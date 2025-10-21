@@ -244,24 +244,22 @@ function DeleteConfirmationModal({
 }
 
 const OeiCard = ({ oei, onEdit, onDelete }: { oei: OEI, onEdit: () => void; onDelete: () => void; }) => (
-    <Card className="flex flex-col overflow-hidden border-[#9A9A9A] shadow-md">
-        <div className="bg-[#EAE7E7] p-4">
-            <div className="bg-[#1A5581] text-white py-1 px-3 rounded-md inline-block">
-                <h3 className="text-sm font-bold">{oei.name}</h3>
+    <div className="rounded-lg shadow-md border border-[#9A9A9A] overflow-hidden flex flex-col">
+        <div className="bg-[#EAE7E7] p-4 flex-grow text-center">
+            <div className="bg-[#1A5581] text-white py-2 px-4 rounded-lg inline-block mb-4">
+                <h3 className="text-base font-bold">{oei.name}</h3>
             </div>
+            <p className="text-sm text-gray-700 min-h-[40px]">{oei.description}</p>
         </div>
-        <CardContent className="p-4 bg-white flex-grow flex flex-col">
-            <p className="text-sm text-gray-600 flex-grow mb-4">{oei.description}</p>
-            <div className="flex justify-end gap-2">
-                <Button size="icon" onClick={onEdit} className="bg-[#1A5581] hover:bg-[#1A5581]/90 h-8 w-8">
-                    <Pencil className="h-4 w-4 text-white" />
-                </Button>
-                <Button size="icon" onClick={onDelete} className="bg-[#1A5581] hover:bg-[#1A5581]/90 h-8 w-8">
-                    <Trash2 className="h-4 w-4 text-white" />
-                </Button>
-            </div>
-        </CardContent>
-    </Card>
+        <div className="bg-white p-4 flex justify-end gap-2 border-t border-[#9A9A9A]">
+            <Button size="icon" onClick={onEdit} className="bg-[#1A5581] hover:bg-[#1A5581]/90 h-10 w-10">
+                <Pencil className="h-5 w-5 text-white" />
+            </Button>
+            <Button size="icon" onClick={onDelete} className="bg-[#1A5581] hover:bg-[#1A5581]/90 h-10 w-10">
+                <Trash2 className="h-5 w-5 text-white" />
+            </Button>
+        </div>
+    </div>
 );
 
 const navItems = [
