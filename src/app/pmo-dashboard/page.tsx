@@ -187,15 +187,15 @@ const CardItem = ({
   subtitle: string;
   bgColor: string;
 }) => (
-  <Card className="flex flex-col overflow-hidden h-full">
+  <Card className="flex flex-col overflow-hidden">
     <div
-      className={`flex-grow flex items-center justify-center p-6 ${bgColor}`}
+      className={`flex items-center justify-center p-6 ${bgColor}`}
     >
       <Icon className="h-20 w-20 text-gray-700" strokeWidth={1} />
     </div>
-    <CardContent className="p-6 bg-white flex flex-col flex-grow text-center">
-      <h3 className="text-xl font-bold">{title}</h3>
-      <p className="text-muted-foreground text-sm mt-1 mb-4">{subtitle}</p>
+    <CardContent className="p-6 bg-white flex flex-col flex-grow">
+      <h3 className="text-xl font-bold text-center">{title}</h3>
+      <p className="text-muted-foreground text-sm mt-1 mb-4 text-center">{subtitle}</p>
       <div className="mt-auto">
         <Button className="w-full">INGRESAR</Button>
       </div>
@@ -287,8 +287,8 @@ export default function PmoDashboardPage() {
   ];
 
   return (
-    <div className="flex h-screen w-full bg-[#F9F9F9] font-body">
-      <header className="bg-[#004272] text-white p-2 flex items-center justify-between fixed top-0 w-full z-20 h-16">
+    <div className="flex flex-col h-screen w-full bg-[#F9F9F9] font-body">
+       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
           <div className="flex-1 flex items-center">
              {/* Placeholder for alignment */}
           </div>
@@ -301,11 +301,11 @@ export default function PmoDashboardPage() {
             <UserProfile />
           </div>
       </header>
-      <div className="flex flex-1 pt-16">
+      <div className="flex flex-1 overflow-hidden">
         <aside
           className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
             sidebarOpen ? "w-64" : "w-0"
-          } overflow-hidden h-full z-10 flex flex-col`}
+          } overflow-hidden h-full z-10 flex flex-col shrink-0`}
         >
           <nav className="flex-grow p-4 space-y-[25px]">
             {navItems.map((item, index) => (
@@ -334,13 +334,9 @@ export default function PmoDashboardPage() {
           )}
         </aside>
 
-        <div className="flex flex-1 flex-col">
-          <main
-            className={`flex-1 flex flex-col transition-all duration-300 ${
-              sidebarOpen ? "" : ""
-            }`}
-          >
-            <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full">
+        <div className="flex flex-1 flex-col overflow-y-auto">
+          <main className="flex-1 flex flex-col">
+            <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full sticky top-0 z-10">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="p-1 rounded hover:bg-gray-400/50"
@@ -353,7 +349,7 @@ export default function PmoDashboardPage() {
             </div>
 
             <div className="flex-1 flex flex-col">
-              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-y border-[#1A5581]">
+              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-y border-[#1A5581] sticky top-[44px] z-10">
                 <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
                 <div className="flex items-center gap-2">
                   <Select value={selectedPgd} onValueChange={setSelectedPgd}>
@@ -376,7 +372,7 @@ export default function PmoDashboardPage() {
               </div>
 
               <div className="bg-[#F9F9F9] p-6 flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 h-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                     {cardsData.map((card, index) => (
                       <CardItem key={index} {...card} />
                     ))}
@@ -397,5 +393,3 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
-
-    
