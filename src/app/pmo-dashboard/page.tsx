@@ -294,14 +294,14 @@ export default function PmoDashboardPage() {
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
         <div className="flex-1 flex items-center pl-4">
-           {!sidebarOpen && (
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="p-1 rounded hover:bg-gray-400/50 mr-2"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              )}
+           {sidebarOpen ? null : (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="p-1 rounded hover:bg-gray-400/50 mr-2"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            )}
         </div>
         <div className="flex-1 text-center">
           <h1 className="text-xl font-bold">
@@ -361,7 +361,7 @@ export default function PmoDashboardPage() {
                 <ChevronRight className="h-4 w-4 text-gray-600" />
                 <span className="font-semibold">PGD</span>
               </div>
-              <div className="p-2 flex items-center justify-between w-full">
+              <div className="p-2 flex items-center justify-between w-full border-y" style={{borderColor: '#1A5581'}}>
                 <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
                 <div className="flex items-center gap-2">
                   <Select value={selectedPgd} onValueChange={setSelectedPgd}>
