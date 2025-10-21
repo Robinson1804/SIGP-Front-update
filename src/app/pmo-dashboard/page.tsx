@@ -311,6 +311,14 @@ export default function PmoDashboardPage() {
             sidebarOpen ? "w-64" : "w-0"
           } overflow-hidden h-full z-10 flex flex-col shrink-0`}
         >
+          <div className="p-2 border-b border-gray-300">
+             <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1 rounded hover:bg-gray-400/50"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+          </div>
           <nav className="flex-grow p-4 space-y-[25px]">
             {navItems.map((item, index) => (
               <a
@@ -341,12 +349,14 @@ export default function PmoDashboardPage() {
         <div className="flex flex-1 flex-col overflow-y-auto">
           <main className="flex-1 flex flex-col">
             <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full sticky top-0 z-10">
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-1 rounded hover:bg-gray-400/50"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
+              {!sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1 rounded hover:bg-gray-400/50"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              )}
               <Home className="h-5 w-5" />
               <ChevronRight className="h-4 w-4 text-gray-600" />
               <span className="font-semibold">PGD</span>
@@ -397,9 +407,5 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
-
-    
-
-    
 
     
