@@ -141,7 +141,7 @@ function PGDModal({
                 </div>
             </div>
           </div>
-          <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
+          <DialogFooter className="px-6 pb-6 flex justify-between">
             {pgd ? (
               <>
                 <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>Eliminar</Button>
@@ -328,18 +328,19 @@ export default function PmoDashboardPage() {
         }`}
       >
         <header className="bg-[#004272] text-white p-2 flex items-center justify-between fixed top-0 w-full z-20 h-16">
-           <div className={`transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-4'}`}>
-              {/* This div helps with title centering when sidebar is open */}
-           </div>
-           <div className="flex-1 text-center absolute w-full left-0">
-             <h1 className="text-xl font-bold">
-               SISTEMA DE ADMINISTRACIÓN DE PROYECTO - OTIN
-             </h1>
-           </div>
-           <div className="absolute right-4 z-10">
-             <UserProfile />
-           </div>
+          <div className="flex-1 flex items-center">
+              {/* This div is a placeholder to push title to center */}
+          </div>
+          <div className="flex-1 text-center">
+            <h1 className="text-xl font-bold">
+              SISTEMA DE ADMINISTRACIÓN DE PROYECTO - OTIN
+            </h1>
+          </div>
+          <div className="flex-1 flex justify-end pr-4">
+            <UserProfile />
+          </div>
         </header>
+
 
         <main className="flex-1 flex flex-col pt-16">
           <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full">
@@ -355,7 +356,7 @@ export default function PmoDashboardPage() {
           </div>
 
           <div className="flex-1 flex flex-col">
-            <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border border-[#1A5581]">
+            <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-y border-[#1A5581]">
               <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
               <div className="flex items-center gap-2">
                 <Select value={selectedPgd} onValueChange={setSelectedPgd}>
@@ -398,5 +399,3 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
-
-    
