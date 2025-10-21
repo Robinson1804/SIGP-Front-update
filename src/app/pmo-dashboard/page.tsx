@@ -363,7 +363,7 @@ export default function PmoDashboardPage() {
             </div>
 
             <div className="flex-1 flex flex-col">
-              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-y border-[#1A5581] sticky top-[44px] z-10">
+              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-t border-[#1A5581] sticky top-[44px] z-10">
                 <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
                 <div className="flex items-center gap-2">
                   <Select value={selectedPgd} onValueChange={setSelectedPgd}>
@@ -407,5 +407,3 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
-
-    
