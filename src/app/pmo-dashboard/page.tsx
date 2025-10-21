@@ -33,6 +33,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { X } from "lucide-react";
+import Link from "next/link";
 
 type PGD = {
   id: string;
@@ -166,11 +167,13 @@ const CardItem = ({
   title,
   subtitle,
   bgColor,
+  href,
 }: {
   icon: React.ElementType;
   title: string;
   subtitle: string;
   bgColor: string;
+  href: string;
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div className={`flex items-center justify-center p-8 ${bgColor}`}>
@@ -180,7 +183,9 @@ const CardItem = ({
       <h3 className="text-xl font-bold text-center">{title}</h3>
       <p className="text-muted-foreground text-sm mt-1 mb-4 text-center">{subtitle}</p>
       <div className="mt-auto w-full pt-4">
-        <Button className="w-full">INGRESAR</Button>
+        <Button asChild className="w-full">
+            <Link href={href}>INGRESAR</Link>
+        </Button>
       </div>
     </CardContent>
   </Card>
@@ -236,11 +241,11 @@ export default function PmoDashboardPage() {
   };
   
   const cardsData = [
-    { icon: Landmark, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]" },
-    { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]" },
-    { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]" },
-    { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]" },
-    { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]" },
+    { icon: Landmark, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]", href: "/oei-dashboard" },
+    { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]", href: "#" },
+    { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]", href: "#" },
+    { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "#" },
+    { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "#" },
   ];
 
   return (
