@@ -189,13 +189,13 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
-      className={`flex items-center justify-center p-12 ${bgColor}`}
+      className={`flex items-center justify-center p-16 ${bgColor}`}
     >
       <Icon className="h-20 w-20 text-gray-700" strokeWidth={1} />
     </div>
     <CardContent className="p-6 bg-white flex flex-col flex-grow items-center text-center justify-center">
-      <h3 className="text-xl font-bold">{title}</h3>
-      <p className="text-muted-foreground text-sm mt-1 mb-4">{subtitle}</p>
+      <h3 className="text-xl font-bold text-center">{title}</h3>
+      <p className="text-muted-foreground text-sm mt-1 mb-4 text-center">{subtitle}</p>
       <div className="mt-auto w-full pt-4">
         <Button className="w-full">INGRESAR</Button>
       </div>
@@ -290,7 +290,7 @@ export default function PmoDashboardPage() {
     <div className="flex flex-col h-screen w-full bg-[#F9F9F9] font-body">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
         <div className="flex-1 flex items-center">
-            {/* Placeholder for alignment */}
+             {/* Placeholder for alignment. Will be used by sidebar trigger */}
         </div>
         <div className="flex-1 text-center">
           <h1 className="text-xl font-bold">
