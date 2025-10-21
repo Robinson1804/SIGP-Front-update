@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, from 'react';
 import {
   FileText,
   Target,
@@ -75,13 +75,13 @@ function OEIModal({
   oei: OEI | null;
   onSave: (data: OEI) => void;
 }) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [indicator, setIndicator] = useState("");
-  const [annualGoals, setAnnualGoals] = useState<{ year: number, reports: number }[]>([]);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [name, setName] = React.useState("");
+  const [description, setDescription] = React.useState("");
+  const [indicator, setIndicator] = React.useState("");
+  const [annualGoals, setAnnualGoals] = React.useState<{ year: number, reports: number }[]>([]);
+  const [errors, setErrors] = React.useState<{ [key: string]: string }>({});
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (oei) {
       setName(oei.name);
       setDescription(oei.description);
@@ -276,16 +276,16 @@ const navItems = [
 ];
 
 export default function OeiDashboardPage() {
-  const [pgds] = useState<PGD[]>(initialPgds);
-  const [selectedPgd, setSelectedPgd] = useState<string | undefined>(
+  const [pgds] = React.useState<PGD[]>(initialPgds);
+  const [selectedPgd, setSelectedPgd] = React.useState<string | undefined>(
     pgds.length > 0 ? pgds[0].id : undefined
   );
   
-  const [oeis, setOeis] = useState<OEI[]>(initialOeis);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingOei, setEditingOei] = useState<OEI | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deletingOei, setDeletingOei] = useState<OEI | null>(null);
+  const [oeis, setOeis] = React.useState<OEI[]>(initialOeis);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [editingOei, setEditingOei] = React.useState<OEI | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [deletingOei, setDeletingOei] = React.useState<OEI | null>(null);
 
   const handleOpenModal = (oei: OEI | null = null) => {
     setEditingOei(oei);
