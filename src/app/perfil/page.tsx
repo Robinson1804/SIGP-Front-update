@@ -2,7 +2,7 @@
 "use client";
 
 import Image from "next/image";
-import { User } from "lucide-react";
+import { FileText, Target, Users, BarChart, Bell, User as UserIcon } from "lucide-react";
 
 import AppLayout from "@/components/layout/app-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,10 +29,19 @@ const InfoField = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
+const navItems = [
+  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
+  { label: "POI", icon: Target, href: "#" },
+  { label: "RECURSOS HUMANOS", icon: Users, href: "#" },
+  { label: "DASHBOARD", icon: BarChart, href: "#" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "#" },
+];
+
 export default function ProfilePage() {
   return (
     <AppLayout
       breadcrumbs={[{ label: "PERFIL" }]}
+      navItems={navItems}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
         <div className="p-2 flex items-center w-full">
@@ -45,7 +54,7 @@ export default function ProfilePage() {
       <main className="flex-1 bg-[#F9F9F9] p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-2 mb-6">
-            <User className="h-6 w-6 text-black" />
+            <UserIcon className="h-6 w-6 text-black" />
             <h3 className="text-lg font-bold text-black">INFORMACIÓN PERSONAL</h3>
           </div>
 

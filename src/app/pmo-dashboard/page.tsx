@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   FileText,
   Target,
@@ -175,7 +174,7 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div className={`flex items-center justify-center p-8 ${bgColor}`}>
-      <Icon className="h-20 w-20 text-gray-700" strokeWidth={1} />
+      <Icon className="h-16 w-16 text-gray-700" strokeWidth={1} />
     </div>
     <CardContent className="p-6 bg-white flex flex-col flex-grow items-center text-center justify-center">
       <h3 className="text-xl font-bold text-center">{title}</h3>
@@ -188,7 +187,7 @@ const CardItem = ({
 );
 
 const navItems = [
-  { label: "PGD", icon: FileText, href: "#" },
+  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
   { label: "POI", icon: Target, href: "#" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "#" },
   { label: "DASHBOARD", icon: BarChart, href: "#" },
