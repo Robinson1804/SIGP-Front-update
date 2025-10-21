@@ -189,9 +189,9 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
-      className={`flex items-center justify-center p-16 ${bgColor}`}
+      className={`flex items-center justify-center p-24 ${bgColor}`}
     >
-      <Icon className="h-20 w-20 text-gray-700" strokeWidth={1} />
+      <Icon className="h-24 w-24 text-gray-700" strokeWidth={1} />
     </div>
     <CardContent className="p-6 bg-white flex flex-col flex-grow items-center text-center justify-center">
       <h3 className="text-xl font-bold text-center">{title}</h3>
@@ -393,3 +393,5 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
+
+    
