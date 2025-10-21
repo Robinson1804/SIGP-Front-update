@@ -318,7 +318,7 @@ export default function PmoDashboardPage() {
             sidebarOpen ? "w-64" : "w-0"
           } overflow-hidden h-full z-10 flex flex-col shrink-0`}
         >
-          <div className="p-2">
+          <div className="p-2 flex justify-end">
              <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-1 rounded hover:bg-gray-400/50"
