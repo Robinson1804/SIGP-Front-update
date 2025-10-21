@@ -4,7 +4,6 @@
 import { useState } from "react";
 import Image from "next/image";
 import {
-  ChevronDown,
   ChevronRight,
   FileText,
   Home,
@@ -215,7 +214,6 @@ const UserProfile = () => (
           <p className="font-bold">EDUARDO CORILLA</p>
           <p className="text-xs">PMO</p>
         </div>
-        <ChevronDown className="h-4 w-4" />
       </button>
     </DropdownMenuTrigger>
     <DropdownMenuContent className="w-56" align="end">
@@ -245,7 +243,7 @@ export default function PmoDashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPgd, setEditingPgd] = useState<PGD | null>(null);
   const [pgds, setPgds] = useState<PGD[]>(initialPgds);
-  const [selectedPgd, setSelectedPgd] = useState<string | undefined>(pgds[0]?.id);
+  const [selectedPgd, setSelectedPgd] = useState<string | undefined>(pgds.length > 0 ? pgds[0].id : undefined);
 
   const handleOpenModal = (pgd: PGD | null = null) => {
     setEditingPgd(pgd);
@@ -259,13 +257,11 @@ export default function PmoDashboardPage() {
   
   const handleSavePgd = (data: { startYear: number; endYear: number }) => {
     if (editingPgd) {
-      // Edit
       const updatedPgds = pgds.map((p) =>
         p.id === editingPgd.id ? { ...p, ...data } : p
       );
       setPgds(updatedPgds);
     } else {
-      // Create
       const newPgd = { id: (pgds.length + 1).toString(), ...data };
       const updatedPgds = [...pgds, newPgd];
       setPgds(updatedPgds);
@@ -277,7 +273,7 @@ export default function PmoDashboardPage() {
     const updatedPgds = pgds.filter(p => p.id !== id);
     setPgds(updatedPgds);
     if(selectedPgd === id){
-        setSelectedPgd(undefined);
+        setSelectedPgd(updatedPgds.length > 0 ? updatedPgds[0].id : undefined);
     }
   };
 
@@ -291,28 +287,25 @@ export default function PmoDashboardPage() {
 
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body">
-      {/* Sidebar */}
       <aside
         className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
           sidebarOpen ? "w-64" : "w-0"
-        } overflow-hidden fixed h-full z-20 flex flex-col`}
+        } overflow-hidden fixed h-full z-30 flex flex-col`}
       >
-        <div className="p-4 flex justify-end">
-            <button onClick={() => setSidebarOpen(false)} className="md:hidden">
-              <Menu className="h-6 w-6" />
-            </button>
+        <div className="p-4 flex justify-between items-center h-16 border-b border-gray-300">
+           {/* Placeholder for alignment, can be empty or have a logo */}
         </div>
-        <nav className="flex-grow px-4 space-y-[25px]">
+        <nav className="flex-grow p-4 space-y-[25px]">
           {navItems.map((item, index) => (
             <a
               key={item.label}
               href={item.href}
               className={`flex items-center p-2 rounded-md border border-gray-300 ${
-                index === 0 ? "bg-[#005999] text-white" : ""
+                index === 0 ? "bg-[#005999] text-white" : "bg-white"
               }`}
             >
               <item.icon className="h-5 w-5 mr-3" />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
             </a>
           ))}
         </nav>
@@ -334,20 +327,21 @@ export default function PmoDashboardPage() {
           sidebarOpen ? "md:ml-64" : "ml-0"
         }`}
       >
-        {/* Header */}
-        <header className="bg-[#004272] text-white p-2 flex items-center justify-between fixed top-0 w-full z-10 h-16">
-           <div className="flex-1 text-center">
+        <header className="bg-[#004272] text-white p-2 flex items-center justify-between fixed top-0 w-full z-20 h-16">
+           <div className={`transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-4'}`}>
+              {/* This div helps with title centering when sidebar is open */}
+           </div>
+           <div className="flex-1 text-center absolute w-full left-0">
              <h1 className="text-xl font-bold">
                SISTEMA DE ADMINISTRACIÓN DE PROYECTO - OTIN
              </h1>
            </div>
-           <div className="absolute right-4">
+           <div className="absolute right-4 z-10">
              <UserProfile />
            </div>
         </header>
 
         <main className="flex-1 flex flex-col pt-16">
-          {/* Bar 1 */}
           <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -360,14 +354,12 @@ export default function PmoDashboardPage() {
             <span className="font-semibold">PGD</span>
           </div>
 
-          {/* Content */}
-          <div className="p-4 flex-1">
-            {/* Toolbar */}
+          <div className="flex-1 flex flex-col">
             <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border border-[#1A5581]">
-              <h2 className="font-bold">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
+              <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
               <div className="flex items-center gap-2">
                 <Select value={selectedPgd} onValueChange={setSelectedPgd}>
-                  <SelectTrigger className="w-[180px] bg-white">
+                  <SelectTrigger className="w-[180px] bg-white border-[#484848]">
                     <SelectValue placeholder="Seleccionar" />
                   </SelectTrigger>
                   <SelectContent>
@@ -376,17 +368,16 @@ export default function PmoDashboardPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button size="icon" variant="outline" className="bg-white" onClick={() => handleOpenModal()}>
+                <Button size="icon" style={{backgroundColor: '#3B4466', borderColor: '#979797'}} className="border text-white" onClick={() => handleOpenModal()}>
                   <Plus className="h-4 w-4" />
                 </Button>
-                <Button size="icon" variant="outline" className="bg-white" disabled={!selectedPgd} onClick={() => handleOpenModal(pgds.find(p => p.id === selectedPgd) || null)}>
+                <Button size="icon" style={{backgroundColor: '#3B4466', borderColor: '#979797'}} className="border text-white" disabled={!selectedPgd} onClick={() => handleOpenModal(pgds.find(p => p.id === selectedPgd) || null)}>
                   <Pencil className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Grid */}
-            <div className="bg-[#F9F9F9] p-4 flex-1">
+            <div className="bg-[#F9F9F9] p-6 flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 h-full">
                   {cardsData.map((card, index) => (
                     <CardItem key={index} {...card} />
@@ -407,3 +398,5 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
+
+    
