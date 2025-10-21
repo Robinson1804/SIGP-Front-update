@@ -193,7 +193,7 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
-      className={`flex items-center justify-center p-12 ${bgColor}`}
+      className={`flex items-center justify-center p-16 ${bgColor}`}
     >
       <Icon className="h-16 w-16 text-gray-700" strokeWidth={1} />
     </div>
@@ -294,14 +294,6 @@ export default function PmoDashboardPage() {
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
         <div className="flex-1 flex items-center">
-           {!sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-1 rounded hover:bg-gray-400/50 ml-4"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-            )}
         </div>
         <div className="flex-1 text-center">
           <h1 className="text-xl font-bold">
@@ -357,6 +349,14 @@ export default function PmoDashboardPage() {
           <main className="flex-1 flex flex-col">
             <div className="sticky top-0 z-10 bg-[#D5D5D5]">
               <div className="p-2 flex items-center gap-2 w-full">
+                {!sidebarOpen && (
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="p-1 rounded hover:bg-gray-700/20"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </button>
+                )}
                 <Home className="h-5 w-5" />
                 <ChevronRight className="h-4 w-4 text-gray-600" />
                 <span className="font-semibold">PGD</span>
