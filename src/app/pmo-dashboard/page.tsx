@@ -187,16 +187,16 @@ const CardItem = ({
   subtitle: string;
   bgColor: string;
 }) => (
-  <Card className="flex flex-col overflow-hidden">
+  <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
       className={`flex items-center justify-center p-6 ${bgColor}`}
     >
       <Icon className="h-20 w-20 text-gray-700" strokeWidth={1} />
     </div>
-    <CardContent className="p-6 bg-white flex flex-col flex-grow">
-      <h3 className="text-xl font-bold text-center">{title}</h3>
-      <p className="text-muted-foreground text-sm mt-1 mb-4 text-center">{subtitle}</p>
-      <div className="mt-auto">
+    <CardContent className="p-6 bg-white flex flex-col flex-grow items-center text-center">
+      <h3 className="text-xl font-bold">{title}</h3>
+      <p className="text-muted-foreground text-sm mt-1 mb-4">{subtitle}</p>
+      <div className="mt-auto w-full">
         <Button className="w-full">INGRESAR</Button>
       </div>
     </CardContent>
@@ -288,18 +288,18 @@ export default function PmoDashboardPage() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#F9F9F9] font-body">
-       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
-          <div className="flex-1 flex items-center">
-             {/* Placeholder for alignment */}
-          </div>
-          <div className="flex-1 text-center">
-            <h1 className="text-xl font-bold">
-              SISTEMA DE ADMINISTRACIÓN DE PROYECTO - OTIN
-            </h1>
-          </div>
-          <div className="flex-1 flex justify-end pr-4">
-            <UserProfile />
-          </div>
+      <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
+        <div className="flex-1 flex items-center">
+            {/* Placeholder for alignment */}
+        </div>
+        <div className="flex-1 text-center">
+          <h1 className="text-xl font-bold">
+            SISTEMA DE ADMINISTRACIÓN DE PROYECTO - OTIN
+          </h1>
+        </div>
+        <div className="flex-1 flex justify-end pr-4">
+          <UserProfile />
+        </div>
       </header>
       <div className="flex flex-1 overflow-hidden">
         <aside
@@ -371,8 +371,8 @@ export default function PmoDashboardPage() {
                 </div>
               </div>
 
-              <div className="bg-[#F9F9F9] p-6 flex-1">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+              <div className="bg-[#F9F9F9] p-6 flex-1 flex items-center justify-center">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 w-full max-w-7xl">
                     {cardsData.map((card, index) => (
                       <CardItem key={index} {...card} />
                     ))}
@@ -393,3 +393,5 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
+
+    
