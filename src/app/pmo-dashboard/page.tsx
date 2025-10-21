@@ -193,7 +193,7 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
-      className={`flex items-center justify-center p-24 ${bgColor}`}
+      className={`flex items-center justify-center p-12 ${bgColor}`}
     >
       <Icon className="h-16 w-16 text-gray-700" strokeWidth={1} />
     </div>
