@@ -246,7 +246,6 @@ export default function PmoDashboardPage() {
   return (
     <AppLayout
       navItems={navItems}
-      activeNavItem="PGD"
       breadcrumbs={[{ label: "PGD" }]}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">

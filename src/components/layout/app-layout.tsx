@@ -11,6 +11,7 @@ import {
   Menu,
   User,
 } from "lucide-react";
+import { usePathname } from 'next/navigation';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -68,17 +69,18 @@ type NavItem = {
 type AppLayoutProps = {
   children: ReactNode;
   navItems?: NavItem[];
-  activeNavItem?: string;
   breadcrumbs: { label: string; href?: string }[];
 };
 
 export default function AppLayout({
   children,
   navItems = [],
-  activeNavItem,
   breadcrumbs,
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const pathname = usePathname();
+  
+  const activeNavItem = navItems.find(item => item.href === pathname)?.label;
 
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
@@ -112,8 +114,10 @@ export default function AppLayout({
               <a
                 key={item.label}
                 href={item.href}
-                className={`flex items-center p-2 rounded-md border border-gray-300 ${
-                  activeNavItem === item.label ? "bg-[#005999] text-white" : "bg-white"
+                className={`flex items-center p-2 rounded-md border ${
+                  activeNavItem === item.label
+                    ? "bg-[#005999] text-white border-transparent"
+                    : "bg-white text-[#004272] border-[#004272]"
                 }`}
               >
                 <item.icon className="h-5 w-5 mr-3" />
