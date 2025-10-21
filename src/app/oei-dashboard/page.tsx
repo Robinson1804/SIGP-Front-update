@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +57,7 @@ const initialOeis: OEI[] = [
     { id: '1', name: 'OEI N°1', description: 'Mantener actualizada la infraestructura estadística del país.', indicator: 'Indicador 1', annualGoals: [{year: 2023, reports: 10}] },
     { id: '2', name: 'OEI N°2', description: 'Producir información estadística oficial para los usuarios en general.', indicator: 'Indicador 2', annualGoals: [] },
     { id: '3', name: 'OEI N°3', description: 'Fortalecer el liderazgo y posicionamiento del Sistema Nacional de Estadística (SNE).', indicator: 'Indicador 3', annualGoals: [] },
+    { id: '4', name: 'OEI N°4', description: 'Promover la cultura estadística y el uso de la información.', indicator: 'Indicador 4', annualGoals: [] },
 ];
 
 const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
@@ -372,7 +372,7 @@ export default function OeiDashboardPage() {
 
       <div className="flex-1 flex flex-col bg-[#F9F9F9]">
         <div className="p-6 flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl mx-auto">
             {oeis.map((oei) => (
               <OeiCard key={oei.id} oei={oei} onEdit={() => handleOpenModal(oei)} onDelete={() => handleOpenDeleteModal(oei)} />
             ))}
@@ -396,5 +396,3 @@ export default function OeiDashboardPage() {
     </AppLayout>
   );
 }
-
-    
