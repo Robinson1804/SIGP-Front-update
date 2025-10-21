@@ -117,10 +117,10 @@ export default function AppLayout({
                 className={`flex items-center p-2 rounded-md border ${
                   activeNavItem === item.label
                     ? "bg-[#005999] text-white border-transparent"
-                    : "bg-white text-[#004272] border-[#004272]"
+                    : "bg-white text-[#004272] border-[#7E7E7E]"
                 }`}
               >
-                <item.icon className="h-5 w-5 mr-3" />
+                <item.icon className={`h-5 w-5 mr-3 ${activeNavItem !== item.label ? 'text-[#004272]' : ''}`} />
                 <span className="flex-1">{item.label}</span>
               </a>
             ))}
