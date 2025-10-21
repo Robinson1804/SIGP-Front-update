@@ -251,7 +251,7 @@ const OeiCard = ({ oei, onEdit, onDelete }: { oei: OEI, onEdit: () => void; onDe
             </div>
             <p className="text-sm text-gray-700 min-h-[40px]">{oei.description}</p>
         </div>
-        <div className="bg-white p-4 flex justify-end gap-2 border-t border-[#9A9A9A]">
+        <div className="bg-white p-4 flex justify-center gap-2 border-t border-[#9A9A9A]">
             <Button size="icon" onClick={onEdit} className="bg-[#1A5581] hover:bg-[#1A5581]/90 h-10 w-10">
                 <Pencil className="h-5 w-5 text-white" />
             </Button>
