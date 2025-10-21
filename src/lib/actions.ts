@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -63,4 +64,9 @@ export async function authenticate(
       // Fallback for demo purposes
       redirect('/pmo-dashboard');
   }
+}
+
+export async function signOut() {
+  // In a real app, you would clear the session cookie here.
+  redirect('/');
 }

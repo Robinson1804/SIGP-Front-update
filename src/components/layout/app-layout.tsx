@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { signOut } from "@/lib/actions";
+
 
 const ineiLogo = PlaceHolderImages.find((img) => img.id === "inei-logo");
 
@@ -45,10 +47,14 @@ const UserProfile = () => (
         </Link>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem>
-        <LogOut className="mr-2 h-4 w-4" />
-        <span>Cerrar sesión</span>
-      </DropdownMenuItem>
+      <form action={signOut}>
+        <DropdownMenuItem asChild>
+            <button type="submit" className="w-full">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Cerrar sesión</span>
+            </button>
+        </DropdownMenuItem>
+      </form>
     </DropdownMenuContent>
   </DropdownMenu>
 );
