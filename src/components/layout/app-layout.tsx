@@ -80,7 +80,13 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
   
-  const activeNavItem = navItems.find(item => item.href === pathname)?.label;
+  let activeNavItemLabel;
+  const activeItem = navItems.find(item => item.href === pathname);
+  if (activeItem) {
+    activeNavItemLabel = activeItem.label;
+  } else if (pathname.startsWith('/oei-dashboard')) {
+    activeNavItemLabel = 'PGD';
+  }
 
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
@@ -115,12 +121,12 @@ export default function AppLayout({
                 key={item.label}
                 href={item.href}
                 className={`flex items-center p-2 rounded-md border ${
-                  activeNavItem === item.label
+                  activeNavItemLabel === item.label
                     ? "bg-[#005999] text-white border-transparent"
                     : "bg-white text-[#004272] border-[#7E7E7E]"
                 }`}
               >
-                <item.icon className={`h-5 w-5 mr-3 ${activeNavItem !== item.label ? 'text-[#004272]' : ''}`} />
+                <item.icon className={`h-5 w-5 mr-3 ${activeNavItemLabel !== item.label ? 'text-[#004272]' : ''}`} />
                 <span className="flex-1">{item.label}</span>
               </a>
             ))}
