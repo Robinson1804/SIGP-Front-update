@@ -51,8 +51,8 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <main className="flex-1 bg-[#F9F9F9] p-6">
-        <div className="max-w-7xl mx-auto">
+      <main className="flex-1 bg-[#F9F9F9] p-6 flex items-center justify-center">
+        <div className="max-w-7xl mx-auto w-full">
           <div className="flex items-center gap-2 mb-6">
             <UserIcon className="h-6 w-6 text-black" />
             <h3 className="text-lg font-bold text-black">INFORMACIÓN PERSONAL</h3>
