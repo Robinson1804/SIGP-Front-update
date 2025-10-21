@@ -137,7 +137,7 @@ function OEIModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0">
+      <DialogContent className="sm:max-w-[700px] p-0" showCloseButton={false}>
         <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
           <DialogTitle>
             {oei ? "EDITAR OBJETIVO ESTRATÉGICO INSTITUCIONAL (OEI)" : "REGISTRAR OBJETIVO ESTRATÉGICO INSTITUCIONAL (OEI)"}
@@ -225,9 +225,14 @@ function DeleteConfirmationModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md p-0">
+            <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
                  <DialogHeader className="p-4 flex flex-row justify-between items-center">
                     <DialogTitle>AVISO</DialogTitle>
+                     <DialogClose asChild>
+                        <Button variant="ghost" size="icon">
+                        <X className="h-4 w-4" />
+                        </Button>
+                    </DialogClose>
                 </DialogHeader>
                 <div className="p-6 text-center flex flex-col items-center">
                     <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1}/>
@@ -396,5 +401,3 @@ export default function OeiDashboardPage() {
     </AppLayout>
   );
 }
-
-    
