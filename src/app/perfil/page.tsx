@@ -80,13 +80,11 @@ export default function ProfilePage() {
 
             <Card className="md:col-span-2 lg:col-span-3">
               <CardContent className="p-6 grid grid-cols-1 gap-6">
-                <div className="grid md:grid-cols-2 gap-6">
                   <InfoField label="Nombres" value={user.name} />
                   <InfoField label="Apellidos" value={user.lastName} />
                   <InfoField label="Teléfono celular" value={user.phone} />
                   <InfoField label="Ubicación" value={user.location} />
-                </div>
-                <InfoField label="Correo institucional" value={user.email} />
+                  <InfoField label="Correo institucional" value={user.email} />
               </CardContent>
             </Card>
           </div>
