@@ -189,14 +189,14 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
-      className={`flex items-center justify-center p-8 ${bgColor}`}
+      className={`flex items-center justify-center p-12 ${bgColor}`}
     >
       <Icon className="h-20 w-20 text-gray-700" strokeWidth={1} />
     </div>
-    <CardContent className="p-6 bg-white flex flex-col flex-grow items-center text-center">
+    <CardContent className="p-6 bg-white flex flex-col flex-grow items-center text-center justify-center">
       <h3 className="text-xl font-bold">{title}</h3>
       <p className="text-muted-foreground text-sm mt-1 mb-4">{subtitle}</p>
-      <div className="mt-auto w-full">
+      <div className="mt-auto w-full pt-4">
         <Button className="w-full">INGRESAR</Button>
       </div>
     </CardContent>
@@ -393,5 +393,3 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
-
-    
