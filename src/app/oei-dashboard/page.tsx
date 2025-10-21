@@ -226,16 +226,16 @@ function DeleteConfirmationModal({
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
-                 <DialogHeader className="p-4 flex flex-row justify-between items-center">
+                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
                     <DialogTitle>AVISO</DialogTitle>
                      <DialogClose asChild>
-                        <Button variant="ghost" size="icon">
-                        <X className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+                            <X className="h-4 w-4" />
                         </Button>
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 text-center flex flex-col items-center">
-                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1}/>
+                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
                     <p className="font-bold text-lg">¿Estás seguro?</p>
                     <p className="text-muted-foreground">El Objetivo Estratégico Institucional será eliminado</p>
                 </div>
