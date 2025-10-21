@@ -148,10 +148,10 @@ function PGDModal({
                 <Button onClick={handleSave}>Guardar</Button>
               </>
             ) : (
-                <>
+                <div className="w-full flex justify-end gap-2">
                  <Button variant="ghost" onClick={onClose}>Cancelar</Button>
                  <Button onClick={handleSave}>Guardar</Button>
-                </>
+                </div>
             )}
           </DialogFooter>
         </DialogContent>
@@ -273,7 +273,8 @@ export default function PmoDashboardPage() {
     const updatedPgds = pgds.filter(p => p.id !== id);
     setPgds(updatedPgds);
     if(selectedPgd === id){
-        setSelectedPgd(updatedPgds.length > 0 ? updatedPgds[0].id : undefined);
+        const newSelectedId = updatedPgds.length > 0 ? updatedPgds[0].id : undefined;
+        setSelectedPgd(newSelectedId);
     }
   };
 
@@ -290,11 +291,8 @@ export default function PmoDashboardPage() {
       <aside
         className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
           sidebarOpen ? "w-64" : "w-0"
-        } overflow-hidden fixed h-full z-30 flex flex-col`}
+        } overflow-hidden fixed h-full z-10 pt-16 flex flex-col`}
       >
-        <div className="p-4 flex justify-between items-center h-16 border-b border-gray-300">
-           {/* Placeholder for alignment, can be empty or have a logo */}
-        </div>
         <nav className="flex-grow p-4 space-y-[25px]">
           {navItems.map((item, index) => (
             <a
@@ -322,14 +320,10 @@ export default function PmoDashboardPage() {
         )}
       </aside>
 
-      <div
-        className={`flex-1 flex flex-col transition-all duration-300 ${
-          sidebarOpen ? "md:ml-64" : "ml-0"
-        }`}
-      >
+      <div className="flex flex-1 flex-col">
         <header className="bg-[#004272] text-white p-2 flex items-center justify-between fixed top-0 w-full z-20 h-16">
           <div className="flex-1 flex items-center">
-              {/* This div is a placeholder to push title to center */}
+             {/* Placeholder for alignment */}
           </div>
           <div className="flex-1 text-center">
             <h1 className="text-xl font-bold">
@@ -341,8 +335,11 @@ export default function PmoDashboardPage() {
           </div>
         </header>
 
-
-        <main className="flex-1 flex flex-col pt-16">
+        <main
+          className={`flex-1 flex flex-col pt-16 transition-all duration-300 ${
+            sidebarOpen ? "md:ml-64" : "ml-0"
+          }`}
+        >
           <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -369,10 +366,10 @@ export default function PmoDashboardPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button size="icon" style={{backgroundColor: '#3B4466', borderColor: '#979797'}} className="border text-white" onClick={() => handleOpenModal()}>
+                <Button size="icon" style={{backgroundColor: '#3B4466', color: 'white'}} className="border border-[#979797]" onClick={() => handleOpenModal()}>
                   <Plus className="h-4 w-4" />
                 </Button>
-                <Button size="icon" style={{backgroundColor: '#3B4466', borderColor: '#979797'}} className="border text-white" disabled={!selectedPgd} onClick={() => handleOpenModal(pgds.find(p => p.id === selectedPgd) || null)}>
+                <Button size="icon" style={{backgroundColor: '#3B4466', color: 'white'}} className="border border-[#979797]" disabled={!selectedPgd} onClick={() => handleOpenModal(pgds.find(p => p.id === selectedPgd) || null)}>
                   <Pencil className="h-4 w-4" />
                 </Button>
               </div>
