@@ -193,7 +193,7 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
-      className={`flex items-center justify-center p-12 ${bgColor}`}
+      className={`flex items-center justify-center p-8 ${bgColor}`}
     >
       <Icon className="h-16 w-16 text-gray-700" strokeWidth={1} />
     </div>
@@ -293,8 +293,15 @@ export default function PmoDashboardPage() {
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
-        <div className="flex-1 flex items-center">
-             {/* Placeholder for alignment. Will be used by sidebar trigger */}
+        <div className="flex-1 flex items-center pl-4">
+           {!sidebarOpen && (
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="p-1 rounded hover:bg-gray-400/50 mr-2"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              )}
         </div>
         <div className="flex-1 text-center">
           <h1 className="text-xl font-bold">
@@ -313,7 +320,7 @@ export default function PmoDashboardPage() {
         >
           <div className="p-2 border-b border-gray-300">
              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
+                onClick={() => setSidebarOpen(false)}
                 className="p-1 rounded hover:bg-gray-400/50"
               >
                 <Menu className="h-5 w-5" />
@@ -348,22 +355,13 @@ export default function PmoDashboardPage() {
 
         <div className="flex flex-1 flex-col overflow-y-auto">
           <main className="flex-1 flex flex-col">
-            <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full sticky top-0 z-10">
-              {!sidebarOpen && (
-                <button
-                  onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-1 rounded hover:bg-gray-400/50"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              )}
-              <Home className="h-5 w-5" />
-              <ChevronRight className="h-4 w-4 text-gray-600" />
-              <span className="font-semibold">PGD</span>
-            </div>
-
-            <div className="flex-1 flex flex-col">
-              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full sticky top-[44px] z-10 border-t border-[#D5D5D5]">
+            <div className="sticky top-0 z-10 bg-[#D5D5D5]">
+              <div className="p-2 flex items-center gap-2 w-full">
+                <Home className="h-5 w-5" />
+                <ChevronRight className="h-4 w-4 text-gray-600" />
+                <span className="font-semibold">PGD</span>
+              </div>
+              <div className="p-2 flex items-center justify-between w-full">
                 <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
                 <div className="flex items-center gap-2">
                   <Select value={selectedPgd} onValueChange={setSelectedPgd}>
@@ -384,9 +382,11 @@ export default function PmoDashboardPage() {
                   </Button>
                 </div>
               </div>
+            </div>
 
+            <div className="flex-1 flex flex-col">
               <div className="bg-[#F9F9F9] p-6 flex-1 flex items-center justify-center">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 w-full max-w-7xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 w-full max-w-7xl justify-center">
                     {cardsData.map((card, index) => (
                       <CardItem key={index} {...card} />
                     ))}
