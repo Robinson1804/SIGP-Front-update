@@ -58,9 +58,9 @@ export default function ProfilePage() {
             <h3 className="text-lg font-bold text-black">INFORMACIÓN PERSONAL</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-start">
-            <Card className="md:col-span-1 lg:col-span-1">
-              <CardContent className="p-6 flex flex-col items-center text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 items-stretch">
+            <Card className="md:col-span-1 lg:col-span-1 flex flex-col">
+              <CardContent className="p-6 flex flex-col items-center text-center flex-grow justify-center">
                 {userAvatar && (
                   <Image
                     src={userAvatar.imageUrl}
@@ -79,14 +79,14 @@ export default function ProfilePage() {
             </Card>
 
             <Card className="md:col-span-2 lg:col-span-3">
-              <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InfoField label="Nombres" value={user.name} />
-                <InfoField label="Apellidos" value={user.lastName} />
-                <InfoField label="Teléfono celular" value={user.phone} />
-                <InfoField label="Ubicación" value={user.location} />
-                <div className="md:col-span-2">
-                   <InfoField label="Correo institucional" value={user.email} />
+              <CardContent className="p-6 grid grid-cols-1 gap-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <InfoField label="Nombres" value={user.name} />
+                  <InfoField label="Apellidos" value={user.lastName} />
+                  <InfoField label="Teléfono celular" value={user.phone} />
+                  <InfoField label="Ubicación" value={user.location} />
                 </div>
+                <InfoField label="Correo institucional" value={user.email} />
               </CardContent>
             </Card>
           </div>
