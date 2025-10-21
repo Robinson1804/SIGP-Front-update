@@ -187,13 +187,13 @@ const CardItem = ({
   subtitle: string;
   bgColor: string;
 }) => (
-  <Card className="flex flex-col text-center overflow-hidden h-full">
+  <Card className="flex flex-col overflow-hidden h-full">
     <div
       className={`flex-grow flex items-center justify-center p-6 ${bgColor}`}
     >
       <Icon className="h-20 w-20 text-gray-700" strokeWidth={1} />
     </div>
-    <CardContent className="p-6 bg-white flex flex-col flex-grow">
+    <CardContent className="p-6 bg-white flex flex-col flex-grow text-center">
       <h3 className="text-xl font-bold">{title}</h3>
       <p className="text-muted-foreground text-sm mt-1 mb-4">{subtitle}</p>
       <div className="mt-auto">
@@ -288,40 +288,7 @@ export default function PmoDashboardPage() {
 
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body">
-      <aside
-        className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
-          sidebarOpen ? "w-64" : "w-0"
-        } overflow-hidden fixed h-full z-10 pt-16 flex flex-col`}
-      >
-        <nav className="flex-grow p-4 space-y-[25px]">
-          {navItems.map((item, index) => (
-            <a
-              key={item.label}
-              href={item.href}
-              className={`flex items-center p-2 rounded-md border border-gray-300 ${
-                index === 0 ? "bg-[#005999] text-white" : "bg-white"
-              }`}
-            >
-              <item.icon className="h-5 w-5 mr-3" />
-              <span className="flex-1">{item.label}</span>
-            </a>
-          ))}
-        </nav>
-        {ineiLogo && (
-          <div className="p-4 mt-auto flex justify-center">
-            <Image
-              src={ineiLogo.imageUrl}
-              alt={ineiLogo.description}
-              width={100}
-              height={50}
-              data-ai-hint={ineiLogo.imageHint}
-            />
-          </div>
-        )}
-      </aside>
-
-      <div className="flex flex-1 flex-col">
-        <header className="bg-[#004272] text-white p-2 flex items-center justify-between fixed top-0 w-full z-20 h-16">
+      <header className="bg-[#004272] text-white p-2 flex items-center justify-between fixed top-0 w-full z-20 h-16">
           <div className="flex-1 flex items-center">
              {/* Placeholder for alignment */}
           </div>
@@ -333,57 +300,91 @@ export default function PmoDashboardPage() {
           <div className="flex-1 flex justify-end pr-4">
             <UserProfile />
           </div>
-        </header>
-
-        <main
-          className={`flex-1 flex flex-col pt-16 transition-all duration-300 ${
-            sidebarOpen ? "md:ml-64" : "ml-0"
-          }`}
+      </header>
+      <div className="flex flex-1 pt-16">
+        <aside
+          className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
+            sidebarOpen ? "w-64" : "w-0"
+          } overflow-hidden h-full z-10 flex flex-col`}
         >
-          <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1 rounded hover:bg-gray-400/50"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <Home className="h-5 w-5" />
-            <ChevronRight className="h-4 w-4 text-gray-600" />
-            <span className="font-semibold">PGD</span>
-          </div>
+          <nav className="flex-grow p-4 space-y-[25px]">
+            {navItems.map((item, index) => (
+              <a
+                key={item.label}
+                href={item.href}
+                className={`flex items-center p-2 rounded-md border border-gray-300 ${
+                  index === 0 ? "bg-[#005999] text-white" : "bg-white"
+                }`}
+              >
+                <item.icon className="h-5 w-5 mr-3" />
+                <span className="flex-1">{item.label}</span>
+              </a>
+            ))}
+          </nav>
+          {ineiLogo && (
+            <div className="p-4 mt-auto flex justify-center">
+              <Image
+                src={ineiLogo.imageUrl}
+                alt={ineiLogo.description}
+                width={100}
+                height={50}
+                data-ai-hint={ineiLogo.imageHint}
+              />
+            </div>
+          )}
+        </aside>
 
-          <div className="flex-1 flex flex-col">
-            <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-y border-[#1A5581]">
-              <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
-              <div className="flex items-center gap-2">
-                <Select value={selectedPgd} onValueChange={setSelectedPgd}>
-                  <SelectTrigger className="w-[180px] bg-white border-[#484848]">
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pgds.map(pgd => (
-                       <SelectItem key={pgd.id} value={pgd.id}>{`${pgd.startYear} - ${pgd.endYear}`}</SelectItem>
+        <div className="flex flex-1 flex-col">
+          <main
+            className={`flex-1 flex flex-col transition-all duration-300 ${
+              sidebarOpen ? "" : ""
+            }`}
+          >
+            <div className="bg-[#D5D5D5] p-2 flex items-center gap-2 w-full">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-1 rounded hover:bg-gray-400/50"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <Home className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4 text-gray-600" />
+              <span className="font-semibold">PGD</span>
+            </div>
+
+            <div className="flex-1 flex flex-col">
+              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-y border-[#1A5581]">
+                <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
+                <div className="flex items-center gap-2">
+                  <Select value={selectedPgd} onValueChange={setSelectedPgd}>
+                    <SelectTrigger className="w-[180px] bg-white border-[#484848]">
+                      <SelectValue placeholder="Seleccionar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pgds.map(pgd => (
+                         <SelectItem key={pgd.id} value={pgd.id}>{`${pgd.startYear} - ${pgd.endYear}`}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="icon" style={{backgroundColor: '#3B4466', color: 'white'}} className="border border-[#979797]" onClick={() => handleOpenModal()}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" style={{backgroundColor: '#3B4466', color: 'white'}} className="border border-[#979797]" disabled={!selectedPgd} onClick={() => handleOpenModal(pgds.find(p => p.id === selectedPgd) || null)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-[#F9F9F9] p-6 flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 h-full">
+                    {cardsData.map((card, index) => (
+                      <CardItem key={index} {...card} />
                     ))}
-                  </SelectContent>
-                </Select>
-                <Button size="icon" style={{backgroundColor: '#3B4466', color: 'white'}} className="border border-[#979797]" onClick={() => handleOpenModal()}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-                <Button size="icon" style={{backgroundColor: '#3B4466', color: 'white'}} className="border border-[#979797]" disabled={!selectedPgd} onClick={() => handleOpenModal(pgds.find(p => p.id === selectedPgd) || null)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
+                </div>
               </div>
             </div>
-
-            <div className="bg-[#F9F9F9] p-6 flex-1">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 h-full">
-                  {cardsData.map((card, index) => (
-                    <CardItem key={index} {...card} />
-                  ))}
-              </div>
-            </div>
-          </div>
-        </main>
+          </main>
+        </div>
       </div>
 
        <PGDModal
@@ -396,3 +397,5 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
+
+    
