@@ -291,7 +291,7 @@ export default function PmoDashboardPage() {
   ];
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[#F9F9F9] font-body">
+    <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
         <div className="flex-1 flex items-center">
              {/* Placeholder for alignment. Will be used by sidebar trigger */}
@@ -363,7 +363,7 @@ export default function PmoDashboardPage() {
             </div>
 
             <div className="flex-1 flex flex-col">
-              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full border-t border-[#1A5581] sticky top-[44px] z-10">
+              <div className="bg-[#D5D5D5] p-2 flex items-center justify-between w-full sticky top-[44px] z-10 border-t border-[#D5D5D5]">
                 <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
                 <div className="flex items-center gap-2">
                   <Select value={selectedPgd} onValueChange={setSelectedPgd}>
