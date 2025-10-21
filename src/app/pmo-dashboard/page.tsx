@@ -193,7 +193,7 @@ const CardItem = ({
 }) => (
   <Card className="flex flex-col overflow-hidden w-full max-w-sm">
     <div
-      className={`flex items-center justify-center p-8 ${bgColor}`}
+      className={`flex items-center justify-center p-12 ${bgColor}`}
     >
       <Icon className="h-16 w-16 text-gray-700" strokeWidth={1} />
     </div>
@@ -293,11 +293,11 @@ export default function PmoDashboardPage() {
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
-        <div className="flex-1 flex items-center pl-4">
-           {sidebarOpen ? null : (
+        <div className="flex-1 flex items-center">
+           {!sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-1 rounded hover:bg-gray-400/50 mr-2"
+                className="p-1 rounded hover:bg-gray-400/50 ml-4"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -318,7 +318,7 @@ export default function PmoDashboardPage() {
             sidebarOpen ? "w-64" : "w-0"
           } overflow-hidden h-full z-10 flex flex-col shrink-0`}
         >
-          <div className="p-2 border-b border-gray-300">
+          <div className="p-2">
              <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-1 rounded hover:bg-gray-400/50"
@@ -361,7 +361,7 @@ export default function PmoDashboardPage() {
                 <ChevronRight className="h-4 w-4 text-gray-600" />
                 <span className="font-semibold">PGD</span>
               </div>
-              <div className="p-2 flex items-center justify-between w-full border-y" style={{borderColor: '#1A5581'}}>
+              <div className="p-2 flex items-center justify-between w-full border-y border-[#1A5581]">
                 <h2 className="font-bold text-black pl-2">PLAN DE GOBIERNO DIGITAL (PGD)</h2>
                 <div className="flex items-center gap-2">
                   <Select value={selectedPgd} onValueChange={setSelectedPgd}>
