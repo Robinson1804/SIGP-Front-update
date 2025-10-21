@@ -239,7 +239,7 @@ function DeleteConfirmationModal({
                     <p className="font-bold text-lg">¿Estás seguro?</p>
                     <p className="text-muted-foreground">El Objetivo Estratégico Institucional será eliminado</p>
                 </div>
-                <DialogFooter className="px-6 pb-6 flex justify-center gap-4">
+                <DialogFooter className="justify-center px-6 pb-6 flex gap-4">
                     <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
                     <Button onClick={onConfirm} style={{backgroundColor: '#018CD1', color: 'white'}}>Sí, eliminar</Button>
                 </DialogFooter>
@@ -401,3 +401,5 @@ export default function OeiDashboardPage() {
     </AppLayout>
   );
 }
+
+    
