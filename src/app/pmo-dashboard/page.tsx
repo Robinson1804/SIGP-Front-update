@@ -19,7 +19,11 @@ import {
   Building,
   Briefcase,
   User,
-  X
+  X,
+  Landmark,
+  ClipboardList,
+  FolderKanban,
+  ListTodo
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -191,7 +195,7 @@ const CardItem = ({
     <div
       className={`flex items-center justify-center p-24 ${bgColor}`}
     >
-      <Icon className="h-24 w-24 text-gray-700" strokeWidth={1} />
+      <Icon className="h-16 w-16 text-gray-700" strokeWidth={1} />
     </div>
     <CardContent className="p-6 bg-white flex flex-col flex-grow items-center text-center justify-center">
       <h3 className="text-xl font-bold text-center">{title}</h3>
@@ -279,11 +283,11 @@ export default function PmoDashboardPage() {
   };
 
   const cardsData = [
-    { icon: Building, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]" },
+    { icon: Landmark, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]" },
     { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]" },
     { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]" },
-    { icon: BarChart, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]" },
-    { icon: Settings, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]" },
+    { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]" },
+    { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]" },
   ];
 
   return (
@@ -393,6 +397,8 @@ export default function PmoDashboardPage() {
     </div>
   );
 }
+
+    
 
     
 
