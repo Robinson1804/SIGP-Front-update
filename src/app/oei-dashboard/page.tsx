@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   Target,
@@ -55,9 +55,9 @@ const initialPgds: PGD[] = [
 ];
 
 const initialOeis: OEI[] = [
-    { id: '1', name: 'OEI N°1', description: 'Mantener actualizada la infraestructura estadística del país.', indicator: '', annualGoals: [] },
-    { id: '2', name: 'OEI N°2', description: 'Producir información estadística oficial para los usuarios en general.', indicator: '', annualGoals: [] },
-    { id: '3', name: 'OEI N°3', description: 'Fortalecer el liderazgo y posicionamiento del Sistema Nacional de Estadística (SNE).', indicator: '', annualGoals: [] },
+    { id: '1', name: 'OEI N°1', description: 'Mantener actualizada la infraestructura estadística del país.', indicator: 'Indicador 1', annualGoals: [{year: 2023, reports: 10}] },
+    { id: '2', name: 'OEI N°2', description: 'Producir información estadística oficial para los usuarios en general.', indicator: 'Indicador 2', annualGoals: [] },
+    { id: '3', name: 'OEI N°3', description: 'Fortalecer el liderazgo y posicionamiento del Sistema Nacional de Estadística (SNE).', indicator: 'Indicador 3', annualGoals: [] },
 ];
 
 const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
@@ -74,18 +74,32 @@ function OEIModal({
   oei: OEI | null;
   onSave: (data: OEI) => void;
 }) {
-  const [name, setName] = useState(oei?.name || "");
-  const [description, setDescription] = useState(oei?.description || "");
-  const [indicator, setIndicator] = useState(oei?.indicator || "");
-  const [annualGoals, setAnnualGoals] = useState(oei?.annualGoals || []);
-  const [selectedYear, setSelectedYear] = useState<number | undefined>();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [indicator, setIndicator] = useState("");
+  const [annualGoals, setAnnualGoals] = useState<{ year: number, reports: number }[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  useEffect(() => {
+    if (oei) {
+      setName(oei.name);
+      setDescription(oei.description);
+      setIndicator(oei.indicator);
+      setAnnualGoals(oei.annualGoals);
+    } else {
+      setName("");
+      setDescription("");
+      setIndicator("");
+      setAnnualGoals([]);
+    }
+    setErrors({});
+  }, [oei, isOpen]);
   
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!name) newErrors.name = "El nombre es requerido.";
-    if (!description) newErrors.description = "La descripción es requerida.";
-    if (!indicator) newErrors.indicator = "El indicador es requerido.";
+    if (!name.trim()) newErrors.name = "El nombre es requerido.";
+    if (!description.trim()) newErrors.description = "La descripción es requerida.";
+    if (!indicator.trim()) newErrors.indicator = "El indicador es requerido.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -103,9 +117,9 @@ function OEIModal({
     onClose();
   };
 
-  const addAnnualGoal = () => {
-    if (selectedYear && !annualGoals.some(g => g.year === selectedYear)) {
-      setAnnualGoals([...annualGoals, { year: selectedYear, reports: 0 }]);
+  const addAnnualGoal = (year: number) => {
+    if (year && !annualGoals.some(g => g.year === year)) {
+      setAnnualGoals(prevGoals => [...prevGoals, { year: year, reports: 0 }]);
     }
   };
   
@@ -113,29 +127,23 @@ function OEIModal({
     setAnnualGoals(annualGoals.filter(g => g.year !== year));
   };
   
-  const updateAnnualGoal = (year: number, reports: number) => {
-      setAnnualGoals(annualGoals.map(g => g.year === year ? {...g, reports: isNaN(reports) ? 0 : reports } : g));
+  const updateAnnualGoalReports = (year: number, reports: number) => {
+      const parsedReports = isNaN(reports) ? 0 : reports;
+      setAnnualGoals(annualGoals.map(g => g.year === year ? {...g, reports: parsedReports } : g));
   }
-  
-  React.useEffect(() => {
-    if (selectedYear) {
-      addAnnualGoal();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedYear]);
 
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[700px] p-0">
-        <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg">
-          <DialogTitle className="flex justify-between items-center">
+        <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+          <DialogTitle>
             {oei ? "EDITAR OBJETIVO ESTRATÉGICO INSTITUCIONAL (OEI)" : "REGISTRAR OBJETIVO ESTRATÉGICO INSTITUCIONAL (OEI)"}
-            <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10 hover:text-white">
-              <X className="h-4 w-4" />
-            </Button>
           </DialogTitle>
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10 hover:text-white">
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
         <div className="p-6 space-y-4">
           <div>
@@ -157,7 +165,7 @@ function OEIModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">Metas anuales</label>
             <div className="flex items-center gap-2 mb-2">
                 <label className="text-sm">Años</label>
-                 <Select onValueChange={(value) => setSelectedYear(Number(value))}>
+                 <Select onValueChange={(value) => addAnnualGoal(Number(value))}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Seleccionar año" />
                     </SelectTrigger>
@@ -179,7 +187,7 @@ function OEIModal({
                         <TableRow key={goal.year}>
                             <TableCell>{goal.year}</TableCell>
                             <TableCell>
-                                <Input type="number" value={goal.reports} onChange={e => updateAnnualGoal(goal.year, parseInt(e.target.value))} />
+                                <Input type="number" value={goal.reports} onChange={e => updateAnnualGoalReports(goal.year, parseInt(e.target.value, 10))} />
                             </TableCell>
                             <TableCell>
                                 <Button variant="destructive" size="icon" onClick={() => removeAnnualGoal(goal.year)} className="h-8 w-8">
@@ -205,12 +213,10 @@ function DeleteConfirmationModal({
     isOpen,
     onClose,
     onConfirm,
-    oei,
 }: {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    oei: OEI | null;
 }) {
     if (!isOpen) return null;
 
@@ -387,9 +393,10 @@ export default function OeiDashboardPage() {
         isOpen={isDeleteModalOpen}
         onClose={handleCloseDeleteModal}
         onConfirm={handleDeleteOei}
-        oei={deletingOei}
       />
 
     </AppLayout>
   );
 }
+
+    
