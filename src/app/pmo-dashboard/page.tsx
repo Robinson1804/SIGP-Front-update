@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
   FileText,
   Target,
@@ -259,7 +259,7 @@ export default function PmoDashboardPage() {
     { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]", href: "/ogd-dashboard" },
     { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]", href: "/oegd-dashboard" },
     { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "/ae-dashboard" },
-    { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "#" },
+    { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "/poi-dashboard" },
   ];
 
   return (

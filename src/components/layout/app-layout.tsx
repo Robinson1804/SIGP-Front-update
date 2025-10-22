@@ -81,7 +81,7 @@ export default function AppLayout({
   const pathname = usePathname();
   
   let activeNavItemLabel;
-  const pgdSubmodules = ['/oei-dashboard', '/ogd-dashboard', '/oegd-dashboard', '/ae-dashboard'];
+  const pgdSubmodules = ['/oei-dashboard', '/ogd-dashboard', '/oegd-dashboard', '/ae-dashboard', '/poi-dashboard'];
   const activeItem = navItems.find(item => item.href === pathname);
   
   if (activeItem) {
