@@ -81,10 +81,11 @@ export default function AppLayout({
   const pathname = usePathname();
   
   let activeNavItemLabel;
+  const pgdSubmodules = ['/oei-dashboard', '/ogd-dashboard', '/oegd-dashboard', '/ae-dashboard'];
   const activeItem = navItems.find(item => item.href === pathname);
   if (activeItem) {
     activeNavItemLabel = activeItem.label;
-  } else if (pathname.startsWith('/oei-dashboard') || pathname.startsWith('/ogd-dashboard') || pathname.startsWith('/oegd-dashboard')) {
+  } else if (pgdSubmodules.some(submodule => pathname.startsWith(submodule))) {
     activeNavItemLabel = 'PGD';
   }
 
@@ -176,5 +177,3 @@ export default function AppLayout({
     </div>
   );
 }
-
-    

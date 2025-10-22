@@ -62,9 +62,9 @@ function PGDModal({
   onSave: (data: { startYear: number; endYear: number }) => void;
   onDelete?: (id: string) => void;
 }) {
-  const [startYear, setStartYear] = useState<number | undefined>(pgd?.startYear);
-  const [endYear, setEndYear] = useState<number | undefined>(pgd?.endYear);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [startYear, setStartYear] = React.useState<number | undefined>(pgd?.startYear);
+  const [endYear, setEndYear] = React.useState<number | undefined>(pgd?.endYear);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
 
   React.useEffect(() => {
     if (pgd) {
@@ -214,10 +214,10 @@ const navItems = [
 ];
 
 export default function PmoDashboardPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingPgd, setEditingPgd] = useState<PGD | null>(null);
-  const [pgds, setPgds] = useState<PGD[]>(initialPgds);
-  const [selectedPgd, setSelectedPgd] = useState<string | undefined>(
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [editingPgd, setEditingPgd] = React.useState<PGD | null>(null);
+  const [pgds, setPgds] = React.useState<PGD[]>(initialPgds);
+  const [selectedPgd, setSelectedPgd] = React.useState<string | undefined>(
     pgds.length > 0 ? pgds[0].id : undefined
   );
 
@@ -258,7 +258,7 @@ export default function PmoDashboardPage() {
     { icon: Landmark, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]", href: "/oei-dashboard" },
     { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]", href: "/ogd-dashboard" },
     { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]", href: "/oegd-dashboard" },
-    { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "#" },
+    { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "/ae-dashboard" },
     { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "#" },
   ];
 
@@ -329,5 +329,3 @@ export default function PmoDashboardPage() {
     </AppLayout>
   );
 }
-
-    
