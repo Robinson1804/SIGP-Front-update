@@ -83,6 +83,7 @@ export default function AppLayout({
   let activeNavItemLabel;
   const pgdSubmodules = ['/oei-dashboard', '/ogd-dashboard', '/oegd-dashboard', '/ae-dashboard'];
   const activeItem = navItems.find(item => item.href === pathname);
+  
   if (activeItem) {
     activeNavItemLabel = activeItem.label;
   } else if (pgdSubmodules.some(submodule => pathname.startsWith(submodule))) {
