@@ -14,7 +14,7 @@ import {
   Folder,
   CheckCircle,
   Calendar,
-  MoreVertical,
+  MoreHorizontal,
   AlertTriangle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
@@ -58,7 +58,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+
+type SubProject = {
+    id: string;
+    name: string;
+    description: string;
+    responsible: string[];
+    scrumMaster: string;
+    years: string[];
+    annualAmount: number;
+    managementMethod: string;
+}
 
 type Project = {
     id: string;
@@ -74,11 +87,12 @@ type Project = {
     strategicAction: string;
     missingData?: boolean;
     coordination?: string;
-    financialArea?: string;
+    financialArea?: string[];
     coordinator?: string;
-    responsible?: string;
-    year?: string;
+    responsible?: string[];
+    years?: string[];
     managementMethod?: string;
+    subProjects?: SubProject[];
 };
 
 const initialProjects: Project[] = [
@@ -119,6 +133,89 @@ const statusColors: { [key: string]: string } = {
     'Finalizado': 'bg-[#2FD573]',
 };
 
+const responsibleOptions: MultiSelectOption[] = [
+    { value: 'Angella Trujillo', label: 'Angella Trujillo' },
+    { value: 'Anayeli Monzon', label: 'Anayeli Monzon' },
+    { value: 'Ana Garcia', label: 'Ana Garcia' },
+];
+
+const yearOptions: MultiSelectOption[] = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => ({label: y.toString(), value: y.toString()}));
+const financialAreaOptions: MultiSelectOption[] = [
+    { value: 'Area 1', label: 'Area 1' },
+    { value: 'Area 2', label: 'Area 2' },
+]
+
+
+function SubProjectModal({
+    isOpen,
+    onClose,
+    onSave,
+    subProject,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (data: SubProject) => void;
+    subProject: SubProject | null;
+}) {
+    const [formData, setFormData] = React.useState<Partial<SubProject>>({});
+
+    React.useEffect(() => {
+        setFormData(subProject || { managementMethod: 'Scrum' });
+    }, [subProject, isOpen]);
+
+    const handleSave = () => {
+        onSave(formData as SubProject);
+        onClose();
+    };
+
+    if (!isOpen) return null;
+    
+    return (
+         <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
+                <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+                    <DialogTitle>REGISTRAR SUBPROYECTO</DialogTitle>
+                    <DialogClose asChild><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></Button></DialogClose>
+                </DialogHeader>
+                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                    <div>
+                        <label>Nombre</label>
+                        <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => setFormData(p => ({...p, name: e.target.value}))} />
+                    </div>
+                     <div>
+                        <label>Descripción</label>
+                        <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} />
+                    </div>
+                    <div>
+                        <label>Responsable</label>
+                         <MultiSelect options={responsibleOptions} selected={formData.responsible || []} onChange={selected => setFormData(p => ({...p, responsible: selected}))} placeholder="Seleccionar" />
+                    </div>
+                    <div>
+                        <label>Gestor/Scrum Master</label>
+                        <Input placeholder="Ingresar gestor/scrum master" value={formData.scrumMaster || ''} onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))} />
+                    </div>
+                    <div>
+                        <label>Año</label>
+                         <MultiSelect options={yearOptions} selected={formData.years || []} onChange={selected => setFormData(p => ({...p, years: selected}))} placeholder="Seleccionar" />
+                    </div>
+                    <div>
+                        <label>Monto anual</label>
+                        <Input type="number" placeholder="Ingresar monto anual" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} />
+                    </div>
+                    <div>
+                        <label>Método de Gestión del proyecto</label>
+                        <Input readOnly value={formData.managementMethod || ''} />
+                    </div>
+                </div>
+                <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
+                     <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
+                     <Button onClick={handleSave} style={{backgroundColor: '#018CD1', color: 'white'}}>Guardar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 function POIModal({
     isOpen,
     onClose,
@@ -132,6 +229,8 @@ function POIModal({
 }) {
     const [formData, setFormData] = React.useState<Partial<Project>>({});
     const [errors, setErrors] = React.useState<{[key: string]: string}>({});
+    const [isSubProjectModalOpen, setIsSubProjectModalOpen] = React.useState(false);
+    const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
     
     const isMissingDataMode = project?.missingData;
 
@@ -142,35 +241,24 @@ function POIModal({
         if (!data.description) newErrors.description = "La descripción es requerida.";
         if (!data.strategicAction) newErrors.strategicAction = "La acción estratégica es requerida.";
         if (!data.classification) newErrors.classification = "La clasificación es requerida.";
-        if (!data.annualAmount) newErrors.annualAmount = "El monto es requerido.";
         if (!data.status) newErrors.status = "El estado es requerido.";
+        if (!data.coordination) newErrors.coordination = "El campo es requerido.";
+        if (!data.coordinator) newErrors.coordinator = "El campo es requerido.";
+        if (!data.scrumMaster) newErrors.scrumMaster = "El campo es requerido.";
+        if (!data.responsible || data.responsible.length === 0) newErrors.responsible = "El campo es requerido.";
+        if (!data.years || data.years.length === 0) newErrors.years = "El campo es requerido.";
+        if (!data.annualAmount) newErrors.annualAmount = "El campo es requerido.";
+        if (!data.financialArea || data.financialArea.length === 0) newErrors.financialArea = "El campo es requerido.";
         
-        if (isMissingDataMode) {
-             if (!data.scrumMaster) newErrors.scrumMaster = "El campo es requerido";
-             if (!data.coordination) newErrors.coordination = "El campo es requerido";
-             if (!data.financialArea) newErrors.financialArea = "El campo es requerido";
-             if (!data.coordinator) newErrors.coordinator = "El campo es requerido";
-             if (!data.responsible) newErrors.responsible = "El campo es requerido";
-             if (!data.year) newErrors.year = "El campo es requerido";
-        }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [isMissingDataMode]);
+    }, []);
 
     React.useEffect(() => {
-        const initialData = project || {
-            id: '',
-            name: '',
-            description: '',
-            type: undefined,
-            classification: undefined,
-            status: undefined,
-            startDate: '',
-            endDate: '',
-            scrumMaster: '',
-            annualAmount: 0,
-            strategicAction: '',
+        const initialData = project ? { ...project } : {
+            id: '', name: '', description: '', type: undefined, classification: undefined,
+            status: undefined, scrumMaster: '', annualAmount: 0, strategicAction: '',
+            subProjects: [],
         };
         setFormData(initialData);
 
@@ -188,7 +276,7 @@ function POIModal({
       if (formData.type === 'Proyecto') {
         setFormData(p => ({...p, managementMethod: 'Scrum'}));
       } else if (formData.type === 'Actividad') {
-        setFormData(p => ({...p, managementMethod: 'Kanban'}));
+        setFormData(p => ({...p, managementMethod: 'Kanban', subProjects: []}));
       }
     }, [formData.type]);
     
@@ -201,7 +289,25 @@ function POIModal({
     
     const isEditMode = !!project?.id;
 
+    const handleSaveSubProject = (subProject: SubProject) => {
+        const existingSubs = formData.subProjects || [];
+        const exists = existingSubs.some(s => s.id === subProject.id);
+        const updatedSubs = exists 
+            ? existingSubs.map(s => s.id === subProject.id ? subProject : s)
+            : [...existingSubs, {...subProject, id: Date.now().toString()}];
+
+        setFormData(p => ({...p, subProjects: updatedSubs}));
+        setIsSubProjectModalOpen(false);
+        setEditingSubProject(null);
+    }
+    
+    const openSubProjectModal = (sub?: SubProject) => {
+        setEditingSubProject(sub || null);
+        setIsSubProjectModalOpen(true);
+    }
+
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-4xl p-0" showCloseButton={false}>
                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
@@ -211,7 +317,8 @@ function POIModal({
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 max-h-[70vh] overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        {/* Columna 1 */}
                         <div className="space-y-4">
                             <div>
                                 <label>Tipo (Proyecto/Actividad) *</label>
@@ -234,6 +341,36 @@ function POIModal({
                                <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} className={errors.description ? 'border-red-500' : ''} />
                                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                             </div>
+                             {formData.type === 'Proyecto' && (
+                                <div>
+                                    <label>Agregar subproyectos</label>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="icon" variant="outline" className="h-8 w-8 border-2 border-gray-400" onClick={() => openSubProjectModal()}>
+                                            <Plus className="h-5 w-5 font-bold text-gray-600" />
+                                        </Button>
+                                    </div>
+                                    {(formData.subProjects || []).length > 0 && (
+                                        <Table className="mt-2">
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Subproyecto</TableHead>
+                                                    <TableHead>Monto</TableHead>
+                                                    <TableHead>Scrum Master</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {formData.subProjects?.map(sub => (
+                                                    <TableRow key={sub.id} onClick={() => openSubProjectModal(sub)} className="cursor-pointer">
+                                                        <TableCell>{sub.name}</TableCell>
+                                                        <TableCell>{sub.annualAmount}</TableCell>
+                                                        <TableCell>{sub.scrumMaster}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    )}
+                                </div>
+                            )}
                             <div>
                                 <label>Acción Estratégica *</label>
                                 <Select value={formData.strategicAction} onValueChange={(value) => setFormData(p => ({...p, strategicAction: value}))}>
@@ -269,16 +406,17 @@ function POIModal({
                                 </Select>
                                  {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
                             </div>
-                            <div>
+                             <div>
                                <label>Coordinación</label>
                                <Input placeholder="Ingresar coordinación" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} className={errors.coordination ? 'border-red-500' : ''} />
                                {errors.coordination && <p className="text-red-500 text-xs mt-1">{errors.coordination}</p>}
                             </div>
                         </div>
+                        {/* Columna 2 */}
                         <div className="space-y-4">
                             <div>
                                <label>Área Financiera</label>
-                               <Input placeholder="Ingresar área financiera" value={formData.financialArea || ''} onChange={e => setFormData(p => ({...p, financialArea: e.target.value}))} className={errors.financialArea ? 'border-red-500' : ''}/>
+                               <MultiSelect options={financialAreaOptions} selected={formData.financialArea || []} onChange={selected => setFormData(p => ({...p, financialArea: selected}))} placeholder="Seleccionar" className={errors.financialArea ? 'border-red-500' : ''} />
                                {errors.financialArea && <p className="text-red-500 text-xs mt-1">{errors.financialArea}</p>}
                             </div>
                              <div>
@@ -293,13 +431,13 @@ function POIModal({
                             </div>
                             <div>
                                <label>Responsable</label>
-                               <Input placeholder="Ingresar responsable" value={formData.responsible || ''} onChange={e => setFormData(p => ({...p, responsible: e.target.value}))} className={errors.responsible ? 'border-red-500' : ''} />
+                               <MultiSelect options={responsibleOptions} selected={formData.responsible || []} onChange={selected => setFormData(p => ({...p, responsible: selected}))} placeholder="Seleccionar" className={errors.responsible ? 'border-red-500' : ''} />
                                {errors.responsible && <p className="text-red-500 text-xs mt-1">{errors.responsible}</p>}
                             </div>
                             <div>
                                <label>Año</label>
-                               <Input placeholder="Ingresar año" value={formData.year || ''} onChange={e => setFormData(p => ({...p, year: e.target.value}))} className={errors.year ? 'border-red-500' : ''} />
-                               {errors.year && <p className="text-red-500 text-xs mt-1">{errors.year}</p>}
+                               <MultiSelect options={yearOptions} selected={formData.years || []} onChange={selected => setFormData(p => ({...p, years: selected}))} placeholder="Seleccionar" className={errors.years ? 'border-red-500' : ''} />
+                               {errors.years && <p className="text-red-500 text-xs mt-1">{errors.years}</p>}
                             </div>
                              <div>
                                <label>Monto anual</label>
@@ -319,6 +457,13 @@ function POIModal({
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        <SubProjectModal 
+            isOpen={isSubProjectModalOpen}
+            onClose={() => setIsSubProjectModalOpen(false)}
+            onSave={handleSaveSubProject}
+            subProject={editingSubProject}
+        />
+        </>
     );
 }
 
@@ -373,7 +518,7 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreVertical className="h-4 w-4" />
+                            <MoreHorizontal className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -392,7 +537,7 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
                 <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
-                    <Badge variant="outline" className="border-gray-300 bg-transparent">{project.startDate} - {project.endDate}</Badge>
+                    <span>{project.startDate} - {project.endDate}</span>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35]" />
@@ -579,3 +724,5 @@ export default function PoiPage() {
     </AppLayout>
   );
 }
+
+    
