@@ -177,6 +177,12 @@ function POIModal({
         if (isMissingDataMode) {
              if (!formData.scrumMaster) newErrors.scrumMaster = "El campo es requerido";
              if (!formData.startDate) newErrors.startDate = "El campo es requerido";
+             if (!formData.endDate) newErrors.endDate = "El campo es requerido";
+             if (!formData.coordination) newErrors.coordination = "El campo es requerido";
+             if (!formData.financialArea) newErrors.financialArea = "El campo es requerido";
+             if (!formData.coordinator) newErrors.coordinator = "El campo es requerido";
+             if (!formData.responsible) newErrors.responsible = "El campo es requerido";
+             if (!formData.year) newErrors.year = "El campo es requerido";
         }
 
         setErrors(newErrors);
@@ -193,113 +199,115 @@ function POIModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
+            <DialogContent className="sm:max-w-4xl p-0" showCloseButton={false}>
                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
                     <DialogTitle>{isEditMode ? 'EDITAR' : 'REGISTRAR'} PLAN OPERATIVO INFORMÁTICO (POI)</DialogTitle>
                     <DialogClose asChild>
                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></Button>
                     </DialogClose>
                 </DialogHeader>
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                    <div>
-                        <label>Tipo (Proyecto/Actividad) *</label>
-                        <Select value={formData.type} onValueChange={(value) => setFormData(p => ({...p, type: value as Project['type']}))}>
-                            <SelectTrigger className={errors.type ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Proyecto">Proyecto</SelectItem>
-                                <SelectItem value="Actividad">Actividad</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type}</p>}
-                    </div>
-                    <div>
-                       <label>Nombre *</label>
-                       <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => setFormData(p => ({...p, name: e.target.value}))} className={errors.name ? 'border-red-500' : ''} />
-                       {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-                    </div>
-                     <div>
-                       <label>Descripción *</label>
-                       <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} className={errors.description ? 'border-red-500' : ''} />
-                       {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-                    </div>
-                    <div>
-                        <label>Acción Estratégica *</label>
-                        <Select value={formData.strategicAction} onValueChange={(value) => setFormData(p => ({...p, strategicAction: value}))}>
-                            <SelectTrigger className={errors.strategicAction ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar AE" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="AE N°1">AE N°1</SelectItem>
-                                <SelectItem value="AE N°2">AE N°2</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
-                    </div>
-                     <div>
-                        <label>Clasificación *</label>
-                        <Select value={formData.classification} onValueChange={(value) => setFormData(p => ({...p, classification: value as Project['classification']}))}>
-                            <SelectTrigger className={errors.classification ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar clasificación" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
-                                <SelectItem value="Gestión interna">Gestión interna</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        {errors.classification && <p className="text-red-500 text-xs mt-1">{errors.classification}</p>}
-                    </div>
-                    <div>
-                        <label>Estado *</label>
-                        <Select value={formData.status} onValueChange={(value) => setFormData(p => ({...p, status: value as Project['status']}))}>
-                            <SelectTrigger className={errors.status ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                <SelectItem value="En planificación">En planificación</SelectItem>
-                                <SelectItem value="En desarrollo">En desarrollo</SelectItem>
-                                <SelectItem value="Finalizado">Finalizado</SelectItem>
-                            </SelectContent>
-                        </Select>
-                         {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
-                    </div>
-                    {isEditMode && (
-                        <>
+                <div className="p-6 max-h-[70vh] overflow-y-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
                             <div>
-                               <label>Coordinación</label>
-                               <Input placeholder="Ingresar coordinador" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} />
+                                <label>Tipo (Proyecto/Actividad) *</label>
+                                <Select value={formData.type} onValueChange={(value) => setFormData(p => ({...p, type: value as Project['type']}))}>
+                                    <SelectTrigger className={errors.type ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Proyecto">Proyecto</SelectItem>
+                                        <SelectItem value="Actividad">Actividad</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type}</p>}
                             </div>
                             <div>
+                               <label>Nombre *</label>
+                               <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => setFormData(p => ({...p, name: e.target.value}))} className={errors.name ? 'border-red-500' : ''} />
+                               {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                            </div>
+                             <div>
+                               <label>Descripción *</label>
+                               <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} className={errors.description ? 'border-red-500' : ''} />
+                               {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+                            </div>
+                            <div>
+                                <label>Acción Estratégica *</label>
+                                <Select value={formData.strategicAction} onValueChange={(value) => setFormData(p => ({...p, strategicAction: value}))}>
+                                    <SelectTrigger className={errors.strategicAction ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar AE" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="AE N°1">AE N°1</SelectItem>
+                                        <SelectItem value="AE N°2">AE N°2</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
+                            </div>
+                             <div>
+                                <label>Clasificación *</label>
+                                <Select value={formData.classification} onValueChange={(value) => setFormData(p => ({...p, classification: value as Project['classification']}))}>
+                                    <SelectTrigger className={errors.classification ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar clasificación" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
+                                        <SelectItem value="Gestión interna">Gestión interna</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {errors.classification && <p className="text-red-500 text-xs mt-1">{errors.classification}</p>}
+                            </div>
+                            <div>
+                                <label>Estado *</label>
+                                <Select value={formData.status} onValueChange={(value) => setFormData(p => ({...p, status: value as Project['status']}))}>
+                                    <SelectTrigger className={errors.status ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                        <SelectItem value="En planificación">En planificación</SelectItem>
+                                        <SelectItem value="En desarrollo">En desarrollo</SelectItem>
+                                        <SelectItem value="Finalizado">Finalizado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                 {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+                            </div>
+                            <div>
+                               <label>Coordinación</label>
+                               <Input placeholder="Ingresar coordinador" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} className={errors.coordination ? 'border-red-500' : ''} />
+                               {errors.coordination && <p className="text-red-500 text-xs mt-1">{errors.coordination}</p>}
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
                                <label>Área Financiera</label>
-                               <Input placeholder="Ingresar área financiera" value={formData.financialArea || ''} onChange={e => setFormData(p => ({...p, financialArea: e.target.value}))} />
+                               <Input placeholder="Ingresar área financiera" value={formData.financialArea || ''} onChange={e => setFormData(p => ({...p, financialArea: e.target.value}))} className={errors.financialArea ? 'border-red-500' : ''}/>
+                               {errors.financialArea && <p className="text-red-500 text-xs mt-1">{errors.financialArea}</p>}
                             </div>
                              <div>
                                <label>Coordinador</label>
-                               <Input placeholder="Ingresar coordinador" value={formData.coordinator || ''} onChange={e => setFormData(p => ({...p, coordinator: e.target.value}))} />
+                               <Input placeholder="Ingresar coordinador" value={formData.coordinator || ''} onChange={e => setFormData(p => ({...p, coordinator: e.target.value}))} className={errors.coordinator ? 'border-red-500' : ''} />
+                               {errors.coordinator && <p className="text-red-500 text-xs mt-1">{errors.coordinator}</p>}
                             </div>
                             <div>
                                <label>Gestor/Scrum Master</label>
-                               <Input placeholder="Ingresar scrum master" value={formData.scrumMaster || ''} onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))} />
+                               <Input placeholder="Ingresar scrum master" value={formData.scrumMaster || ''} onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))}  className={errors.scrumMaster ? 'border-red-500' : ''}/>
+                               {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
                             </div>
                             <div>
                                <label>Responsable</label>
-                               <Input placeholder="Ingresar responsable" value={formData.responsible || ''} onChange={e => setFormData(p => ({...p, responsible: e.target.value}))} />
+                               <Input placeholder="Ingresar responsable" value={formData.responsible || ''} onChange={e => setFormData(p => ({...p, responsible: e.target.value}))} className={errors.responsible ? 'border-red-500' : ''} />
+                               {errors.responsible && <p className="text-red-500 text-xs mt-1">{errors.responsible}</p>}
                             </div>
                             <div>
                                <label>Año</label>
-                               <Input placeholder="Ingresar año" value={formData.year || ''} onChange={e => setFormData(p => ({...p, year: e.target.value}))} />
+                               <Input placeholder="Ingresar año" value={formData.year || ''} onChange={e => setFormData(p => ({...p, year: e.target.value}))} className={errors.year ? 'border-red-500' : ''} />
+                               {errors.year && <p className="text-red-500 text-xs mt-1">{errors.year}</p>}
                             </div>
                              <div>
                                <label>Monto anual</label>
-                               <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} />
+                               <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
+                               {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
                             </div>
                             <div>
                                <label>Método de gestión de proyecto</label>
                                <Input readOnly value={formData.managementMethod || ''} />
                             </div>
-                        </>
-                    )}
-                     {!isEditMode && (
-                         <div>
-                           <label>Monto anual *</label>
-                           <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
-                            {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
                         </div>
-                     )}
+                    </div>
                 </div>
                 <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
                      <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
@@ -335,7 +343,7 @@ function DeleteConfirmationModal({
                 <div className="p-6 text-center flex flex-col items-center">
                     <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
                     <p className="font-bold text-lg">¿Estás seguro?</p>
-                    <p className="text-muted-foreground">El Plan Operativo Informático será eliminado</p>
+                    <p className="text-muted-foreground">El proyecto/actividad será eliminado</p>
                 </div>
                 <DialogFooter className="px-6 pb-6 flex justify-center gap-4">
                     <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>

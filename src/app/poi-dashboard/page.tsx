@@ -305,7 +305,6 @@ function POIModal({
     const handleSave = () => {
         if (!validate()) return;
         
-        // When creating a new project, flag it as having missing data if it is a project
         const isNewProject = !project?.id;
         const missingData = isNewProject && formData.type === 'Proyecto';
 
