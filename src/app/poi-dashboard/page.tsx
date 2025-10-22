@@ -305,7 +305,7 @@ function POIModal({
     const handleSave = () => {
         if (!validate()) return;
         
-        // When creating a new project, flag it as having missing data.
+        // When creating a new project, flag it as having missing data if it is a project
         const isNewProject = !project?.id;
         const missingData = isNewProject && formData.type === 'Proyecto';
 
@@ -432,10 +432,9 @@ function DeleteConfirmationModal({
     );
 }
 
-const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: Project, onEdit: () => void, onDelete: () => void, showMissingData: boolean }) => {
-    const isMissingData = showMissingData && project.missingData;
-    const cardContent = (
-         <Card className={`w-full h-full flex flex-col shadow-md rounded-lg ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
+const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
+    return (
+         <Card className="w-full h-full flex flex-col shadow-md rounded-lg bg-white">
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-2">
                     <Folder className="w-6 h-6 text-[#008ED2]" />
@@ -465,7 +464,7 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
                 <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
-                    <Badge variant="outline" className="border-gray-300">{project.startDate} - {project.endDate}</Badge>
+                    <Badge variant="outline" className="border-gray-300 bg-transparent">{project.startDate} - {project.endDate}</Badge>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35]" />
@@ -475,26 +474,6 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
             </CardContent>
         </Card>
     );
-
-    if (isMissingData) {
-        return (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                       <div className="h-full">{cardContent}</div>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-red-50 border-red-200">
-                        <div className="flex items-center gap-2">
-                            <AlertTriangle className="h-4 w-4 text-red-500" />
-                            <p className="text-red-600">Faltan datos</p>
-                        </div>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        );
-    }
-    
-    return cardContent;
 };
 
 const navItems = [
@@ -563,7 +542,7 @@ export default function PoiDashboardPage() {
       if (exists) {
           setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: false} : p));
       } else {
-          setProjects([...projects, { ...projectData, id: Date.now().toString() }]);
+          setProjects([...projects, { ...projectData, id: Date.now().toString(), missingData: projectData.type === 'Proyecto' }]);
       }
   }
   
@@ -682,7 +661,7 @@ export default function PoiDashboardPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-6">
             {projects.map(p => (
-                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} showMissingData={false} />
+                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} />
             ))}
         </div>
         

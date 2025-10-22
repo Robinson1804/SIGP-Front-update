@@ -9,8 +9,6 @@ import {
   BarChart,
   Bell,
   Plus,
-  Pencil,
-  Trash2,
   X,
   Search,
   Folder,
@@ -62,18 +60,6 @@ import {
 } from "@/components/ui/tooltip";
 
 
-type PGD = {
-  id: string;
-  startYear: number;
-  endYear: number;
-};
-
-const initialPgds: PGD[] = [
-  { id: "1", startYear: 2020, endYear: 2024 },
-];
-
-const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
-
 type Project = {
     id: string;
     name: string;
@@ -87,6 +73,12 @@ type Project = {
     annualAmount: number;
     strategicAction: string;
     missingData?: boolean;
+    coordination?: string;
+    financialArea?: string;
+    coordinator?: string;
+    responsible?: string;
+    year?: string;
+    managementMethod?: string;
 };
 
 const initialProjects: Project[] = [
@@ -127,132 +119,6 @@ const statusColors: { [key: string]: string } = {
     'Finalizado': 'bg-[#2FD573]',
 };
 
-function PGDModal({
-  isOpen,
-  onClose,
-  pgd,
-  onSave,
-  onDelete,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  pgd: PGD | null;
-  onSave: (data: { startYear: number; endYear: number }) => void;
-  onDelete?: (id: string) => void;
-}) {
-  const [startYear, setStartYear] = React.useState<number | undefined>(pgd?.startYear);
-  const [endYear, setEndYear] = React.useState<number | undefined>(pgd?.endYear);
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-
-  React.useEffect(() => {
-    if (pgd) {
-      setStartYear(pgd.startYear);
-      setEndYear(pgd.endYear);
-    } else {
-      setStartYear(undefined);
-      setEndYear(undefined);
-    }
-  }, [pgd, isOpen]);
-  
-  const handleSave = () => {
-    if (startYear && endYear) {
-      if (endYear - startYear !== 4) {
-        alert("El rango debe ser de 4 años.");
-        return;
-      }
-       if (endYear < startYear) {
-        alert("El año final no puede ser menor al año de inicio.");
-        return;
-      }
-      onSave({ startYear, endYear });
-      onClose();
-    }
-  };
-  
-  const handleDelete = () => {
-      if (pgd?.id) {
-          onDelete?.(pgd.id);
-          setShowDeleteConfirm(false);
-          onClose();
-      }
-  }
-
-  if (!isOpen) return null;
-
-  return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] p-0" showCloseButton={false}>
-          <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
-            <DialogTitle>
-              {pgd ? "EDITAR PLAN DE GOBIERNO DIGITAL (PGD)" : "REGISTRAR PLAN DE GOBIERNO DIGITAL (PGD)"}
-            </DialogTitle>
-            <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
-                    <X className="h-4 w-4" />
-                </Button>
-            </DialogClose>
-          </DialogHeader>
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label htmlFor="startYear" className="block text-sm font-medium text-gray-700 mb-1">Año Inicio:</label>
-                    <Select onValueChange={(value) => setStartYear(Number(value))} defaultValue={startYear?.toString()}>
-                        <SelectTrigger id="startYear">
-                            <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div>
-                    <label htmlFor="endYear" className="block text-sm font-medium text-gray-700 mb-1">Año Final:</label>
-                    <Select onValueChange={(value) => setEndYear(Number(value))} defaultValue={endYear?.toString()}>
-                        <SelectTrigger id="endYear">
-                            <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-          </div>
-          <DialogFooter className="px-6 pb-6 flex justify-between">
-            {pgd ? (
-              <>
-                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>Eliminar</Button>
-                <Button onClick={handleSave}>Guardar</Button>
-              </>
-            ) : (
-                <div className="w-full flex justify-end gap-2">
-                 <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-                 <Button onClick={handleSave}>Guardar</Button>
-                </div>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {showDeleteConfirm && (
-        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Confirmar Eliminación</DialogTitle>
-                </DialogHeader>
-                <p>¿Está seguro de que desea eliminar el plan {pgd?.startYear} - {pgd?.endYear}? Esta acción no se puede deshacer.</p>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
-                    <Button variant="destructive" onClick={handleDelete}>Eliminar</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-      )}
-    </>
-  );
-}
-
 function POIModal({
     isOpen,
     onClose,
@@ -289,6 +155,14 @@ function POIModal({
         }
         setErrors({});
     }, [project, isOpen]);
+
+    React.useEffect(() => {
+      if (formData.type === 'Proyecto') {
+        setFormData(p => ({...p, managementMethod: 'Scrum'}));
+      } else if (formData.type === 'Actividad') {
+        setFormData(p => ({...p, managementMethod: 'Kanban'}));
+      }
+    }, [formData.type]);
     
     const validate = () => {
         const newErrors: {[key: string]: string} = {};
@@ -371,11 +245,6 @@ function POIModal({
                         {errors.classification && <p className="text-red-500 text-xs mt-1">{errors.classification}</p>}
                     </div>
                     <div>
-                       <label>Monto anual *</label>
-                       <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
-                        {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
-                    </div>
-                    <div>
                         <label>Estado *</label>
                         <Select value={formData.status} onValueChange={(value) => setFormData(p => ({...p, status: value as Project['status']}))}>
                             <SelectTrigger className={errors.status ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
@@ -388,30 +257,49 @@ function POIModal({
                         </Select>
                          {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
                     </div>
-                    {isMissingDataMode && (
+                    {isEditMode && (
                         <>
                             <div>
-                                <label>Scrum Master *</label>
-                                <Input 
-                                    placeholder="Requerido" 
-                                    value={formData.scrumMaster || ''} 
-                                    onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))} 
-                                    className={errors.scrumMaster ? 'border-red-500' : ''} 
-                                />
-                                {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
+                               <label>Coordinación</label>
+                               <Input placeholder="Ingresar coordinador" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} />
                             </div>
                             <div>
-                                <label>Fechas *</label>
-                                <Input 
-                                    placeholder="Requerido" 
-                                    value={formData.startDate || ''} 
-                                    onChange={e => setFormData(p => ({...p, startDate: e.target.value}))} 
-                                    className={errors.startDate ? 'border-red-500' : ''} 
-                                />
-                                {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
+                               <label>Área Financiera</label>
+                               <Input placeholder="Ingresar área financiera" value={formData.financialArea || ''} onChange={e => setFormData(p => ({...p, financialArea: e.target.value}))} />
+                            </div>
+                             <div>
+                               <label>Coordinador</label>
+                               <Input placeholder="Ingresar coordinador" value={formData.coordinator || ''} onChange={e => setFormData(p => ({...p, coordinator: e.target.value}))} />
+                            </div>
+                            <div>
+                               <label>Gestor/Scrum Master</label>
+                               <Input placeholder="Ingresar scrum master" value={formData.scrumMaster || ''} onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))} />
+                            </div>
+                            <div>
+                               <label>Responsable</label>
+                               <Input placeholder="Ingresar responsable" value={formData.responsible || ''} onChange={e => setFormData(p => ({...p, responsible: e.target.value}))} />
+                            </div>
+                            <div>
+                               <label>Año</label>
+                               <Input placeholder="Ingresar año" value={formData.year || ''} onChange={e => setFormData(p => ({...p, year: e.target.value}))} />
+                            </div>
+                             <div>
+                               <label>Monto anual</label>
+                               <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} />
+                            </div>
+                            <div>
+                               <label>Método de gestión de proyecto</label>
+                               <Input readOnly value={formData.managementMethod || ''} />
                             </div>
                         </>
                     )}
+                     {!isEditMode && (
+                         <div>
+                           <label>Monto anual *</label>
+                           <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
+                            {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
+                        </div>
+                     )}
                 </div>
                 <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
                      <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
@@ -477,8 +365,9 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar</DropdownMenuItem>
+                        <DropdownMenuItem disabled>Ir a proyecto / Actividad</DropdownMenuItem>
+                        <DropdownMenuItem onClick={onEdit}>Editar POI</DropdownMenuItem>
+                        <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar POI</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </CardHeader>
@@ -491,7 +380,7 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
                 <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
-                    <Badge variant="outline" className="border-gray-300">{project.startDate} - {project.endDate}</Badge>
+                    <Badge variant="outline" className="border-gray-300 bg-transparent">{project.startDate} - {project.endDate}</Badge>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35]" />
@@ -533,46 +422,12 @@ const navItems = [
 
 
 export default function PoiPage() {
-  const [pgds, setPgds] = React.useState<PGD[]>(initialPgds);
-  const [selectedPgd, setSelectedPgd] = React.useState<string | undefined>(
-    pgds.length > 0 ? pgds[0].id : undefined
-  );
-  const [isPgdModalOpen, setIsPgdModalOpen] = React.useState(false);
-  const [editingPgd, setEditingPgd] = React.useState<PGD | null>(null);
-
   const [projects, setProjects] = React.useState<Project[]>(initialProjects);
   const [isPoiModalOpen, setIsPoiModalOpen] = React.useState(false);
   const [editingProject, setEditingProject] = React.useState<Partial<Project> | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [deletingProject, setDeletingProject] = React.useState<Project | null>(null);
 
-
-  const handleOpenPgdModal = (pgd: PGD | null = null) => {
-    setEditingPgd(pgd);
-    setIsPgdModalOpen(true);
-  };
-
-  const handleClosePgdModal = () => {
-    setIsPgdModalOpen(false);
-    setEditingPgd(null);
-  };
-
-  const handleSavePgd = (data: { startYear: number; endYear: number }) => {
-    if (editingPgd) {
-      setPgds(pgds.map((p) => (p.id === editingPgd.id ? { ...p, ...data } : p)));
-    } else {
-      const newPgd = { id: Date.now().toString(), ...data };
-      setPgds([...pgds, newPgd]);
-      setSelectedPgd(newPgd.id);
-    }
-  };
-
-   const handleDeletePgd = (id: string) => {
-    setPgds(pgds.filter((p) => p.id !== id));
-    if (selectedPgd === id) {
-      setSelectedPgd(pgds.length > 1 ? pgds.filter(p => p.id !== id)[0].id : undefined);
-    }
-  };
 
   const handleOpenPoiModal = (project: Partial<Project> | null = null) => {
       setEditingProject(project);
@@ -589,7 +444,7 @@ export default function PoiPage() {
       if (exists) {
           setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: !p.scrumMaster || !p.startDate } : p));
       } else {
-          setProjects([...projects, { ...projectData, id: Date.now().toString() }]);
+          setProjects([...projects, { ...projectData, id: Date.now().toString(), missingData: true }]);
       }
   }
   
@@ -615,7 +470,6 @@ export default function PoiPage() {
     <AppLayout
       navItems={navItems}
       breadcrumbs={[
-        { label: "PGD", href: "/pmo-dashboard" },
         { label: "POI" },
       ]}
     >
@@ -625,37 +479,6 @@ export default function PoiPage() {
             PLAN OPERATIVO INFORMÁTICO (POI)
           </h2>
           <div className="flex items-center gap-2">
-            <Select value={selectedPgd} onValueChange={setSelectedPgd}>
-              <SelectTrigger className="w-[180px] bg-white border-[#484848]">
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {pgds.map((pgd) => (
-                  <SelectItem key={pgd.id} value={pgd.id}>
-                    {`${pgd.startYear} - ${pgd.endYear}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="icon"
-              style={{ backgroundColor: "#3B4466", color: "white" }}
-              className="border border-[#979797]"
-              onClick={() => handleOpenPgdModal()}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              style={{ backgroundColor: "#3B4466", color: "white" }}
-              className="border border-[#979797]"
-              disabled={!selectedPgd}
-              onClick={() =>
-                handleOpenPgdModal(pgds.find((p) => p.id === selectedPgd) || null)
-              }
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
             <Button onClick={() => handleOpenPoiModal()} style={{ backgroundColor: "#018CD1", color: "white" }}>
               <Plus className="mr-2 h-4 w-4" /> NUEVO POI
             </Button>
@@ -727,14 +550,6 @@ export default function PoiPage() {
         </Pagination>
 
       </div>
-
-      <PGDModal
-        isOpen={isPgdModalOpen}
-        onClose={handleClosePgdModal}
-        pgd={editingPgd}
-        onSave={handleSavePgd}
-        onDelete={handleDeletePgd}
-      />
       
       <POIModal
         isOpen={isPoiModalOpen}
