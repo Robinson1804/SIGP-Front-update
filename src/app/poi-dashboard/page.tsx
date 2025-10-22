@@ -53,6 +53,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 type PGD = {
   id: string;
@@ -80,7 +81,7 @@ type Project = {
     annualAmount: number;
     strategicAction: string;
     missingData?: boolean;
-    years?: number[];
+    years?: string[];
 };
 
 const initialProjects: Project[] = [
@@ -97,7 +98,7 @@ const initialProjects: Project[] = [
         annualAmount: 50000,
         strategicAction: 'AE N°1',
         missingData: false,
-        years: [2025],
+        years: ["2025"],
     },
     {
         id: '2',
@@ -110,7 +111,7 @@ const initialProjects: Project[] = [
         annualAmount: 75000,
         strategicAction: 'AE N°2',
         missingData: true,
-        years: [2025]
+        years: ["2025"]
     }
 ];
 
@@ -306,17 +307,8 @@ function POIModal({
         onClose();
     }
     
-    const handleYearSelect = (year: number) => {
-        const currentYears = formData.years || [];
-        if (!currentYears.includes(year)) {
-            setFormData(p => ({...p, years: [...currentYears, year].sort()}));
-        }
-    }
+    const yearOptions = availableYears.map(y => ({ label: y.toString(), value: y.toString() }));
 
-    const handleYearRemove = (year: number) => {
-        setFormData(p => ({...p, years: p.years?.filter(y => y !== year)}));
-    }
-    
     const isEditMode = !!project?.id;
 
     return (
@@ -392,26 +384,13 @@ function POIModal({
                     </div>
                      <div>
                         <label>Año *</label>
-                        <div className="flex flex-col">
-                             <Select onValueChange={(value) => handleYearSelect(Number(value))}>
-                                <SelectTrigger className={errors.years ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar año(s)" /></SelectTrigger>
-                                <SelectContent>
-                                    {availableYears.map(year => (
-                                        <SelectItem key={year} value={year.toString()} disabled={(formData.years || []).includes(year)}>{year}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {formData.years?.map(year => (
-                                    <Badge key={year} variant="secondary" className="flex items-center gap-1">
-                                        {year}
-                                        <button onClick={() => handleYearRemove(year)} className="rounded-full hover:bg-black/10">
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    </Badge>
-                                ))}
-                            </div>
-                        </div>
+                        <MultiSelect
+                            options={yearOptions}
+                            selected={formData.years || []}
+                            onChange={(selected) => setFormData(p => ({...p, years: selected}))}
+                            className={errors.years ? 'border-red-500' : ''}
+                            placeholder="Seleccionar año(s)"
+                        />
                          {errors.years && <p className="text-red-500 text-xs mt-1">{errors.years}</p>}
                     </div>
                 </div>
