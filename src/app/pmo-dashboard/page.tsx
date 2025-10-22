@@ -14,6 +14,7 @@ import {
   FolderKanban,
   Plus,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
+    DialogClose,
 } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import Link from "next/link";
@@ -64,6 +66,16 @@ function PGDModal({
   const [endYear, setEndYear] = useState<number | undefined>(pgd?.endYear);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  React.useEffect(() => {
+    if (pgd) {
+      setStartYear(pgd.startYear);
+      setEndYear(pgd.endYear);
+    } else {
+      setStartYear(undefined);
+      setEndYear(undefined);
+    }
+  }, [pgd, isOpen]);
+  
   const handleSave = () => {
     if (startYear && endYear) {
       if (endYear - startYear !== 4) {
@@ -92,14 +104,16 @@ function PGDModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] p-0">
-          <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg">
-            <DialogTitle className="flex justify-between items-center">
+        <DialogContent className="sm:max-w-[500px] p-0" showCloseButton={false}>
+          <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+            <DialogTitle>
               {pgd ? "EDITAR PLAN DE GOBIERNO DIGITAL (PGD)" : "REGISTRAR PLAN DE GOBIERNO DIGITAL (PGD)"}
-              <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10 hover:text-white">
-                <X className="h-4 w-4" />
-              </Button>
             </DialogTitle>
+             <DialogClose asChild>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+                    <X className="h-4 w-4" />
+                </Button>
+            </DialogClose>
           </DialogHeader>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -224,7 +238,7 @@ export default function PmoDashboardPage() {
       );
       setPgds(updatedPgds);
     } else {
-      const newPgd = { id: (pgds.length + 1).toString(), ...data };
+      const newPgd = { id: (Date.now()).toString(), ...data };
       const updatedPgds = [...pgds, newPgd];
       setPgds(updatedPgds);
       setSelectedPgd(newPgd.id);
