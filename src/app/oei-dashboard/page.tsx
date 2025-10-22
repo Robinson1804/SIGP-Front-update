@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, from 'react';
+import React from 'react';
 import {
   FileText,
   Target,
@@ -62,6 +62,121 @@ const initialOeis: OEI[] = [
 ];
 
 const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
+const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
+
+function PGDModal({
+  isOpen,
+  onClose,
+  pgd,
+  onSave,
+  onDelete,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  pgd: PGD | null;
+  onSave: (data: { startYear: number; endYear: number }) => void;
+  onDelete?: (id: string) => void;
+}) {
+  const [startYear, setStartYear] = React.useState<number | undefined>(pgd?.startYear);
+  const [endYear, setEndYear] = React.useState<number | undefined>(pgd?.endYear);
+  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+
+  const handleSave = () => {
+    if (startYear && endYear) {
+      if (endYear - startYear !== 4) {
+        alert("El rango debe ser de 4 años.");
+        return;
+      }
+       if (endYear < startYear) {
+        alert("El año final no puede ser menor al año de inicio.");
+        return;
+      }
+      onSave({ startYear, endYear });
+      onClose();
+    }
+  };
+  
+  const handleDelete = () => {
+      if (pgd?.id) {
+          onDelete?.(pgd.id);
+          setShowDeleteConfirm(false);
+          onClose();
+      }
+  }
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[500px] p-0">
+          <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg">
+            <DialogTitle className="flex justify-between items-center">
+              {pgd ? "EDITAR PLAN DE GOBIERNO DIGITAL (PGD)" : "REGISTRAR PLAN DE GOBIERNO DIGITAL (PGD)"}
+              <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10 hover:text-white">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="startYear" className="block text-sm font-medium text-gray-700 mb-1">Año Inicio:</label>
+                    <Select onValueChange={(value) => setStartYear(Number(value))} defaultValue={startYear?.toString()}>
+                        <SelectTrigger id="startYear">
+                            <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {years.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div>
+                    <label htmlFor="endYear" className="block text-sm font-medium text-gray-700 mb-1">Año Final:</label>
+                    <Select onValueChange={(value) => setEndYear(Number(value))} defaultValue={endYear?.toString()}>
+                        <SelectTrigger id="endYear">
+                            <SelectValue placeholder="Seleccionar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {years.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+          </div>
+          <DialogFooter className="px-6 pb-6 flex justify-between">
+            {pgd ? (
+              <>
+                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>Eliminar</Button>
+                <Button onClick={handleSave}>Guardar</Button>
+              </>
+            ) : (
+                <div className="w-full flex justify-end gap-2">
+                 <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+                 <Button onClick={handleSave}>Guardar</Button>
+                </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {showDeleteConfirm && (
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Confirmar Eliminación</DialogTitle>
+                </DialogHeader>
+                <p>¿Está seguro de que desea eliminar el plan {pgd?.startYear} - {pgd?.endYear}? Esta acción no se puede deshacer.</p>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
+                    <Button variant="destructive" onClick={handleDelete}>Eliminar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
+    </>
+  );
+}
 
 
 function OEIModal({
@@ -276,16 +391,51 @@ const navItems = [
 ];
 
 export default function OeiDashboardPage() {
-  const [pgds] = React.useState<PGD[]>(initialPgds);
+  const [pgds, setPgds] = React.useState<PGD[]>(initialPgds);
   const [selectedPgd, setSelectedPgd] = React.useState<string | undefined>(
     pgds.length > 0 ? pgds[0].id : undefined
   );
-  
+  const [isPgdModalOpen, setIsPgdModalOpen] = React.useState(false);
+  const [editingPgd, setEditingPgd] = React.useState<PGD | null>(null);
+
   const [oeis, setOeis] = React.useState<OEI[]>(initialOeis);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingOei, setEditingOei] = React.useState<OEI | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [deletingOei, setDeletingOei] = React.useState<OEI | null>(null);
+
+  const handleOpenPgdModal = (pgd: PGD | null = null) => {
+    setEditingPgd(pgd);
+    setIsPgdModalOpen(true);
+  };
+
+  const handleClosePgdModal = () => {
+    setIsPgdModalOpen(false);
+    setEditingPgd(null);
+  };
+
+  const handleSavePgd = (data: { startYear: number; endYear: number }) => {
+    if (editingPgd) {
+      const updatedPgds = pgds.map((p) =>
+        p.id === editingPgd.id ? { ...p, ...data } : p
+      );
+      setPgds(updatedPgds);
+    } else {
+      const newPgd = { id: (pgds.length + 1).toString(), ...data };
+      const updatedPgds = [...pgds, newPgd];
+      setPgds(updatedPgds);
+      setSelectedPgd(newPgd.id);
+    }
+  };
+
+  const handleDeletePgd = (id: string) => {
+    const updatedPgds = pgds.filter((p) => p.id !== id);
+    setPgds(updatedPgds);
+    if (selectedPgd === id) {
+      const newSelectedId = updatedPgds.length > 0 ? updatedPgds[0].id : undefined;
+      setSelectedPgd(newSelectedId);
+    }
+  };
 
   const handleOpenModal = (oei: OEI | null = null) => {
     setEditingOei(oei);
@@ -355,7 +505,7 @@ export default function OeiDashboardPage() {
               size="icon"
               style={{ backgroundColor: "#3B4466", color: "white" }}
               className="border border-[#979797]"
-              onClick={() => {}}
+              onClick={() => handleOpenPgdModal()}
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -364,7 +514,9 @@ export default function OeiDashboardPage() {
               style={{ backgroundColor: "#3B4466", color: "white" }}
               className="border border-[#979797]"
               disabled={!selectedPgd}
-              onClick={() => {}}
+              onClick={() =>
+                handleOpenPgdModal(pgds.find((p) => p.id === selectedPgd) || null)
+              }
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -384,6 +536,14 @@ export default function OeiDashboardPage() {
           </div>
         </div>
       </div>
+
+      <PGDModal
+        isOpen={isPgdModalOpen}
+        onClose={handleClosePgdModal}
+        pgd={editingPgd}
+        onSave={handleSavePgd}
+        onDelete={handleDeletePgd}
+      />
 
       <OEIModal
         isOpen={isModalOpen}
