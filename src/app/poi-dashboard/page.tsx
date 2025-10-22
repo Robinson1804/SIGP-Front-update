@@ -270,7 +270,19 @@ function POIModal({
         if (project) {
             setFormData(project);
         } else {
-            setFormData({});
+            setFormData({
+                id: '',
+                name: '',
+                description: '',
+                type: undefined,
+                classification: undefined,
+                status: undefined,
+                startDate: '',
+                endDate: '',
+                scrumMaster: '',
+                annualAmount: 0,
+                strategicAction: '',
+            });
         }
         setErrors({});
     }, [project, isOpen]);
@@ -286,7 +298,8 @@ function POIModal({
         if (!formData.status) newErrors.status = "El estado es requerido.";
         
         if (project?.missingData) {
-            // Add more validations for the extra fields
+             if (!formData.scrumMaster) newErrors.scrumMaster = "El campo es requerido";
+             if (!formData.startDate) newErrors.startDate = "El campo es requerido";
         }
 
         setErrors(newErrors);
@@ -304,7 +317,7 @@ function POIModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-3xl p-0" showCloseButton={false}>
+            <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
                     <DialogTitle>{isEditMode ? 'EDITAR' : 'REGISTRAR'} PLAN OPERATIVO INFORMÁTICO (POI)</DialogTitle>
                     <DialogClose asChild>
@@ -312,79 +325,93 @@ function POIModal({
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label>Tipo (Proyecto/Actividad) *</label>
-                            <Select value={formData.type} onValueChange={(value) => setFormData(p => ({...p, type: value as Project['type']}))}>
-                                <SelectTrigger className={errors.type ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Proyecto">Proyecto</SelectItem>
-                                    <SelectItem value="Actividad">Actividad</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type}</p>}
-                        </div>
-                        <div>
-                           <label>Nombre *</label>
-                           <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => setFormData(p => ({...p, name: e.target.value}))} className={errors.name ? 'border-red-500' : ''} />
-                           {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-                        </div>
+                    <div>
+                        <label>Tipo (Proyecto/Actividad) *</label>
+                        <Select value={formData.type} onValueChange={(value) => setFormData(p => ({...p, type: value as Project['type']}))}>
+                            <SelectTrigger className={errors.type ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Proyecto">Proyecto</SelectItem>
+                                <SelectItem value="Actividad">Actividad</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {errors.type && <p className="text-red-500 text-xs mt-1">{errors.type}</p>}
+                    </div>
+                    <div>
+                       <label>Nombre *</label>
+                       <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => setFormData(p => ({...p, name: e.target.value}))} className={errors.name ? 'border-red-500' : ''} />
+                       {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                     </div>
                      <div>
                        <label>Descripción *</label>
                        <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} className={errors.description ? 'border-red-500' : ''} />
                        {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label>Acción Estratégica *</label>
-                            <Select value={formData.strategicAction} onValueChange={(value) => setFormData(p => ({...p, strategicAction: value}))}>
-                                <SelectTrigger className={errors.strategicAction ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar AE" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="AE N°1">AE N°1</SelectItem>
-                                    <SelectItem value="AE N°2">AE N°2</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
-                        </div>
-                         <div>
-                            <label>Clasificación *</label>
-                            <Select value={formData.classification} onValueChange={(value) => setFormData(p => ({...p, classification: value as Project['classification']}))}>
-                                <SelectTrigger className={errors.classification ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar clasificación" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
-                                    <SelectItem value="Gestión interna">Gestión interna</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {errors.classification && <p className="text-red-500 text-xs mt-1">{errors.classification}</p>}
-                        </div>
-                        <div>
-                           <label>Monto anual *</label>
-                           <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
-                            {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
-                        </div>
-                        <div>
-                            <label>Estado *</label>
-                            <Select value={formData.status} onValueChange={(value) => setFormData(p => ({...p, status: value as Project['status']}))}>
-                                <SelectTrigger className={errors.status ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                    <SelectItem value="En planificación">En planificación</SelectItem>
-                                    <SelectItem value="En desarrollo">En desarrollo</SelectItem>
-                                    <SelectItem value="Finalizado">Finalizado</SelectItem>
-                                </SelectContent>
-                            </Select>
-                             {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
-                        </div>
-                         {isMissingDataMode && (
-                            <>
-                                <div><label>Campo Adicional 1*</label><Input placeholder="Requerido" className="border-red-500" /> <p className="text-red-500 text-xs mt-1">El campo es requerido</p></div>
-                                <div><label>Campo Adicional 2*</label><Input placeholder="Requerido" className="border-red-500" /> <p className="text-red-500 text-xs mt-1">El campo es requerido</p></div>
-                            </>
-                        )}
+                    <div>
+                        <label>Acción Estratégica *</label>
+                        <Select value={formData.strategicAction} onValueChange={(value) => setFormData(p => ({...p, strategicAction: value}))}>
+                            <SelectTrigger className={errors.strategicAction ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar AE" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="AE N°1">AE N°1</SelectItem>
+                                <SelectItem value="AE N°2">AE N°2</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
                     </div>
+                     <div>
+                        <label>Clasificación *</label>
+                        <Select value={formData.classification} onValueChange={(value) => setFormData(p => ({...p, classification: value as Project['classification']}))}>
+                            <SelectTrigger className={errors.classification ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar clasificación" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
+                                <SelectItem value="Gestión interna">Gestión interna</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {errors.classification && <p className="text-red-500 text-xs mt-1">{errors.classification}</p>}
+                    </div>
+                    <div>
+                       <label>Monto anual *</label>
+                       <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
+                        {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
+                    </div>
+                    <div>
+                        <label>Estado *</label>
+                        <Select value={formData.status} onValueChange={(value) => setFormData(p => ({...p, status: value as Project['status']}))}>
+                            <SelectTrigger className={errors.status ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                <SelectItem value="En planificación">En planificación</SelectItem>
+                                <SelectItem value="En desarrollo">En desarrollo</SelectItem>
+                                <SelectItem value="Finalizado">Finalizado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                         {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+                    </div>
+                    {isMissingDataMode && (
+                        <>
+                            <div>
+                                <label>Scrum Master *</label>
+                                <Input 
+                                    placeholder="Requerido" 
+                                    value={formData.scrumMaster || ''} 
+                                    onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))} 
+                                    className={errors.scrumMaster ? 'border-red-500' : ''} 
+                                />
+                                {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
+                            </div>
+                            <div>
+                                <label>Fechas *</label>
+                                <Input 
+                                    placeholder="Requerido" 
+                                    value={formData.startDate || ''} 
+                                    onChange={e => setFormData(p => ({...p, startDate: e.target.value}))} 
+                                    className={errors.startDate ? 'border-red-500' : ''} 
+                                />
+                                {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
+                            </div>
+                        </>
+                    )}
                 </div>
-                <DialogFooter className="px-6 pb-6 flex justify-between">
+                <DialogFooter className="px-6 pb-6 flex justify-between items-center">
                      {isEditMode ? (
                         <Button variant="destructive" onClick={() => {}}>Eliminar</Button>
                      ) : <div></div>}
@@ -398,15 +425,51 @@ function POIModal({
     );
 }
 
+function DeleteConfirmationModal({
+    isOpen,
+    onClose,
+    onConfirm,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+}) {
+    if (!isOpen) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
+                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+                    <DialogTitle>AVISO</DialogTitle>
+                     <DialogClose asChild>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </DialogClose>
+                </DialogHeader>
+                <div className="p-6 text-center flex flex-col items-center">
+                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
+                    <p className="font-bold text-lg">¿Estás seguro?</p>
+                    <p className="text-muted-foreground">El Plan Operativo Informático será eliminado</p>
+                </div>
+                <DialogFooter className="px-6 pb-6 flex justify-center gap-4">
+                    <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
+                    <Button onClick={onConfirm} style={{backgroundColor: '#018CD1', color: 'white'}}>Sí, eliminar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
     const cardContent = (
-         <Card className={`w-full h-full flex flex-col ${project.missingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
+         <Card className={`w-full h-full flex flex-col shadow-md rounded-lg ${project.missingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-2">
                     <Folder className="w-6 h-6 text-[#008ED2]" />
                     <div className="flex flex-col">
                         <h3 className="font-bold text-black">{project.name}</h3>
-                        <Badge variant="secondary" className="text-[#ADADAD] w-fit">{project.type}</Badge>
+                        <Badge variant="secondary" className="text-[#ADADAD] w-fit bg-transparent">{project.type}</Badge>
                     </div>
                 </div>
                 <DropdownMenu>
@@ -430,7 +493,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                 <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
-                    <Badge variant="outline">{project.startDate} - {project.endDate}</Badge>
+                    <Badge variant="outline" className="border-gray-300">{project.startDate} - {project.endDate}</Badge>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35]" />
@@ -446,7 +509,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                       {cardContent}
+                       <div className="h-full">{cardContent}</div>
                     </TooltipTrigger>
                     <TooltipContent className="bg-red-50 border-red-200">
                         <div className="flex items-center gap-2">
@@ -482,6 +545,9 @@ export default function PoiDashboardPage() {
   const [projects, setProjects] = React.useState<Project[]>(initialProjects);
   const [isPoiModalOpen, setIsPoiModalOpen] = React.useState(false);
   const [editingProject, setEditingProject] = React.useState<Partial<Project> | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const [deletingProject, setDeletingProject] = React.useState<Project | null>(null);
+
 
   const handleOpenPgdModal = (pgd: PGD | null = null) => {
     setEditingPgd(pgd);
@@ -521,15 +587,29 @@ export default function PoiDashboardPage() {
   }
   
   const handleSaveProject = (projectData: Project) => {
-      if (projectData.id) {
+      const exists = projects.some(p => p.id === projectData.id);
+      if (exists) {
           setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: false} : p));
       } else {
-          setProjects([...projects, { ...projectData, id: Date.now().toString() }]);
+          setProjects([...projects, { ...projectData, id: Date.now().toString(), missingData: true }]);
       }
   }
   
-  const handleDeleteProject = (id: string) => {
-      setProjects(projects.filter(p => p.id !== id));
+  const handleOpenDeleteModal = (project: Project) => {
+    setDeletingProject(project);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setDeletingProject(null);
+  };
+  
+  const handleDeleteProject = () => {
+      if (deletingProject) {
+        setProjects(projects.filter(p => p.id !== deletingProject.id));
+        handleCloseDeleteModal();
+      }
   }
 
 
@@ -585,9 +665,9 @@ export default function PoiDashboardPage() {
         </div>
       </div>
       <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
-        <div className="flex items-center mb-4">
-            <Button className="rounded-r-none bg-[#018CD1]">POI</Button>
-            <Button variant="outline" className="rounded-l-none bg-white text-black border-l-0">REPORTE POI</Button>
+        <div className="flex items-center mb-4 gap-4">
+            <Button className="bg-[#018CD1] text-white">POI</Button>
+            <Button variant="outline" className="bg-white text-black border-gray-300">REPORTE POI</Button>
         </div>
         <div className="flex items-center gap-2 text-[#004272] mb-4">
             <Folder />
@@ -630,7 +710,7 @@ export default function PoiDashboardPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-6">
             {projects.map(p => (
-                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleDeleteProject(p.id)} />
+                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} />
             ))}
         </div>
         
@@ -663,6 +743,12 @@ export default function PoiDashboardPage() {
         onClose={handleClosePoiModal}
         project={editingProject}
         onSave={handleSaveProject}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleDeleteProject}
       />
       
     </AppLayout>
