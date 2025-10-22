@@ -135,26 +135,54 @@ function POIModal({
     
     const isMissingDataMode = project?.missingData;
 
-    React.useEffect(() => {
-        if (project) {
-            setFormData(project);
-        } else {
-            setFormData({
-                id: '',
-                name: '',
-                description: '',
-                type: undefined,
-                classification: undefined,
-                status: undefined,
-                startDate: '',
-                endDate: '',
-                scrumMaster: '',
-                annualAmount: 0,
-                strategicAction: '',
-            });
+    const validate = React.useCallback((data: Partial<Project>) => {
+        const newErrors: {[key: string]: string} = {};
+        if (!data.type) newErrors.type = "El tipo es requerido.";
+        if (!data.name) newErrors.name = "El nombre es requerido.";
+        if (!data.description) newErrors.description = "La descripción es requerida.";
+        if (!data.strategicAction) newErrors.strategicAction = "La acción estratégica es requerida.";
+        if (!data.classification) newErrors.classification = "La clasificación es requerida.";
+        if (!data.annualAmount) newErrors.annualAmount = "El monto es requerido.";
+        if (!data.status) newErrors.status = "El estado es requerido.";
+        
+        if (isMissingDataMode) {
+             if (!data.scrumMaster) newErrors.scrumMaster = "El campo es requerido";
+             if (!data.coordination) newErrors.coordination = "El campo es requerido";
+             if (!data.financialArea) newErrors.financialArea = "El campo es requerido";
+             if (!data.coordinator) newErrors.coordinator = "El campo es requerido";
+             if (!data.responsible) newErrors.responsible = "El campo es requerido";
+             if (!data.year) newErrors.year = "El campo es requerido";
         }
-        setErrors({});
-    }, [project, isOpen]);
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    }, [isMissingDataMode]);
+
+    React.useEffect(() => {
+        const initialData = project || {
+            id: '',
+            name: '',
+            description: '',
+            type: undefined,
+            classification: undefined,
+            status: undefined,
+            startDate: '',
+            endDate: '',
+            scrumMaster: '',
+            annualAmount: 0,
+            strategicAction: '',
+        };
+        setFormData(initialData);
+
+        if (isOpen) {
+            if (isMissingDataMode) {
+                // Delay validation to allow state to update
+                setTimeout(() => validate(initialData), 0);
+            } else {
+                setErrors({});
+            }
+        }
+    }, [project, isOpen, isMissingDataMode, validate]);
 
     React.useEffect(() => {
       if (formData.type === 'Proyecto') {
@@ -164,33 +192,9 @@ function POIModal({
       }
     }, [formData.type]);
     
-    const validate = () => {
-        const newErrors: {[key: string]: string} = {};
-        if (!formData.type) newErrors.type = "El tipo es requerido.";
-        if (!formData.name) newErrors.name = "El nombre es requerido.";
-        if (!formData.description) newErrors.description = "La descripción es requerida.";
-        if (!formData.strategicAction) newErrors.strategicAction = "La acción estratégica es requerida.";
-        if (!formData.classification) newErrors.classification = "La clasificación es requerida.";
-        if (!formData.annualAmount) newErrors.annualAmount = "El monto es requerido.";
-        if (!formData.status) newErrors.status = "El estado es requerido.";
-        
-        if (isMissingDataMode) {
-             if (!formData.scrumMaster) newErrors.scrumMaster = "El campo es requerido";
-             if (!formData.startDate) newErrors.startDate = "El campo es requerido";
-             if (!formData.endDate) newErrors.endDate = "El campo es requerido";
-             if (!formData.coordination) newErrors.coordination = "El campo es requerido";
-             if (!formData.financialArea) newErrors.financialArea = "El campo es requerido";
-             if (!formData.coordinator) newErrors.coordinator = "El campo es requerido";
-             if (!formData.responsible) newErrors.responsible = "El campo es requerido";
-             if (!formData.year) newErrors.year = "El campo es requerido";
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    }
 
     const handleSave = () => {
-        if (!validate()) return;
+        if (!validate(formData)) return;
         onSave({ ...formData as Project, missingData: false });
         onClose();
     }
@@ -267,7 +271,7 @@ function POIModal({
                             </div>
                             <div>
                                <label>Coordinación</label>
-                               <Input placeholder="Ingresar coordinador" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} className={errors.coordination ? 'border-red-500' : ''} />
+                               <Input placeholder="Ingresar coordinación" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} className={errors.coordination ? 'border-red-500' : ''} />
                                {errors.coordination && <p className="text-red-500 text-xs mt-1">{errors.coordination}</p>}
                             </div>
                         </div>
