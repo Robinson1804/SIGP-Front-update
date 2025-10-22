@@ -15,6 +15,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  X,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,6 @@ import {
     DialogFooter,
     DialogClose,
 } from "@/components/ui/dialog";
-import { X } from "lucide-react";
 import Link from "next/link";
 
 type PGD = {
@@ -109,7 +109,7 @@ function PGDModal({
             <DialogTitle>
               {pgd ? "EDITAR PLAN DE GOBIERNO DIGITAL (PGD)" : "REGISTRAR PLAN DE GOBIERNO DIGITAL (PGD)"}
             </DialogTitle>
-             <DialogClose asChild>
+            <DialogClose asChild>
                 <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
                     <X className="h-4 w-4" />
                 </Button>
@@ -257,7 +257,7 @@ export default function PmoDashboardPage() {
   const cardsData = [
     { icon: Landmark, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]", href: "/oei-dashboard" },
     { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]", href: "/ogd-dashboard" },
-    { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]", href: "#" },
+    { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]", href: "/oegd-dashboard" },
     { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "#" },
     { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "#" },
   ];
@@ -329,3 +329,5 @@ export default function PmoDashboardPage() {
     </AppLayout>
   );
 }
+
+    
