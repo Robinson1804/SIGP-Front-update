@@ -17,7 +17,6 @@ import {
   CheckCircle,
   Calendar,
   MoreVertical,
-  AlertTriangle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -54,13 +53,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
 
 type PGD = {
   id: string;
@@ -453,7 +445,7 @@ function DeleteConfirmationModal({
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 text-center flex flex-col items-center">
-                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
+                    <Folder className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
                     <p className="font-bold text-lg">¿Estás seguro?</p>
                     <p className="text-muted-foreground">El Plan Operativo Informático será eliminado</p>
                 </div>
@@ -747,3 +739,5 @@ export default function PoiDashboardPage() {
     </AppLayout>
   );
 }
+
+    
