@@ -267,6 +267,8 @@ function POIModal({
     const [formData, setFormData] = React.useState<Partial<Project>>({});
     const [errors, setErrors] = React.useState<{[key: string]: string}>({});
     
+    const isMissingDataMode = project?.missingData;
+
     React.useEffect(() => {
         if (project) {
             setFormData(project);
@@ -298,18 +300,18 @@ function POIModal({
         if (!formData.annualAmount) newErrors.annualAmount = "El monto es requerido.";
         if (!formData.status) newErrors.status = "El estado es requerido.";
         
+        if (isMissingDataMode) {
+             if (!formData.scrumMaster) newErrors.scrumMaster = "El campo es requerido";
+             if (!formData.startDate) newErrors.startDate = "El campo es requerido";
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     }
 
     const handleSave = () => {
         if (!validate()) return;
-        
-        // When creating a new project, flag it as having missing data.
-        const isNewProject = !project?.id;
-        const missingData = isNewProject && formData.type === 'Proyecto';
-
-        onSave({ ...formData as Project, missingData });
+        onSave({ ...formData as Project, missingData: false });
         onClose();
     }
     
@@ -386,6 +388,30 @@ function POIModal({
                         </Select>
                          {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
                     </div>
+                    {isMissingDataMode && (
+                        <>
+                            <div>
+                                <label>Scrum Master *</label>
+                                <Input 
+                                    placeholder="Requerido" 
+                                    value={formData.scrumMaster || ''} 
+                                    onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))} 
+                                    className={errors.scrumMaster ? 'border-red-500' : ''} 
+                                />
+                                {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
+                            </div>
+                            <div>
+                                <label>Fechas *</label>
+                                <Input 
+                                    placeholder="Requerido" 
+                                    value={formData.startDate || ''} 
+                                    onChange={e => setFormData(p => ({...p, startDate: e.target.value}))} 
+                                    className={errors.startDate ? 'border-red-500' : ''} 
+                                />
+                                {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
+                            </div>
+                        </>
+                    )}
                 </div>
                 <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
                      <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
@@ -506,7 +532,7 @@ const navItems = [
 ];
 
 
-export default function PoiDashboardPage() {
+export default function PoiPage() {
   const [pgds, setPgds] = React.useState<PGD[]>(initialPgds);
   const [selectedPgd, setSelectedPgd] = React.useState<string | undefined>(
     pgds.length > 0 ? pgds[0].id : undefined
@@ -561,7 +587,7 @@ export default function PoiDashboardPage() {
   const handleSaveProject = (projectData: Project) => {
       const exists = projects.some(p => p.id === projectData.id);
       if (exists) {
-          setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: false} : p));
+          setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: !p.scrumMaster || !p.startDate } : p));
       } else {
           setProjects([...projects, { ...projectData, id: Date.now().toString() }]);
       }
@@ -682,7 +708,7 @@ export default function PoiDashboardPage() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-6">
             {projects.map(p => (
-                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} showMissingData={false} />
+                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} showMissingData={true} />
             ))}
         </div>
         

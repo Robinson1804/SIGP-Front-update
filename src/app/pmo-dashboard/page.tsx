@@ -207,7 +207,7 @@ const CardItem = ({
 
 const navItems = [
   { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
-  { label: "POI", icon: Target, href: "#" },
+  { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "#" },
   { label: "DASHBOARD", icon: BarChart, href: "#" },
   { label: "NOTIFICACIONES", icon: Bell, href: "#" },
