@@ -308,11 +308,13 @@ function POIModal({
     
     const handleYearSelect = (year: number) => {
         const currentYears = formData.years || [];
-        if (currentYears.includes(year)) {
-            setFormData(p => ({...p, years: currentYears.filter(y => y !== year)}));
-        } else {
-            setFormData(p => ({...p, years: [...currentYears, year]}));
+        if (!currentYears.includes(year)) {
+            setFormData(p => ({...p, years: [...currentYears, year].sort()}));
         }
+    }
+
+    const handleYearRemove = (year: number) => {
+        setFormData(p => ({...p, years: p.years?.filter(y => y !== year)}));
     }
     
     const isEditMode = !!project?.id;
@@ -395,7 +397,7 @@ function POIModal({
                                 <SelectTrigger className={errors.years ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar año(s)" /></SelectTrigger>
                                 <SelectContent>
                                     {availableYears.map(year => (
-                                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                        <SelectItem key={year} value={year.toString()} disabled={(formData.years || []).includes(year)}>{year}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
@@ -403,7 +405,7 @@ function POIModal({
                                 {formData.years?.map(year => (
                                     <Badge key={year} variant="secondary" className="flex items-center gap-1">
                                         {year}
-                                        <button onClick={() => handleYearSelect(year)} className="rounded-full hover:bg-black/10">
+                                        <button onClick={() => handleYearRemove(year)} className="rounded-full hover:bg-black/10">
                                             <X className="h-3 w-3" />
                                         </button>
                                     </Badge>
