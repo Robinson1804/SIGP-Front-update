@@ -72,6 +72,7 @@ const initialPgds: PGD[] = [
   { id: "1", startYear: 2020, endYear: 2024 },
 ];
 
+const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
 type Project = {
@@ -81,12 +82,13 @@ type Project = {
     type: 'Proyecto' | 'Actividad';
     classification: 'Al ciudadano' | 'Gestión interna';
     status: 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
-    startDate: string;
-    endDate: string;
+    startDate?: string;
+    endDate?: string;
     scrumMaster: string;
     annualAmount: number;
     strategicAction: string;
     missingData?: boolean;
+    years?: number[];
 };
 
 const initialProjects: Project[] = [
@@ -103,6 +105,7 @@ const initialProjects: Project[] = [
         annualAmount: 50000,
         strategicAction: 'AE N°1',
         missingData: false,
+        years: [2025],
     },
     {
         id: '2',
@@ -111,12 +114,11 @@ const initialProjects: Project[] = [
         type: 'Proyecto',
         classification: 'Al ciudadano',
         status: 'En desarrollo',
-        startDate: 'Mayo 2025',
-        endDate: 'Dic 2025',
         scrumMaster: 'Juan Garcia',
         annualAmount: 75000,
         strategicAction: 'AE N°2',
         missingData: true,
+        years: [2025]
     }
 ];
 
@@ -278,11 +280,10 @@ function POIModal({
                 type: undefined,
                 classification: undefined,
                 status: undefined,
-                startDate: '',
-                endDate: '',
                 scrumMaster: '',
                 annualAmount: 0,
                 strategicAction: '',
+                years: [],
             });
         }
         setErrors({});
@@ -297,6 +298,7 @@ function POIModal({
         if (!formData.classification) newErrors.classification = "La clasificación es requerida.";
         if (!formData.annualAmount) newErrors.annualAmount = "El monto es requerido.";
         if (!formData.status) newErrors.status = "El estado es requerido.";
+        if (!formData.years || formData.years.length === 0) newErrors.years = "El año es requerido.";
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -310,6 +312,15 @@ function POIModal({
 
         onSave({ ...formData as Project, missingData });
         onClose();
+    }
+    
+    const handleYearSelect = (year: number) => {
+        const currentYears = formData.years || [];
+        if (currentYears.includes(year)) {
+            setFormData(p => ({...p, years: currentYears.filter(y => y !== year)}));
+        } else {
+            setFormData(p => ({...p, years: [...currentYears, year]}));
+        }
     }
     
     const isEditMode = !!project?.id;
@@ -365,7 +376,7 @@ function POIModal({
                                 <SelectItem value="Gestión interna">Gestión interna</SelectItem>
                             </SelectContent>
                         </Select>
-                        {errors.classification && <p className="text-red-500 text-xs mt-1">{errors.classification}</p>}
+                        {errors.classification && <p className="text-red-500 text-xs mt-1"> {errors.classification}</p>}
                     </div>
                     <div>
                        <label>Monto anual *</label>
@@ -384,6 +395,30 @@ function POIModal({
                             </SelectContent>
                         </Select>
                          {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status}</p>}
+                    </div>
+                     <div>
+                        <label>Año *</label>
+                        <div className="flex flex-col">
+                             <Select onValueChange={(value) => handleYearSelect(Number(value))}>
+                                <SelectTrigger className={errors.years ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar año(s)" /></SelectTrigger>
+                                <SelectContent>
+                                    {availableYears.map(year => (
+                                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {formData.years?.map(year => (
+                                    <Badge key={year} variant="secondary" className="flex items-center gap-1">
+                                        {year}
+                                        <button onClick={() => handleYearSelect(year)} className="rounded-full hover:bg-black/10">
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                         {errors.years && <p className="text-red-500 text-xs mt-1">{errors.years}</p>}
                     </div>
                 </div>
                 <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
@@ -432,6 +467,10 @@ function DeleteConfirmationModal({
 }
 
 const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
+    const displayDate = project.startDate && project.endDate 
+        ? `${project.startDate} - ${project.endDate}`
+        : project.years?.join(', ');
+
     return (
          <Card className="w-full h-full flex flex-col shadow-md rounded-lg bg-white">
             <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -463,12 +502,16 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                 <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
-                    <Badge variant="outline" className="border-gray-300 bg-transparent">{project.startDate} - {project.endDate}</Badge>
+                    {displayDate ? (
+                        <Badge variant="outline" className="border-gray-300 bg-transparent">{displayDate}</Badge>
+                    ) : (
+                        <span></span>
+                    )}
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Scrum Master:</span>
-                    <span>{project.scrumMaster}</span>
+                    <span>{project.scrumMaster || ''}</span>
                 </div>
             </CardContent>
         </Card>
@@ -541,7 +584,7 @@ export default function PoiDashboardPage() {
       if (exists) {
           setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: false} : p));
       } else {
-          setProjects([...projects, { ...projectData, id: Date.now().toString(), missingData: projectData.type === 'Proyecto' }]);
+          setProjects([...projects, { ...projectData, id: Date.now().toString(), scrumMaster: '', missingData: projectData.type === 'Proyecto' }]);
       }
   }
   
