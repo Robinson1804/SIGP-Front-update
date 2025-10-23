@@ -242,17 +242,19 @@ function POIModal({
         if (!data.strategicAction) newErrors.strategicAction = "La acción estratégica es requerida.";
         if (!data.classification) newErrors.classification = "La clasificación es requerida.";
         if (!data.status) newErrors.status = "El estado es requerido.";
-        if (!data.coordination) newErrors.coordination = "El campo es requerido.";
-        if (!data.coordinator) newErrors.coordinator = "El campo es requerido.";
-        if (!data.scrumMaster) newErrors.scrumMaster = "El campo es requerido.";
-        if (!data.responsible || data.responsible.length === 0) newErrors.responsible = "El campo es requerido.";
-        if (!data.years || data.years.length === 0) newErrors.years = "El campo es requerido.";
-        if (!data.annualAmount) newErrors.annualAmount = "El campo es requerido.";
-        if (!data.financialArea || data.financialArea.length === 0) newErrors.financialArea = "El campo es requerido.";
+        if (isMissingDataMode) {
+            if (!data.coordination) newErrors.coordination = "El campo es requerido.";
+            if (!data.coordinator) newErrors.coordinator = "El campo es requerido.";
+            if (!data.scrumMaster) newErrors.scrumMaster = "El campo es requerido.";
+            if (!data.responsible || data.responsible.length === 0) newErrors.responsible = "El campo es requerido.";
+            if (!data.years || data.years.length === 0) newErrors.years = "El campo es requerido.";
+            if (!data.annualAmount) newErrors.annualAmount = "El campo es requerido.";
+            if (!data.financialArea || data.financialArea.length === 0) newErrors.financialArea = "El campo es requerido.";
+        }
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, []);
+    }, [isMissingDataMode]);
 
     React.useEffect(() => {
         const initialData = project ? { ...project } : {
@@ -264,7 +266,6 @@ function POIModal({
 
         if (isOpen) {
             if (isMissingDataMode) {
-                // Delay validation to allow state to update
                 setTimeout(() => validate(initialData), 0);
             } else {
                 setErrors({});
@@ -644,8 +645,8 @@ export default function PoiPage() {
       </div>
       <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
         <div className="flex items-center mb-4 gap-4">
-            <Button className="bg-[#018CD1] text-white">POI</Button>
-            <Button variant="outline" className="bg-white text-black border-gray-300">REPORTE POI</Button>
+            <Button size="sm" className="bg-[#018CD1] text-white">POI</Button>
+            <Button size="sm" variant="outline" className="bg-white text-black border-gray-300">REPORTE POI</Button>
         </div>
         <div className="flex items-center gap-2 text-[#004272] mb-4">
             <Folder />
