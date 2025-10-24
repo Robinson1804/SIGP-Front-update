@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -16,6 +17,7 @@ import {
   CheckCircle,
   Calendar,
   MoreHorizontal,
+  AlertTriangle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -74,13 +76,13 @@ type Project = {
     type: 'Proyecto' | 'Actividad';
     classification: 'Al ciudadano' | 'Gestión interna';
     status: 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
-    startDate?: string;
-    endDate?: string;
     scrumMaster: string;
     annualAmount: number;
     strategicAction: string;
     missingData?: boolean;
-    years?: string[];
+    years: string[];
+    startDate?: string;
+    endDate?: string;
 };
 
 const initialProjects: Project[] = [
@@ -269,7 +271,7 @@ function POIModal({
                 description: '',
                 type: undefined,
                 classification: undefined,
-                status: undefined,
+                status: 'Pendiente',
                 scrumMaster: '',
                 annualAmount: 0,
                 strategicAction: '',
@@ -420,9 +422,9 @@ function DeleteConfirmationModal({
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 text-center flex flex-col items-center">
-                    <Folder className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
+                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
                     <p className="font-bold text-lg">¿Estás seguro?</p>
-                    <p className="text-muted-foreground">El Plan Operativo Informático será eliminado</p>
+                    <p className="text-muted-foreground">El proyecto/actividad será eliminado</p>
                 </div>
                 <DialogFooter className="px-6 pb-6 flex justify-center gap-4">
                     <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
@@ -434,9 +436,7 @@ function DeleteConfirmationModal({
 }
 
 const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
-    const displayDate = project.startDate && project.endDate 
-        ? `${project.startDate} - ${project.endDate}`
-        : project.years?.join(', ');
+    const displayDate = project.years?.join(', ');
 
     return (
          <Card className="w-full h-full flex flex-col shadow-md rounded-lg bg-white hover:shadow-xl transition-shadow duration-300 cursor-pointer">
@@ -714,3 +714,5 @@ export default function PoiDashboardPage() {
     </AppLayout>
   );
 }
+
+    

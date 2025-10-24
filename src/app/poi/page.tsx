@@ -103,8 +103,8 @@ const initialProjects: Project[] = [
         type: 'Proyecto',
         classification: 'Gestión interna',
         status: 'En planificación',
-        startDate: 'Abril 2025',
-        endDate: 'Sep 2025',
+        startDate: '2025-04',
+        endDate: '2025-09',
         scrumMaster: 'Ana Pérez',
         annualAmount: 50000,
         strategicAction: 'AE N°1',
@@ -169,7 +169,7 @@ function SubProjectModal({
     const [formData, setFormData] = React.useState<Partial<SubProject>>({});
 
     React.useEffect(() => {
-        setFormData(subProject || { managementMethod: 'Scrum' });
+        setFormData(subProject || { managementMethod: 'Scrum', responsible: [], years: [] });
     }, [subProject, isOpen]);
 
     const handleSave = () => {
@@ -335,13 +335,6 @@ function POIModal({
         setIsSubProjectModalOpen(true);
     }
     
-    const formatMonthYear = (dateString: string) => {
-        if (!dateString) return '';
-        const [year, month] = dateString.split('-');
-        const date = new Date(Number(year), Number(month) - 1);
-        return date.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
-    }
-
     return (
         <>
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -554,6 +547,17 @@ function DeleteConfirmationModal({
 const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
     const isMissingData = project.missingData;
 
+    const formatMonthYear = (dateString: string) => {
+        if (!dateString) return '';
+        const [year, month] = dateString.split('-');
+        const date = new Date(Number(year), Number(month) - 1);
+        return date.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+    }
+
+    const displayDate = project.startDate && project.endDate
+        ? `${formatMonthYear(project.startDate)} - ${formatMonthYear(project.endDate)}`
+        : project.years?.join(', ');
+
     const cardContent = (
          <Card className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -586,7 +590,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                 <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
-                    <span>{project.startDate && project.endDate ? `${project.startDate} - ${project.endDate}` : ''}</span>
+                    <span>{displayDate}</span>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35]" />
@@ -773,3 +777,5 @@ export default function PoiPage() {
     </AppLayout>
   );
 }
+
+    
