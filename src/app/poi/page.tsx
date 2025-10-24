@@ -17,6 +17,7 @@ import {
   MoreHorizontal,
   AlertTriangle,
 } from "lucide-react";
+import Link from 'next/link';
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,8 +81,6 @@ type Project = {
     type: 'Proyecto' | 'Actividad';
     classification: 'Al ciudadano' | 'Gestión interna';
     status: 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
-    startDate: string;
-    endDate: string;
     scrumMaster: string;
     annualAmount: number;
     strategicAction: string;
@@ -93,6 +92,8 @@ type Project = {
     years?: string[];
     managementMethod?: string;
     subProjects?: SubProject[];
+    startDate?: string;
+    endDate?: string;
 };
 
 const initialProjects: Project[] = [
@@ -575,7 +576,9 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem disabled>Ir a proyecto / Actividad</DropdownMenuItem>
+                        <DropdownMenuItem asChild disabled={project.missingData}>
+                            <Link href={project.missingData ? '#' : '/poi/detalles'}>Ir a proyecto / Actividad</Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={onEdit}>Editar POI</DropdownMenuItem>
                         <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar POI</DropdownMenuItem>
                     </DropdownMenuContent>
