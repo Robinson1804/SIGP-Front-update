@@ -282,7 +282,6 @@ function POIModal({
 
         if (isOpen) {
              if (isMissingDataMode) {
-                // Defer validation to next tick to ensure state is updated
                 setTimeout(() => validate(initialData), 0);
             } else {
                 setErrors({});
@@ -334,6 +333,13 @@ function POIModal({
     const openSubProjectModal = (sub?: SubProject) => {
         setEditingSubProject(sub || null);
         setIsSubProjectModalOpen(true);
+    }
+    
+    const formatMonthYear = (dateString: string) => {
+        if (!dateString) return '';
+        const [year, month] = dateString.split('-');
+        const date = new Date(Number(year), Number(month) - 1);
+        return date.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
     }
 
     return (
@@ -477,12 +483,12 @@ function POIModal({
                              <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label>Fecha inicio</label>
-                                    <Input placeholder="mm/yyyy" value={formData.startDate || ''} onChange={e => handleChange('startDate', e.target.value)} className={errors.startDate ? 'border-red-500' : ''} />
+                                    <Input type="month" value={formData.startDate || ''} onChange={e => handleChange('startDate', e.target.value)} className={errors.startDate ? 'border-red-500' : ''} />
                                     {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
                                 </div>
                                 <div>
                                     <label>Fecha fin</label>
-                                    <Input placeholder="mm/yyyy" value={formData.endDate || ''} onChange={e => handleChange('endDate', e.target.value)} className={errors.endDate ? 'border-red-500' : ''} />
+                                    <Input type="month" value={formData.endDate || ''} onChange={e => handleChange('endDate', e.target.value)} className={errors.endDate ? 'border-red-500' : ''} />
                                     {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
                                 </div>
                             </div>
@@ -546,7 +552,7 @@ function DeleteConfirmationModal({
 }
 
 const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
-    const isMissingData = project.status === 'Pendiente' || project.missingData;
+    const isMissingData = project.missingData;
 
     const cardContent = (
          <Card className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
@@ -729,7 +735,7 @@ export default function PoiPage() {
             </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {projects.map(p => (
                 <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} />
             ))}
@@ -767,5 +773,3 @@ export default function PoiPage() {
     </AppLayout>
   );
 }
-
-    
