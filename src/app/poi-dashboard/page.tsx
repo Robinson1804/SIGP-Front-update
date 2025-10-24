@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -16,7 +15,7 @@ import {
   Folder,
   CheckCircle,
   Calendar,
-  MoreVertical,
+  MoreHorizontal,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { MultiSelect } from "@/components/ui/multi-select";
+import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 
 type PGD = {
   id: string;
@@ -92,8 +91,6 @@ const initialProjects: Project[] = [
         type: 'Proyecto',
         classification: 'Gestión interna',
         status: 'En planificación',
-        startDate: 'Abril 2025',
-        endDate: 'Sep 2025',
         scrumMaster: 'Ana Pérez',
         annualAmount: 50000,
         strategicAction: 'AE N°1',
@@ -106,8 +103,8 @@ const initialProjects: Project[] = [
         description: 'Descripción del proyecto 2',
         type: 'Proyecto',
         classification: 'Al ciudadano',
-        status: 'En desarrollo',
-        scrumMaster: 'Juan Garcia',
+        status: 'Pendiente',
+        scrumMaster: '',
         annualAmount: 75000,
         strategicAction: 'AE N°2',
         missingData: true,
@@ -300,14 +297,11 @@ function POIModal({
     const handleSave = () => {
         if (!validate()) return;
         
-        const isNewProject = !project?.id;
-        const missingData = isNewProject && formData.type === 'Proyecto';
-
-        onSave({ ...formData as Project, missingData });
+        onSave({ ...formData as Project, scrumMaster: formData.scrumMaster || '' });
         onClose();
     }
     
-    const yearOptions = availableYears.map(y => ({ label: y.toString(), value: y.toString() }));
+    const yearOptions: MultiSelectOption[] = availableYears.map(y => ({ label: y.toString(), value: y.toString() }));
 
     const isEditMode = !!project?.id;
 
@@ -445,19 +439,19 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
         : project.years?.join(', ');
 
     return (
-         <Card className="w-full h-full flex flex-col shadow-md rounded-lg bg-white">
+         <Card className="w-full h-full flex flex-col shadow-md rounded-lg bg-white hover:shadow-xl transition-shadow duration-300 cursor-pointer">
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-2">
                     <Folder className="w-6 h-6 text-[#008ED2]" />
                     <div className="flex flex-col">
                         <h3 className="font-bold text-black">{project.name}</h3>
-                        <Badge variant="secondary" className="text-[#ADADAD] w-fit bg-transparent">{project.type}</Badge>
+                        <p className="text-sm text-[#ADADAD]">{project.type}</p>
                     </div>
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-6 w-6">
-                            <MoreVertical className="h-4 w-4" />
+                            <MoreHorizontal className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -476,7 +470,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
                     {displayDate ? (
-                        <Badge variant="outline" className="border-gray-300 bg-transparent">{displayDate}</Badge>
+                        <span>{displayDate}</span>
                     ) : (
                         <span></span>
                     )}
@@ -557,7 +551,7 @@ export default function PoiDashboardPage() {
       if (exists) {
           setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: false} : p));
       } else {
-          setProjects([...projects, { ...projectData, id: Date.now().toString(), scrumMaster: '', missingData: projectData.type === 'Proyecto' }]);
+          setProjects([...projects, { ...projectData, id: Date.now().toString(), scrumMaster: '', status: 'Pendiente' }]);
       }
   }
   
@@ -632,8 +626,8 @@ export default function PoiDashboardPage() {
       </div>
       <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
         <div className="flex items-center mb-4 gap-4">
-            <Button className="bg-[#018CD1] text-white">POI</Button>
-            <Button variant="outline" className="bg-white text-black border-gray-300">REPORTE POI</Button>
+            <Button size="sm" className="bg-[#018CD1] text-white">POI</Button>
+            <Button size="sm" variant="outline" className="bg-white text-black border-gray-300">REPORTE POI</Button>
         </div>
         <div className="flex items-center gap-2 text-[#004272] mb-4">
             <Folder />
@@ -720,5 +714,3 @@ export default function PoiDashboardPage() {
     </AppLayout>
   );
 }
-
-    
