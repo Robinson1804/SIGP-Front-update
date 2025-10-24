@@ -70,10 +70,13 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
                       className="mr-1"
                     >
                       {option?.label}
-                      <button
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Remove ${option?.label}`}
                         className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") {
+                          if (e.key === "Enter" || e.key === " ") {
                             handleRemove(value);
                           }
                         }}
@@ -81,10 +84,14 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
                           e.preventDefault();
                           e.stopPropagation();
                         }}
-                        onClick={() => handleRemove(value)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleRemove(value);
+                        }}
                       >
                         <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                      </button>
+                      </span>
                     </Badge>
                   );
                 })
