@@ -14,7 +14,8 @@ import {
   Briefcase,
   DollarSign,
   Users as UsersIcon,
-  CheckCircle
+  CheckCircle,
+  MoreHorizontal,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -277,6 +278,5 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
-
 
     
