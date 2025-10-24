@@ -168,6 +168,10 @@ function SubProjectModal({
         onSave(formData as SubProject);
         onClose();
     };
+    
+    const handleChange = (field: keyof SubProject, value: any) => {
+        setFormData(p => ({...p, [field]: value}));
+    };
 
     if (!isOpen) return null;
     
@@ -175,33 +179,33 @@ function SubProjectModal({
          <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
-                    <DialogTitle>REGISTRAR SUBPROYECTO</DialogTitle>
+                    <DialogTitle>{subProject ? 'EDITAR' : 'REGISTRAR'} SUBPROYECTO</DialogTitle>
                     <DialogClose asChild><Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></Button></DialogClose>
                 </DialogHeader>
                 <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                     <div>
                         <label>Nombre</label>
-                        <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => setFormData(p => ({...p, name: e.target.value}))} />
+                        <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => handleChange('name', e.target.value)} />
                     </div>
                      <div>
                         <label>Descripción</label>
-                        <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} />
+                        <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => handleChange('description', e.target.value)} />
                     </div>
                     <div>
                         <label>Responsable</label>
-                         <MultiSelect options={responsibleOptions} selected={formData.responsible || []} onChange={selected => setFormData(p => ({...p, responsible: selected}))} placeholder="Seleccionar" />
+                         <MultiSelect options={responsibleOptions} selected={formData.responsible || []} onChange={selected => handleChange('responsible', selected)} placeholder="Seleccionar" />
                     </div>
                     <div>
                         <label>Gestor/Scrum Master</label>
-                        <Input placeholder="Ingresar gestor/scrum master" value={formData.scrumMaster || ''} onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))} />
+                        <Input placeholder="Ingresar gestor/scrum master" value={formData.scrumMaster || ''} onChange={e => handleChange('scrumMaster', e.target.value)} />
                     </div>
                     <div>
                         <label>Año</label>
-                         <MultiSelect options={yearOptions} selected={formData.years || []} onChange={selected => setFormData(p => ({...p, years: selected}))} placeholder="Seleccionar" />
+                         <MultiSelect options={yearOptions} selected={formData.years || []} onChange={selected => handleChange('years', selected)} placeholder="Seleccionar" />
                     </div>
                     <div>
                         <label>Monto anual</label>
-                        <Input type="number" placeholder="Ingresar monto anual" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} />
+                        <Input type="number" placeholder="Ingresar monto anual" value={formData.annualAmount || ''} onChange={e => handleChange('annualAmount', Number(e.target.value))} />
                     </div>
                     <div>
                         <label>Método de Gestión del proyecto</label>
@@ -233,7 +237,7 @@ function POIModal({
     const [isSubProjectModalOpen, setIsSubProjectModalOpen] = React.useState(false);
     const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
     
-    const isMissingDataMode = project?.missingData || project?.status === 'Pendiente';
+    const isMissingDataMode = !!project?.missingData;
 
     const validate = React.useCallback((data: Partial<Project>) => {
         const newErrors: {[key: string]: string} = {};
@@ -243,7 +247,8 @@ function POIModal({
         if (!data.strategicAction) newErrors.strategicAction = "La acción estratégica es requerida.";
         if (!data.classification) newErrors.classification = "La clasificación es requerida.";
         if (!data.status) newErrors.status = "El estado es requerido.";
-        if (isMissingDataMode) {
+        
+        if (isMissingDataMode || data.status !== 'Pendiente') {
             if (!data.coordination) newErrors.coordination = "El campo es requerido.";
             if (!data.coordinator) newErrors.coordinator = "El campo es requerido.";
             if (!data.scrumMaster) newErrors.scrumMaster = "El campo es requerido.";
@@ -266,7 +271,7 @@ function POIModal({
         setFormData(initialData);
 
         if (isOpen) {
-            if (isMissingDataMode) {
+             if (isMissingDataMode) {
                 // Defer validation to next tick to ensure state is updated
                 setTimeout(() => validate(initialData), 0);
             } else {
@@ -285,17 +290,22 @@ function POIModal({
     
 
     const handleSave = () => {
-        const isSavingMissingData = isMissingDataMode;
         if (!validate(formData)) return;
         
         let finalStatus = formData.status;
-        if(isSavingMissingData && finalStatus === 'Pendiente') {
+        if(isMissingDataMode && finalStatus === 'Pendiente') {
             finalStatus = 'En planificación';
         }
 
         onSave({ ...formData as Project, missingData: false, status: finalStatus });
         onClose();
     }
+    
+    const handleChange = (field: keyof Project, value: any) => {
+        const updatedFormData = {...formData, [field]: value};
+        setFormData(updatedFormData);
+        validate(updatedFormData);
+    };
     
     const isEditMode = !!project?.id;
 
@@ -306,7 +316,7 @@ function POIModal({
             ? existingSubs.map(s => s.id === subProject.id ? subProject : s)
             : [...existingSubs, {...subProject, id: Date.now().toString()}];
 
-        setFormData(p => ({...p, subProjects: updatedSubs}));
+        handleChange('subProjects', updatedSubs);
         setIsSubProjectModalOpen(false);
         setEditingSubProject(null);
     }
@@ -332,7 +342,7 @@ function POIModal({
                         <div className="space-y-4">
                             <div>
                                 <label>Tipo (Proyecto/Actividad) *</label>
-                                <Select value={formData.type} onValueChange={(value) => setFormData(p => ({...p, type: value as Project['type']}))}>
+                                <Select value={formData.type} onValueChange={(value) => handleChange('type', value as Project['type'])}>
                                     <SelectTrigger className={errors.type ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar tipo" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Proyecto">Proyecto</SelectItem>
@@ -343,12 +353,12 @@ function POIModal({
                             </div>
                             <div>
                                <label>Nombre *</label>
-                               <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => setFormData(p => ({...p, name: e.target.value}))} className={errors.name ? 'border-red-500' : ''} />
+                               <Input placeholder="Ingresar nombre" value={formData.name || ''} onChange={e => handleChange('name', e.target.value)} className={errors.name ? 'border-red-500' : ''} />
                                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                             </div>
                              <div>
                                <label>Descripción *</label>
-                               <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => setFormData(p => ({...p, description: e.target.value}))} className={errors.description ? 'border-red-500' : ''} />
+                               <Textarea placeholder="Ingresar descripción" value={formData.description || ''} onChange={e => handleChange('description', e.target.value)} className={errors.description ? 'border-red-500' : ''} />
                                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                             </div>
                              {formData.type === 'Proyecto' && (
@@ -383,7 +393,7 @@ function POIModal({
                             )}
                             <div>
                                 <label>Acción Estratégica *</label>
-                                <Select value={formData.strategicAction} onValueChange={(value) => setFormData(p => ({...p, strategicAction: value}))}>
+                                <Select value={formData.strategicAction} onValueChange={(value) => handleChange('strategicAction', value)}>
                                     <SelectTrigger className={errors.strategicAction ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar AE" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="AE N°1">AE N°1</SelectItem>
@@ -394,7 +404,7 @@ function POIModal({
                             </div>
                              <div>
                                 <label>Clasificación *</label>
-                                <Select value={formData.classification} onValueChange={(value) => setFormData(p => ({...p, classification: value as Project['classification']}))}>
+                                <Select value={formData.classification} onValueChange={(value) => handleChange('classification', value as Project['classification'])}>
                                     <SelectTrigger className={errors.classification ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar clasificación" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
@@ -405,7 +415,7 @@ function POIModal({
                             </div>
                             <div>
                                 <label>Estado *</label>
-                                <Select value={formData.status} onValueChange={(value) => setFormData(p => ({...p, status: value as Project['status']}))}>
+                                <Select value={formData.status} onValueChange={(value) => handleChange('status', value as Project['status'])}>
                                     <SelectTrigger className={errors.status ? 'border-red-500' : ''}><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="Pendiente">Pendiente</SelectItem>
@@ -418,7 +428,7 @@ function POIModal({
                             </div>
                              <div>
                                <label>Coordinación</label>
-                               <Input placeholder="Ingresar coordinación" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} className={errors.coordination ? 'border-red-500' : ''} />
+                               <Input placeholder="Ingresar coordinación" value={formData.coordination || ''} onChange={e => handleChange('coordination', e.target.value)} className={errors.coordination ? 'border-red-500' : ''} />
                                {errors.coordination && <p className="text-red-500 text-xs mt-1">{errors.coordination}</p>}
                             </div>
                         </div>
@@ -426,32 +436,32 @@ function POIModal({
                         <div className="space-y-4">
                             <div>
                                <label>Área Financiera</label>
-                               <MultiSelect options={financialAreaOptions} selected={formData.financialArea || []} onChange={selected => setFormData(p => ({...p, financialArea: selected}))} placeholder="Seleccionar" className={errors.financialArea ? 'border-red-500' : ''} />
+                               <MultiSelect options={financialAreaOptions} selected={formData.financialArea || []} onChange={selected => handleChange('financialArea', selected)} placeholder="Seleccionar" className={errors.financialArea ? 'border-red-500' : ''} />
                                {errors.financialArea && <p className="text-red-500 text-xs mt-1">{errors.financialArea}</p>}
                             </div>
                              <div>
                                <label>Coordinador</label>
-                               <Input placeholder="Ingresar coordinador" value={formData.coordinator || ''} onChange={e => setFormData(p => ({...p, coordinator: e.target.value}))} className={errors.coordinator ? 'border-red-500' : ''} />
+                               <Input placeholder="Ingresar coordinador" value={formData.coordinator || ''} onChange={e => handleChange('coordinator', e.target.value)} className={errors.coordinator ? 'border-red-500' : ''} />
                                {errors.coordinator && <p className="text-red-500 text-xs mt-1">{errors.coordinator}</p>}
                             </div>
                             <div>
                                <label>Gestor/Scrum Master</label>
-                               <Input placeholder="Ingresar scrum master" value={formData.scrumMaster || ''} onChange={e => setFormData(p => ({...p, scrumMaster: e.target.value}))}  className={errors.scrumMaster ? 'border-red-500' : ''}/>
+                               <Input placeholder="Ingresar scrum master" value={formData.scrumMaster || ''} onChange={e => handleChange('scrumMaster', e.target.value)}  className={errors.scrumMaster ? 'border-red-500' : ''}/>
                                {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
                             </div>
                             <div>
                                <label>Responsable</label>
-                               <MultiSelect options={responsibleOptions} selected={formData.responsible || []} onChange={selected => setFormData(p => ({...p, responsible: selected}))} placeholder="Seleccionar" className={errors.responsible ? 'border-red-500' : ''} />
+                               <MultiSelect options={responsibleOptions} selected={formData.responsible || []} onChange={selected => handleChange('responsible', selected)} placeholder="Seleccionar" className={errors.responsible ? 'border-red-500' : ''} />
                                {errors.responsible && <p className="text-red-500 text-xs mt-1">{errors.responsible}</p>}
                             </div>
                             <div>
                                <label>Año</label>
-                               <MultiSelect options={yearOptions} selected={formData.years || []} onChange={selected => setFormData(p => ({...p, years: selected}))} placeholder="Seleccionar" className={errors.years ? 'border-red-500' : ''} />
+                               <MultiSelect options={yearOptions} selected={formData.years || []} onChange={selected => handleChange('years', selected)} placeholder="Seleccionar" className={errors.years ? 'border-red-500' : ''} />
                                {errors.years && <p className="text-red-500 text-xs mt-1">{errors.years}</p>}
                             </div>
                              <div>
                                <label>Monto anual</label>
-                               <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
+                               <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => handleChange('annualAmount', Number(e.target.value))} className={errors.annualAmount ? 'border-red-500' : ''} />
                                {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
                             </div>
                             <div>
@@ -563,7 +573,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                       <div className="h-full cursor-pointer">{cardContent}</div>
+                       <div className="h-full cursor-pointer" onClick={onEdit}>{cardContent}</div>
                     </TooltipTrigger>
                     <TooltipContent className="bg-red-50 border-red-200">
                         <div className="flex items-center gap-2">
@@ -734,5 +744,3 @@ export default function PoiPage() {
     </AppLayout>
   );
 }
-
-    
