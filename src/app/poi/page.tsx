@@ -58,7 +58,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
+import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 
@@ -116,10 +116,10 @@ const initialProjects: Project[] = [
         description: 'Descripción del proyecto 2',
         type: 'Proyecto',
         classification: 'Al ciudadano',
-        status: 'En desarrollo',
-        startDate: 'Mayo 2025',
-        endDate: 'Dic 2025',
-        scrumMaster: 'Juan Garcia',
+        status: 'Pendiente',
+        startDate: '',
+        endDate: '',
+        scrumMaster: '',
         annualAmount: 75000,
         strategicAction: 'AE N°2',
         missingData: true,
@@ -141,8 +141,9 @@ const responsibleOptions: MultiSelectOption[] = [
 
 const yearOptions: MultiSelectOption[] = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => ({label: y.toString(), value: y.toString()}));
 const financialAreaOptions: MultiSelectOption[] = [
-    { value: 'Area 1', label: 'Area 1' },
-    { value: 'Area 2', label: 'Area 2' },
+    { value: 'OTIN', label: 'OTIN' },
+    { value: 'DCNC', label: 'DCNC' },
+    { value: 'OTA', label: 'OTA' },
 ]
 
 
@@ -232,7 +233,7 @@ function POIModal({
     const [isSubProjectModalOpen, setIsSubProjectModalOpen] = React.useState(false);
     const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
     
-    const isMissingDataMode = project?.missingData;
+    const isMissingDataMode = project?.missingData || project?.status === 'Pendiente';
 
     const validate = React.useCallback((data: Partial<Project>) => {
         const newErrors: {[key: string]: string} = {};
@@ -259,13 +260,14 @@ function POIModal({
     React.useEffect(() => {
         const initialData = project ? { ...project } : {
             id: '', name: '', description: '', type: undefined, classification: undefined,
-            status: undefined, scrumMaster: '', annualAmount: 0, strategicAction: '',
-            subProjects: [],
+            status: 'Pendiente', scrumMaster: '', annualAmount: 0, strategicAction: '',
+            subProjects: [], startDate: '', endDate: '',
         };
         setFormData(initialData);
 
         if (isOpen) {
             if (isMissingDataMode) {
+                // Defer validation to next tick to ensure state is updated
                 setTimeout(() => validate(initialData), 0);
             } else {
                 setErrors({});
@@ -283,8 +285,15 @@ function POIModal({
     
 
     const handleSave = () => {
+        const isSavingMissingData = isMissingDataMode;
         if (!validate(formData)) return;
-        onSave({ ...formData as Project, missingData: false });
+        
+        let finalStatus = formData.status;
+        if(isSavingMissingData && finalStatus === 'Pendiente') {
+            finalStatus = 'En planificación';
+        }
+
+        onSave({ ...formData as Project, missingData: false, status: finalStatus });
         onClose();
     }
     
@@ -504,16 +513,16 @@ function DeleteConfirmationModal({
     );
 }
 
-const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: Project, onEdit: () => void, onDelete: () => void, showMissingData: boolean }) => {
-    const isMissingData = showMissingData && project.missingData;
+const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
+    const isMissingData = project.status === 'Pendiente';
     const cardContent = (
-         <Card className={`w-full h-full flex flex-col shadow-md rounded-lg ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
+         <Card className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-2">
                     <Folder className="w-6 h-6 text-[#008ED2]" />
                     <div className="flex flex-col">
                         <h3 className="font-bold text-black">{project.name}</h3>
-                        <Badge variant="secondary" className="text-[#ADADAD] w-fit bg-transparent">{project.type}</Badge>
+                        <p className="text-xs text-[#ADADAD]">{project.type}</p>
                     </div>
                 </div>
                 <DropdownMenu>
@@ -538,7 +547,7 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
                 <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35]" />
                     <span className="font-semibold">Fechas:</span>
-                    <span>{project.startDate} - {project.endDate}</span>
+                    <span>{project.startDate && project.endDate ? `${project.startDate} - ${project.endDate}` : ''}</span>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35]" />
@@ -554,7 +563,7 @@ const ProjectCard = ({ project, onEdit, onDelete, showMissingData }: { project: 
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                       <div className="h-full">{cardContent}</div>
+                       <div className="h-full cursor-pointer">{cardContent}</div>
                     </TooltipTrigger>
                     <TooltipContent className="bg-red-50 border-red-200">
                         <div className="flex items-center gap-2">
@@ -600,9 +609,9 @@ export default function PoiPage() {
   const handleSaveProject = (projectData: Project) => {
       const exists = projects.some(p => p.id === projectData.id);
       if (exists) {
-          setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData, missingData: !p.scrumMaster || !p.startDate } : p));
+          setProjects(projects.map(p => p.id === projectData.id ? {...p, ...projectData } : p));
       } else {
-          setProjects([...projects, { ...projectData, id: Date.now().toString(), missingData: true }]);
+          setProjects([...projects, { ...projectData, id: Date.now().toString() }]);
       }
   }
   
@@ -687,9 +696,9 @@ export default function PoiPage() {
             </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6">
             {projects.map(p => (
-                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} showMissingData={true} />
+                <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} />
             ))}
         </div>
         
