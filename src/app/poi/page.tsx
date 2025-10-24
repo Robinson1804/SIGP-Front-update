@@ -109,10 +109,17 @@ const initialProjects: Project[] = [
         annualAmount: 50000,
         strategicAction: 'AE N°1',
         missingData: false,
+        years: ['2025'],
+        responsible: ['Ana Garcia'],
+        financialArea: ['OTIN'],
+        coordination: 'Coordinación 1',
+        coordinator: 'Jefe de Proyecto',
+        managementMethod: 'Scrum',
+        subProjects: [],
     },
     {
         id: '2',
-        name: 'Sistema de Trámite Documentario',
+        name: 'UNETE INEI',
         description: 'Descripción del proyecto 2',
         type: 'Proyecto',
         classification: 'Al ciudadano',
@@ -123,6 +130,7 @@ const initialProjects: Project[] = [
         annualAmount: 75000,
         strategicAction: 'AE N°2',
         missingData: true,
+        years: ['2025'],
     }
 ];
 
@@ -241,12 +249,12 @@ function POIModal({
 
     const validate = React.useCallback((data: Partial<Project>) => {
         const newErrors: {[key: string]: string} = {};
-        if (!data.type) newErrors.type = "El tipo es requerido.";
-        if (!data.name) newErrors.name = "El nombre es requerido.";
-        if (!data.description) newErrors.description = "La descripción es requerida.";
-        if (!data.strategicAction) newErrors.strategicAction = "La acción estratégica es requerida.";
-        if (!data.classification) newErrors.classification = "La clasificación es requerida.";
-        if (!data.status) newErrors.status = "El estado es requerido.";
+        if (!data.type) newErrors.type = "El campo es requerido.";
+        if (!data.name) newErrors.name = "El campo es requerido.";
+        if (!data.description) newErrors.description = "El campo es requerido.";
+        if (!data.strategicAction) newErrors.strategicAction = "El campo es requerido.";
+        if (!data.classification) newErrors.classification = "El campo es requerido.";
+        if (!data.status) newErrors.status = "El campo es requerido.";
         
         if (isMissingDataMode || data.status !== 'Pendiente') {
             if (!data.coordination) newErrors.coordination = "El campo es requerido.";
@@ -256,6 +264,8 @@ function POIModal({
             if (!data.years || data.years.length === 0) newErrors.years = "El campo es requerido.";
             if (!data.annualAmount) newErrors.annualAmount = "El campo es requerido.";
             if (!data.financialArea || data.financialArea.length === 0) newErrors.financialArea = "El campo es requerido.";
+            if (!data.startDate) newErrors.startDate = "El campo es requerido.";
+            if (!data.endDate) newErrors.endDate = "El campo es requerido.";
         }
         
         setErrors(newErrors);
@@ -266,7 +276,7 @@ function POIModal({
         const initialData = project ? { ...project } : {
             id: '', name: '', description: '', type: undefined, classification: undefined,
             status: 'Pendiente', scrumMaster: '', annualAmount: 0, strategicAction: '',
-            subProjects: [], startDate: '', endDate: '',
+            subProjects: [], startDate: '', endDate: '', financialArea: [], responsible: [], years: [],
         };
         setFormData(initialData);
 
@@ -434,7 +444,7 @@ function POIModal({
                         </div>
                         {/* Columna 2 */}
                         <div className="space-y-4">
-                            <div>
+                             <div>
                                <label>Área Financiera</label>
                                <MultiSelect options={financialAreaOptions} selected={formData.financialArea || []} onChange={selected => handleChange('financialArea', selected)} placeholder="Seleccionar" className={errors.financialArea ? 'border-red-500' : ''} />
                                {errors.financialArea && <p className="text-red-500 text-xs mt-1">{errors.financialArea}</p>}
@@ -463,6 +473,18 @@ function POIModal({
                                <label>Monto anual</label>
                                <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => handleChange('annualAmount', Number(e.target.value))} className={errors.annualAmount ? 'border-red-500' : ''} />
                                {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
+                            </div>
+                             <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label>Fecha inicio</label>
+                                    <Input placeholder="mm/yyyy" value={formData.startDate || ''} onChange={e => handleChange('startDate', e.target.value)} className={errors.startDate ? 'border-red-500' : ''} />
+                                    {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
+                                </div>
+                                <div>
+                                    <label>Fecha fin</label>
+                                    <Input placeholder="mm/yyyy" value={formData.endDate || ''} onChange={e => handleChange('endDate', e.target.value)} className={errors.endDate ? 'border-red-500' : ''} />
+                                    {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
+                                </div>
                             </div>
                             <div>
                                <label>Método de gestión de proyecto</label>
@@ -524,7 +546,8 @@ function DeleteConfirmationModal({
 }
 
 const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
-    const isMissingData = project.status === 'Pendiente';
+    const isMissingData = project.status === 'Pendiente' || project.missingData;
+
     const cardContent = (
          <Card className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -706,7 +729,7 @@ export default function PoiPage() {
             </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-6">
             {projects.map(p => (
                 <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} />
             ))}
@@ -744,3 +767,5 @@ export default function PoiPage() {
     </AppLayout>
   );
 }
+
+    
