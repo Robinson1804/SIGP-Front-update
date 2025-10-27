@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, type ReactNode } from "react";
@@ -70,12 +69,14 @@ type AppLayoutProps = {
   children: ReactNode;
   navItems?: NavItem[];
   breadcrumbs: { label: string; href?: string }[];
+  secondaryHeader?: ReactNode;
 };
 
 export default function AppLayout({
   children,
   navItems = [],
   breadcrumbs,
+  secondaryHeader,
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
@@ -97,7 +98,7 @@ export default function AppLayout({
 
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
-      <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-20 h-16 shrink-0">
+      <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-30 h-16 shrink-0">
         <div className="flex-1 flex items-center"></div>
         <div className="flex-1 text-center">
           <h1 className="text-xl font-bold">
@@ -112,7 +113,7 @@ export default function AppLayout({
         <aside
           className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
             sidebarOpen ? "w-64" : "w-0"
-          } overflow-hidden h-full z-10 flex flex-col shrink-0`}
+          } overflow-hidden h-full z-20 flex flex-col shrink-0`}
         >
           <div className="p-2 flex justify-end">
             <button
@@ -152,30 +153,33 @@ export default function AppLayout({
         </aside>
 
         <div className="flex flex-1 flex-col overflow-y-auto">
-          <div className="sticky top-0 z-10 bg-[#D5D5D5]">
-            <div className="p-2 flex items-center gap-2 w-full">
-              {!sidebarOpen && (
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="p-1 rounded hover:bg-gray-700/20"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
-              )}
-              <Home className="h-5 w-5" />
-              {breadcrumbs.map((crumb, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <ChevronRight className="h-4 w-4 text-gray-600" />
-                  {crumb.href ? (
-                    <Link href={crumb.href} className="font-semibold hover:underline">
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span className="font-semibold">{crumb.label}</span>
-                  )}
-                </div>
-              ))}
+          <div className="sticky top-0 z-10 bg-background">
+            <div className="bg-[#D5D5D5]">
+              <div className="p-2 flex items-center gap-2 w-full">
+                {!sidebarOpen && (
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="p-1 rounded hover:bg-gray-700/20"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </button>
+                )}
+                <Home className="h-5 w-5" />
+                {breadcrumbs.map((crumb, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <ChevronRight className="h-4 w-4 text-gray-600" />
+                    {crumb.href ? (
+                      <Link href={crumb.href} className="font-semibold hover:underline">
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold">{crumb.label}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
+            {secondaryHeader}
           </div>
           <main className="flex-1 flex flex-col">{children}</main>
         </div>

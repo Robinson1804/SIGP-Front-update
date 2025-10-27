@@ -344,27 +344,32 @@ export default function ProjectDetailsPage() {
       { label: activeTab }
     ];
 
+    const secondaryHeader = (
+      <>
+        <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
+            <div className="p-2 flex items-center justify-between w-full">
+                <h2 className="font-bold text-black pl-2">
+                    {`${projectCode}: ${project.name}`}
+                </h2>
+            </div>
+        </div>
+        <div className="bg-[#F9F9F9] px-6 pt-6">
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setActiveTab('Detalles')} className={activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
+            <Button size="sm" onClick={() => setActiveTab('Documentos')} className={activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
+            <Button size="sm" onClick={() => setActiveTab('Backlog')} className={activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+          </div>
+        </div>
+      </>
+    );
+
     return (
         <AppLayout
             navItems={navItems}
             breadcrumbs={breadcrumbs}
+            secondaryHeader={secondaryHeader}
         >
-            <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
-                <div className="p-2 flex items-center justify-between w-full">
-                    <h2 className="font-bold text-black pl-2">
-                        {`${projectCode}: ${project.name}`}
-                    </h2>
-                </div>
-            </div>
             <div className="flex-1 flex flex-col bg-[#F9F9F9]">
-                <div className="sticky top-[52px] bg-[#F9F9F9] z-10 p-6 -mb-2">
-                    <div className="flex items-center gap-2">
-                        <Button size="sm" onClick={() => setActiveTab('Detalles')} className={activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
-                        <Button size="sm" onClick={() => setActiveTab('Documentos')} className={activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
-                        <Button size="sm" onClick={() => setActiveTab('Backlog')} className={activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
-                    </div>
-                </div>
-
                 <div className="p-6">
                     {activeTab === 'Detalles' && (
                         <>
