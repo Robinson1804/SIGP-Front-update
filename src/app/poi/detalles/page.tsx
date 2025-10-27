@@ -278,7 +278,6 @@ export default function ProjectDetailsPage() {
     };
 
     const handleDeleteProject = () => {
-        console.log("Deleting project...");
         localStorage.removeItem('selectedProject');
         setIsDeleteModalOpen(false);
         router.push('/poi');
@@ -487,55 +486,57 @@ export default function ProjectDetailsPage() {
                                 <Input placeholder="Buscar por nombre/descripción" className="pl-10 bg-white" />
                             </div>
                         </div>
-                        <Table className="bg-white rounded-lg">
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Fase</TableHead>
-                                    <TableHead>Descripción</TableHead>
-                                    <TableHead>Link (Archivo o carpeta)</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                    <TableHead className="text-center">Acciones</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {documents.map((doc) => (
-                                    <TableRow key={doc.id}>
-                                        <TableCell>{doc.phase}</TableCell>
-                                        <TableCell>{doc.description}</TableCell>
-                                        <TableCell>
-                                            {doc.link.startsWith('http') ? 
-                                                <a href={doc.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{doc.link}</a> : 
-                                                <span className="underline cursor-pointer">{doc.link}</span>
-                                            }
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge style={{ backgroundColor: documentStatusConfig[doc.status].bg, color: documentStatusConfig[doc.status].text }} className="font-semibold">
-                                                {doc.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="flex justify-center gap-2">
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={doc.status !== 'Pendiente'}>
-                                                        <CheckSquare className="h-5 w-5" />
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-40 p-2">
-                                                    <div className="text-sm font-semibold p-1">Validar documento</div>
-                                                    <div className="flex flex-col gap-1 mt-1">
-                                                        <Badge onClick={() => handleDocumentStatusChange(doc.id, 'Aprobado')} style={{ backgroundColor: documentStatusConfig['Aprobado'].bg, color: documentStatusConfig['Aprobado'].text}} className="cursor-pointer justify-center py-1">Aprobado</Badge>
-                                                        <Badge onClick={() => handleDocumentStatusChange(doc.id, 'No aprobado')} style={{ backgroundColor: documentStatusConfig['No aprobado'].bg, color: documentStatusConfig['No aprobado'].text}} className="cursor-pointer justify-center py-1">No Aprobado</Badge>
-                                                    </div>
-                                                </PopoverContent>
-                                            </Popover>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <Download className="h-5 w-5" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                        <div className="rounded-lg border overflow-hidden">
+                          <Table className="bg-white">
+                              <TableHeader className="bg-blue-50">
+                                  <TableRow>
+                                      <TableHead>Fase</TableHead>
+                                      <TableHead>Descripción</TableHead>
+                                      <TableHead>Link (Archivo o carpeta)</TableHead>
+                                      <TableHead>Estado</TableHead>
+                                      <TableHead className="text-center">Acciones</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {documents.map((doc) => (
+                                      <TableRow key={doc.id}>
+                                          <TableCell>{doc.phase}</TableCell>
+                                          <TableCell>{doc.description}</TableCell>
+                                          <TableCell>
+                                              {doc.link.startsWith('http') ? 
+                                                  <a href={doc.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{doc.link}</a> : 
+                                                  <span className="underline cursor-pointer">{doc.link}</span>
+                                              }
+                                          </TableCell>
+                                          <TableCell>
+                                              <Badge style={{ backgroundColor: documentStatusConfig[doc.status].bg, color: documentStatusConfig[doc.status].text }} className="font-semibold">
+                                                  {doc.status}
+                                              </Badge>
+                                          </TableCell>
+                                          <TableCell className="flex justify-center gap-2">
+                                              <Popover>
+                                                  <PopoverTrigger asChild>
+                                                      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={doc.status !== 'Pendiente'}>
+                                                          <CheckSquare className="h-5 w-5" />
+                                                      </Button>
+                                                  </PopoverTrigger>
+                                                  <PopoverContent className="w-auto p-2">
+                                                      <div className="text-sm font-semibold p-1">Validar documento</div>
+                                                      <div className="flex flex-col gap-1 mt-1">
+                                                          <Badge onClick={() => handleDocumentStatusChange(doc.id, 'Aprobado')} style={{ backgroundColor: documentStatusConfig['Aprobado'].bg, color: documentStatusConfig['Aprobado'].text}} className="cursor-pointer justify-center py-1">Aprobado</Badge>
+                                                          <Badge onClick={() => handleDocumentStatusChange(doc.id, 'No aprobado')} style={{ backgroundColor: documentStatusConfig['No aprobado'].bg, color: documentStatusConfig['No aprobado'].text}} className="cursor-pointer justify-center py-1">No Aprobado</Badge>
+                                                      </div>
+                                                  </PopoverContent>
+                                              </Popover>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                  <Download className="h-5 w-5" />
+                                              </Button>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                        </div>
                         <Pagination className="mt-4 justify-start">
                             <PaginationContent>
                                 <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
@@ -591,3 +592,5 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
+
+    
