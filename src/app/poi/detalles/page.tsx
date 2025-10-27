@@ -33,38 +33,46 @@ const project = {
   financialArea: ['OTIN', 'DCNC'],
   coordinator: 'Coordinador1',
   manager: 'Mario Casas',
-  responsibles: ['Angella Trujillo', 'Anayeli Monzon'],
+  responsibles: ['Angella Trujillo', 'Anayeli Monzon', 'Otro Responsable'],
   years: ['2021', '2022', '2023', '2024'],
   annualAmount: '2,500,000.00',
   managementMethod: 'Scrum',
-  startDate: 'Abril 2025',
-  endDate: 'Sep 2025',
+  startDate: '2025-04',
+  endDate: '2025-09',
   status: 'En planificación',
 };
 
 const subProjects = [
-    { id: '1', name: 'Monitoreo', progress: 80, amount: '640k', devs: 5, status: 'En desarrollo', icon: Briefcase, color: 'text-green-500' },
-    { id: '2', name: 'Logística', progress: 60, amount: '360k', devs: 4, status: 'En desarrollo', icon: Briefcase, color: 'text-yellow-500' },
-    { id: '3', name: 'Captura', progress: 50, amount: '350k', devs: 6, status: 'En desarrollo', icon: Briefcase, color: 'text-yellow-500' },
-    { id: '4', name: 'BI', progress: 30, amount: '120k', devs: 3, status: 'En desarrollo', icon: Briefcase, color: 'text-orange-500' },
+    { id: '1', name: 'Monitoreo', progress: 80, amount: '640k', devs: 5, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
+    { id: '2', name: 'Logística', progress: 60, amount: '360k', devs: 4, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
+    { id: '3', name: 'Captura', progress: 50, amount: '350k', devs: 6, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
+    { id: '4', name: 'BI', progress: 30, amount: '120k', devs: 3, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
 ];
 
 const sprints = [
-  { name: 'Sprint 1', status: 'Finalizado', progress: 100, color: 'bg-[#34D399]' },
-  { name: 'Sprint 2', status: 'En progreso', progress: 50, color: 'bg-[#BFDBFE]' },
-  { name: 'Sprint 3', status: 'En progreso', progress: 25, color: 'bg-[#BFDBFE]' },
-  { name: 'Sprint 4', status: 'Por hacer', progress: 0, color: 'bg-[#FFD29F]' },
+  { name: 'Sprint 1', status: 'Finalizado', progress: 100 },
+  { name: 'Sprint 2', status: 'En progreso', progress: 50 },
+  { name: 'Sprint 3', status: 'En progreso', progress: 25 },
+  { name: 'Sprint 4', status: 'Por hacer', progress: 0 },
 ];
 
 
 const statusColors: { [key: string]: string } = {
-  'Pendiente': 'bg-[#FE9F43] text-white',
+  'Pendiente': 'bg-[#FE9F43] text-black',
   'En planificación': 'bg-[#FFD700] text-black',
   'En desarrollo': 'bg-[#559FFE] text-white',
   'Finalizado': 'bg-[#2FD573] text-white',
 };
 
-const sprintStatusColors: { [key: string]: { badge: string; progress: string } } = {
+const subProjectStatusColors: { [key: string]: string } = {
+    'Pendiente': 'bg-[#FF9F43] text-black',
+    'En planificación': 'bg-[#FFD700] text-black',
+    'En desarrollo': 'bg-[#54A0FF] text-white',
+    'Finalizado': 'bg-[#2ED573] text-white',
+};
+
+
+const sprintStatusConfig: { [key: string]: { badge: string; progress: string } } = {
     'Por hacer': { badge: 'bg-[#FFD29F] text-black', progress: 'bg-[#FFD29F]' },
     'En progreso': { badge: 'bg-[#BFDBFE] text-black', progress: 'bg-[#BFDBFE]' },
     'Finalizado': { badge: 'bg-[#34D399] text-black', progress: 'bg-[#34D399]' },
@@ -73,7 +81,9 @@ const sprintStatusColors: { [key: string]: { badge: string; progress: string } }
 const InfoField = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div>
         <p className="text-sm font-semibold text-gray-500 mb-1">{label}</p>
-        {children}
+        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center flex-wrap gap-1">
+            {children}
+        </div>
     </div>
 );
 
@@ -89,7 +99,7 @@ const SubProjectCard = ({ subProject }: { subProject: typeof subProjects[0] }) =
             </Button>
         </CardHeader>
         <CardContent>
-            <Progress value={subProject.progress} indicatorClassName={subProject.color.replace('text-', 'bg-')} />
+            <Progress value={subProject.progress} indicatorClassName={subProject.color} />
             <div className="flex justify-between items-center mt-2 text-sm text-gray-600">
                 <span>{subProject.progress}%</span>
             </div>
@@ -97,7 +107,7 @@ const SubProjectCard = ({ subProject }: { subProject: typeof subProjects[0] }) =
                 <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-gray-500" />
                     <span>Estado:</span>
-                    <Badge className={`${statusColors[subProject.status]}`}>{subProject.status}</Badge>
+                    <Badge className={`${subProjectStatusColors[subProject.status]}`}>{subProject.status}</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-gray-500" />
@@ -124,6 +134,13 @@ const navItems = [
 
 export default function ProjectDetailsPage() {
     const [activeTab, setActiveTab] = React.useState('Detalles');
+
+    const formatMonthYear = (dateString: string) => {
+        if (!dateString) return '';
+        const [year, month] = dateString.split('-');
+        const date = new Date(Number(year), Number(month) - 1);
+        return date.toLocaleString('es-ES', { month: 'short', year: 'numeric' });
+    }
 
     return (
         <AppLayout
@@ -171,59 +188,44 @@ export default function ProjectDetailsPage() {
                         <div className="lg:col-span-2">
                             <Card>
                                 <CardContent className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                                         <div className="space-y-4">
-                                            <InfoField label="Estado">
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
                                                 <Badge className={statusColors[project.status]}>{project.status}</Badge>
-                                            </InfoField>
-                                            <InfoField label="Descripción">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.description}</p>
-                                            </InfoField>
-                                            <InfoField label="Acción estratégica">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.strategicAction}</p>
-                                            </InfoField>
-                                             <InfoField label="Clasificación">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.classification}</p>
-                                            </InfoField>
-                                             <InfoField label="Coordinación">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.coordination}</p>
-                                            </InfoField>
+                                            </div>
+                                            <InfoField label="Descripción"><p>{project.description}</p></InfoField>
+                                            <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
+                                             <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
+                                             <InfoField label="Coordinación"><p>{project.coordination}</p></InfoField>
                                              <InfoField label="Área Financiera">
-                                                <div className="flex flex-wrap gap-1 p-2 bg-gray-50 rounded-md border min-h-[36px]">
                                                     {project.financialArea.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
-                                                </div>
                                             </InfoField>
                                         </div>
                                         <div className="space-y-4">
-                                             <InfoField label="Coordinador">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.coordinator}</p>
-                                            </InfoField>
-                                            <InfoField label="Gestor">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.manager}</p>
-                                            </InfoField>
+                                             <InfoField label="Coordinador"><p>{project.coordinator}</p></InfoField>
+                                            <InfoField label="Gestor/Scrum Master"><p>{project.manager}</p></InfoField>
                                             <InfoField label="Responsable">
-                                                <div className="flex flex-wrap gap-1 p-2 bg-gray-50 rounded-md border min-h-[36px]">
                                                     {project.responsibles.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                                                </div>
                                             </InfoField>
                                             <InfoField label="Año">
-                                                 <div className="flex flex-wrap gap-1 p-2 bg-gray-50 rounded-md border min-h-[36px]">
                                                     {project.years.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
-                                                </div>
                                             </InfoField>
-                                            <InfoField label="Monto Anual">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">S/ {project.annualAmount}</p>
-                                            </InfoField>
-                                            <InfoField label="Método de Gestión de Proyecto">
-                                                <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.managementMethod}</p>
-                                            </InfoField>
+                                            <InfoField label="Monto Anual"><p>S/ {project.annualAmount}</p></InfoField>
+                                            <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod}</p></InfoField>
                                             <div className="grid grid-cols-2 gap-4">
-                                                <InfoField label="Fecha inicio">
-                                                    <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.startDate}</p>
-                                                </InfoField>
-                                                <InfoField label="Fecha fin">
-                                                    <p className="text-sm p-2 bg-gray-50 rounded-md border">{project.endDate}</p>
-                                                </InfoField>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
+                                                    <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
+                                                        <p>{formatMonthYear(project.startDate)}</p>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
+                                                     <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
+                                                        <p>{formatMonthYear(project.endDate)}</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -240,7 +242,7 @@ export default function ProjectDetailsPage() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <Progress value={45} indicatorClassName="bg-[#018CD1]" />
+                                    <Progress value={45} className="h-2.5" indicatorClassName="bg-[#018CD1]" />
                                 </CardContent>
                             </Card>
                              <Card>
@@ -252,9 +254,9 @@ export default function ProjectDetailsPage() {
                                         <div key={sprint.name}>
                                             <div className="flex justify-between items-center mb-1">
                                                 <p className="text-sm font-medium">{sprint.name}</p>
-                                                <Badge className={`${sprintStatusColors[sprint.status as keyof typeof sprintStatusColors].badge} text-xs`}>{sprint.status}</Badge>
+                                                <Badge className={`${sprintStatusConfig[sprint.status as keyof typeof sprintStatusConfig].badge} text-xs`}>{sprint.status}</Badge>
                                             </div>
-                                            <Progress value={sprint.progress} indicatorClassName={sprintStatusColors[sprint.status as keyof typeof sprintStatusColors].progress} />
+                                            <Progress value={sprint.progress} className="h-2" indicatorClassName={sprintStatusConfig[sprint.status as keyof typeof sprintStatusConfig].progress} />
                                         </div>
                                     ))}
                                 </CardContent>
