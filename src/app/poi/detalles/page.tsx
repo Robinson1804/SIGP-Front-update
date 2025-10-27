@@ -45,7 +45,7 @@ import { SubProject, Project } from '@/lib/definitions';
 
 const projectData: Project = {
   id: 'PROY N°3',
-  name: 'CPV',
+  name: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
   description: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
   strategicAction: 'AE1: Modernizar los servidores, sistemas de almacenamiento y redes críticas del INEI',
   classification: 'Gestión interna',
