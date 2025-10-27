@@ -44,7 +44,7 @@ import { SubProject, Project } from '@/lib/definitions';
 
 
 const projectData: Project = {
-  id: 'PROY N°3',
+  id: '3',
   name: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
   description: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
   strategicAction: 'AE1: Modernizar los servidores, sistemas de almacenamiento y redes críticas del INEI',
@@ -300,6 +300,8 @@ export default function ProjectDetailsPage() {
         )
     }
 
+    const projectCode = `PROY N°${project.id}`;
+
     return (
         <AppLayout
             navItems={navItems}
@@ -311,7 +313,7 @@ export default function ProjectDetailsPage() {
             <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
                 <div className="p-2 flex items-center justify-between w-full">
                     <h2 className="font-bold text-black pl-2">
-                        {`${project.id}: ${project.name}`}
+                        {`${projectCode}: ${project.name}`}
                     </h2>
                 </div>
             </div>
@@ -327,7 +329,7 @@ export default function ProjectDetailsPage() {
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
                             <Folder className="w-6 h-6 text-gray-700" />
-                            <h3 className="text-xl font-bold">{`${project.id}: ${project.name}`}</h3>
+                            <h3 className="text-xl font-bold">{`${projectCode}: ${project.name}`}</h3>
                         </div>
                         <div className="flex items-center gap-2">
                             <Button variant="destructive" size="sm" className="bg-[#EC221F] text-white" onClick={() => setIsDeleteModalOpen(true)}>
@@ -476,7 +478,5 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
-
-    
 
     

@@ -29,6 +29,7 @@ export type SubProject = {
 
 export type Project = {
     id: string;
+    code?: string;
     name: string;
     description: string;
     type: 'Proyecto' | 'Actividad';
@@ -48,3 +49,5 @@ export type Project = {
     startDate?: string;
     endDate?: string;
 };
+
+    
