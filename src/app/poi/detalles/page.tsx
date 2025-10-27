@@ -488,7 +488,7 @@ export default function ProjectDetailsPage() {
                         </div>
                         <div className="rounded-lg border overflow-hidden">
                           <Table className="bg-white">
-                              <TableHeader className="bg-blue-100 text-blue-900">
+                              <TableHeader className="bg-[#004272]/10 text-[#004272]">
                                   <TableRow>
                                       <TableHead className="font-bold">Fase</TableHead>
                                       <TableHead className="font-bold">Descripción</TableHead>
@@ -592,6 +592,8 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
+
+    
 
     
 
