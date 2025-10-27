@@ -476,7 +476,7 @@ export default function ProjectDetailsPage() {
                 )}
 
                  {activeTab === 'Documentos' && (
-                    <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div>
                         <div className="flex items-center gap-2 mb-4">
                           <FileText className="h-6 w-6 text-black" />
                           <h3 className="text-xl font-bold">DOCUMENTOS</h3>
@@ -484,10 +484,10 @@ export default function ProjectDetailsPage() {
                         <div className="flex justify-between items-center mb-4">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <Input placeholder="Buscar por nombre/descripción" className="pl-10" />
+                                <Input placeholder="Buscar por nombre/descripción" className="pl-10 bg-white" />
                             </div>
                         </div>
-                        <Table>
+                        <Table className="bg-white rounded-lg">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Fase</TableHead>
@@ -591,6 +591,3 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
-
-
-    
