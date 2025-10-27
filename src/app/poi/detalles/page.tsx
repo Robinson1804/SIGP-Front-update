@@ -25,6 +25,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -32,11 +38,11 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { POIModal } from '@/app/poi/page';
+import { POIModal, SubProjectModal } from '@/app/poi/page';
 import { SubProject, Project } from '@/lib/definitions';
 
 
-const project: Project = {
+const projectData: Project = {
   id: 'PROY N°3',
   name: 'CPV',
   description: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
@@ -115,9 +121,17 @@ const SubProjectCard = ({ subProject, onEdit, onDelete }: { subProject: SubProje
                 <Briefcase className="w-5 h-5 text-gray-500" />
                 <CardTitle className="text-base font-bold">{subProject.name}</CardTitle>
             </div>
-             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
-                <MoreHorizontal className="h-4 w-4" />
-            </Button>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
+                    <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar</DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </CardHeader>
         <CardContent>
             <Progress value={subProject.progress} indicatorClassName="bg-[#559FFE]" />
@@ -194,9 +208,15 @@ const navItems = [
 ];
 
 export default function ProjectDetailsPage() {
+    const [project, setProject] = React.useState(projectData);
     const [activeTab, setActiveTab] = React.useState('Detalles');
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+
+    const [isSubProjectModalOpen, setIsSubProjectModalOpen] = React.useState(false);
+    const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
+    const [isSubProjectDeleteModalOpen, setIsSubProjectDeleteModalOpen] = React.useState(false);
+    const [deletingSubProject, setDeletingSubProject] = React.useState<SubProject | null>(null);
 
     const formatMonthYear = (dateString: string) => {
         if (!dateString) return '';
@@ -206,9 +226,52 @@ export default function ProjectDetailsPage() {
     }
 
     const handleSaveProject = (updatedProject: Project) => {
-        // Here you would typically update the project data in your state management or backend
+        setProject(updatedProject);
         console.log("Project saved:", updatedProject);
     };
+
+    const handleDeleteProject = () => {
+        console.log("Deleting project...");
+        setIsDeleteModalOpen(false);
+        // Here you would typically redirect or update the UI
+    };
+    
+    const openSubProjectModal = (sub?: SubProject) => {
+        setEditingSubProject(sub || null);
+        setIsSubProjectModalOpen(true);
+    };
+
+    const handleSaveSubProject = (subProject: SubProject) => {
+        const updatedSubProjects = project.subProjects ? [...project.subProjects] : [];
+        const index = updatedSubProjects.findIndex(s => s.id === subProject.id);
+
+        if (index > -1) {
+            updatedSubProjects[index] = subProject;
+        } else {
+            updatedSubProjects.push({ ...subProject, id: Date.now().toString() });
+        }
+
+        setProject(p => ({ ...p, subProjects: updatedSubProjects }));
+        setIsSubProjectModalOpen(false);
+        setEditingSubProject(null);
+    };
+
+    const openDeleteSubProjectModal = (sub: SubProject) => {
+        setDeletingSubProject(sub);
+        setIsSubProjectDeleteModalOpen(true);
+    };
+
+    const handleDeleteSubProject = () => {
+        if (deletingSubProject && project.subProjects) {
+            setProject(p => ({
+                ...p,
+                subProjects: p.subProjects?.filter(s => s.id !== deletingSubProject.id)
+            }));
+        }
+        setIsSubProjectDeleteModalOpen(false);
+        setDeletingSubProject(null);
+    };
+
 
     return (
         <AppLayout
@@ -265,13 +328,13 @@ export default function ProjectDetailsPage() {
                                             <InfoField label="Descripción"><p>{project.description}</p></InfoField>
                                             <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
                                              <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
-                                             <InfoField label="Coordinación"><p>{project.coordination}</p></InfoField>
+                                             <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
                                              <InfoField label="Área Financiera">
                                                     {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                             </InfoField>
                                         </div>
                                         <div className="space-y-4">
-                                             <InfoField label="Coordinador"><p>{project.coordinator}</p></InfoField>
+                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                             <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
                                             <InfoField label="Responsable">
                                                     {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
@@ -280,7 +343,7 @@ export default function ProjectDetailsPage() {
                                                     {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                             </InfoField>
                                             <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
-                                            <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod}</p></InfoField>
+                                            <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
@@ -336,7 +399,7 @@ export default function ProjectDetailsPage() {
                         <div className="mt-6">
                             <h3 className="text-xl font-bold text-gray-800 mb-4">SUBPROYECTOS</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {project.subProjects.map(sub => <SubProjectCard key={sub.id} subProject={sub} onEdit={() => {}} onDelete={() => {}} />)}
+                                {project.subProjects.map(sub => <SubProjectCard key={sub.id} subProject={sub} onEdit={() => openSubProjectModal(sub)} onDelete={() => openDeleteSubProjectModal(sub)} />)}
                             </div>
                         </div>
                     )}
@@ -358,13 +421,27 @@ export default function ProjectDetailsPage() {
             <DeleteConfirmationModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => {
-                    console.log("Deleting project...");
-                    setIsDeleteModalOpen(false);
-                }}
+                onConfirm={handleDeleteProject}
                 title="AVISO"
                 message="El Plan Operativo Informático será eliminado"
+            />
+            
+            <SubProjectModal
+                isOpen={isSubProjectModalOpen}
+                onClose={() => setIsSubProjectModalOpen(false)}
+                onSave={handleSaveSubProject}
+                subProject={editingSubProject}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={isSubProjectDeleteModalOpen}
+                onClose={() => setIsSubProjectDeleteModalOpen(false)}
+                onConfirm={handleDeleteSubProject}
+                title="AVISO"
+                message="El subproyecto será eliminado"
             />
         </AppLayout>
     );
 }
+
+    
