@@ -357,10 +357,12 @@ export default function ProjectDetailsPage() {
                 </div>
             </div>
             <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
-                <div className="flex items-center mb-6 gap-2">
-                     <Button size="sm" onClick={() => setActiveTab('Detalles')} className={activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
-                    <Button size="sm" onClick={() => setActiveTab('Documentos')} className={activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
-                    <Button size="sm" onClick={() => setActiveTab('Backlog')} className={activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+                <div className="sticky top-0 bg-[#F9F9F9] z-10 py-4 mb-2">
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" onClick={() => setActiveTab('Detalles')} className={activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
+                        <Button size="sm" onClick={() => setActiveTab('Documentos')} className={activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
+                        <Button size="sm" onClick={() => setActiveTab('Backlog')} className={activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+                    </div>
                 </div>
 
                 {activeTab === 'Detalles' && (
@@ -488,13 +490,13 @@ export default function ProjectDetailsPage() {
                         </div>
                         <div className="rounded-lg border overflow-hidden">
                           <Table className="bg-white">
-                              <TableHeader className="bg-[#004272]/10 text-[#004272]">
+                              <TableHeader className="bg-[#004272]/10">
                                   <TableRow>
-                                      <TableHead className="font-bold">Fase</TableHead>
-                                      <TableHead className="font-bold">Descripción</TableHead>
-                                      <TableHead className="font-bold">Link (Archivo o carpeta)</TableHead>
-                                      <TableHead className="font-bold">Estado</TableHead>
-                                      <TableHead className="text-center font-bold">Acciones</TableHead>
+                                      <TableHead className="font-bold text-[#004272]">Fase</TableHead>
+                                      <TableHead className="font-bold text-[#004272]">Descripción</TableHead>
+                                      <TableHead className="font-bold text-[#004272]">Link (Archivo o carpeta)</TableHead>
+                                      <TableHead className="font-bold text-[#004272]">Estado</TableHead>
+                                      <TableHead className="text-center font-bold text-[#004272]">Acciones</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -592,6 +594,8 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
+
+    
 
     
 
