@@ -438,12 +438,14 @@ export default function ProjectDetailsPage() {
 
             </div>
 
-             <POIModal
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                project={project}
-                onSave={handleSaveProject}
-            />
+             {isEditModalOpen && (
+                <POIModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    project={project}
+                    onSave={handleSaveProject}
+                />
+             )}
 
             <DeleteConfirmationModal
                 isOpen={isDeleteModalOpen}
@@ -453,22 +455,28 @@ export default function ProjectDetailsPage() {
                 message="El Plan Operativo Informático será eliminado"
             />
             
-            <SubProjectModal
-                isOpen={isSubProjectModalOpen}
-                onClose={() => setIsSubProjectModalOpen(false)}
-                onSave={handleSaveSubProject}
-                subProject={editingSubProject}
-            />
+            {isSubProjectModalOpen && (
+                 <SubProjectModal
+                    isOpen={isSubProjectModalOpen}
+                    onClose={() => setIsSubProjectModalOpen(false)}
+                    onSave={handleSaveSubProject}
+                    subProject={editingSubProject}
+                />
+            )}
 
-            <DeleteConfirmationModal
+           {deletingSubProject && (
+             <DeleteConfirmationModal
                 isOpen={isSubProjectDeleteModalOpen}
                 onClose={() => setIsSubProjectDeleteModalOpen(false)}
                 onConfirm={handleDeleteSubProject}
                 title="AVISO"
                 message="El subproyecto será eliminado"
             />
+           )}
         </AppLayout>
     );
 }
+
+    
 
     
