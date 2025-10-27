@@ -79,7 +79,7 @@ const initialProjects: Project[] = [
         strategicAction: 'AE N°1',
         missingData: false,
         years: ['2025'],
-        responsible: ['Ana Garcia'],
+        responsibles: ['Ana Garcia'],
         financialArea: ['OTIN'],
         coordination: 'Coordinación 1',
         coordinator: 'Jefe de Proyecto',
@@ -100,6 +100,7 @@ const initialProjects: Project[] = [
         strategicAction: 'AE N°2',
         missingData: true,
         years: ['2025'],
+        subProjects: [],
     }
 ];
 
@@ -229,7 +230,7 @@ export function POIModal({
             if (!data.coordination) newErrors.coordination = "El campo es requerido.";
             if (!data.coordinator) newErrors.coordinator = "El campo es requerido.";
             if (!data.scrumMaster) newErrors.scrumMaster = "El campo es requerido.";
-            if (!data.responsible || data.responsible.length === 0) newErrors.responsible = "El campo es requerido.";
+            if (!data.responsibles || data.responsibles.length === 0) newErrors.responsible = "El campo es requerido.";
             if (!data.years || data.years.length === 0) newErrors.years = "El campo es requerido.";
             if (!data.annualAmount) newErrors.annualAmount = "El campo es requerido.";
             if (!data.financialArea || data.financialArea.length === 0) newErrors.financialArea = "El campo es requerido.";
@@ -245,7 +246,7 @@ export function POIModal({
         const initialData = project ? { ...project } : {
             id: '', name: '', description: '', type: undefined, classification: undefined,
             status: 'Pendiente', scrumMaster: '', annualAmount: 0, strategicAction: '',
-            subProjects: [], startDate: '', endDate: '', financialArea: [], responsible: [], years: [],
+            subProjects: [], startDate: '', endDate: '', financialArea: [], responsibles: [], years: [],
         };
         setFormData(initialData);
 
@@ -429,7 +430,7 @@ export function POIModal({
                             </div>
                             <div>
                                <label>Responsable</label>
-                               <MultiSelect options={responsibleOptions} selected={formData.responsible || []} onChange={selected => handleChange('responsible', selected)} placeholder="Seleccionar" className={errors.responsible ? 'border-red-500' : ''} />
+                               <MultiSelect options={responsibleOptions} selected={formData.responsibles || []} onChange={selected => handleChange('responsibles', selected)} placeholder="Seleccionar" className={errors.responsible ? 'border-red-500' : ''} />
                                {errors.responsible && <p className="text-red-500 text-xs mt-1">{errors.responsible}</p>}
                             </div>
                             <div>
@@ -494,9 +495,7 @@ function DeleteConfirmationModal({
                  <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
                     <DialogTitle>AVISO</DialogTitle>
                      <DialogClose asChild>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
-                            <X className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></Button>
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 text-center flex flex-col items-center">
@@ -527,6 +526,10 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
         ? `${formatMonthYear(project.startDate)} - ${formatMonthYear(project.endDate)}`
         : project.years?.join(', ');
 
+    const handleGoToDetails = () => {
+        localStorage.setItem('selectedProject', JSON.stringify(project));
+    };
+
     const cardContent = (
          <Card className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -545,7 +548,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild disabled={project.missingData}>
-                            <Link href={project.missingData ? '#' : '/poi/detalles'}>Ir a proyecto / Actividad</Link>
+                            <Link href={project.missingData ? '#' : '/poi/detalles'} onClick={handleGoToDetails}>Ir a proyecto / Actividad</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={onEdit}>Editar POI</DropdownMenuItem>
                         <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar POI</DropdownMenuItem>

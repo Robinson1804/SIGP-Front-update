@@ -2,6 +2,7 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import {
   FileText,
   Target,
@@ -208,7 +209,7 @@ const navItems = [
 ];
 
 export default function ProjectDetailsPage() {
-    const [project, setProject] = React.useState(projectData);
+    const [project, setProject] = React.useState<Project | null>(null);
     const [activeTab, setActiveTab] = React.useState('Detalles');
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
@@ -217,6 +218,16 @@ export default function ProjectDetailsPage() {
     const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
     const [isSubProjectDeleteModalOpen, setIsSubProjectDeleteModalOpen] = React.useState(false);
     const [deletingSubProject, setDeletingSubProject] = React.useState<SubProject | null>(null);
+    const router = useRouter();
+    
+    React.useEffect(() => {
+        const savedProjectData = localStorage.getItem('selectedProject');
+        if (savedProjectData) {
+            setProject(JSON.parse(savedProjectData));
+        } else {
+            setProject(projectData); // Fallback to mock data
+        }
+    }, []);
 
     const formatMonthYear = (dateString: string) => {
         if (!dateString) return '';
@@ -227,13 +238,16 @@ export default function ProjectDetailsPage() {
 
     const handleSaveProject = (updatedProject: Project) => {
         setProject(updatedProject);
-        console.log("Project saved:", updatedProject);
+        localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+        // Here you would also update your main projects list in a real app
+        setIsEditModalOpen(false);
     };
 
     const handleDeleteProject = () => {
         console.log("Deleting project...");
+        localStorage.removeItem('selectedProject');
         setIsDeleteModalOpen(false);
-        // Here you would typically redirect or update the UI
+        router.push('/poi');
     };
     
     const openSubProjectModal = (sub?: SubProject) => {
@@ -242,6 +256,7 @@ export default function ProjectDetailsPage() {
     };
 
     const handleSaveSubProject = (subProject: SubProject) => {
+        if (!project) return;
         const updatedSubProjects = project.subProjects ? [...project.subProjects] : [];
         const index = updatedSubProjects.findIndex(s => s.id === subProject.id);
 
@@ -250,8 +265,11 @@ export default function ProjectDetailsPage() {
         } else {
             updatedSubProjects.push({ ...subProject, id: Date.now().toString() });
         }
+        
+        const updatedProject = { ...project, subProjects: updatedSubProjects };
+        setProject(updatedProject);
+        localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
 
-        setProject(p => ({ ...p, subProjects: updatedSubProjects }));
         setIsSubProjectModalOpen(false);
         setEditingSubProject(null);
     };
@@ -262,16 +280,25 @@ export default function ProjectDetailsPage() {
     };
 
     const handleDeleteSubProject = () => {
-        if (deletingSubProject && project.subProjects) {
-            setProject(p => ({
-                ...p,
-                subProjects: p.subProjects?.filter(s => s.id !== deletingSubProject.id)
-            }));
+        if (deletingSubProject && project && project.subProjects) {
+            const updatedProject = {
+                ...project,
+                subProjects: project.subProjects?.filter(s => s.id !== deletingSubProject.id)
+            };
+            setProject(updatedProject);
+            localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
         }
         setIsSubProjectDeleteModalOpen(false);
         setDeletingSubProject(null);
     };
 
+    if (!project) {
+        return (
+             <AppLayout navItems={navItems} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
+                <div className="flex-1 flex items-center justify-center">Cargando proyecto...</div>
+             </AppLayout>
+        )
+    }
 
     return (
         <AppLayout
