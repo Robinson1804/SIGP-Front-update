@@ -340,8 +340,8 @@ export default function ProjectDetailsPage() {
     const projectCode = `PROY N° ${project.id}`;
     
     const breadcrumbs = [
-        { label: 'POI', href: '/poi' },
-        { label: activeTab }
+      { label: 'POI', href: '/poi' },
+      { label: activeTab }
     ];
 
     return (
@@ -488,13 +488,13 @@ export default function ProjectDetailsPage() {
                         </div>
                         <div className="rounded-lg border overflow-hidden">
                           <Table className="bg-white">
-                              <TableHeader className="bg-blue-50">
+                              <TableHeader className="bg-blue-100 text-blue-900">
                                   <TableRow>
-                                      <TableHead>Fase</TableHead>
-                                      <TableHead>Descripción</TableHead>
-                                      <TableHead>Link (Archivo o carpeta)</TableHead>
-                                      <TableHead>Estado</TableHead>
-                                      <TableHead className="text-center">Acciones</TableHead>
+                                      <TableHead className="font-bold">Fase</TableHead>
+                                      <TableHead className="font-bold">Descripción</TableHead>
+                                      <TableHead className="font-bold">Link (Archivo o carpeta)</TableHead>
+                                      <TableHead className="font-bold">Estado</TableHead>
+                                      <TableHead className="text-center font-bold">Acciones</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -592,5 +592,7 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
+
+    
 
     
