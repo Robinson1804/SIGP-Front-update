@@ -19,6 +19,9 @@ import {
   MoreHorizontal,
   AlertTriangle,
   X,
+  Search,
+  Download,
+  CheckSquare,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -41,6 +44,10 @@ import {
 } from "@/components/ui/dialog";
 import { POIModal, SubProjectModal } from '@/app/poi/page';
 import { SubProject, Project } from '@/lib/definitions';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 
 const projectData: Project = {
@@ -76,6 +83,24 @@ const sprints = [
   { name: 'Sprint 4', status: 'Por hacer', progress: 0 },
 ];
 
+type DocumentStatus = 'Pendiente' | 'Aprobado' | 'No aprobado';
+type Document = {
+    id: string;
+    phase: string;
+    description: string;
+    link: string;
+    status: DocumentStatus;
+};
+
+const initialDocuments: Document[] = [
+    { id: '1', phase: 'Análisis y Planificación', description: 'Presentación Kick Off', link: 'Subir', status: 'Aprobado' },
+    { id: '2', phase: 'Análisis y Planificación', description: 'Acta de constitucion del proyecto', link: 'https://drive.google.com/file/d/1S0v08cemryRXG3', status: 'Aprobado' },
+    { id: '3', phase: 'Análisis y Planificación', description: 'Cronograma de lanzamiento', link: 'Subir', status: 'Aprobado' },
+    { id: '4', phase: 'Diseño', description: 'Prototipo', link: 'https://drive.google.com/file/d/1S0v08cemryRXG3', status: 'Pendiente' },
+    { id: '5', phase: 'Diseño', description: 'Casos de pruebas unitarias', link: 'Subir', status: 'Pendiente' },
+    { id: '6', phase: 'Desarrollo', description: 'Código fuentes del software', link: 'Subir', status: 'Pendiente' },
+];
+
 
 const statusColors: { [key: string]: string } = {
   'Pendiente': 'bg-[#FE9F43] text-black',
@@ -97,6 +122,13 @@ const sprintStatusConfig: { [key: string]: { badge: string; progress: string } }
     'En progreso': { badge: 'bg-[#BFDBFE] text-black', progress: 'bg-[#BFDBFE]' },
     'Finalizado': { badge: 'bg-[#34D399] text-black', progress: 'bg-[#34D399]' },
 };
+
+const documentStatusConfig: { [key: string]: { bg: string; text: string } } = {
+    'Pendiente': { bg: '#FFF0C8', text: '#A67C00' },
+    'Aprobado': { bg: '#B2FBBE', text: '#006B1A' },
+    'No aprobado': { bg: '#FFC8C8', text: '#A90000' },
+};
+
 
 const InfoField = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div>
@@ -218,6 +250,9 @@ export default function ProjectDetailsPage() {
     const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
     const [isSubProjectDeleteModalOpen, setIsSubProjectDeleteModalOpen] = React.useState(false);
     const [deletingSubProject, setDeletingSubProject] = React.useState<SubProject | null>(null);
+    
+    const [documents, setDocuments] = React.useState<Document[]>(initialDocuments);
+    
     const router = useRouter();
     
     React.useEffect(() => {
@@ -239,7 +274,6 @@ export default function ProjectDetailsPage() {
     const handleSaveProject = (updatedProject: Project) => {
         setProject(updatedProject);
         localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
-        // Here you would also update your main projects list in a real app
         setIsEditModalOpen(false);
     };
 
@@ -291,6 +325,10 @@ export default function ProjectDetailsPage() {
         setIsSubProjectDeleteModalOpen(false);
         setDeletingSubProject(null);
     };
+    
+    const handleDocumentStatusChange = (docId: string, newStatus: DocumentStatus) => {
+        setDocuments(documents.map(doc => doc.id === docId ? { ...doc, status: newStatus } : doc));
+    };
 
     if (!project) {
         return (
@@ -301,14 +339,16 @@ export default function ProjectDetailsPage() {
     }
 
     const projectCode = `PROY N°${project.id}`;
+    
+    const breadcrumbs = [
+        { label: 'POI', href: '/poi' },
+        { label: activeTab === 'Detalles' ? 'Detalles' : activeTab }
+    ];
 
     return (
         <AppLayout
             navItems={navItems}
-            breadcrumbs={[
-                { label: 'POI', href: '/poi' },
-                { label: 'Detalles' }
-            ]}
+            breadcrumbs={breadcrumbs}
         >
             <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
                 <div className="p-2 flex items-center justify-between w-full">
@@ -435,12 +475,82 @@ export default function ProjectDetailsPage() {
                     </>
                 )}
 
-                {activeTab === 'Documentos' && <div className="text-center p-10"><p>Sección de Documentos en construcción.</p></div>}
+                 {activeTab === 'Documentos' && (
+                    <div className="bg-white p-6 rounded-lg shadow-md">
+                        <h3 className="text-xl font-bold mb-4">DOCUMENTOS</h3>
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input placeholder="Buscar por nombre/descripción" className="pl-10" />
+                            </div>
+                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Fase</TableHead>
+                                    <TableHead>Descripción</TableHead>
+                                    <TableHead>Link (Archivo o carpeta)</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-center">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {documents.map((doc) => (
+                                    <TableRow key={doc.id}>
+                                        <TableCell>{doc.phase}</TableCell>
+                                        <TableCell>{doc.description}</TableCell>
+                                        <TableCell>
+                                            {doc.link.startsWith('http') ? 
+                                                <a href={doc.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{doc.link}</a> : 
+                                                <span className="underline cursor-pointer">{doc.link}</span>
+                                            }
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge style={{ backgroundColor: documentStatusConfig[doc.status].bg, color: documentStatusConfig[doc.status].text }} className="font-semibold">
+                                                {doc.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="flex justify-center gap-2">
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={doc.status !== 'Pendiente'}>
+                                                        <CheckSquare className="h-5 w-5" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-40 p-2">
+                                                    <div className="text-sm font-semibold p-1">Validar documento</div>
+                                                    <div className="flex flex-col gap-1 mt-1">
+                                                        <Badge onClick={() => handleDocumentStatusChange(doc.id, 'Aprobado')} style={{ backgroundColor: documentStatusConfig['Aprobado'].bg, color: documentStatusConfig['Aprobado'].text}} className="cursor-pointer justify-center py-1">Aprobado</Badge>
+                                                        <Badge onClick={() => handleDocumentStatusChange(doc.id, 'No aprobado')} style={{ backgroundColor: documentStatusConfig['No aprobado'].bg, color: documentStatusConfig['No aprobado'].text}} className="cursor-pointer justify-center py-1">No Aprobado</Badge>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <Download className="h-5 w-5" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                        <Pagination className="mt-4 justify-start">
+                            <PaginationContent>
+                                <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
+                                <PaginationItem><PaginationLink href="#">1</PaginationLink></PaginationItem>
+                                <PaginationItem><PaginationLink href="#" isActive>2</PaginationLink></PaginationItem>
+                                <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
+                                <PaginationItem>...</PaginationItem>
+                                <PaginationItem><PaginationNext href="#" /></PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
+                    </div>
+                )}
+                
                 {activeTab === 'Backlog' && <div className="text-center p-10"><p>Sección de Backlog en construcción.</p></div>}
 
             </div>
 
-             {isEditModalOpen && (
+             {isEditModalOpen && project && (
                 <POIModal
                     isOpen={isEditModalOpen}
                     onClose={() => setIsEditModalOpen(false)}
@@ -478,5 +588,3 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
-
-    
