@@ -356,8 +356,8 @@ export default function ProjectDetailsPage() {
                     </h2>
                 </div>
             </div>
-            <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
-                <div className="sticky top-0 bg-[#F9F9F9] z-10 py-4 mb-2">
+            <div className="flex-1 flex flex-col bg-[#F9F9F9]">
+                <div className="sticky top-[52px] bg-[#F9F9F9] z-10 p-6 -mb-2">
                     <div className="flex items-center gap-2">
                         <Button size="sm" onClick={() => setActiveTab('Detalles')} className={activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
                         <Button size="sm" onClick={() => setActiveTab('Documentos')} className={activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
@@ -365,194 +365,196 @@ export default function ProjectDetailsPage() {
                     </div>
                 </div>
 
-                {activeTab === 'Detalles' && (
-                    <>
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-2">
-                            <Folder className="w-6 h-6 text-gray-700" />
-                            <h3 className="text-xl font-bold">{`${projectCode}: ${project.name}`}</h3>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="destructive" size="sm" className="bg-[#EC221F] text-white" onClick={() => setIsDeleteModalOpen(true)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Eliminar
-                            </Button>
-                            <Button size="sm" className="bg-[#018CD1] text-white" onClick={() => setIsEditModalOpen(true)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Editar
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Columna Izquierda */}
-                        <div className="lg:col-span-2">
-                            <Card>
-                                <CardContent className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                        <div className="space-y-4">
-                                            <div>
-                                                <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
-                                                <Badge className={statusColors[project.status]}>{project.status}</Badge>
-                                            </div>
-                                            <InfoField label="Descripción"><p>{project.description}</p></InfoField>
-                                            <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
-                                             <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
-                                             <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
-                                             <InfoField label="Área Financiera">
-                                                    {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
-                                            </InfoField>
-                                        </div>
-                                        <div className="space-y-4">
-                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                            <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
-                                            <InfoField label="Responsable">
-                                                    {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                                            </InfoField>
-                                            <InfoField label="Año">
-                                                    {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
-                                            </InfoField>
-                                            <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
-                                            <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
-                                                    <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                        <p>{formatMonthYear(project.startDate || '')}</p>
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
-                                                     <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                        <p>{formatMonthYear(project.endDate || '')}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        {/* Columna Derecha */}
-                        <div className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <div className="flex justify-between items-center">
-                                       <CardTitle className="text-base">Progreso General</CardTitle>
-                                       <span className="font-bold text-base">45%</span>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <Progress value={45} className="h-2.5" indicatorClassName="bg-[#018CD1]" />
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader>
-                                   <CardTitle className="text-base">Progreso por Sprints</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {sprints.map(sprint => (
-                                        <div key={sprint.name}>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <p className="text-sm font-medium">{sprint.name}</p>
-                                                <Badge className={`${sprintStatusConfig[sprint.status as keyof typeof sprintStatusConfig].badge} text-xs`}>{sprint.status}</Badge>
-                                            </div>
-                                            <Progress value={sprint.progress} className="h-2" indicatorClassName={sprintStatusConfig[sprint.status as keyof typeof sprintStatusConfig].progress} />
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                    
-                    {project.subProjects && project.subProjects.length > 0 && (
-                        <div className="mt-6">
-                            <h3 className="text-xl font-bold text-gray-800 mb-4">SUBPROYECTOS</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {project.subProjects.map(sub => <SubProjectCard key={sub.id} subProject={sub} onEdit={() => openSubProjectModal(sub)} onDelete={() => openDeleteSubProjectModal(sub)} />)}
+                <div className="p-6">
+                    {activeTab === 'Detalles' && (
+                        <>
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2">
+                                <Folder className="w-6 h-6 text-gray-700" />
+                                <h3 className="text-xl font-bold">{`${projectCode}: ${project.name}`}</h3>
                             </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="destructive" size="sm" className="bg-[#EC221F] text-white" onClick={() => setIsDeleteModalOpen(true)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                </Button>
+                                <Button size="sm" className="bg-[#018CD1] text-white" onClick={() => setIsEditModalOpen(true)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Columna Izquierda */}
+                            <div className="lg:col-span-2">
+                                <Card>
+                                    <CardContent className="p-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
+                                                    <Badge className={statusColors[project.status]}>{project.status}</Badge>
+                                                </div>
+                                                <InfoField label="Descripción"><p>{project.description}</p></InfoField>
+                                                <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
+                                                <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
+                                                <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
+                                                <InfoField label="Área Financiera">
+                                                        {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
+                                                </InfoField>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
+                                                <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
+                                                <InfoField label="Responsable">
+                                                        {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                                                </InfoField>
+                                                <InfoField label="Año">
+                                                        {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
+                                                </InfoField>
+                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
+                                                <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
+                                                        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
+                                                            <p>{formatMonthYear(project.startDate || '')}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
+                                                        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
+                                                            <p>{formatMonthYear(project.endDate || '')}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            {/* Columna Derecha */}
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <div className="flex justify-between items-center">
+                                        <CardTitle className="text-base">Progreso General</CardTitle>
+                                        <span className="font-bold text-base">45%</span>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Progress value={45} className="h-2.5" indicatorClassName="bg-[#018CD1]" />
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader>
+                                    <CardTitle className="text-base">Progreso por Sprints</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        {sprints.map(sprint => (
+                                            <div key={sprint.name}>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <p className="text-sm font-medium">{sprint.name}</p>
+                                                    <Badge className={`${sprintStatusConfig[sprint.status as keyof typeof sprintStatusConfig].badge} text-xs`}>{sprint.status}</Badge>
+                                                </div>
+                                                <Progress value={sprint.progress} className="h-2" indicatorClassName={sprintStatusConfig[sprint.status as keyof typeof sprintStatusConfig].progress} />
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                        
+                        {project.subProjects && project.subProjects.length > 0 && (
+                            <div className="mt-6">
+                                <h3 className="text-xl font-bold text-gray-800 mb-4">SUBPROYECTOS</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {project.subProjects.map(sub => <SubProjectCard key={sub.id} subProject={sub} onEdit={() => openSubProjectModal(sub)} onDelete={() => openDeleteSubProjectModal(sub)} />)}
+                                </div>
+                            </div>
+                        )}
+                        </>
+                    )}
+
+                    {activeTab === 'Documentos' && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-4">
+                            <FileText className="h-6 w-6 text-black" />
+                            <h3 className="text-xl font-bold">DOCUMENTOS</h3>
+                            </div>
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input placeholder="Buscar por nombre/descripción" className="pl-10 bg-white" />
+                                </div>
+                            </div>
+                            <div className="rounded-lg border overflow-hidden">
+                            <Table className="bg-white">
+                                <TableHeader className="bg-[#004272]/10">
+                                    <TableRow>
+                                        <TableHead className="font-bold text-[#004272]">Fase</TableHead>
+                                        <TableHead className="font-bold text-[#004272]">Descripción</TableHead>
+                                        <TableHead className="font-bold text-[#004272]">Link (Archivo o carpeta)</TableHead>
+                                        <TableHead className="font-bold text-[#004272]">Estado</TableHead>
+                                        <TableHead className="text-center font-bold text-[#004272]">Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {documents.map((doc) => (
+                                        <TableRow key={doc.id}>
+                                            <TableCell>{doc.phase}</TableCell>
+                                            <TableCell>{doc.description}</TableCell>
+                                            <TableCell>
+                                                {doc.link.startsWith('http') ? 
+                                                    <a href={doc.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{doc.link}</a> : 
+                                                    <span className="underline cursor-pointer">{doc.link}</span>
+                                                }
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge style={{ backgroundColor: documentStatusConfig[doc.status].bg, color: documentStatusConfig[doc.status].text }} className="font-semibold">
+                                                    {doc.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="flex justify-center gap-2">
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" disabled={doc.status !== 'Pendiente'}>
+                                                            <CheckSquare className="h-5 w-5" />
+                                                        </Button>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-2">
+                                                        <div className="text-sm font-semibold p-1">Validar documento</div>
+                                                        <div className="flex flex-col gap-1 mt-1">
+                                                            <Badge onClick={() => handleDocumentStatusChange(doc.id, 'Aprobado')} style={{ backgroundColor: documentStatusConfig['Aprobado'].bg, color: documentStatusConfig['Aprobado'].text}} className="cursor-pointer justify-center py-1">Aprobado</Badge>
+                                                            <Badge onClick={() => handleDocumentStatusChange(doc.id, 'No aprobado')} style={{ backgroundColor: documentStatusConfig['No aprobado'].bg, color: documentStatusConfig['No aprobado'].text}} className="cursor-pointer justify-center py-1">No Aprobado</Badge>
+                                                        </div>
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                    <Download className="h-5 w-5" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                            </div>
+                            <Pagination className="mt-4 justify-start">
+                                <PaginationContent>
+                                    <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
+                                    <PaginationItem><PaginationLink href="#">1</PaginationLink></PaginationItem>
+                                    <PaginationItem><PaginationLink href="#" isActive>2</PaginationLink></PaginationItem>
+                                    <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
+                                    <PaginationItem>...</PaginationItem>
+                                    <PaginationItem><PaginationNext href="#" /></PaginationItem>
+                                </PaginationContent>
+                            </Pagination>
                         </div>
                     )}
-                    </>
-                )}
-
-                 {activeTab === 'Documentos' && (
-                    <div>
-                        <div className="flex items-center gap-2 mb-4">
-                          <FileText className="h-6 w-6 text-black" />
-                          <h3 className="text-xl font-bold">DOCUMENTOS</h3>
-                        </div>
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <Input placeholder="Buscar por nombre/descripción" className="pl-10 bg-white" />
-                            </div>
-                        </div>
-                        <div className="rounded-lg border overflow-hidden">
-                          <Table className="bg-white">
-                              <TableHeader className="bg-[#004272]/10">
-                                  <TableRow>
-                                      <TableHead className="font-bold text-[#004272]">Fase</TableHead>
-                                      <TableHead className="font-bold text-[#004272]">Descripción</TableHead>
-                                      <TableHead className="font-bold text-[#004272]">Link (Archivo o carpeta)</TableHead>
-                                      <TableHead className="font-bold text-[#004272]">Estado</TableHead>
-                                      <TableHead className="text-center font-bold text-[#004272]">Acciones</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                  {documents.map((doc) => (
-                                      <TableRow key={doc.id}>
-                                          <TableCell>{doc.phase}</TableCell>
-                                          <TableCell>{doc.description}</TableCell>
-                                          <TableCell>
-                                              {doc.link.startsWith('http') ? 
-                                                  <a href={doc.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">{doc.link}</a> : 
-                                                  <span className="underline cursor-pointer">{doc.link}</span>
-                                              }
-                                          </TableCell>
-                                          <TableCell>
-                                              <Badge style={{ backgroundColor: documentStatusConfig[doc.status].bg, color: documentStatusConfig[doc.status].text }} className="font-semibold">
-                                                  {doc.status}
-                                              </Badge>
-                                          </TableCell>
-                                          <TableCell className="flex justify-center gap-2">
-                                              <Popover>
-                                                  <PopoverTrigger asChild>
-                                                      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={doc.status !== 'Pendiente'}>
-                                                          <CheckSquare className="h-5 w-5" />
-                                                      </Button>
-                                                  </PopoverTrigger>
-                                                  <PopoverContent className="w-auto p-2">
-                                                      <div className="text-sm font-semibold p-1">Validar documento</div>
-                                                      <div className="flex flex-col gap-1 mt-1">
-                                                          <Badge onClick={() => handleDocumentStatusChange(doc.id, 'Aprobado')} style={{ backgroundColor: documentStatusConfig['Aprobado'].bg, color: documentStatusConfig['Aprobado'].text}} className="cursor-pointer justify-center py-1">Aprobado</Badge>
-                                                          <Badge onClick={() => handleDocumentStatusChange(doc.id, 'No aprobado')} style={{ backgroundColor: documentStatusConfig['No aprobado'].bg, color: documentStatusConfig['No aprobado'].text}} className="cursor-pointer justify-center py-1">No Aprobado</Badge>
-                                                      </div>
-                                                  </PopoverContent>
-                                              </Popover>
-                                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                  <Download className="h-5 w-5" />
-                                              </Button>
-                                          </TableCell>
-                                      </TableRow>
-                                  ))}
-                              </TableBody>
-                          </Table>
-                        </div>
-                        <Pagination className="mt-4 justify-start">
-                            <PaginationContent>
-                                <PaginationItem><PaginationPrevious href="#" /></PaginationItem>
-                                <PaginationItem><PaginationLink href="#">1</PaginationLink></PaginationItem>
-                                <PaginationItem><PaginationLink href="#" isActive>2</PaginationLink></PaginationItem>
-                                <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
-                                <PaginationItem>...</PaginationItem>
-                                <PaginationItem><PaginationNext href="#" /></PaginationItem>
-                            </PaginationContent>
-                        </Pagination>
-                    </div>
-                )}
-                
-                {activeTab === 'Backlog' && <div className="text-center p-10"><p>Sección de Backlog en construcción.</p></div>}
+                    
+                    {activeTab === 'Backlog' && <div className="text-center p-10"><p>Sección de Backlog en construcción.</p></div>}
+                </div>
 
             </div>
 
@@ -594,11 +596,3 @@ export default function ProjectDetailsPage() {
         </AppLayout>
     );
 }
-
-    
-
-    
-
-    
-
-    
