@@ -61,40 +61,8 @@ import {
 } from "@/components/ui/tooltip";
 import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { type SubProject, type Project } from '@/lib/definitions';
 
-
-type SubProject = {
-    id: string;
-    name: string;
-    description: string;
-    responsible: string[];
-    scrumMaster: string;
-    years: string[];
-    annualAmount: number;
-    managementMethod: string;
-}
-
-type Project = {
-    id: string;
-    name: string;
-    description: string;
-    type: 'Proyecto' | 'Actividad';
-    classification: 'Al ciudadano' | 'Gestión interna';
-    status: 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
-    scrumMaster: string;
-    annualAmount: number;
-    strategicAction: string;
-    missingData?: boolean;
-    coordination?: string;
-    financialArea?: string[];
-    coordinator?: string;
-    responsible?: string[];
-    years?: string[];
-    managementMethod?: string;
-    subProjects?: SubProject[];
-    startDate?: string;
-    endDate?: string;
-};
 
 const initialProjects: Project[] = [
     {
@@ -214,7 +182,7 @@ function SubProjectModal({
                     </div>
                     <div>
                         <label>Monto anual</label>
-                        <Input type="number" placeholder="Ingresar monto anual" value={formData.annualAmount || ''} onChange={e => handleChange('annualAmount', Number(e.target.value))} />
+                        <Input type="number" placeholder="Ingresar monto anual" value={formData.amount || ''} onChange={e => handleChange('amount', Number(e.target.value))} />
                     </div>
                     <div>
                         <label>Método de Gestión del proyecto</label>
@@ -230,7 +198,7 @@ function SubProjectModal({
     )
 }
 
-function POIModal({
+export function POIModal({
     isOpen,
     onClose,
     project,
@@ -392,7 +360,7 @@ function POIModal({
                                                 {formData.subProjects?.map(sub => (
                                                     <TableRow key={sub.id} onClick={() => openSubProjectModal(sub)} className="cursor-pointer">
                                                         <TableCell>{sub.name}</TableCell>
-                                                        <TableCell>{sub.annualAmount}</TableCell>
+                                                        <TableCell>{sub.amount}</TableCell>
                                                         <TableCell>{sub.scrumMaster}</TableCell>
                                                     </TableRow>
                                                 ))}
@@ -526,9 +494,7 @@ function DeleteConfirmationModal({
                  <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
                     <DialogTitle>AVISO</DialogTitle>
                      <DialogClose asChild>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
-                            <X className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></Button>
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 text-center flex flex-col items-center">
