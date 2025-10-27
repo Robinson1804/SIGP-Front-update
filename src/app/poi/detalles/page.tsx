@@ -16,14 +16,27 @@ import {
   Users as UsersIcon,
   CheckCircle,
   MoreHorizontal,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { POIModal } from '@/app/poi/page';
+import { SubProject, Project } from '@/lib/definitions';
 
-const project = {
+
+const project: Project = {
   id: 'PROY N°3',
   name: 'CPV',
   description: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
@@ -32,22 +45,22 @@ const project = {
   coordination: 'Son las divisiones',
   financialArea: ['OTIN', 'DCNC'],
   coordinator: 'Coordinador1',
-  manager: 'Mario Casas',
+  scrumMaster: 'Mario Casas',
   responsibles: ['Angella Trujillo', 'Anayeli Monzon', 'Otro Responsable'],
   years: ['2021', '2022', '2023', '2024'],
-  annualAmount: '2,500,000.00',
+  annualAmount: 2500000,
   managementMethod: 'Scrum',
   startDate: '2025-04',
   endDate: '2025-09',
   status: 'En planificación',
+  type: 'Proyecto',
+  subProjects: [
+    { id: '1', name: 'Monitoreo', progress: 80, amount: 640000, scrumMaster: 'Responsable 1', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3', 'Dev 4', 'Dev 5'], years: ['2025'], managementMethod: 'Scrum' },
+    { id: '2', name: 'Logística', progress: 60, amount: 360000, scrumMaster: 'Responsable 2', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3', 'Dev 4'], years: ['2025'], managementMethod: 'Scrum' },
+    { id: '3', name: 'Captura', progress: 50, amount: 350000, scrumMaster: 'Responsable 3', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3', 'Dev 4', 'Dev 5', 'Dev 6'], years: ['2025'], managementMethod: 'Scrum' },
+    { id: '4', name: 'BI', progress: 30, amount: 120000, scrumMaster: 'Responsable 4', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3'], years: ['2025'], managementMethod: 'Scrum' },
+  ]
 };
-
-const subProjects = [
-    { id: '1', name: 'Monitoreo', progress: 80, amount: '640k', devs: 5, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
-    { id: '2', name: 'Logística', progress: 60, amount: '360k', devs: 4, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
-    { id: '3', name: 'Captura', progress: 50, amount: '350k', devs: 6, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
-    { id: '4', name: 'BI', progress: 30, amount: '120k', devs: 3, status: 'En desarrollo', icon: Briefcase, color: 'bg-[#559FFE]' },
-];
 
 const sprints = [
   { name: 'Sprint 1', status: 'Finalizado', progress: 100 },
@@ -87,19 +100,27 @@ const InfoField = ({ label, children }: { label: string, children: React.ReactNo
     </div>
 );
 
-const SubProjectCard = ({ subProject }: { subProject: typeof subProjects[0] }) => (
+const SubProjectCard = ({ subProject, onEdit, onDelete }: { subProject: SubProject, onEdit: () => void, onDelete: () => void }) => {
+    const formatAmount = (amount: number) => {
+        if (amount >= 1000) {
+            return `S/ ${amount / 1000}k`;
+        }
+        return `S/ ${amount}`;
+    }
+    
+    return (
     <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div className="flex items-center gap-2">
-                <subProject.icon className="w-5 h-5 text-gray-500" />
+                <Briefcase className="w-5 h-5 text-gray-500" />
                 <CardTitle className="text-base font-bold">{subProject.name}</CardTitle>
             </div>
-             <Button variant="ghost" size="icon" className="h-6 w-6">
+             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
                 <MoreHorizontal className="h-4 w-4" />
             </Button>
         </CardHeader>
         <CardContent>
-            <Progress value={subProject.progress} indicatorClassName={subProject.color} />
+            <Progress value={subProject.progress} indicatorClassName="bg-[#559FFE]" />
             <div className="flex justify-between items-center mt-2 text-sm text-gray-600">
                 <span>{subProject.progress}%</span>
             </div>
@@ -107,22 +128,62 @@ const SubProjectCard = ({ subProject }: { subProject: typeof subProjects[0] }) =
                 <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-gray-500" />
                     <span>Estado:</span>
-                    <Badge className={`${subProjectStatusColors[subProject.status]}`}>{subProject.status}</Badge>
+                    <Badge className={`${subProjectStatusColors['En desarrollo']}`}>En desarrollo</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-gray-500" />
                     <span>Monto:</span>
-                    <span>S/ {subProject.amount}</span>
+                    <span>{formatAmount(subProject.amount)}</span>
                 </div>
                  <div className="flex items-center gap-2">
                     <UsersIcon className="w-4 h-4 text-gray-500" />
                     <span>Responsable:</span>
-                    <span>{subProject.devs}</span>
+                    <span>{subProject.responsible.length}</span>
                 </div>
             </div>
         </CardContent>
     </Card>
-);
+)};
+
+function DeleteConfirmationModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+    message,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    message: string;
+}) {
+    if (!isOpen) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
+                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+                    <DialogTitle>{title}</DialogTitle>
+                     <DialogClose asChild>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </DialogClose>
+                </DialogHeader>
+                <div className="p-6 text-center flex flex-col items-center">
+                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
+                    <p className="font-bold text-lg">¿Estás seguro?</p>
+                    <p className="text-muted-foreground">{message}</p>
+                </div>
+                <DialogFooter className="px-6 pb-6 flex justify-center gap-4">
+                    <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
+                    <Button onClick={onConfirm} style={{backgroundColor: '#018CD1', color: 'white'}}>Sí, eliminar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 const navItems = [
   { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
@@ -134,6 +195,8 @@ const navItems = [
 
 export default function ProjectDetailsPage() {
     const [activeTab, setActiveTab] = React.useState('Detalles');
+    const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
 
     const formatMonthYear = (dateString: string) => {
         if (!dateString) return '';
@@ -141,6 +204,11 @@ export default function ProjectDetailsPage() {
         const date = new Date(Number(year), Number(month) - 1);
         return date.toLocaleString('es-ES', { month: 'short', year: 'numeric' });
     }
+
+    const handleSaveProject = (updatedProject: Project) => {
+        // Here you would typically update the project data in your state management or backend
+        console.log("Project saved:", updatedProject);
+    };
 
     return (
         <AppLayout
@@ -172,11 +240,11 @@ export default function ProjectDetailsPage() {
                             <h3 className="text-xl font-bold">{`${project.id}: ${project.name}`}</h3>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button variant="destructive" size="sm" className="bg-[#EC221F] text-white">
+                            <Button variant="destructive" size="sm" className="bg-[#EC221F] text-white" onClick={() => setIsDeleteModalOpen(true)}>
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Eliminar
                             </Button>
-                            <Button size="sm" className="bg-[#018CD1] text-white">
+                            <Button size="sm" className="bg-[#018CD1] text-white" onClick={() => setIsEditModalOpen(true)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Editar
                             </Button>
@@ -199,31 +267,31 @@ export default function ProjectDetailsPage() {
                                              <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
                                              <InfoField label="Coordinación"><p>{project.coordination}</p></InfoField>
                                              <InfoField label="Área Financiera">
-                                                    {project.financialArea.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
+                                                    {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                             </InfoField>
                                         </div>
                                         <div className="space-y-4">
                                              <InfoField label="Coordinador"><p>{project.coordinator}</p></InfoField>
-                                            <InfoField label="Gestor/Scrum Master"><p>{project.manager}</p></InfoField>
+                                            <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
                                             <InfoField label="Responsable">
-                                                    {project.responsibles.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                                                    {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
                                             </InfoField>
                                             <InfoField label="Año">
-                                                    {project.years.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
+                                                    {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                             </InfoField>
-                                            <InfoField label="Monto Anual"><p>S/ {project.annualAmount}</p></InfoField>
+                                            <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                             <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod}</p></InfoField>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
                                                     <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                        <p>{formatMonthYear(project.startDate)}</p>
+                                                        <p>{formatMonthYear(project.startDate || '')}</p>
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
                                                      <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                        <p>{formatMonthYear(project.endDate)}</p>
+                                                        <p>{formatMonthYear(project.endDate || '')}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -264,12 +332,14 @@ export default function ProjectDetailsPage() {
                         </div>
                     </div>
                     
-                    <div className="mt-6">
-                        <h3 className="text-xl font-bold text-gray-800 mb-4">SUBPROYECTOS</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {subProjects.map(sub => <SubProjectCard key={sub.id} subProject={sub} />)}
+                    {project.subProjects && project.subProjects.length > 0 && (
+                        <div className="mt-6">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4">SUBPROYECTOS</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {project.subProjects.map(sub => <SubProjectCard key={sub.id} subProject={sub} onEdit={() => {}} onDelete={() => {}} />)}
+                            </div>
                         </div>
-                    </div>
+                    )}
                     </>
                 )}
 
@@ -277,8 +347,24 @@ export default function ProjectDetailsPage() {
                 {activeTab === 'Backlog' && <div className="text-center p-10"><p>Sección de Backlog en construcción.</p></div>}
 
             </div>
+
+             <POIModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                project={project}
+                onSave={handleSaveProject}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={() => {
+                    console.log("Deleting project...");
+                    setIsDeleteModalOpen(false);
+                }}
+                title="AVISO"
+                message="El Plan Operativo Informático será eliminado"
+            />
         </AppLayout>
     );
 }
-
-    

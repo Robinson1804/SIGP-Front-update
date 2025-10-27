@@ -14,3 +14,37 @@ export type LoginFormState = {
     captcha?: string[];
   };
 };
+
+export type SubProject = {
+    id: string;
+    name: string;
+    description: string;
+    responsible: string[];
+    scrumMaster: string;
+    years: string[];
+    amount: number; // Changed from annualAmount to amount
+    managementMethod: string;
+    progress?: number;
+}
+
+export type Project = {
+    id: string;
+    name: string;
+    description: string;
+    type: 'Proyecto' | 'Actividad';
+    classification: 'Al ciudadano' | 'Gestión interna';
+    status: 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
+    scrumMaster: string;
+    annualAmount: number;
+    strategicAction: string;
+    missingData?: boolean;
+    coordination?: string;
+    financialArea?: string[];
+    coordinator?: string;
+    responsibles?: string[];
+    years?: string[];
+    managementMethod?: string;
+    subProjects?: SubProject[];
+    startDate?: string;
+    endDate?: string;
+};
