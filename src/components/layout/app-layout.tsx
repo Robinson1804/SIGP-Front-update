@@ -81,7 +81,7 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
   
-  const activeItem = navItems.find(item => item.href === pathname);
+  const activeItem = navItems.find(item => pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'));
   const activeNavItemLabel = activeItem?.label;
 
 
