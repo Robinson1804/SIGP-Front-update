@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -8,7 +9,6 @@ import {
   BarChart,
   Bell,
   Search,
-  MoreHorizontal,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Input } from '@/components/ui/input';
@@ -122,7 +122,6 @@ export default function RecursosHumanosPage() {
                 <TableHead className="font-bold text-[#004272]">Tipo de contrato</TableHead>
                 <TableHead className="font-bold text-[#004272]">Fecha Inicio</TableHead>
                 <TableHead className="font-bold text-[#004272]">Fecha Fin</TableHead>
-                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -145,14 +144,11 @@ export default function RecursosHumanosPage() {
                     <TableCell>{person.contractType}</TableCell>
                     <TableCell>{person.startDate}</TableCell>
                     <TableCell>{person.endDate}</TableCell>
-                    <TableCell>
-                      <MoreHorizontal className="h-5 w-5 text-gray-500" />
-                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-24">
+                  <TableCell colSpan={9} className="text-center h-24">
                     No se encontró personal que coincida con la búsqueda
                   </TableCell>
                 </TableRow>
