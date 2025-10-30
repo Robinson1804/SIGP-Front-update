@@ -81,19 +81,8 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
   
-  let activeNavItemLabel;
-  const pgdSubmodules = ['/oei-dashboard', '/ogd-dashboard', '/oegd-dashboard', '/ae-dashboard', '/poi-dashboard'];
-  
-  if (pathname.startsWith('/poi')) { // This covers /poi and /poi/detalles
-      activeNavItemLabel = 'POI';
-  } else {
-      const activeItem = navItems.find(item => item.href === pathname);
-      if (activeItem) {
-        activeNavItemLabel = activeItem.label;
-      } else if (pgdSubmodules.some(submodule => pathname.startsWith(submodule)) || pathname === '/pmo-dashboard') {
-        activeNavItemLabel = 'PGD';
-      }
-  }
+  const activeItem = navItems.find(item => item.href === pathname);
+  const activeNavItemLabel = activeItem?.label;
 
 
   return (
