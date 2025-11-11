@@ -599,9 +599,9 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
 const navItems = [
   { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
   { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "#" },
+  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "#" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "#" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
 ];
 
 
@@ -751,5 +751,3 @@ export default function PoiPage() {
     </AppLayout>
   );
 }
-
-    

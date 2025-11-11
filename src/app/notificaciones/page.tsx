@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -78,7 +79,7 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
   return (
     <div
       className={cn(
-        "flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50",
+        "flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50",
         notification.read ? 'bg-gray-100' : 'bg-white'
       )}
       onClick={() => onClick(notification.id)}
@@ -101,7 +102,7 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
           </Badge>
         </div>
       </div>
-      <div className="shrink-0 ml-auto self-start">
+      <div className="shrink-0 ml-auto">
         <TimeAgo date={notification.timestamp} />
       </div>
     </div>

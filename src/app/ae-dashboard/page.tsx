@@ -383,10 +383,10 @@ const AeCard = ({ ae, onEdit, onDelete }: { ae: AE, onEdit: () => void; onDelete
 
 const navItems = [
   { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
-  { label: "POI", icon: Target, href: "#" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "#" },
+  { label: "POI", icon: Target, href: "/poi" },
+  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "#" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "#" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
 ];
 
 export default function AeDashboardPage() {
