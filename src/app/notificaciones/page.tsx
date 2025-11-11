@@ -21,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 type NotificationStatus = 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
-type NotificationType = 'project' | 'sprint' | 'delay' | 'approval';
+type NotificationType = 'project' | 'sprint' | 'delay';
 
 type Notification = {
   id: string;
@@ -88,10 +88,10 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
       <div className={cn("flex items-center justify-center h-10 w-10 rounded-full shrink-0", isUnread ? "bg-blue-100" : "bg-gray-200")}>
         <FileIcon className={cn("h-5 w-5", isUnread ? "text-[#018CD1]" : "text-gray-500")} />
       </div>
-      <div className="flex-grow">
+      <div className="flex-grow space-y-1">
         <p className="font-bold">{notification.title}</p>
         {notification.description && <p className="text-sm text-gray-600">{notification.description}</p>}
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2">
           {notification.status && (
             <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold">
               {notification.status}
