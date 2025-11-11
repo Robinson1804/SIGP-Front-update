@@ -210,7 +210,7 @@ const navItems = [
   { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "#" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "#" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
 ];
 
 export default function PmoDashboardPage() {
