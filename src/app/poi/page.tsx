@@ -16,6 +16,7 @@ import {
   Calendar,
   MoreHorizontal,
   AlertTriangle,
+  List,
 } from "lucide-react";
 import Link from 'next/link';
 import AppLayout from "@/components/layout/app-layout";
@@ -101,6 +102,27 @@ const initialProjects: Project[] = [
         missingData: true,
         years: ['2025'],
         subProjects: [],
+    },
+    {
+        id: '3',
+        name: 'Actividad de Mantenimiento',
+        description: 'Descripción de la actividad',
+        type: 'Actividad',
+        classification: 'Gestión interna',
+        status: 'En desarrollo',
+        startDate: '2025-01',
+        endDate: '2025-12',
+        scrumMaster: 'Juan Torres',
+        annualAmount: 25000,
+        strategicAction: 'AE N°3',
+        missingData: false,
+        years: ['2025'],
+        responsibles: ['Carlos Ruiz'],
+        financialArea: ['OTA'],
+        coordination: 'Coordinación 2',
+        coordinator: 'Jefe de Área',
+        managementMethod: 'Kanban',
+        subProjects: [],
     }
 ];
 
@@ -115,6 +137,8 @@ const responsibleOptions: MultiSelectOption[] = [
     { value: 'Angella Trujillo', label: 'Angella Trujillo' },
     { value: 'Anayeli Monzon', label: 'Anayeli Monzon' },
     { value: 'Ana Garcia', label: 'Ana Garcia' },
+    { value: 'Carlos Ruiz', label: 'Carlos Ruiz' },
+    { value: 'Juan Torres', label: 'Juan Torres' },
 ];
 
 const yearOptions: MultiSelectOption[] = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => ({label: y.toString(), value: y.toString()}));
@@ -377,6 +401,7 @@ export function POIModal({
                                     <SelectContent>
                                         <SelectItem value="AE N°1">AE N°1</SelectItem>
                                         <SelectItem value="AE N°2">AE N°2</SelectItem>
+                                        <SelectItem value="AE N°3">AE N°3</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
@@ -611,6 +636,7 @@ export default function PoiPage() {
   const [editingProject, setEditingProject] = React.useState<Partial<Project> | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [deletingProject, setDeletingProject] = React.useState<Project | null>(null);
+  const [selectedType, setSelectedType] = React.useState<string>("Proyecto");
 
 
   const handleOpenPoiModal = (project: Partial<Project> | null = null) => {
@@ -649,6 +675,10 @@ export default function PoiPage() {
       }
   }
 
+  const filteredProjects = projects.filter(p => p.type === selectedType);
+  const sectionTitle = selectedType === "Proyecto" ? "Proyectos" : "Lista de Actividades";
+  const SectionIcon = selectedType === "Proyecto" ? Folder : List;
+
 
   return (
     <AppLayout
@@ -675,8 +705,8 @@ export default function PoiPage() {
             <Button size="sm" variant="outline" className="bg-white text-black border-gray-300">REPORTE POI</Button>
         </div>
         <div className="flex items-center gap-2 text-[#004272] mb-4">
-            <Folder />
-            <h3 className="font-bold text-lg">Proyectos</h3>
+            <SectionIcon />
+            <h3 className="font-bold text-lg">{sectionTitle}</h3>
         </div>
         <div className="flex flex-wrap items-center gap-4 mb-6">
             <div className="relative">
@@ -685,7 +715,7 @@ export default function PoiPage() {
             </div>
             <div className="flex items-center gap-2">
                 <label className="text-sm">Tipo</label>
-                <Select defaultValue="Proyecto">
+                <Select value={selectedType} onValueChange={setSelectedType}>
                     <SelectTrigger className="w-[150px] bg-white border-[#CFD6DD] text-[#7E8C9A]">
                         <SelectValue />
                     </SelectTrigger>
@@ -714,7 +744,7 @@ export default function PoiPage() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-            {projects.map(p => (
+            {filteredProjects.map(p => (
                 <ProjectCard key={p.id} project={p} onEdit={() => handleOpenPoiModal(p)} onDelete={() => handleOpenDeleteModal(p)} />
             ))}
         </div>
