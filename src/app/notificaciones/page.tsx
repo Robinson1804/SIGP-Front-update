@@ -91,7 +91,7 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
       <div className="flex-grow space-y-1">
         <p className="font-bold">{notification.title}</p>
         {notification.description && <p className="text-sm text-gray-600">{notification.description}</p>}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {notification.status && (
             <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold">
               {notification.status}
@@ -131,11 +131,12 @@ export default function NotificationsPage() {
       notifications.map(n => n.id === id ? { ...n, read: true } : n)
     );
     
-    // Here you would fetch the real project data before navigating
+    // This is a mock project object. In a real app, you would fetch this data
+    // based on clickedNotification.projectId before navigating.
     const mockProject = {
         id: clickedNotification.projectId,
         name: clickedNotification.projectName,
-        description: 'Descripción del proyecto de ejemplo',
+        description: 'Descripción del proyecto de ejemplo. Esta data es un mock para la demostración de la navegación.',
         type: 'Proyecto',
         classification: 'Gestión interna',
         status: 'En planificación',
@@ -155,11 +156,9 @@ export default function NotificationsPage() {
     };
     localStorage.setItem('selectedProject', JSON.stringify(mockProject));
 
-    if (clickedNotification.type === 'project') {
-      router.push('/poi/detalles');
-    } else {
-      router.push('/poi/detalles'); // Redirect to details and user can switch to backlog
-    }
+    // For all notification types, redirect to details page.
+    // The user can then switch to "Backlog" if needed.
+    router.push('/poi/detalles');
   };
   
   const TABS: {name: string, type: NotificationType | 'all'}[] = [
@@ -222,3 +221,5 @@ export default function NotificationsPage() {
     </AppLayout>
   );
 }
+
+    
