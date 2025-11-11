@@ -166,7 +166,6 @@ export default function NotificationsPage() {
     { name: 'Proyectos', type: 'project' },
     { name: 'Sprints', type: 'sprint' },
     { name: 'Retrasos', type: 'delay' },
-    { name: 'Aprobaciones', type: 'approval' }
   ];
 
   const currentTabType = TABS.find(t => t.name === activeTab)?.type;
