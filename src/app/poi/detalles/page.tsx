@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
   Target,
@@ -48,6 +48,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 
 const projectData: Project = {
@@ -235,14 +236,17 @@ function DeleteConfirmationModal({
 const navItems = [
   { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
   { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "#" },
+  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "#" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "#" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
 ];
 
-export default function ProjectDetailsPage() {
+function ProjectDetailsContent() {
     const [project, setProject] = React.useState<Project | null>(null);
-    const [activeTab, setActiveTab] = React.useState('Detalles');
+    const searchParams = useSearchParams();
+    const tabParam = searchParams.get('tab');
+    const [activeTab, setActiveTab] = React.useState(tabParam || 'Detalles');
+    
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
 
@@ -254,6 +258,10 @@ export default function ProjectDetailsPage() {
     const [documents, setDocuments] = React.useState<Document[]>(initialDocuments);
     
     const router = useRouter();
+
+    React.useEffect(() => {
+        setActiveTab(tabParam || 'Detalles');
+    }, [tabParam]);
     
     React.useEffect(() => {
         const savedProjectData = localStorage.getItem('selectedProject');
@@ -353,11 +361,11 @@ export default function ProjectDetailsPage() {
                 </h2>
             </div>
         </div>
-        <div className="bg-[#F9F9F9] px-6 pt-6">
+        <div className="sticky top-[104px] z-10 bg-[#F9F9F9] px-6 pt-4">
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setActiveTab('Detalles')} className={activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
-            <Button size="sm" onClick={() => setActiveTab('Documentos')} className={activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
-            <Button size="sm" onClick={() => setActiveTab('Backlog')} className={activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300'} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+            <Button size="sm" onClick={() => setActiveTab('Detalles')} className={cn(activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
+            <Button size="sm" onClick={() => setActiveTab('Documentos')} className={cn(activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
+            <Button size="sm" onClick={() => setActiveTab('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
           </div>
         </div>
       </>
@@ -483,10 +491,10 @@ export default function ProjectDetailsPage() {
                     )}
 
                     {activeTab === 'Documentos' && (
-                        <div>
+                        <div className="bg-white p-6 rounded-lg shadow-md">
                             <div className="flex items-center gap-2 mb-4">
-                            <FileText className="h-6 w-6 text-black" />
-                            <h3 className="text-xl font-bold">DOCUMENTOS</h3>
+                                <FileText className="h-6 w-6 text-black" />
+                                <h3 className="text-xl font-bold">DOCUMENTOS</h3>
                             </div>
                             <div className="flex justify-between items-center mb-4">
                                 <div className="relative">
@@ -600,4 +608,13 @@ export default function ProjectDetailsPage() {
            )}
         </AppLayout>
     );
+}
+
+
+export default function ProjectDetailsPage() {
+    return (
+        <React.Suspense fallback={<div>Loading...</div>}>
+            <ProjectDetailsContent />
+        </React.Suspense>
+    )
 }

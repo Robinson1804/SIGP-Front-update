@@ -73,7 +73,7 @@ const TimeAgo = ({ date }: { date: Date }) => {
 };
 
 
-const NotificationCard = ({ notification, onClick }: { notification: Notification, onClick: (id: string) => void }) => {
+const NotificationCard = ({ notification, onClick }: { notification: Notification, onClick: (notification: Notification) => void }) => {
   const isUnread = !notification.read;
 
   return (
@@ -82,7 +82,7 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
         "flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50",
         notification.read ? 'bg-gray-100' : 'bg-white'
       )}
-      onClick={() => onClick(notification.id)}
+      onClick={() => onClick(notification)}
     >
       <div className={cn("w-1.5 self-stretch rounded-full", isUnread ? "bg-[#018CD1]" : "bg-gray-300")}></div>
       <div className={cn("flex items-center justify-center h-10 w-10 rounded-full shrink-0", isUnread ? "bg-blue-100" : "bg-gray-200")}>
@@ -123,16 +123,13 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState(initialNotifications);
   const router = useRouter();
 
-  const handleNotificationClick = (id: string) => {
-    const clickedNotification = notifications.find(n => n.id === id);
+  const handleNotificationClick = (clickedNotification: Notification) => {
     if (!clickedNotification) return;
 
     setNotifications(
-      notifications.map(n => n.id === id ? { ...n, read: true } : n)
+      notifications.map(n => n.id === clickedNotification.id ? { ...n, read: true } : n)
     );
     
-    // This is a mock project object. In a real app, you would fetch this data
-    // based on clickedNotification.projectId before navigating.
     const mockProject = {
         id: clickedNotification.projectId,
         name: clickedNotification.projectName,
@@ -156,9 +153,11 @@ export default function NotificationsPage() {
     };
     localStorage.setItem('selectedProject', JSON.stringify(mockProject));
 
-    // For all notification types, redirect to details page.
-    // The user can then switch to "Backlog" if needed.
-    router.push('/poi/detalles');
+    let route = '/poi/detalles';
+    if (clickedNotification.type === 'sprint' || clickedNotification.type === 'delay') {
+        route += '?tab=Backlog';
+    }
+    router.push(route);
   };
   
   const TABS: {name: string, type: NotificationType | 'all'}[] = [
@@ -221,5 +220,3 @@ export default function NotificationsPage() {
     </AppLayout>
   );
 }
-
-    
