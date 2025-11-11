@@ -676,7 +676,7 @@ export default function PoiPage() {
   }
 
   const filteredProjects = projects.filter(p => p.type === selectedType);
-  const sectionTitle = selectedType === "Proyecto" ? "Proyectos" : "Lista de Actividades";
+  const sectionTitle = selectedType === "Proyecto" ? "Proyectos" : "Lista";
   const SectionIcon = selectedType === "Proyecto" ? Folder : List;
 
 
