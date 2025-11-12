@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   FileText,
   Target,
@@ -244,8 +245,11 @@ const navItems = [
 function ProjectDetailsContent() {
     const [project, setProject] = React.useState<Project | null>(null);
     const searchParams = useSearchParams();
+    const router = useRouter();
     const tabParam = searchParams.get('tab');
-    const [activeTab, setActiveTab] = React.useState(tabParam || 'Detalles');
+    
+    // Default to 'Detalles' if no tab is specified or if the tab is not 'Backlog'
+    const [activeTab, setActiveTab] = React.useState(tabParam === 'Backlog' ? 'Backlog' : 'Detalles');
     
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
@@ -257,11 +261,11 @@ function ProjectDetailsContent() {
     
     const [documents, setDocuments] = React.useState<Document[]>(initialDocuments);
     
-    const router = useRouter();
 
     React.useEffect(() => {
-        setActiveTab(tabParam || 'Detalles');
-    }, [tabParam]);
+        const newTab = searchParams.get('tab') || 'Detalles';
+        setActiveTab(newTab);
+    }, [searchParams]);
     
     React.useEffect(() => {
         const savedProjectData = localStorage.getItem('selectedProject');
@@ -337,6 +341,18 @@ function ProjectDetailsContent() {
         setDocuments(documents.map(doc => doc.id === docId ? { ...doc, status: newStatus } : doc));
     };
 
+    const handleTabClick = (tabName: string) => {
+        setActiveTab(tabName);
+        if (tabName === 'Backlog') {
+            router.push('/poi/backlog');
+        } else {
+            // Update URL without navigating for other tabs
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('tab', tabName);
+            window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
+        }
+    };
+
     if (!project) {
         return (
              <AppLayout navItems={navItems} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
@@ -349,7 +365,7 @@ function ProjectDetailsContent() {
     
     const breadcrumbs = [
       { label: 'POI', href: '/poi' },
-      { label: activeTab }
+      { label: project.name }
     ];
 
     const secondaryHeader = (
@@ -363,9 +379,9 @@ function ProjectDetailsContent() {
         </div>
         <div className="sticky top-[104px] z-10 bg-[#F9F9F9] px-6 pt-4">
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setActiveTab('Detalles')} className={cn(activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
-            <Button size="sm" onClick={() => setActiveTab('Documentos')} className={cn(activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
-            <Button size="sm" onClick={() => setActiveTab('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+            <Button size="sm" onClick={() => handleTabClick('Detalles')} className={cn(activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
+            <Button size="sm" onClick={() => handleTabClick('Documentos')} className={cn(activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
+            <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
           </div>
         </div>
       </>
@@ -565,8 +581,6 @@ function ProjectDetailsContent() {
                             </Pagination>
                         </div>
                     )}
-                    
-                    {activeTab === 'Backlog' && <div className="text-center p-10"><p>Sección de Backlog en construcción.</p></div>}
                 </div>
 
             </div>
@@ -618,3 +632,5 @@ export default function ProjectDetailsPage() {
         </React.Suspense>
     )
 }
+
+    
