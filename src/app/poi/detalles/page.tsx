@@ -246,10 +246,8 @@ function ProjectDetailsContent() {
     const [project, setProject] = React.useState<Project | null>(null);
     const searchParams = useSearchParams();
     const router = useRouter();
-    const tabParam = searchParams.get('tab');
     
-    // Default to 'Detalles' if no tab is specified or if the tab is not 'Backlog'
-    const [activeTab, setActiveTab] = React.useState(tabParam === 'Backlog' ? 'Backlog' : 'Detalles');
+    const [activeTab, setActiveTab] = React.useState('Detalles');
     
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
@@ -263,8 +261,10 @@ function ProjectDetailsContent() {
     
 
     React.useEffect(() => {
-        const newTab = searchParams.get('tab') || 'Detalles';
-        setActiveTab(newTab);
+        const tabParam = searchParams.get('tab');
+        if (tabParam) {
+            setActiveTab(tabParam);
+        }
     }, [searchParams]);
     
     React.useEffect(() => {
@@ -342,11 +342,10 @@ function ProjectDetailsContent() {
     };
 
     const handleTabClick = (tabName: string) => {
-        setActiveTab(tabName);
         if (tabName === 'Backlog') {
             router.push('/poi/backlog');
         } else {
-            // Update URL without navigating for other tabs
+            setActiveTab(tabName);
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.set('tab', tabName);
             window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
@@ -633,4 +632,5 @@ export default function ProjectDetailsPage() {
     )
 }
 
+    
     

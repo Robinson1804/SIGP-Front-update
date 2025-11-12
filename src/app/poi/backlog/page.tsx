@@ -81,6 +81,10 @@ const priorityColors: { [key: string]: string } = {
 
 const userStories = [
     { id: 'HU-1', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 1', priority: 'Media', startDate: '01/02/2025', endDate: '05/02/2025' },
+    { id: 'HU-2', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 2', priority: 'Media', startDate: '03/02/2025', endDate: '05/02/2025' },
+    { id: 'HU-3', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 3', priority: 'Media', startDate: '05/02/2025', endDate: '08/02/2025' },
+    { id: 'HU-4', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 4', priority: 'Media', startDate: '08/02/2025', endDate: '09/02/2025' },
+    { id: 'HU-5', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 5', priority: 'Media', startDate: '09/02/2025', endDate: '11/02/2025' },
 ];
 
 function BacklogContent() {
@@ -94,7 +98,6 @@ function BacklogContent() {
     if (savedProjectData) {
       setProject(JSON.parse(savedProjectData));
     } else {
-      // Fallback or redirect if no project is found
       router.push('/poi');
     }
   }, [router]);
@@ -111,7 +114,7 @@ function BacklogContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Proyecto', href: '/poi/detalles' },
+    { label: 'Proyecto', href: `/poi/detalles` },
     { label: 'Backlog' },
   ];
 
@@ -142,20 +145,25 @@ function BacklogContent() {
                 <div className="flex-1 flex gap-4">
                     <div className="flex-1 flex flex-col gap-4">
                         {/* Filtros */}
-                        <div className="flex items-center gap-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <Input placeholder="Buscar en el backlog" className="pl-10 bg-white" />
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                    <Input placeholder="Buscar en el backlog" className="pl-10 bg-white" />
+                                </div>
+                                <Select onValueChange={(value) => { if(value === 'show') setShowEpics(true) }}>
+                                    <SelectTrigger className="w-[180px] bg-white">
+                                        <SelectValue placeholder="Épica" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="show">Mostrar épicas</SelectItem>
+                                        {/* Opciones de epicas */}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                            <Select onValueChange={(value) => { if(value === 'show') setShowEpics(true) }}>
-                                <SelectTrigger className="w-[180px] bg-white">
-                                    <SelectValue placeholder="Épica" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="show">Mostrar épicas</SelectItem>
-                                    {/* Opciones de epicas */}
-                                </SelectContent>
-                            </Select>
+                             <div className="flex items-center gap-2 text-red-500">
+                                <Info className="h-5 w-5" />
+                            </div>
                         </div>
 
                         {/* Sprint Board */}
@@ -163,10 +171,9 @@ function BacklogContent() {
                              <Collapsible defaultOpen>
                                 <div className="flex items-center justify-between">
                                     <CollapsibleTrigger asChild>
-                                        <div className="flex items-center gap-2 cursor-pointer">
+                                        <div className="flex items-center gap-2 cursor-pointer group">
                                             <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                            <h3 className="font-semibold">Tablero Sprint 1 | 01 feb - 08 feb</h3>
-                                            <Badge className={sprintStatusColors['Por hacer']}>Por hacer</Badge>
+                                            <h3 className="font-semibold">Tablero Sprint 1 | 01 feb - 14 feb</h3>
                                         </div>
                                     </CollapsibleTrigger>
                                     <div className="flex items-center gap-2">
@@ -178,9 +185,27 @@ function BacklogContent() {
                                     </div>
                                 </div>
                                 <CollapsibleContent>
-                                    <div className="text-center py-8 text-gray-500 bg-gray-50 mt-2 rounded-md">
-                                        <p>Crea historias de usuario en el Backlog y luego asigna al Sprint</p>
-                                        <Input className="mt-2 w-1/2 mx-auto bg-white" placeholder="Agregar historia de usuario" disabled />
+                                    <div className="pl-6">
+                                        <Table>
+                                             <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-[80px]">ID</TableHead>
+                                                    <TableHead>Title</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell colSpan={2} className="text-center text-gray-500 py-4">
+                                                        Crea historias de usuario en el Backlog y luego asigna al Sprint
+                                                    </TableCell>
+                                                </TableRow>
+                                                 <TableRow>
+                                                    <TableCell colSpan={2}>
+                                                         <Input className="w-full bg-white" placeholder="Agregar historia de usuario" disabled />
+                                                    </TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
                                     </div>
                                 </CollapsibleContent>
                              </Collapsible>
@@ -188,58 +213,66 @@ function BacklogContent() {
                         
                         {/* Backlog Section */}
                         <div className="bg-white rounded-lg border p-4 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-bold text-lg">Backlog</h3>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" className="bg-white" disabled>Crear Sprint</Button>
-                                    <Button className="bg-[#018CD1]" disabled>Asignar Sprint</Button>
+                             <Collapsible defaultOpen>
+                                <div className="flex items-center justify-between mb-2">
+                                    <CollapsibleTrigger asChild>
+                                        <div className="flex items-center gap-2 cursor-pointer group">
+                                            <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                            <h3 className="font-bold text-lg">Backlog</h3>
+                                        </div>
+                                    </CollapsibleTrigger>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" className="bg-[#018CD1] text-white" disabled>Crear Sprint</Button>
+                                        <Button className="bg-[#018CD1]" disabled>Asignar Sprint</Button>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="rounded-lg border">
-                            <Table>
-                                <TableHeader className="bg-gray-50">
-                                    <TableRow>
-                                        <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
-                                        <TableHead>ID</TableHead>
-                                        <TableHead>Title</TableHead>
-                                        <TableHead>Estado</TableHead>
-                                        <TableHead>Responsable</TableHead>
-                                        <TableHead>Prioridad</TableHead>
-                                        <TableHead>Fecha Inicio</TableHead>
-                                        <TableHead>Fecha Fin</TableHead>
-                                        <TableHead>Acciones</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {userStories.map(hu => (
-                                        <TableRow key={hu.id}>
-                                            <TableCell><Checkbox disabled /></TableCell>
-                                            <TableCell>{hu.id}</TableCell>
-                                            <TableCell>{hu.title}</TableCell>
-                                            <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
-                                            <TableCell>{hu.responsible}</TableCell>
-                                            <TableCell><Badge style={{ backgroundColor: priorityColors[hu.priority as keyof typeof priorityColors]}} className="text-white w-12 justify-center">{hu.priority}</Badge></TableCell>
-                                            <TableCell>{hu.startDate}</TableCell>
-                                            <TableCell>{hu.endDate}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" disabled><Info className="h-4 w-4" /></Button>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
-                                                    <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
-                                                </DropdownMenu>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    <TableRow>
-                                        <TableCell colSpan={9}>
-                                             <Input className="w-full bg-white" placeholder="Agregar historia de usuario" disabled />
-                                        </TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                            </div>
+                                <CollapsibleContent>
+                                    <div className="rounded-lg border">
+                                    <Table>
+                                        <TableHeader className="bg-gray-50">
+                                            <TableRow>
+                                                <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
+                                                <TableHead>ID</TableHead>
+                                                <TableHead>Title</TableHead>
+                                                <TableHead>Estado</TableHead>
+                                                <TableHead>Épica</TableHead>
+                                                <TableHead>Responsable</TableHead>
+                                                <TableHead>Prioridad</TableHead>
+                                                <TableHead>Fecha Inicio</TableHead>
+                                                <TableHead>Fecha Fin</TableHead>
+                                                <TableHead>Acciones</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {userStories.map(hu => (
+                                                <TableRow key={hu.id}>
+                                                    <TableCell><Checkbox disabled /></TableCell>
+                                                    <TableCell>{hu.id}</TableCell>
+                                                    <TableCell>{hu.title}</TableCell>
+                                                    <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
+                                                    <TableCell>{hu.epic}</TableCell>
+                                                    <TableCell>{hu.responsible}</TableCell>
+                                                    <TableCell>
+                                                        <Badge style={{ backgroundColor: priorityColors[hu.priority as keyof typeof priorityColors]}} className="text-white w-12 justify-center">{hu.priority}</Badge>
+                                                    </TableCell>
+                                                    <TableCell>{hu.startDate}</TableCell>
+                                                    <TableCell>{hu.endDate}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><Info className="h-4 w-4" /></Button>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
+                                                            <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                    </div>
+                                </CollapsibleContent>
+                             </Collapsible>
                         </div>
 
                     </div>
@@ -283,4 +316,5 @@ export default function BacklogPage() {
 }
 
 
+    
     
