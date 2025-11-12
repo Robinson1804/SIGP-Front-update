@@ -40,18 +40,18 @@ const initialNotifications: Notification[] = [
   { id: '1', type: 'project', title: 'El proyecto está pendiente', projectName: 'Implementación y desarrollo de un chatbot', status: 'Pendiente', timestamp: new Date(Date.now() - 5 * 60 * 1000), read: false, projectId: '1' },
   { id: '2', type: 'project', title: 'El proyecto está en planificación', projectName: 'Administración del portafolio de proyectos', status: 'En planificación', timestamp: new Date(Date.now() - 5 * 60 * 1000), read: false, projectId: '2' },
   { id: '3', type: 'project', title: 'El proyecto está en desarrollo', projectName: 'CPV', status: 'En desarrollo', timestamp: new Date(Date.now() - 45 * 60 * 1000), read: false, projectId: '3' },
-  { id: '4', type: 'project', title: 'El proyecto ha finalizado', projectName: 'App móvil para el monitoreo de tablets', status: 'Finalizado', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), read: false, projectId: '4' },
+  { id: '4', type: 'project', title: 'El proyecto ha finalizado', projectName: 'App móvil para el monitoreo de tablets', status: 'Finalizado', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), read: true, projectId: '4' },
   { id: '5', type: 'sprint', title: 'Sprint 2 finalizado', description: 'El sprint 2 del proyecto ha finalizado', projectName: 'Administración de portafolio de proyectos', timestamp: new Date(Date.now() - 15 * 60 * 1000), read: false, projectId: '2' },
   { id: '6', type: 'sprint', title: 'Sprint 1 finalizado', description: 'El sprint 1 del proyecto ha finalizado', projectName: 'CPV', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), read: true, projectId: '3' },
   { id: '7', type: 'delay', title: 'Historia de usuario atrasada', description: 'HU - 1: Captura de datos para el procesamiento del personal', projectName: 'CPV', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), read: false, projectId: '3' },
   { id: '8', type: 'delay', title: 'Historia de usuario atrasada', description: 'HU - 5: Visualización de reportes', projectName: 'Administración de Proyectos', timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), read: true, projectId: '1' },
 ];
 
-const statusColors: { [key: string]: string } = {
-  'Pendiente': '#FE9F43',
-  'En planificación': '#FFD700',
-  'En desarrollo': '#559FFE',
-  'Finalizado': '#2FD573',
+const statusStyles: { [key: string]: { bg: string, text: string } } = {
+  'Pendiente': { bg: 'bg-[#FE9F43]/20', text: 'text-yellow-800' },
+  'En planificación': { bg: 'bg-[#FFD700]/20', text: 'text-amber-800' },
+  'En desarrollo': { bg: 'bg-[#559FFE]/20', text: 'text-blue-800' },
+  'Finalizado': { bg: 'bg-[#2FD573]/20', text: 'text-green-800' },
 };
 
 
@@ -70,7 +70,7 @@ const TimeAgo = ({ date }: { date: Date }) => {
     return () => clearInterval(intervalId);
   }, [date]);
 
-  return <span className="text-sm text-gray-500">{timeAgo}</span>;
+  return <span className="text-sm text-gray-500 whitespace-nowrap">{timeAgo}</span>;
 };
 
 
@@ -80,34 +80,35 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
   return (
     <div
       className={cn(
-        "flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50 border",
-        notification.read ? 'bg-gray-100 border-gray-200' : 'bg-white border-white shadow-sm'
+        "relative flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50 border",
+        notification.read ? 'bg-gray-100 border-gray-200' : 'bg-white border-transparent shadow-sm'
       )}
       onClick={() => onClick(notification)}
     >
-      <div className={cn("w-1 self-stretch rounded-full", isUnread ? "bg-[#018CD1]" : "bg-transparent")}></div>
+      {isUnread && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#018CD1] rounded-l-lg"></div>}
+      
       <div className="relative shrink-0">
         <div className={cn("flex items-center justify-center h-10 w-10 rounded-full", isUnread ? "bg-blue-100" : "bg-gray-200")}>
           <Folder className={cn("h-5 w-5", isUnread ? "text-[#018CD1]" : "text-gray-500")} />
         </div>
         {isUnread && <div className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-[#018CD1] border-2 border-white"></div>}
       </div>
-      <div className="flex-grow">
-        <div className="flex flex-col gap-1">
-          <p className="font-semibold text-gray-800">{notification.title}</p>
-          {notification.description && (
-            <p className="text-sm text-gray-600">{notification.description}</p>
+
+      <div className="flex-grow flex flex-col gap-1">
+        <p className="font-semibold text-gray-800">{notification.title}</p>
+        {notification.description && (
+          <p className="text-sm text-gray-600">{notification.description}</p>
+        )}
+        {notification.status && (
+            <Badge className={cn(statusStyles[notification.status].bg, statusStyles[notification.status].text, "font-semibold text-xs w-fit")}>
+              {notification.status}
+            </Badge>
           )}
-          {notification.status && (
-              <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold text-xs w-fit">
-                {notification.status}
-              </Badge>
-            )}
-          <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black text-xs w-fit">
-              Proyecto: {notification.projectName}
-          </Badge>
-        </div>
+        <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black text-xs w-fit">
+            Proyecto: {notification.projectName}
+        </Badge>
       </div>
+      
       <div className="shrink-0 ml-auto self-start">
         <TimeAgo date={notification.timestamp} />
       </div>
@@ -128,7 +129,6 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState('Proyectos');
   const [notifications, setNotifications] = useState(initialNotifications);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const handleNotificationClick = (clickedNotification: Notification) => {
     if (!clickedNotification) return;
@@ -227,3 +227,5 @@ export default function NotificationsPage() {
     </AppLayout>
   );
 }
+
+    

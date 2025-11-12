@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, type ReactNode } from "react";
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { signOut } from "@/lib/actions";
+import { cn } from "@/lib/utils";
 
 
 const ineiLogo = PlaceHolderImages.find((img) => img.id === "inei-logo");
@@ -81,10 +83,6 @@ export default function AppLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
   
-  const activeItem = navItems.find(item => pathname.startsWith(item.href) && (item.href !== '/pmo-dashboard' || pathname === '/pmo-dashboard'));
-  const activeNavItemLabel = activeItem?.label;
-
-
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-30 h-16 shrink-0">
@@ -113,20 +111,23 @@ export default function AppLayout({
             </button>
           </div>
           <nav className="flex-grow p-4 space-y-[25px]">
-            {navItems.map((item) => (
+            {navItems.map((item) => {
+              const isActive = pathname.startsWith(item.href) && (item.href !== '/pmo-dashboard' || pathname === '/pmo-dashboard');
+              return (
               <a
                 key={item.label}
                 href={item.href}
-                className={`flex items-center p-2 rounded-md border ${
-                  activeNavItemLabel === item.label
+                className={cn(
+                  "flex items-center p-2 rounded-md border",
+                  isActive
                     ? "bg-[#005999] text-white border-transparent"
                     : "bg-white text-[#004272] border-[#7E7E7E]"
-                }`}
+                )}
               >
-                <item.icon className={`h-5 w-5 mr-3 ${activeNavItemLabel !== item.label ? 'text-[#004272]' : ''}`} />
+                <item.icon className={cn("h-5 w-5 mr-3", !isActive ? 'text-[#004272]' : '')} />
                 <span className="flex-1">{item.label}</span>
               </a>
-            ))}
+            )})}
           </nav>
           {ineiLogo && (
             <div className="p-4 mt-auto flex justify-center">
@@ -176,3 +177,5 @@ export default function AppLayout({
     </div>
   );
 }
+
+    
