@@ -92,12 +92,12 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
         </div>
         {isUnread && <div className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-[#018CD1] border-2 border-white"></div>}
       </div>
-      <div className="flex-grow flex flex-col gap-1.5">
+      <div className="flex-grow">
         <p className="font-semibold text-gray-800">{notification.title}</p>
-        {notification.description && !notification.status && (
-          <p className="text-sm text-gray-600">{notification.description}</p>
+         {notification.description && !notification.status && (
+          <p className="text-sm text-gray-600 mt-1">{notification.description}</p>
         )}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap mt-1">
           {notification.status && (
             <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold text-xs">
               {notification.status}
