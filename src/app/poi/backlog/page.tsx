@@ -73,18 +73,24 @@ const huStatusColors: { [key: string]: string } = {
   'Finalizado': 'bg-[#A7F3D0] text-green-800',
 };
 
-const priorityColors: { [key: string]: string } = {
-    'Alta': 'bg-red-500',
-    'Media': 'bg-yellow-500',
-    'Baja': 'bg-green-500'
+const priorityColors: { [key: string]: { bg: string, text: string } } = {
+    'Alta': { bg: 'bg-red-200', text: 'text-red-800' },
+    'Media': { bg: 'bg-yellow-200', text: 'text-yellow-800' },
+    'Baja': { bg: 'bg-green-200', text: 'text-green-800' }
 };
 
-const userStories = [
+const sprint1UserStories = [
     { id: 'HU-1', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 1', priority: 'Media', startDate: '01/02/2025', endDate: '05/02/2025' },
-    { id: 'HU-2', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 2', priority: 'Media', startDate: '03/02/2025', endDate: '05/02/2025' },
-    { id: 'HU-3', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 3', priority: 'Media', startDate: '05/02/2025', endDate: '08/02/2025' },
-    { id: 'HU-4', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 4', priority: 'Media', startDate: '08/02/2025', endDate: '09/02/2025' },
-    { id: 'HU-5', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 5', priority: 'Media', startDate: '09/02/2025', endDate: '11/02/2025' },
+    { id: 'HU-2', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 1', priority: 'Media', startDate: '03/02/2025', endDate: '05/02/2025' },
+    { id: 'HU-3', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 1', priority: 'Media', startDate: '05/02/2025', endDate: '08/02/2025' },
+    { id: 'HU-4', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 1', priority: 'Media', startDate: '08/02/2025', endDate: '09/02/2025' },
+    { id: 'HU-5', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Por hacer', epic: '-', responsible: 'Nombre 1', priority: 'Media', startDate: '09/02/2025', endDate: '11/02/2025' },
+    { id: 'HU-6', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', state: 'Finalizado', epic: '-', responsible: 'Nombre 2', priority: 'Alta', startDate: '11/02/2025', endDate: '14/02/2025' },
+];
+
+const sprint2UserStories = [
+    { id: 'HU-7', title: 'Captura y procesamiento eficiente de datos censales en plataformas web', state: 'Por hacer', epic: '-', responsible: 'Nombre 2', priority: 'Media', startDate: '14/02/2025', endDate: '17/02/2025' },
+    { id: 'TAR-1', title: 'Crear formulario digital con validaciones para encuestas', state: 'Por hacer', epic: '-', responsible: 'Nombre 2', priority: 'Media', startDate: '14/02/2025', endDate: '15/02/2025' },
 ];
 
 function BacklogContent() {
@@ -122,7 +128,7 @@ function BacklogContent() {
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
       <div className="p-2 flex items-center justify-between w-full">
         <h2 className="font-bold text-black pl-2">
-          {projectCode}: {project.name}
+          PLAN OPERATIVO INFORMÁTICO (POI)
         </h2>
       </div>
     </div>
@@ -143,19 +149,6 @@ function BacklogContent() {
         <div className="flex-1 flex bg-[#F9F9F9] px-4 pb-4">
             {activeTab === 'Backlog' && (
                 <div className="flex-1 flex gap-4">
-                    {/* Epics Panel */}
-                    {showEpics && (
-                        <div className="w-1/3 bg-white rounded-lg border p-4 flex flex-col">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold">Épicas</h3>
-                                <Button variant="ghost" size="icon" onClick={() => setShowEpics(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
-                            </div>
-                             <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center">
-                                <p>No hay épicas creadas</p>
-                                <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
-                            </div>
-                        </div>
-                    )}
                     <div className="flex-1 flex flex-col gap-4">
                         {/* Filtros */}
                         <div className="flex items-center justify-between">
@@ -174,15 +167,31 @@ function BacklogContent() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                             <div className="flex items-center gap-2 text-red-500">
-                                <Info className="h-5 w-5" />
+                             <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="icon" className="text-[#018CD1] h-8 w-8">
+                                    <Info className="h-6 w-6" />
+                                </Button>
                             </div>
                         </div>
 
-                        {/* Sprint Board */}
-                         <div className="bg-white rounded-lg border p-4 space-y-2">
+                         {/* Epics Panel */}
+                        {showEpics && (
+                            <div className="bg-white rounded-lg border p-4 flex flex-col">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold">Épicas</h3>
+                                    <Button variant="ghost" size="icon" onClick={() => setShowEpics(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
+                                </div>
+                                <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center py-8">
+                                    <p>No hay épicas creadas</p>
+                                    <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Sprint 1 Board */}
+                         <div className="bg-white rounded-lg border">
                              <Collapsible defaultOpen>
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between p-4">
                                     <CollapsibleTrigger asChild>
                                         <div className="flex items-center gap-2 cursor-pointer group">
                                             <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
@@ -198,25 +207,101 @@ function BacklogContent() {
                                     </div>
                                 </div>
                                 <CollapsibleContent>
-                                    <div className="pl-6">
+                                    <div className="px-4 pb-4">
                                         <Table>
-                                             <TableHeader>
+                                             <TableHeader className="bg-gray-50">
                                                 <TableRow>
                                                     <TableHead className="w-[80px]">ID</TableHead>
                                                     <TableHead>Title</TableHead>
+                                                    <TableHead>Estado</TableHead>
+                                                    <TableHead>Épica</TableHead>
+                                                    <TableHead>Responsable</TableHead>
+                                                    <TableHead>Prioridad</TableHead>
+                                                    <TableHead>Fecha Inicio</TableHead>
+                                                    <TableHead>Fecha Fin</TableHead>
+                                                    <TableHead></TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                <TableRow>
-                                                    <TableCell colSpan={2} className="text-center text-gray-500 py-4">
-                                                        Crea historias de usuario en el Backlog y luego asigna al Sprint
+                                               {sprint1UserStories.map(hu => (
+                                                <TableRow key={hu.id}>
+                                                    <TableCell>{hu.id}</TableCell>
+                                                    <TableCell>{hu.title}</TableCell>
+                                                    <TableCell><Badge className={cn(hu.state === 'Finalizado' ? 'bg-green-200 text-green-800' : huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
+                                                    <TableCell>{hu.epic}</TableCell>
+                                                    <TableCell>{hu.responsible}</TableCell>
+                                                    <TableCell>
+                                                        <Badge className={cn(priorityColors[hu.priority as keyof typeof priorityColors].bg, priorityColors[hu.priority as keyof typeof priorityColors].text, 'w-16 justify-center')}>{hu.priority}</Badge>
                                                     </TableCell>
+                                                    <TableCell>{hu.startDate}</TableCell>
+                                                    <TableCell>{hu.endDate}</TableCell>
+                                                    <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400"/></TableCell>
                                                 </TableRow>
+                                            ))}
                                                  <TableRow>
-                                                    <TableCell colSpan={2}>
-                                                         <Input className="w-full bg-white" placeholder="Agregar historia de usuario" disabled />
+                                                    <TableCell colSpan={9}>
+                                                         <Input className="w-full bg-gray-100" placeholder="Agregar historia de usuario" disabled />
                                                     </TableCell>
                                                 </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CollapsibleContent>
+                             </Collapsible>
+                        </div>
+
+                         {/* Sprint 2 Board */}
+                         <div className="bg-white rounded-lg border">
+                             <Collapsible defaultOpen>
+                                <div className="flex items-center justify-between p-4">
+                                    <CollapsibleTrigger asChild>
+                                        <div className="flex items-center gap-2 cursor-pointer group">
+                                            <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                            <h3 className="font-semibold">Tablero Sprint 2 | 14 feb - 28 feb</h3>
+                                        </div>
+                                    </CollapsibleTrigger>
+                                    <div className="flex items-center gap-2">
+                                        <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                </div>
+                                <CollapsibleContent>
+                                    <div className="px-4 pb-4">
+                                        <Table>
+                                             <TableHeader className="bg-gray-50">
+                                                <TableRow>
+                                                    <TableHead className="w-[50px]"><ChevronDown className="h-4 w-4"/></TableHead>
+                                                    <TableHead className="w-[80px]">ID</TableHead>
+                                                    <TableHead>Title</TableHead>
+                                                    <TableHead>Estado</TableHead>
+                                                    <TableHead>Épica</TableHead>
+                                                    <TableHead>Responsable</TableHead>
+                                                    <TableHead>Prioridad</TableHead>
+                                                    <TableHead>Fecha Inicio</TableHead>
+                                                    <TableHead>Fecha Fin</TableHead>
+                                                    <TableHead></TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                               {sprint2UserStories.map(hu => (
+                                                <TableRow key={hu.id}>
+                                                     <TableCell></TableCell>
+                                                    <TableCell>{hu.id}</TableCell>
+                                                    <TableCell>{hu.title}</TableCell>
+                                                    <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
+                                                    <TableCell>{hu.epic}</TableCell>
+                                                    <TableCell>{hu.responsible}</TableCell>
+                                                    <TableCell>
+                                                        <Badge className={cn(priorityColors[hu.priority as keyof typeof priorityColors].bg, priorityColors[hu.priority as keyof typeof priorityColors].text, 'w-16 justify-center')}>{hu.priority}</Badge>
+                                                    </TableCell>
+                                                    <TableCell>{hu.startDate}</TableCell>
+                                                    <TableCell>{hu.endDate}</TableCell>
+                                                    <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400"/></TableCell>
+                                                </TableRow>
+                                            ))}
                                             </TableBody>
                                         </Table>
                                     </div>
@@ -235,54 +320,12 @@ function BacklogContent() {
                                         </div>
                                     </CollapsibleTrigger>
                                     <div className="flex items-center gap-2">
-                                        <Button variant="outline" className="bg-[#018CD1] text-white" disabled>Crear Sprint</Button>
-                                        <Button className="bg-[#018CD1]" disabled>Asignar Sprint</Button>
+                                        <Button variant="outline" className="bg-gray-100" disabled>Crear Sprint</Button>
                                     </div>
                                 </div>
                                 <CollapsibleContent>
-                                    <div className="rounded-lg border">
-                                    <Table>
-                                        <TableHeader className="bg-gray-50">
-                                            <TableRow>
-                                                <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
-                                                <TableHead>ID</TableHead>
-                                                <TableHead>Title</TableHead>
-                                                <TableHead>Estado</TableHead>
-                                                <TableHead>Épica</TableHead>
-                                                <TableHead>Responsable</TableHead>
-                                                <TableHead>Prioridad</TableHead>
-                                                <TableHead>Fecha Inicio</TableHead>
-                                                <TableHead>Fecha Fin</TableHead>
-                                                <TableHead>Acciones</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {userStories.map(hu => (
-                                                <TableRow key={hu.id}>
-                                                    <TableCell><Checkbox disabled /></TableCell>
-                                                    <TableCell>{hu.id}</TableCell>
-                                                    <TableCell>{hu.title}</TableCell>
-                                                    <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
-                                                    <TableCell>{hu.epic}</TableCell>
-                                                    <TableCell>{hu.responsible}</TableCell>
-                                                    <TableCell>
-                                                        <Badge style={{ backgroundColor: priorityColors[hu.priority as keyof typeof priorityColors]}} className="text-white w-12 justify-center">{hu.priority}</Badge>
-                                                    </TableCell>
-                                                    <TableCell>{hu.startDate}</TableCell>
-                                                    <TableCell>{hu.endDate}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center">
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><Info className="h-4 w-4" /></Button>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
-                                                            <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                    <div className="text-center text-gray-500 py-8">
+                                      El backlog está vacío
                                     </div>
                                 </CollapsibleContent>
                              </Collapsible>
@@ -314,9 +357,5 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-
-    
-    
 
     
