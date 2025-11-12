@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
   Target,
@@ -10,7 +10,7 @@ import {
   BarChart,
   Bell,
   BellRing,
-  File as FileIcon,
+  Folder,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -19,6 +19,7 @@ import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { type Project } from '@/lib/definitions';
 
 type NotificationStatus = 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
 type NotificationType = 'project' | 'sprint' | 'delay';
@@ -79,25 +80,27 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
   return (
     <div
       className={cn(
-        "flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50",
-        notification.read ? 'bg-gray-100' : 'bg-white'
+        "flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50 border",
+        notification.read ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-200'
       )}
       onClick={() => onClick(notification)}
     >
-      <div className={cn("w-1.5 self-stretch rounded-full", isUnread ? "bg-[#018CD1]" : "bg-gray-300")}></div>
+      <div className={cn("w-1 self-stretch rounded-full", isUnread ? "bg-[#018CD1]" : "bg-transparent")}></div>
       <div className={cn("flex items-center justify-center h-10 w-10 rounded-full shrink-0", isUnread ? "bg-blue-100" : "bg-gray-200")}>
-        <FileIcon className={cn("h-5 w-5", isUnread ? "text-[#018CD1]" : "text-gray-500")} />
+        <Folder className={cn("h-5 w-5", isUnread ? "text-[#018CD1]" : "text-gray-500")} />
       </div>
-      <div className="flex-grow space-y-1">
+      <div className="flex-grow space-y-2">
         <p className="font-bold">{notification.title}</p>
-        {notification.description && <p className="text-sm text-gray-600">{notification.description}</p>}
         <div className="flex items-center gap-2 flex-wrap">
+          {notification.description && !notification.status && (
+            <p className="text-sm text-gray-600">{notification.description}</p>
+          )}
           {notification.status && (
             <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold">
               {notification.status}
             </Badge>
           )}
-          <Badge variant="outline" className="bg-[#BFDBFE] border-transparent text-black">
+          <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black">
             Proyecto: {notification.projectName}
           </Badge>
         </div>
@@ -130,7 +133,7 @@ export default function NotificationsPage() {
       notifications.map(n => n.id === clickedNotification.id ? { ...n, read: true } : n)
     );
     
-    const mockProject = {
+    const mockProject: Project = {
         id: clickedNotification.projectId,
         name: clickedNotification.projectName,
         description: 'Descripción del proyecto de ejemplo. Esta data es un mock para la demostración de la navegación.',
