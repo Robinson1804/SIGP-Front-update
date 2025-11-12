@@ -93,21 +93,19 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
         {isUnread && <div className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-[#018CD1] border-2 border-white"></div>}
       </div>
       <div className="flex-grow">
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-1">
           <p className="font-semibold text-gray-800">{notification.title}</p>
-          {notification.description && !notification.status && (
-            <p className="text-sm text-gray-600 mt-1">{notification.description}</p>
+          {notification.description && (
+            <p className="text-sm text-gray-600">{notification.description}</p>
           )}
-          <div className="flex items-center gap-2 flex-wrap mt-1">
-            {notification.status && (
-              <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold text-xs">
+          {notification.status && (
+              <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold text-xs w-fit">
                 {notification.status}
               </Badge>
             )}
-            <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black text-xs">
+          <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black text-xs w-fit">
               Proyecto: {notification.projectName}
-            </Badge>
-          </div>
+          </Badge>
         </div>
       </div>
       <div className="shrink-0 ml-auto self-start">
