@@ -80,32 +80,35 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
   return (
     <div
       className={cn(
-        "flex items-start gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50 border",
-        notification.read ? 'bg-gray-100 border-gray-200' : 'bg-white border-gray-200'
+        "flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50 border",
+        notification.read ? 'bg-gray-100 border-gray-200' : 'bg-white border-white shadow-sm'
       )}
       onClick={() => onClick(notification)}
     >
       <div className={cn("w-1 self-stretch rounded-full", isUnread ? "bg-[#018CD1]" : "bg-transparent")}></div>
-      <div className={cn("flex items-center justify-center h-10 w-10 rounded-full shrink-0", isUnread ? "bg-blue-100" : "bg-gray-200")}>
-        <Folder className={cn("h-5 w-5", isUnread ? "text-[#018CD1]" : "text-gray-500")} />
+      <div className="relative">
+        <div className={cn("flex items-center justify-center h-10 w-10 rounded-full shrink-0", isUnread ? "bg-blue-100" : "bg-gray-200")}>
+          <Folder className={cn("h-5 w-5", isUnread ? "text-[#018CD1]" : "text-gray-500")} />
+        </div>
+        {isUnread && <div className="absolute top-0 right-0 -mt-1 -mr-1 h-3 w-3 rounded-full bg-[#018CD1] border-2 border-white"></div>}
       </div>
-      <div className="flex-grow space-y-2">
-        <p className="font-bold">{notification.title}</p>
+      <div className="flex-grow space-y-1">
+        <p className="font-semibold text-gray-800">{notification.title}</p>
         <div className="flex items-center gap-2 flex-wrap">
           {notification.description && !notification.status && (
             <p className="text-sm text-gray-600">{notification.description}</p>
           )}
           {notification.status && (
-            <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold">
+            <Badge style={{ backgroundColor: statusColors[notification.status], color: 'black' }} className="font-semibold text-xs">
               {notification.status}
             </Badge>
           )}
-          <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black">
+          <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black text-xs">
             Proyecto: {notification.projectName}
           </Badge>
         </div>
       </div>
-      <div className="shrink-0 ml-auto">
+      <div className="shrink-0 ml-auto self-start">
         <TimeAgo date={notification.timestamp} />
       </div>
     </div>
@@ -125,6 +128,7 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState('Proyectos');
   const [notifications, setNotifications] = useState(initialNotifications);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const handleNotificationClick = (clickedNotification: Notification) => {
     if (!clickedNotification) return;
@@ -223,3 +227,5 @@ export default function NotificationsPage() {
     </AppLayout>
   );
 }
+
+    
