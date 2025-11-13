@@ -193,17 +193,19 @@ function BacklogContent() {
                         </div>
                     </div>
                     
-                    <div className="flex-1 flex gap-4">
+                    <div className="flex-1 flex items-start gap-4">
                         {/* Epics Panel */}
                         {showEpicsPanel && (
-                            <div className="bg-white rounded-lg border p-4 flex flex-col w-1/3 lg:w-1/4">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold">Épicas</h3>
-                                    <Button variant="ghost" size="icon" onClick={() => setShowEpicsPanel(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
-                                </div>
-                                <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center py-8">
-                                    <p>No hay épicas creadas</p>
-                                    <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
+                            <div className="sticky top-0 w-1/3 lg:w-1/4">
+                                <div className="bg-white rounded-lg border p-4 flex flex-col h-fit max-h-screen overflow-y-auto">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="font-bold">Épicas</h3>
+                                        <Button variant="ghost" size="icon" onClick={() => setShowEpicsPanel(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
+                                    </div>
+                                    <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center py-8">
+                                        <p>No hay épicas creadas</p>
+                                        <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -377,7 +379,3 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-    
-
-    
