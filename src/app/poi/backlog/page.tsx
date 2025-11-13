@@ -19,13 +19,6 @@ import {
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -233,7 +226,6 @@ function BacklogContent() {
                                             </div>
                                         </CollapsibleTrigger>
                                         <div className="flex items-center gap-2">
-                                            <Badge className={cn(sprintStatusColors['Finalizado'])}>Finalizado</Badge>
                                             <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')} disabled>Iniciar Sprint</Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
@@ -292,7 +284,6 @@ function BacklogContent() {
                                             </div>
                                         </CollapsibleTrigger>
                                         <div className="flex items-center gap-2">
-                                             <Badge className={cn(sprintStatusColors['Por hacer'])}>Por hacer</Badge>
                                             <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
