@@ -217,7 +217,7 @@ function BacklogContent() {
                         </div>
                          <div className="flex items-center gap-2">
                             <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 border-2 border-destructive text-destructive hover:bg-destructive/10" onClick={() => setIsInfoModalOpen(true)}>
-                                <Info className="h-5 w-5" />
+                                <Info className="h-5 w-5" strokeWidth={2.5}/>
                             </Button>
                         </div>
                     </div>
