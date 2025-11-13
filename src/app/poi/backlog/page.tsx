@@ -237,148 +237,150 @@ function BacklogContent() {
                             </div>
                         )}
                         
-                        <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
-                            {/* Sprint 1 Board */}
-                            <div className="bg-white rounded-lg border">
-                                <Collapsible defaultOpen>
-                                    <div className="flex items-center justify-between p-4">
-                                        <CollapsibleTrigger asChild>
-                                            <div className="flex items-center gap-2 cursor-pointer group">
-                                                <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                                <h3 className="font-semibold">Tablero Sprint 1 | 01 feb - 14 feb</h3>
+                        <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)]">
+                            <div className="flex flex-col gap-4">
+                                {/* Sprint 1 Board */}
+                                <div className="bg-white rounded-lg border">
+                                    <Collapsible defaultOpen>
+                                        <div className="flex items-center justify-between p-4">
+                                            <CollapsibleTrigger asChild>
+                                                <div className="flex items-center gap-2 cursor-pointer group">
+                                                    <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                                    <h3 className="font-semibold">Tablero Sprint 1 | 01 feb - 14 feb</h3>
+                                                </div>
+                                            </CollapsibleTrigger>
+                                            <div className="flex items-center gap-2">
+                                                <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
-                                        </CollapsibleTrigger>
-                                        <div className="flex items-center gap-2">
-                                            <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
-                                            </DropdownMenu>
                                         </div>
-                                    </div>
-                                    <CollapsibleContent>
-                                        <div className="px-4 pb-4">
-                                            <Table>
-                                                <TableHeader className="bg-gray-50">
-                                                    <TableRow>
-                                                        <TableHead className="w-[80px]">ID</TableHead>
-                                                        <TableHead>Title</TableHead>
-                                                        <TableHead>Estado</TableHead>
-                                                        <TableHead>Épica</TableHead>
-                                                        <TableHead>Responsable</TableHead>
-                                                        <TableHead>Prioridad</TableHead>
-                                                        <TableHead>Fecha Inicio</TableHead>
-                                                        <TableHead>Fecha Fin</TableHead>
-                                                        <TableHead></TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                {sprint1UserStories.map(hu => (
-                                                    <TableRow key={hu.id}>
-                                                        <TableCell>{hu.id}</TableCell>
-                                                        <TableCell>{hu.title}</TableCell>
-                                                        <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
-                                                        <TableCell>{hu.epic}</TableCell>
-                                                        <TableCell>{hu.responsible}</TableCell>
-                                                        <TableCell>
-                                                            <Badge className={cn(priorityColors[hu.priority as keyof typeof priorityColors].bg, priorityColors[hu.priority as keyof typeof priorityColors].text, 'w-16 justify-center')}>{hu.priority}</Badge>
-                                                        </TableCell>
-                                                        <TableCell>{hu.startDate}</TableCell>
-                                                        <TableCell>{hu.endDate}</TableCell>
-                                                        <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400"/></TableCell>
-                                                    </TableRow>
-                                                ))}
-                                                </TableBody>
-                                            </Table>
-                                            <Input className="w-full bg-gray-100 mt-2" placeholder="+ Crear historia de usuario" disabled />
-                                        </div>
-                                    </CollapsibleContent>
-                                </Collapsible>
-                            </div>
+                                        <CollapsibleContent>
+                                            <div className="px-4 pb-4">
+                                                <Table>
+                                                    <TableHeader className="bg-gray-50">
+                                                        <TableRow>
+                                                            <TableHead className="w-[80px]">ID</TableHead>
+                                                            <TableHead>Title</TableHead>
+                                                            <TableHead>Estado</TableHead>
+                                                            <TableHead>Épica</TableHead>
+                                                            <TableHead>Responsable</TableHead>
+                                                            <TableHead>Prioridad</TableHead>
+                                                            <TableHead>Fecha Inicio</TableHead>
+                                                            <TableHead>Fecha Fin</TableHead>
+                                                            <TableHead></TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                    {sprint1UserStories.map(hu => (
+                                                        <TableRow key={hu.id}>
+                                                            <TableCell>{hu.id}</TableCell>
+                                                            <TableCell>{hu.title}</TableCell>
+                                                            <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
+                                                            <TableCell>{hu.epic}</TableCell>
+                                                            <TableCell>{hu.responsible}</TableCell>
+                                                            <TableCell>
+                                                                <Badge className={cn(priorityColors[hu.priority as keyof typeof priorityColors].bg, priorityColors[hu.priority as keyof typeof priorityColors].text, 'w-16 justify-center')}>{hu.priority}</Badge>
+                                                            </TableCell>
+                                                            <TableCell>{hu.startDate}</TableCell>
+                                                            <TableCell>{hu.endDate}</TableCell>
+                                                            <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400"/></TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                    </TableBody>
+                                                </Table>
+                                                <Input className="w-full bg-gray-100 mt-2" placeholder="+ Crear historia de usuario" disabled />
+                                            </div>
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                </div>
 
-                            {/* Sprint 2 Board */}
-                            <div className="bg-white rounded-lg border">
-                                <Collapsible defaultOpen>
-                                    <div className="flex items-center justify-between p-4">
-                                        <CollapsibleTrigger asChild>
-                                            <div className="flex items-center gap-2 cursor-pointer group">
-                                                <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                                <h3 className="font-semibold">Tablero Sprint 2 | 14 feb - 28 feb</h3>
+                                {/* Sprint 2 Board */}
+                                <div className="bg-white rounded-lg border">
+                                    <Collapsible defaultOpen>
+                                        <div className="flex items-center justify-between p-4">
+                                            <CollapsibleTrigger asChild>
+                                                <div className="flex items-center gap-2 cursor-pointer group">
+                                                    <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                                    <h3 className="font-semibold">Tablero Sprint 2 | 14 feb - 28 feb</h3>
+                                                </div>
+                                            </CollapsibleTrigger>
+                                            <div className="flex items-center gap-2">
+                                                <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
-                                        </CollapsibleTrigger>
-                                        <div className="flex items-center gap-2">
-                                            <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
-                                                <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
-                                            </DropdownMenu>
                                         </div>
-                                    </div>
-                                    <CollapsibleContent>
-                                        <div className="px-4 pb-4">
-                                            <Table>
-                                                <TableHeader className="bg-gray-50">
-                                                    <TableRow>
-                                                        <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
-                                                        <TableHead className="w-[80px]">ID</TableHead>
-                                                        <TableHead>Title</TableHead>
-                                                        <TableHead>Estado</TableHead>
-                                                        <TableHead>Épica</TableHead>
-                                                        <TableHead>Responsable</TableHead>
-                                                        <TableHead>Prioridad</TableHead>
-                                                        <TableHead>Fecha Inicio</TableHead>
-                                                        <TableHead>Fecha Fin</TableHead>
-                                                        <TableHead></TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                {sprint2UserStories.map(hu => (
-                                                    <TableRow key={hu.id}>
-                                                        <TableCell><Checkbox disabled/></TableCell>
-                                                        <TableCell>{hu.id}</TableCell>
-                                                        <TableCell>{hu.title}</TableCell>
-                                                        <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
-                                                        <TableCell>{hu.epic}</TableCell>
-                                                        <TableCell>{hu.responsible}</TableCell>
-                                                        <TableCell>
-                                                            <Badge className={cn(priorityColors[hu.priority as keyof typeof priorityColors].bg, priorityColors[hu.priority as keyof typeof priorityColors].text, 'w-16 justify-center')}>{hu.priority}</Badge>
-                                                        </TableCell>
-                                                        <TableCell>{hu.startDate}</TableCell>
-                                                        <TableCell>{hu.endDate}</TableCell>
-                                                        <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400"/></TableCell>
-                                                    </TableRow>
-                                                ))}
-                                                </TableBody>
-                                            </Table>
-                                            <Input className="w-full bg-gray-100 mt-2" placeholder="+ Crear historia de usuario" disabled />
-                                        </div>
-                                    </CollapsibleContent>
-                                </Collapsible>
-                            </div>
-                            
-                            {/* Backlog Section */}
-                            <div className="bg-white rounded-lg border p-4 space-y-4">
-                                <Collapsible defaultOpen>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <CollapsibleTrigger asChild>
-                                            <div className="flex items-center gap-2 cursor-pointer group">
-                                                <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                                                <h3 className="font-bold text-lg">Backlog</h3>
+                                        <CollapsibleContent>
+                                            <div className="px-4 pb-4">
+                                                <Table>
+                                                    <TableHeader className="bg-gray-50">
+                                                        <TableRow>
+                                                            <TableHead className="w-[50px]"><Checkbox disabled/></TableHead>
+                                                            <TableHead className="w-[80px]">ID</TableHead>
+                                                            <TableHead>Title</TableHead>
+                                                            <TableHead>Estado</TableHead>
+                                                            <TableHead>Épica</TableHead>
+                                                            <TableHead>Responsable</TableHead>
+                                                            <TableHead>Prioridad</TableHead>
+                                                            <TableHead>Fecha Inicio</TableHead>
+                                                            <TableHead>Fecha Fin</TableHead>
+                                                            <TableHead></TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                    {sprint2UserStories.map(hu => (
+                                                        <TableRow key={hu.id}>
+                                                            <TableCell><Checkbox disabled/></TableCell>
+                                                            <TableCell>{hu.id}</TableCell>
+                                                            <TableCell>{hu.title}</TableCell>
+                                                            <TableCell><Badge className={cn(huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
+                                                            <TableCell>{hu.epic}</TableCell>
+                                                            <TableCell>{hu.responsible}</TableCell>
+                                                            <TableCell>
+                                                                <Badge className={cn(priorityColors[hu.priority as keyof typeof priorityColors].bg, priorityColors[hu.priority as keyof typeof priorityColors].text, 'w-16 justify-center')}>{hu.priority}</Badge>
+                                                            </TableCell>
+                                                            <TableCell>{hu.startDate}</TableCell>
+                                                            <TableCell>{hu.endDate}</TableCell>
+                                                            <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400"/></TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                    </TableBody>
+                                                </Table>
+                                                <Input className="w-full bg-gray-100 mt-2" placeholder="+ Crear historia de usuario" disabled />
                                             </div>
-                                        </CollapsibleTrigger>
-                                        <div className="flex items-center gap-2">
-                                            <Button variant="outline" className="bg-gray-100" disabled>Crear Sprint</Button>
-                                        </div>
-                                    </div>
-                                    <CollapsibleContent>
-                                         <div className="px-4 pb-4">
-                                            <div className="text-center text-gray-500 py-8">
-                                            El backlog está vacío
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                </div>
+                                
+                                {/* Backlog Section */}
+                                <div className="bg-white rounded-lg border p-4 space-y-4">
+                                    <Collapsible defaultOpen>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <CollapsibleTrigger asChild>
+                                                <div className="flex items-center gap-2 cursor-pointer group">
+                                                    <ChevronDown className="h-5 w-5 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                                                    <h3 className="font-bold text-lg">Backlog</h3>
+                                                </div>
+                                            </CollapsibleTrigger>
+                                            <div className="flex items-center gap-2">
+                                                <Button variant="outline" className="bg-gray-100" disabled>Crear Sprint</Button>
                                             </div>
-                                            <Input className="w-full bg-gray-100" placeholder="+ Crear historia de usuario" disabled />
                                         </div>
-                                    </CollapsibleContent>
-                                </Collapsible>
+                                        <CollapsibleContent>
+                                             <div className="px-4 pb-4">
+                                                <div className="text-center text-gray-500 py-8">
+                                                El backlog está vacío
+                                                </div>
+                                                <Input className="w-full bg-gray-100" placeholder="+ Crear historia de usuario" disabled />
+                                            </div>
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -408,5 +410,7 @@ export default function BacklogPage() {
     );
 }
 
+
+    
 
     
