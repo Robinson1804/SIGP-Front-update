@@ -59,12 +59,6 @@ const navItems = [
   { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
 ];
 
-const sprintStatusColors: { [key: string]: string } = {
-  'Por hacer': 'bg-[#BFDBFE] text-blue-800',
-  'En progreso': 'bg-[#FACC15] text-yellow-800',
-  'Finalizado': 'bg-[#34D399] text-green-800',
-};
-
 const huStatusColors: { [key: string]: string } = {
   'Por hacer': 'bg-[#BFDBFE] text-blue-800',
   'En progreso': 'bg-[#FDE68A] text-yellow-800',
@@ -226,7 +220,7 @@ function BacklogContent() {
                                             </div>
                                         </CollapsibleTrigger>
                                         <div className="flex items-center gap-2">
-                                            <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')} disabled>Iniciar Sprint</Button>
+                                            <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
@@ -383,5 +377,7 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
+
+    
 
     
