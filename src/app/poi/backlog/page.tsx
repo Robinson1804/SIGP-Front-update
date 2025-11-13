@@ -129,7 +129,7 @@ function BacklogContent() {
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
       <div className="p-2 flex items-center justify-between w-full">
         <h2 className="font-bold text-black pl-2">
-          PLAN OPERATIVO INFORMÁTICO (POI)
+          {projectCode}: {project.name}
         </h2>
       </div>
     </div>
@@ -196,7 +196,7 @@ function BacklogContent() {
                     <div className="flex-1 flex items-start gap-4">
                         {/* Epics Panel */}
                         {showEpicsPanel && (
-                            <div className="w-1/3 lg:w-1/4">
+                            <div className="w-1/3 lg:w-1/4 sticky top-4">
                                 <div className="bg-white rounded-lg border p-4 flex flex-col">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-bold">Épicas</h3>
@@ -205,13 +205,12 @@ function BacklogContent() {
                                     <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center py-8">
                                         <p>No hay épicas creadas</p>
                                     </div>
-                                    <div className="flex-grow"></div>
                                     <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
                                 </div>
                             </div>
                         )}
                         
-                        <div className="flex-1 flex flex-col gap-4">
+                        <div className="flex-1 flex flex-col gap-4 overflow-y-auto">
                             {/* Sprint 1 Board */}
                             <div className="bg-white rounded-lg border">
                                 <Collapsible defaultOpen>
@@ -380,7 +379,5 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-    
 
     
