@@ -47,6 +47,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Project } from '@/lib/definitions';
 
@@ -94,10 +95,38 @@ const mockEpics = [
     { id: 'reports', label: 'Módulo de Reportes'},
 ];
 
+function InfoModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    if (!isOpen) return null;
+    
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md p-8 text-center" showCloseButton={false}>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-20 h-20 bg-[#018CD1] rounded-full flex items-center justify-center">
+                        <Info className="w-12 h-12 text-white" />
+                    </div>
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold">FINALIZACIÓN DE HU</DialogTitle>
+                    </DialogHeader>
+                    <ol className="text-left space-y-3 list-decimal list-inside text-gray-700">
+                        <li><span className="font-bold">Agrega Tareas:</span> Toda HU debe tener tareas.</li>
+                        <li><span className="font-bold">Finaliza Tareas:</span> Cada tarea requiere evidencia (imagen/PDF).</li>
+                        <li><span className="font-bold">Completa HU:</span> La HU finaliza al completar todas sus tareas.</li>
+                    </ol>
+                    <DialogFooter className="mt-4 w-full">
+                        <Button onClick={onClose} className="w-full bg-[#018CD1] hover:bg-[#018CD1]/90">Entendido</Button>
+                    </DialogFooter>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 function BacklogContent() {
   const [project, setProject] = useState<Project | null>(null);
   const [activeTab, setActiveTab] = useState('Backlog');
   const [showEpicsPanel, setShowEpicsPanel] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const router = useRouter();
 
   React.useEffect(() => {
@@ -187,8 +216,8 @@ function BacklogContent() {
                             </Popover>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" className="text-white bg-[#018CD1] hover:bg-[#018CD1]/90 h-8 w-8">
-                                <Info className="h-6 w-6" />
+                            <Button variant="default" size="icon" className="text-white bg-[#018CD1] hover:bg-[#018CD1]/90 h-8 w-8" onClick={() => setIsInfoModalOpen(true)}>
+                                <Info className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
@@ -197,12 +226,12 @@ function BacklogContent() {
                         {/* Epics Panel */}
                         {showEpicsPanel && (
                             <div className="w-1/3 lg:w-1/4 sticky top-4">
-                                <div className="bg-white rounded-lg border p-4 flex flex-col">
+                                <div className="bg-white rounded-lg border p-4 flex flex-col h-fit">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-bold">Épicas</h3>
                                         <Button variant="ghost" size="icon" onClick={() => setShowEpicsPanel(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
                                     </div>
-                                    <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center py-8">
+                                    <div className="flex-grow text-center text-gray-500 flex flex-col justify-center items-center py-8">
                                         <p>No hay épicas creadas</p>
                                     </div>
                                     <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
@@ -368,6 +397,7 @@ function BacklogContent() {
                 </div>
             )}
         </div>
+        <InfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
     </AppLayout>
   );
 }
@@ -379,5 +409,3 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-    
