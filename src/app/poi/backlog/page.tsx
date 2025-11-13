@@ -275,6 +275,7 @@ function BacklogContent() {
                                                 ))}
                                                 </TableBody>
                                             </Table>
+                                            <Input className="w-full bg-gray-100 mt-2" placeholder="+ Crear historia de usuario" disabled />
                                         </div>
                                     </CollapsibleContent>
                                 </Collapsible>
@@ -335,6 +336,7 @@ function BacklogContent() {
                                                 ))}
                                                 </TableBody>
                                             </Table>
+                                            <Input className="w-full bg-gray-100 mt-2" placeholder="+ Crear historia de usuario" disabled />
                                         </div>
                                     </CollapsibleContent>
                                 </Collapsible>
