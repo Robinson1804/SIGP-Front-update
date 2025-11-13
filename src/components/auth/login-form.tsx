@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useState, useActionState } from "react";
 
 import { authenticate } from "@/lib/actions";
 import { type LoginFormState } from "@/lib/definitions";
@@ -29,7 +29,7 @@ function LoginButton() {
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const initialState: LoginFormState = { message: null, errors: {} };
-  const [state, dispatch] = useFormState(authenticate, initialState);
+  const [state, dispatch] = useActionState(authenticate, initialState);
 
   return (
     <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm shadow-2xl border-2 border-white/20">
