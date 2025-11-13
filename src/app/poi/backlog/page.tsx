@@ -216,8 +216,8 @@ function BacklogContent() {
                             </Popover>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Button variant="default" size="icon" className="text-white bg-[#018CD1] hover:bg-[#018CD1]/90 h-8 w-8" onClick={() => setIsInfoModalOpen(true)}>
-                                <Info className="h-5 w-5" />
+                            <Button variant="destructive" size="icon" className="bg-[#A90000] hover:bg-[#A90000]/90 rounded-full h-8 w-8" onClick={() => setIsInfoModalOpen(true)}>
+                                <Info className="h-5 w-5 text-white" />
                             </Button>
                         </div>
                     </div>
@@ -226,7 +226,7 @@ function BacklogContent() {
                         {/* Epics Panel */}
                         {showEpicsPanel && (
                             <div className="w-1/3 lg:w-1/4 sticky top-4">
-                                <div className="bg-white rounded-lg border p-4 flex flex-col h-fit">
+                                <div className="bg-white rounded-lg border p-4 flex flex-col">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-bold">Épicas</h3>
                                         <Button variant="ghost" size="icon" onClick={() => setShowEpicsPanel(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
