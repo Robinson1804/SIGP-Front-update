@@ -146,48 +146,48 @@ function BacklogContent() {
             <Button size="sm" onClick={() => setActiveTab('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Dashboard' ? 'default' : 'outline'}>Dashboard</Button>
         </div>
 
-        <div className="flex-1 flex bg-[#F9F9F9] px-4 pb-4">
+        <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">
             {activeTab === 'Backlog' && (
-                <div className="flex-1 flex gap-4">
-                    <div className="flex-1 flex flex-col gap-4">
-                        {/* Filtros */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                    <Input placeholder="Buscar en el backlog" className="pl-10 bg-white" />
-                                </div>
-                                <Select onValueChange={(value) => { if(value === 'show') setShowEpics(true) }}>
-                                    <SelectTrigger className="w-[180px] bg-white">
-                                        <SelectValue placeholder="Épica" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="show">Mostrar épicas</SelectItem>
-                                        {/* Opciones de epicas */}
-                                    </SelectContent>
-                                </Select>
+                <div className="flex-1 flex flex-col gap-4">
+                    {/* Filtros */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input placeholder="Buscar en el backlog" className="pl-10 bg-white" />
                             </div>
-                             <div className="flex items-center gap-2">
-                                <Button variant="ghost" size="icon" className="text-[#018CD1] h-8 w-8">
-                                    <Info className="h-6 w-6" />
-                                </Button>
+                            <Select onValueChange={(value) => { if(value === 'show') setShowEpics(true) }}>
+                                <SelectTrigger className="w-[180px] bg-white">
+                                    <SelectValue placeholder="Épica" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="show">Mostrar épicas</SelectItem>
+                                    {/* Opciones de epicas */}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="text-white bg-[#018CD1] hover:bg-[#018CD1]/90 h-8 w-8">
+                                <Info className="h-6 w-6" />
+                            </Button>
+                        </div>
+                    </div>
+
+                     {/* Epics Panel */}
+                    {showEpics && (
+                        <div className="bg-white rounded-lg border p-4 flex flex-col mb-4">
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="font-bold">Épicas</h3>
+                                <Button variant="ghost" size="icon" onClick={() => setShowEpics(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
+                            </div>
+                            <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center py-8">
+                                <p>No hay épicas creadas</p>
+                                <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
                             </div>
                         </div>
-
-                         {/* Epics Panel */}
-                        {showEpics && (
-                            <div className="bg-white rounded-lg border p-4 flex flex-col">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold">Épicas</h3>
-                                    <Button variant="ghost" size="icon" onClick={() => setShowEpics(false)} className="h-6 w-6"><X className="h-4 w-4"/></Button>
-                                </div>
-                                <div className="flex-1 text-center text-gray-500 flex flex-col justify-center items-center py-8">
-                                    <p>No hay épicas creadas</p>
-                                    <Button variant="outline" className="mt-4 bg-gray-100" disabled><Plus className="mr-2 h-4 w-4" />Crear Épica</Button>
-                                </div>
-                            </div>
-                        )}
-
+                    )}
+                    
+                    <div className="flex-1 flex flex-col gap-4">
                         {/* Sprint 1 Board */}
                          <div className="bg-white rounded-lg border">
                              <Collapsible defaultOpen>
@@ -227,7 +227,7 @@ function BacklogContent() {
                                                 <TableRow key={hu.id}>
                                                     <TableCell>{hu.id}</TableCell>
                                                     <TableCell>{hu.title}</TableCell>
-                                                    <TableCell><Badge className={cn(hu.state === 'Finalizado' ? 'bg-green-200 text-green-800' : huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
+                                                    <TableCell><Badge className={cn(hu.state === 'Finalizado' ? huStatusColors['Finalizado'] : huStatusColors[hu.state as keyof typeof huStatusColors], 'font-semibold')}>{hu.state}</Badge></TableCell>
                                                     <TableCell>{hu.epic}</TableCell>
                                                     <TableCell>{hu.responsible}</TableCell>
                                                     <TableCell>
@@ -330,9 +330,7 @@ function BacklogContent() {
                                 </CollapsibleContent>
                              </Collapsible>
                         </div>
-
                     </div>
-                    
                 </div>
             )}
             {activeTab === 'Tablero' && (
@@ -357,5 +355,3 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-    
