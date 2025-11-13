@@ -216,9 +216,7 @@ function BacklogContent() {
                             </Popover>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 border-2 border-destructive text-destructive hover:bg-destructive/10" onClick={() => setIsInfoModalOpen(true)}>
-                                <Info className="h-5 w-5" strokeWidth={2.5}/>
-                            </Button>
+                            <Info className="h-6 w-6 text-destructive cursor-pointer" strokeWidth={2.5} onClick={() => setIsInfoModalOpen(true)} />
                         </div>
                     </div>
                     
