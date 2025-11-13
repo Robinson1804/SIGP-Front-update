@@ -216,8 +216,8 @@ function BacklogContent() {
                             </Popover>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Button variant="destructive" size="icon" className="bg-[#A90000] hover:bg-[#A90000]/90 rounded-full h-8 w-8" onClick={() => setIsInfoModalOpen(true)}>
-                                <Info className="h-5 w-5 text-white" />
+                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 border-2 border-destructive text-destructive hover:bg-destructive/10" onClick={() => setIsInfoModalOpen(true)}>
+                                <Info className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
@@ -409,3 +409,6 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
+
+
+    
