@@ -196,7 +196,7 @@ function BacklogContent() {
                     <div className="flex-1 flex items-start gap-4">
                         {/* Epics Panel */}
                         {showEpicsPanel && (
-                            <div className="sticky top-0 w-1/3 lg:w-1/4">
+                            <div className="w-1/3 lg:w-1/4">
                                 <div className="bg-white rounded-lg border p-4 flex flex-col">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-bold">Épicas</h3>
@@ -380,5 +380,7 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
+
+    
 
     
