@@ -237,7 +237,7 @@ function BacklogContent() {
                             </div>
                         )}
                         
-                        <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)]">
+                        <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
                             <div className="flex flex-col gap-4">
                                 {/* Sprint 1 Board */}
                                 <div className="bg-white rounded-lg border">
