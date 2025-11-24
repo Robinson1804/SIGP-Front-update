@@ -582,19 +582,19 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
             </CardHeader>
             <CardContent className="flex flex-col gap-2 flex-grow justify-end">
                 <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="w-4 h-4 text-[#272E35]" />
-                    <span className="font-semibold">Estado:</span>
+                    <CheckCircle className="w-4 h-4 text-[#272E35] shrink-0" />
+                    <span className="font-semibold shrink-0">Estado:</span>
                     <Badge className={`${statusColors[project.status]} text-black`}>{project.status}</Badge>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-[#272E35]" />
-                    <span className="font-semibold">Fechas:</span>
-                    <span>{displayDate}</span>
+                <div className="flex items-start gap-2 text-sm">
+                    <Calendar className="w-4 h-4 text-[#272E35] shrink-0 mt-0.5" />
+                    <span className="font-semibold shrink-0">Fechas:</span>
+                    <span className="break-words">{displayDate}</span>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="w-4 h-4 text-[#272E35]" />
-                    <span className="font-semibold">Scrum Master:</span>
-                    <span>{project.scrumMaster}</span>
+                    <Users className="w-4 h-4 text-[#272E35] shrink-0" />
+                    <span className="font-semibold shrink-0">Scrum Master:</span>
+                    <span className="truncate">{project.scrumMaster}</span>
                 </div>
             </CardContent>
         </Card>
