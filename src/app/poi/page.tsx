@@ -53,6 +53,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationEllipsis,
 } from "@/components/ui/pagination";
 import {
   Tooltip,
@@ -105,14 +106,14 @@ const initialProjects: Project[] = [
     },
     {
         id: '3',
-        name: 'Actividad de Mantenimiento',
+        name: 'Transformación Digital con Blockchain en Sectores Estratégicos',
         description: 'Descripción de la actividad',
         type: 'Actividad',
         classification: 'Gestión interna',
-        status: 'En desarrollo',
-        startDate: '2025-01',
-        endDate: '2025-12',
-        scrumMaster: 'Juan Torres',
+        status: 'En planificación',
+        startDate: '2025-04',
+        endDate: '2025-09',
+        scrumMaster: 'Marco Polo',
         annualAmount: 25000,
         strategicAction: 'AE N°3',
         missingData: false,
@@ -121,6 +122,27 @@ const initialProjects: Project[] = [
         financialArea: ['OTA'],
         coordination: 'Coordinación 2',
         coordinator: 'Jefe de Área',
+        managementMethod: 'Kanban',
+        subProjects: [],
+    },
+     {
+        id: '4',
+        name: 'SIRA',
+        description: 'Descripción de la actividad SIRA',
+        type: 'Actividad',
+        classification: 'Gestión interna',
+        status: 'En planificación',
+        startDate: '2025-04',
+        endDate: '2025-09',
+        scrumMaster: 'Marco Polo',
+        annualAmount: 30000,
+        strategicAction: 'AE N°4',
+        missingData: false,
+        years: ['2025'],
+        responsibles: ['Equipo SIRA'],
+        financialArea: ['OTIN'],
+        coordination: 'Coordinación 3',
+        coordinator: 'Líder Técnico',
         managementMethod: 'Kanban',
         subProjects: [],
     }
@@ -139,6 +161,7 @@ const responsibleOptions: MultiSelectOption[] = [
     { value: 'Ana Garcia', label: 'Ana Garcia' },
     { value: 'Carlos Ruiz', label: 'Carlos Ruiz' },
     { value: 'Juan Torres', label: 'Juan Torres' },
+    { value: 'Marco Polo', label: 'Marco Polo' },
 ];
 
 const yearOptions: MultiSelectOption[] = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i).map(y => ({label: y.toString(), value: y.toString()}));
@@ -402,6 +425,7 @@ export function POIModal({
                                         <SelectItem value="AE N°1">AE N°1</SelectItem>
                                         <SelectItem value="AE N°2">AE N°2</SelectItem>
                                         <SelectItem value="AE N°3">AE N°3</SelectItem>
+                                        <SelectItem value="AE N°4">AE N°4</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
@@ -580,7 +604,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                     </DropdownMenuContent>
                 </DropdownMenu>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2 flex-grow justify-end">
+            <CardContent className="flex flex-col gap-3 flex-grow justify-end">
                 <div className="flex items-center gap-2 text-sm">
                     <CheckCircle className="w-4 h-4 text-[#272E35] shrink-0" />
                     <span className="font-semibold shrink-0">Estado:</span>
@@ -589,7 +613,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                 <div className="flex items-start gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-[#272E35] shrink-0 mt-0.5" />
                     <span className="font-semibold shrink-0">Fechas:</span>
-                    <span className="break-words">{displayDate}</span>
+                    <span className="break-words capitalize">{displayDate}</span>
                 </div>
                  <div className="flex items-center gap-2 text-sm">
                     <Users className="w-4 h-4 text-[#272E35] shrink-0" />
@@ -676,7 +700,7 @@ export default function PoiPage() {
   }
 
   const filteredProjects = projects.filter(p => p.type === selectedType);
-  const sectionTitle = selectedType === "Proyecto" ? "Proyectos" : "Lista";
+  const sectionTitle = selectedType === "Proyecto" ? "Proyectos" : "Actividades";
   const SectionIcon = selectedType === "Proyecto" ? Folder : List;
 
 
@@ -714,7 +738,7 @@ export default function PoiPage() {
                 <Input placeholder="Buscar" className="pl-9 bg-white border-[#CFD6DD]" />
             </div>
             <div className="flex items-center gap-2">
-                <label className="text-sm">Tipo</label>
+                <label className="text-sm text-black">Tipo</label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
                     <SelectTrigger className="w-[150px] bg-white border-[#CFD6DD] text-[#7E8C9A]">
                         <SelectValue />
@@ -726,7 +750,7 @@ export default function PoiPage() {
                 </Select>
             </div>
             <div className="flex items-center gap-2">
-                <label className="text-sm">Clasificación</label>
+                <label className="text-sm text-black">Clasificación</label>
                 <Select>
                     <SelectTrigger className="w-[180px] bg-white border-[#CFD6DD] text-[#7E8C9A]">
                         <SelectValue placeholder="Seleccionar" />
@@ -738,7 +762,7 @@ export default function PoiPage() {
                 </Select>
             </div>
             <div className="flex items-center gap-2">
-                <label className="text-sm">Mes</label>
+                <label className="text-sm text-black">Mes</label>
                  <Input type="month" defaultValue={new Date().toISOString().substring(0, 7)} className="bg-white border-[#CFD6DD] text-[#7E8C9A]" />
             </div>
         </div>
@@ -749,19 +773,24 @@ export default function PoiPage() {
             ))}
         </div>
         
-        <Pagination>
-            <PaginationContent>
-                <PaginationItem>
-                    <PaginationPrevious href="#" />
-                </PaginationItem>
-                <PaginationItem><PaginationLink href="#">1</PaginationLink></PaginationItem>
-                <PaginationItem><PaginationLink href="#" isActive>2</PaginationLink></PaginationItem>
-                <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
-                <PaginationItem>
-                    <PaginationNext href="#" />
-                </PaginationItem>
-            </PaginationContent>
-        </Pagination>
+        <div className="flex justify-end mt-auto">
+            <Pagination>
+                <PaginationContent>
+                    <PaginationItem>
+                        <PaginationPrevious href="#" />
+                    </PaginationItem>
+                    <PaginationItem><PaginationLink href="#">1</PaginationLink></PaginationItem>
+                    <PaginationItem><PaginationLink href="#" isActive>2</PaginationLink></PaginationItem>
+                    <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
+                    <PaginationItem><PaginationEllipsis/></PaginationItem>
+                    <PaginationItem><PaginationLink href="#">9</PaginationLink></PaginationItem>
+                    <PaginationItem><PaginationLink href="#">10</PaginationLink></PaginationItem>
+                    <PaginationItem>
+                        <PaginationNext href="#" />
+                    </PaginationItem>
+                </PaginationContent>
+            </Pagination>
+        </div>
 
       </div>
       
