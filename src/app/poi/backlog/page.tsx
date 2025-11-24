@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
   Target,
@@ -141,6 +141,8 @@ function BacklogContent() {
   const handleTabClick = (tabName: string) => {
     if (tabName === 'Tablero') {
         router.push('/poi/tablero');
+    } else if (tabName === 'Dashboard') {
+        router.push('/poi/dashboard');
     } else {
         setActiveTab(tabName);
     }
@@ -181,7 +183,7 @@ function BacklogContent() {
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
             <Button size="sm" onClick={() => setActiveTab('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
             <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Tablero' ? 'default' : 'outline'}>Tablero</Button>
-            <Button size="sm" onClick={() => setActiveTab('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Dashboard' ? 'default' : 'outline'}>Dashboard</Button>
+            <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Dashboard' ? 'default' : 'outline'}>Dashboard</Button>
         </div>
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">
@@ -231,7 +233,7 @@ function BacklogContent() {
                     <div className="flex-1 flex items-start gap-4">
                         {/* Epics Panel */}
                         {showEpicsPanel && (
-                            <div className="w-1/3 lg:w-1/4 sticky top-4">
+                             <div className="w-1/3 lg:w-1/4 sticky top-4">
                                 <div className="bg-white rounded-lg border p-4 flex flex-col">
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-bold">Épicas</h3>
@@ -394,16 +396,6 @@ function BacklogContent() {
                     </div>
                 </div>
             )}
-            {activeTab === 'Tablero' && (
-                <div className="flex-1 flex items-center justify-center text-gray-500 bg-white rounded-lg border">
-                    <p>Sección de Tablero en construcción.</p>
-                </div>
-            )}
-             {activeTab === 'Dashboard' && (
-                <div className="flex-1 flex items-center justify-center text-gray-500 bg-white rounded-lg border">
-                    <p>Sección de Dashboard en construcción.</p>
-                </div>
-            )}
         </div>
         <InfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)} />
     </AppLayout>
@@ -417,11 +409,3 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-
-    
-
-    
-
-
-    

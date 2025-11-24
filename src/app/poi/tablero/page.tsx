@@ -11,10 +11,9 @@ import {
   Bell,
   MoreHorizontal,
   Plus,
-  MessageSquare,
-  Paperclip,
   Calendar,
-  Bookmark
+  Bookmark,
+  MessageSquare
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -47,7 +46,7 @@ type UserStory = {
     points: number;
     comments: number;
     assignee: string;
-    status: 'Por hacer' | 'En progreso' | 'Listo' | 'En revisión';
+    status: 'Por hacer' | 'En progreso' | 'En revisión' | 'Finalizado';
 };
 
 const userStoriesData: UserStory[] = [
@@ -58,7 +57,16 @@ const userStoriesData: UserStory[] = [
 const KanbanCard = ({ story }: { story: UserStory }) => {
     return (
         <div className="bg-white p-3 rounded-md border border-gray-200 shadow-sm mb-3 cursor-grab">
-            <p className="font-semibold text-sm mb-2">{story.title}</p>
+            <div className="flex justify-between items-start">
+                <p className="font-semibold text-sm mb-2 pr-2">{story.title}</p>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" disabled>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                </DropdownMenu>
+            </div>
             <div className="flex items-center gap-2 mb-2">
                 <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs font-bold">{story.epic}</Badge>
                 <div className="flex items-center text-xs text-gray-500 gap-1">
@@ -123,6 +131,8 @@ function TableroContent() {
   const handleTabClick = (tabName: string) => {
     if (tabName === 'Backlog') {
         router.push('/poi/backlog');
+    } else if (tabName === 'Dashboard') {
+        router.push('/poi/dashboard');
     } else {
         setActiveTab(tabName);
     }
@@ -161,8 +171,8 @@ function TableroContent() {
   const columns: { title: UserStory['status'], stories: UserStory[] }[] = [
     { title: 'Por hacer', stories: userStoriesData.filter(s => s.status === 'Por hacer') },
     { title: 'En progreso', stories: userStoriesData.filter(s => s.status === 'En progreso') },
-    { title: 'Listo', stories: userStoriesData.filter(s => s.status === 'Listo') },
     { title: 'En revisión', stories: userStoriesData.filter(s => s.status === 'En revisión') },
+    { title: 'Finalizado', stories: userStoriesData.filter(s => s.status === 'Finalizado') },
   ];
 
 
@@ -175,7 +185,7 @@ function TableroContent() {
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
             <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Backlog</Button>
             <Button size="sm" onClick={() => setActiveTab('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='default'>Tablero</Button>
-            <Button size="sm" onClick={() => setActiveTab('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Dashboard</Button>
+            <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Dashboard</Button>
         </div>
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">
@@ -207,11 +217,6 @@ function TableroContent() {
                     </div>
                 </div>
             )}
-             {activeTab === 'Dashboard' && (
-                <div className="flex-1 flex items-center justify-center text-gray-500 bg-white rounded-lg border">
-                    <p>Sección de Dashboard en construcción.</p>
-                </div>
-            )}
         </div>
     </AppLayout>
   );
@@ -224,5 +229,3 @@ export default function TableroPage() {
         </React.Suspense>
     );
 }
-
-    
