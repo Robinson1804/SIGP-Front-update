@@ -61,7 +61,7 @@ const summaryCards = [
 ];
 
 const stateChartData = [
-  { name: 'Hecho', value: 4, fill: '#A7F3D0' },
+  { name: 'Finalizado', value: 4, fill: '#A7F3D0' },
   { name: 'En progreso', value: 2, fill: '#FDE68A' },
   { name: 'Por hacer', value: 2, fill: '#BFDBFE' },
   { name: 'Revisión', value: 1, fill: '#A78BFA'}
@@ -221,7 +221,7 @@ function DashboardContent() {
                         <ChartContainer config={{}} className="w-full h-48">
                             <PieChart>
                                <ChartTooltip
-                                    cursor={false}
+                                    cursor={true}
                                     content={<ChartTooltipContent hideLabel />}
                                 />
                                 <Pie data={stateChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2}>
@@ -321,4 +321,4 @@ export default function DashboardPage() {
     );
 }
 
-
+    
