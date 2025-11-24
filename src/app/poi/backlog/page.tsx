@@ -137,6 +137,14 @@ function BacklogContent() {
       router.push('/poi');
     }
   }, [router]);
+
+  const handleTabClick = (tabName: string) => {
+    if (tabName === 'Tablero') {
+        router.push('/poi/tablero');
+    } else {
+        setActiveTab(tabName);
+    }
+  };
   
   if (!project) {
     return (
@@ -172,7 +180,7 @@ function BacklogContent() {
     >
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
             <Button size="sm" onClick={() => setActiveTab('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
-            <Button size="sm" onClick={() => setActiveTab('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Tablero' ? 'default' : 'outline'}>Tablero</Button>
+            <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Tablero' ? 'default' : 'outline'}>Tablero</Button>
             <Button size="sm" onClick={() => setActiveTab('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Dashboard' ? 'default' : 'outline'}>Dashboard</Button>
         </div>
 
@@ -216,7 +224,7 @@ function BacklogContent() {
                             </Popover>
                         </div>
                          <div className="flex items-center gap-2">
-                            <Info className="h-6 w-6 text-destructive cursor-pointer" strokeWidth={2.5} onClick={() => setIsInfoModalOpen(true)} />
+                            <Info className="h-6 w-6 text-red-700 cursor-pointer" strokeWidth={2.5} onClick={() => setIsInfoModalOpen(true)} />
                         </div>
                     </div>
                     
@@ -237,7 +245,7 @@ function BacklogContent() {
                             </div>
                         )}
                         
-                        <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
                             <div className="flex flex-col gap-4">
                                 {/* Sprint 1 Board */}
                                 <div className="bg-white rounded-lg border">
@@ -250,7 +258,7 @@ function BacklogContent() {
                                                 </div>
                                             </CollapsibleTrigger>
                                             <div className="flex items-center gap-2">
-                                                <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
+                                                <Button size="sm" className="bg-[#018CD1]" onClick={() => handleTabClick('Tablero')}>Iniciar Sprint</Button>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
                                                     <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
@@ -308,7 +316,7 @@ function BacklogContent() {
                                                 </div>
                                             </CollapsibleTrigger>
                                             <div className="flex items-center gap-2">
-                                                <Button size="sm" className="bg-[#018CD1]" onClick={() => setActiveTab('Tablero')}>Iniciar Sprint</Button>
+                                                <Button size="sm" className="bg-[#018CD1]" onClick={() => handleTabClick('Tablero')}>Iniciar Sprint</Button>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" disabled><MoreHorizontal /></Button></DropdownMenuTrigger>
                                                     <DropdownMenuContent><DropdownMenuItem>Editar</DropdownMenuItem><DropdownMenuItem>Eliminar</DropdownMenuItem></DropdownMenuContent>
@@ -412,5 +420,8 @@ export default function BacklogPage() {
 
 
     
+
+    
+
 
     
