@@ -28,6 +28,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 const navItems = [
