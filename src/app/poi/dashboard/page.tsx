@@ -61,9 +61,10 @@ const summaryCards = [
 ];
 
 const stateChartData = [
-  { name: 'Hecho', value: 4, fill: '#FFA500' },
-  { name: 'En progreso', value: 2, fill: '#3B82F6' },
-  { name: 'Por hacer', value: 2, fill: '#F472B6' },
+  { name: 'Hecho', value: 4, fill: '#A7F3D0' },
+  { name: 'En progreso', value: 2, fill: '#FDE68A' },
+  { name: 'Por hacer', value: 2, fill: '#BFDBFE' },
+  { name: 'Revisión', value: 1, fill: '#A78BFA'}
 ];
 
 const priorityChartData = [
@@ -212,13 +213,17 @@ function DashboardContent() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                   <Card>
                     <CardHeader><CardTitle className="text-base">RESUMEN DE ESTADO</CardTitle></CardHeader>
-                    <CardContent className="flex items-center">
-                        <ChartContainer config={{}} className="w-48 h-48">
+                    <CardContent className="flex items-center justify-center">
+                        <ChartContainer config={{}} className="w-full h-48">
                             <PieChart>
+                               <ChartTooltip
+                                    cursor={false}
+                                    content={<ChartTooltipContent hideLabel />}
+                                />
                                 <Pie data={stateChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2}>
                                     {stateChartData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -237,42 +242,42 @@ function DashboardContent() {
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardHeader><CardTitle className="text-base">RESUMEN DE PRIORIDAD</CardTitle></CardHeader>
-                    <CardContent>
-                        <ChartContainer config={{}} className="h-48 w-full">
-                            <RechartsBarChart data={priorityChartData} layout="vertical" margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
-                                <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                                <Bar dataKey="value" fill="#8884d8" radius={4}>
-                                  <LabelList dataKey="value" position="right" />
-                                </Bar>
-                            </RechartsBarChart>
-                        </ChartContainer>
+                    <CardHeader><CardTitle className="text-base">TIPOS DE TRABAJO</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                        {workTypesData.map(item => (
+                            <div key={item.name} className="flex items-center gap-4">
+                                <item.icon className="w-5 h-5 text-gray-600" />
+                                <div className="flex-1">
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span>{item.name}</span>
+                                        <span>{item.percentage}%</span>
+                                    </div>
+                                    <Progress value={item.percentage} indicatorClassName={item.color} className="h-2" />
+                                </div>
+                            </div>
+                        ))}
                     </CardContent>
                   </Card>
-                  <div className="md:col-span-2">
-                    <Card>
-                        <CardHeader><CardTitle className="text-base">TIPOS DE TRABAJO</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            {workTypesData.map(item => (
-                                <div key={item.name} className="flex items-center gap-4">
-                                    <item.icon className="w-5 h-5 text-gray-600" />
-                                    <div className="flex-1">
-                                        <div className="flex justify-between text-sm mb-1">
-                                            <span>{item.name}</span>
-                                            <span>{item.percentage}%</span>
-                                        </div>
-                                        <Progress value={item.percentage} indicatorClassName={item.color} className="h-2" />
-                                    </div>
-                                </div>
-                            ))}
-                        </CardContent>
-                    </Card>
-                  </div>
               </div>
-              <Card className="lg:col-span-1">
+
+               <Card>
+                <CardHeader><CardTitle className="text-base">RESUMEN DE PRIORIDAD</CardTitle></CardHeader>
+                <CardContent>
+                    <ChartContainer config={{}} className="h-48 w-full">
+                        <RechartsBarChart data={priorityChartData} layout="vertical" margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
+                            <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
+                            <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                            <Bar dataKey="value" fill="#8884d8" radius={4}>
+                              <LabelList dataKey="value" position="right" />
+                            </Bar>
+                        </RechartsBarChart>
+                    </ChartContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-1 md:col-span-2">
                 <CardHeader><CardTitle className="text-base">ACTIVIDAD RECIENTE</CardTitle></CardHeader>
                 <CardContent className="h-[500px] overflow-y-auto custom-scrollbar">
                     <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en todo el proyecto</p>
@@ -315,4 +320,5 @@ export default function DashboardPage() {
         </React.Suspense>
     );
 }
+
 
