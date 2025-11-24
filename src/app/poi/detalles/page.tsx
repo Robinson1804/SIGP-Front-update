@@ -349,10 +349,6 @@ function ProjectDetailsContent() {
             router.push('/poi/backlog');
             return;
         }
-        if (tabName === 'Tablero') {
-            router.push('/poi/tablero');
-            return;
-        }
 
         setActiveTab(tabName);
         window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
@@ -387,7 +383,6 @@ function ProjectDetailsContent() {
             <Button size="sm" onClick={() => handleTabClick('Detalles')} className={cn(activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
             <Button size="sm" onClick={() => handleTabClick('Documentos')} className={cn(activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
             <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
-             <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Tablero' ? 'default' : 'outline'}>Tablero</Button>
           </div>
         </div>
       </>
@@ -638,8 +633,3 @@ export default function ProjectDetailsPage() {
         </React.Suspense>
     )
 }
-
-    
-    
-
-    
