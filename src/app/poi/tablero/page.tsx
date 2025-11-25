@@ -135,18 +135,15 @@ function TableroContent() {
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
-    if (tabName === 'Backlog') {
-        router.push('/poi/backlog');
-    } else if (tabName === 'Dashboard') {
-        router.push('/poi/dashboard');
-    } else if (tabName === 'Detalles') {
-        router.push('/poi/detalles');
-    } else if (tabName === 'Lista') {
-        router.push('/poi/lista');
+    if (project?.type === 'Proyecto') {
+        if (tabName === 'Backlog') router.push('/poi/backlog');
+        else if (tabName === 'Dashboard') router.push('/poi/dashboard');
+    } else { // Actividad
+        if (tabName === 'Detalles') router.push('/poi/detalles');
+        else if (tabName === 'Lista') router.push('/poi/lista');
+        else if (tabName === 'Dashboard') router.push('/poi/dashboard');
     }
-     else {
-        setActiveTab(tabName);
-    }
+    setActiveTab(tabName);
   };
 
   const handleCloseSprint = () => {

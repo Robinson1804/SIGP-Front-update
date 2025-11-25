@@ -143,7 +143,10 @@ function BacklogContent() {
         router.push('/poi/tablero');
     } else if (tabName === 'Dashboard') {
         router.push('/poi/dashboard');
-    } else {
+    } else if (tabName === 'Backlog') {
+        router.push('/poi/backlog');
+    }
+    else {
         setActiveTab(tabName);
     }
   };
@@ -181,7 +184,7 @@ function BacklogContent() {
       secondaryHeader={secondaryHeader}
     >
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-            <Button size="sm" onClick={() => setActiveTab('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+            <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
             <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Tablero' ? 'default' : 'outline'}>Tablero</Button>
             <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Dashboard' ? 'default' : 'outline'}>Dashboard</Button>
         </div>

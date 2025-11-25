@@ -152,15 +152,15 @@ function DashboardContent() {
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
-    if (tabName === 'Backlog') {
-        router.push('/poi/backlog');
-    } else if (tabName === 'Tablero') {
-        router.push('/poi/tablero');
-    } else if (tabName === 'Detalles') {
-        router.push('/poi/detalles');
-    } else {
-        setActiveTab(tabName);
+    if (project?.type === 'Proyecto') {
+        if (tabName === 'Backlog') router.push('/poi/backlog');
+        else if (tabName === 'Tablero') router.push('/poi/tablero');
+    } else { // Actividad
+        if (tabName === 'Detalles') router.push('/poi/detalles');
+        else if (tabName === 'Lista') router.push('/poi/lista');
+        else if (tabName === 'Tablero') router.push('/poi/tablero');
     }
+    setActiveTab(tabName);
   };
   
   if (!project) {
@@ -213,7 +213,7 @@ function DashboardContent() {
             <Button 
                 key={tab}
                 size="sm" 
-                onClick={() => router.push(currentTabPath(tab))} 
+                onClick={() => handleTabClick(tab)} 
                 className={cn(activeTab === tab ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
                 variant={activeTab === tab ? 'default' : 'outline'}
             >
@@ -236,70 +236,70 @@ function DashboardContent() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-              <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader><CardTitle className="text-base">RESUMEN DE ESTADO</CardTitle></CardHeader>
-                  <CardContent className="flex flex-col items-center justify-center">
-                      <ChartContainer config={{}} className="w-full h-40">
-                          <PieChart>
-                            <ChartTooltip
-                                  cursor={true}
-                                  content={<ChartTooltipContent />}
-                              />
-                              <Pie data={stateChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={60} paddingAngle={2}>
-                                  {stateChartData.map((entry, index) => (
-                                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                                  ))}
-                              </Pie>
-                          </PieChart>
-                      </ChartContainer>
-                      <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm">
-                          {stateChartData.map(entry => (
-                              <div key={entry.name} className="flex items-center gap-2">
-                                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.fill }}></div>
-                                  <span>{entry.name}</span>
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">RESUMEN DE ESTADO</CardTitle></CardHeader>
+                      <CardContent className="flex flex-col items-center justify-center">
+                          <ChartContainer config={{}} className="w-full h-40">
+                              <PieChart>
+                                <ChartTooltip
+                                      cursor={true}
+                                      content={<ChartTooltipContent />}
+                                  />
+                                  <Pie data={stateChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={60} paddingAngle={2}>
+                                      {stateChartData.map((entry, index) => (
+                                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                                      ))}
+                                  </Pie>
+                              </PieChart>
+                          </ChartContainer>
+                          <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm">
+                              {stateChartData.map(entry => (
+                                  <div key={entry.name} className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: entry.fill }}></div>
+                                      <span>{entry.name}</span>
+                                  </div>
+                              ))}
+                          </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">RESUMEN DE PRIORIDAD</CardTitle></CardHeader>
+                      <CardContent>
+                          <ChartContainer config={{}} className="h-64 w-full">
+                              <RechartsBarChart data={priorityChartData} layout="vertical" margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
+                                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                                  <XAxis type="number" hide />
+                                  <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
+                                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                  <Bar dataKey="value" fill="#8884d8" radius={4}>
+                                    <LabelList dataKey="value" position="right" />
+                                  </Bar>
+                              </RechartsBarChart>
+                          </ChartContainer>
+                      </CardContent>
+                    </Card>
+                    <Card className="md:col-span-2">
+                      <CardHeader><CardTitle className="text-base">TIPOS DE TRABAJO</CardTitle></CardHeader>
+                      <CardContent className="space-y-4">
+                          {workTypesData.map(item => (
+                              <div key={item.name} className="flex items-center gap-4">
+                                  <item.icon className="w-5 h-5 text-gray-600" />
+                                  <div className="flex-1">
+                                      <div className="flex justify-between text-sm mb-1">
+                                          <span>{item.name}</span>
+                                          <span>{item.percentage}%</span>
+                                      </div>
+                                      <Progress value={item.percentage} indicatorClassName={item.color} className="h-2" />
+                                  </div>
                               </div>
                           ))}
-                      </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader><CardTitle className="text-base">RESUMEN DE PRIORIDAD</CardTitle></CardHeader>
-                  <CardContent>
-                      <ChartContainer config={{}} className="h-64 w-full">
-                          <RechartsBarChart data={priorityChartData} layout="vertical" margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
-                              <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                              <XAxis type="number" hide />
-                              <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
-                              <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                              <Bar dataKey="value" fill="#8884d8" radius={4}>
-                                <LabelList dataKey="value" position="right" />
-                              </Bar>
-                          </RechartsBarChart>
-                      </ChartContainer>
-                  </CardContent>
-                </Card>
-                <Card className="md:col-span-2">
-                  <CardHeader><CardTitle className="text-base">TIPOS DE TRABAJO</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                      {workTypesData.map(item => (
-                          <div key={item.name} className="flex items-center gap-4">
-                              <item.icon className="w-5 h-5 text-gray-600" />
-                              <div className="flex-1">
-                                  <div className="flex justify-between text-sm mb-1">
-                                      <span>{item.name}</span>
-                                      <span>{item.percentage}%</span>
-                                  </div>
-                                  <Progress value={item.percentage} indicatorClassName={item.color} className="h-2" />
-                              </div>
-                          </div>
-                      ))}
-                  </CardContent>
-                </Card>
-              </div>
+                      </CardContent>
+                    </Card>
+                </div>
                 
-              <Card className="h-full lg:col-span-1">
+                <Card className="h-full lg:row-span-2">
                   <CardHeader><CardTitle className="text-base">ACTIVIDAD RECIENTE</CardTitle></CardHeader>
                   <CardContent className="h-[calc(100%-4rem)] overflow-y-auto custom-scrollbar">
                       <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en todo el proyecto</p>

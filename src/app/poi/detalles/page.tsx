@@ -346,8 +346,6 @@ function ProjectDetailsContent() {
         let route = '';
         if (project?.type === 'Proyecto') {
             if (tabName === 'Backlog') route = '/poi/backlog';
-            else if (tabName === 'Tablero') route = '/poi/tablero';
-            else if (tabName === 'Dashboard') route = '/poi/dashboard';
         } else {
              if (tabName === 'Lista') route = '/poi/lista';
              if (tabName === 'Tablero') route = '/poi/tablero';
@@ -376,11 +374,7 @@ function ProjectDetailsContent() {
     
     let breadcrumbs;
     if (project.type === "Proyecto") {
-        if (activeTab === 'Backlog') {
-            breadcrumbs = [{ label: "POI", href: "/poi" }, { label: "Proyecto", href: "/poi/detalles" }, { label: activeTab }];
-        } else {
-            breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
-        }
+       breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
     } else { // Actividad
         breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
     }
@@ -390,8 +384,6 @@ function ProjectDetailsContent() {
         { name: 'Detalles' },
         { name: 'Documentos' },
         { name: 'Backlog' },
-        { name: 'Tablero' },
-        { name: 'Dashboard' },
     ];
     
     const activityTabs = [
@@ -478,6 +470,7 @@ function ProjectDetailsContent() {
                                                 <InfoField label="Área Financiera">
                                                     {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                                 </InfoField>
+                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                             </div>
                                             {/* Columna 2 */}
                                             <div className="space-y-4">
@@ -489,7 +482,6 @@ function ProjectDetailsContent() {
                                                 <InfoField label="Año">
                                                     {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                                 </InfoField>
-                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                                 <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
