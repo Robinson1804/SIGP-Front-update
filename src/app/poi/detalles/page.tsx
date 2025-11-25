@@ -23,6 +23,7 @@ import {
   Search,
   Download,
   CheckSquare,
+  List,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -341,14 +342,14 @@ function ProjectDetailsContent() {
         setDocuments(documents.map(doc => doc.id === docId ? { ...doc, status: newStatus } : doc));
     };
 
-    const handleTabClick = (tabName: string) => {
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('tab', tabName);
-
-        if (tabName === 'Backlog') {
-            router.push('/poi/backlog');
+    const handleTabClick = (tabName: string, route?: string) => {
+        if (route) {
+            router.push(route);
             return;
         }
+        
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('tab', tabName);
 
         setActiveTab(tabName);
         window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
@@ -362,12 +363,27 @@ function ProjectDetailsContent() {
         )
     }
 
-    const projectCode = `PROY N° ${project.id}`;
+    const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
     
     const breadcrumbs = [
       { label: 'POI', href: '/poi' },
       { label: project.name }
     ];
+    
+    const projectTabs = [
+        { name: 'Detalles', route: undefined },
+        { name: 'Documentos', route: undefined },
+        { name: 'Backlog', route: '/poi/backlog' },
+    ];
+    
+    const activityTabs = [
+        { name: 'Detalles', route: undefined },
+        { name: 'Lista', route: '/poi/lista' },
+        { name: 'Tablero', route: '/poi/tablero' },
+        { name: 'Dashboard', route: '/poi/dashboard' },
+    ];
+
+    const currentTabs = project.type === 'Proyecto' ? projectTabs : activityTabs;
 
     const secondaryHeader = (
       <>
@@ -380,9 +396,17 @@ function ProjectDetailsContent() {
         </div>
         <div className="sticky top-[104px] z-10 bg-[#F9F9F9] px-6 pt-4">
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => handleTabClick('Detalles')} className={cn(activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Detalles' ? 'default' : 'outline'}>Detalles</Button>
-            <Button size="sm" onClick={() => handleTabClick('Documentos')} className={cn(activeTab === 'Documentos' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Documentos' ? 'default' : 'outline'}>Documentos</Button>
-            <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+            {currentTabs.map(tab => (
+                 <Button 
+                    key={tab.name}
+                    size="sm" 
+                    onClick={() => handleTabClick(tab.name, tab.route)} 
+                    className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
+                    variant={activeTab === tab.name ? 'default' : 'outline'}
+                >
+                    {tab.name}
+                </Button>
+            ))}
           </div>
         </div>
       </>
