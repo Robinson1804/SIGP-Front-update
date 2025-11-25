@@ -346,6 +346,8 @@ function ProjectDetailsContent() {
         let route = '';
         if (project?.type === 'Proyecto') {
             if (tabName === 'Backlog') route = '/poi/backlog';
+            else if (tabName === 'Tablero') route = '/poi/tablero';
+            else if (tabName === 'Dashboard') route = '/poi/dashboard';
         } else {
              if (tabName === 'Lista') route = '/poi/lista';
              if (tabName === 'Tablero') route = '/poi/tablero';
@@ -374,7 +376,7 @@ function ProjectDetailsContent() {
     
     let breadcrumbs;
     if (project.type === "Proyecto") {
-        if(activeTab === 'Backlog') {
+        if (activeTab === 'Backlog') {
             breadcrumbs = [{ label: "POI", href: "/poi" }, { label: "Proyecto", href: "/poi/detalles" }, { label: activeTab }];
         } else {
             breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
@@ -388,6 +390,8 @@ function ProjectDetailsContent() {
         { name: 'Detalles' },
         { name: 'Documentos' },
         { name: 'Backlog' },
+        { name: 'Tablero' },
+        { name: 'Dashboard' },
     ];
     
     const activityTabs = [
@@ -458,7 +462,7 @@ function ProjectDetailsContent() {
                             <div className="lg:col-span-2">
                                 <Card>
                                     <CardContent className="p-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                             <div className="space-y-4">
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
@@ -469,17 +473,17 @@ function ProjectDetailsContent() {
                                                 <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
                                                 <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
                                                 <InfoField label="Área Financiera">
-                                                        {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
+                                                    {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                                 </InfoField>
                                             </div>
                                             <div className="space-y-4">
                                                 <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                                 <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
                                                 <InfoField label="Responsable">
-                                                        {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                                                    {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
                                                 </InfoField>
                                                 <InfoField label="Año">
-                                                        {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
+                                                    {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                                 </InfoField>
                                                 <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                                 <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
@@ -671,3 +675,5 @@ export default function ProjectDetailsPage() {
         </React.Suspense>
     )
 }
+
+    
