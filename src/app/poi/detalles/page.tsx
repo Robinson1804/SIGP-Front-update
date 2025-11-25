@@ -372,18 +372,11 @@ function ProjectDetailsContent() {
 
     const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    let breadcrumbs = [{ label: "POI", href: "/poi" }];
+    const breadcrumbs = [{ label: "POI", href: "/poi" }];
     if (project.type === 'Proyecto') {
-        if (activeTab === 'Backlog') {
-            breadcrumbs.push({ label: 'Proyecto', href: '/poi/detalles' });
-            breadcrumbs.push({ label: activeTab });
-        } else {
-            breadcrumbs.push({ label: 'Proyecto', href: '/poi/detalles' });
-            breadcrumbs.push({ label: activeTab });
-        }
-    } else { // Activity
-        breadcrumbs.push({ label: 'Actividad', href: '/poi/detalles' });
-        breadcrumbs.push({ label: activeTab });
+      breadcrumbs.push({ label: 'Detalles' });
+    } else {
+      breadcrumbs.push({ label: 'Detalles' });
     }
     
 
@@ -479,7 +472,7 @@ function ProjectDetailsContent() {
                                                 <InfoField label="Área Financiera">
                                                     {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                                 </InfoField>
-                                                <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
+                                                 <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                             </div>
                                             {/* Columna 2 */}
                                             <div className="space-y-4">
@@ -490,7 +483,7 @@ function ProjectDetailsContent() {
                                                     {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                                 </InfoField>
                                                 <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
-                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
+                                                 <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                                  <div className="grid grid-cols-2 gap-4">
                                                     <div>
                                                         <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
@@ -727,4 +720,5 @@ export default function ProjectDetailsPage() {
     )
 }
 
+    
     
