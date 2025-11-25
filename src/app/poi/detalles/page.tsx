@@ -378,9 +378,11 @@ function ProjectDetailsContent() {
             breadcrumbs.push({ label: 'Proyecto', href: '/poi/detalles' });
             breadcrumbs.push({ label: activeTab });
         } else {
+            breadcrumbs.push({ label: 'Proyecto', href: '/poi/detalles' });
             breadcrumbs.push({ label: activeTab });
         }
-    } else {
+    } else { // Activity
+        breadcrumbs.push({ label: 'Actividad', href: '/poi/detalles' });
         breadcrumbs.push({ label: activeTab });
     }
     
@@ -477,10 +479,10 @@ function ProjectDetailsContent() {
                                                 <InfoField label="Área Financiera">
                                                     {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                                 </InfoField>
+                                                <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                             </div>
                                             {/* Columna 2 */}
                                             <div className="space-y-4">
-                                                <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                                 <InfoField label="Responsable">
                                                     {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
                                                 </InfoField>
@@ -555,10 +557,10 @@ function ProjectDetailsContent() {
                                             <InfoField label="Área Financiera">
                                                 {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                             </InfoField>
+                                            <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                         </div>
                                         {/* Columna 2 */}
                                         <div className="space-y-4">
-                                            <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                             <InfoField label="Responsable">
                                                 {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
                                             </InfoField>
