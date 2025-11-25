@@ -373,8 +373,12 @@ function ProjectDetailsContent() {
     const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
     
     let breadcrumbs;
-    if (project.type === "Proyecto") {
-       breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
+    if (project.type === 'Proyecto') {
+        if (activeTab === 'Backlog') {
+            breadcrumbs = [{ label: "POI", href: "/poi" }, { label: "Proyecto", href: "/poi/detalles" }, { label: activeTab }];
+        } else {
+            breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
+        }
     } else { // Actividad
         breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
     }
@@ -453,17 +457,22 @@ function ProjectDetailsContent() {
                             {/* Columna Izquierda y Central */}
                             <div className="lg:col-span-2">
                                 <Card>
-                                    <CardContent className="p-6">
+                                    <CardContent className="p-6 space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                                            <div className="md:col-span-2">
-                                                <InfoField label="Descripción"><p>{project.description}</p></InfoField>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
+                                                <Badge className={statusColors[project.status]}>{project.status}</Badge>
                                             </div>
+                                            <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
+                                        </div>
+
+                                        <div className="md:col-span-2">
+                                            <InfoField label="Descripción"><p>{project.description}</p></InfoField>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                             {/* Columna 1 */}
                                             <div className="space-y-4">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
-                                                    <Badge className={statusColors[project.status]}>{project.status}</Badge>
-                                                </div>
                                                 <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
                                                 <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
                                                 <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
@@ -475,7 +484,6 @@ function ProjectDetailsContent() {
                                             {/* Columna 2 */}
                                             <div className="space-y-4">
                                                 <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                                <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
                                                 <InfoField label="Responsable">
                                                     {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
                                                 </InfoField>
@@ -671,5 +679,3 @@ export default function ProjectDetailsPage() {
         </React.Suspense>
     )
 }
-
-    
