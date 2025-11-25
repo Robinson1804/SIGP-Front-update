@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -128,25 +127,29 @@ function BacklogContent() {
   const [showEpicsPanel, setShowEpicsPanel] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   React.useEffect(() => {
     const savedProjectData = localStorage.getItem('selectedProject');
     if (savedProjectData) {
-      setProject(JSON.parse(savedProjectData));
+        setProject(JSON.parse(savedProjectData));
     } else {
-      router.push('/poi');
+        router.push('/poi');
     }
-  }, [router]);
+
+    const tab = searchParams.get('tab');
+    if (tab) {
+        setActiveTab(tab);
+    }
+  }, [router, searchParams]);
 
   const handleTabClick = (tabName: string) => {
+    let route = '';
     if (tabName === 'Tablero') {
         router.push('/poi/tablero');
     } else if (tabName === 'Dashboard') {
         router.push('/poi/dashboard');
-    } else if (tabName === 'Backlog') {
-        router.push('/poi/backlog');
-    }
-    else {
+    } else {
         setActiveTab(tabName);
     }
   };
@@ -163,7 +166,7 @@ function BacklogContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Proyecto', href: `/poi/detalles` },
+    { label: 'Detalles', href: `/poi/detalles` },
     { label: 'Backlog' },
   ];
 
@@ -184,9 +187,9 @@ function BacklogContent() {
       secondaryHeader={secondaryHeader}
     >
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-            <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
-            <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Tablero' ? 'default' : 'outline'}>Tablero</Button>
-            <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Dashboard' ? 'default' : 'outline'}>Dashboard</Button>
+            <Button size="sm" onClick={() => setActiveTab('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+            <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={'outline'}>Tablero</Button>
+            <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={'outline'}>Dashboard</Button>
         </div>
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">

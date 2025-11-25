@@ -1,8 +1,7 @@
-
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
   Target,
@@ -141,6 +140,7 @@ function DashboardContent() {
   const [project, setProject] = useState<Project | null>(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   React.useEffect(() => {
     const savedProjectData = localStorage.getItem('selectedProject');
@@ -149,18 +149,28 @@ function DashboardContent() {
     } else {
       router.push('/poi');
     }
-  }, [router]);
+     const tab = searchParams.get('tab');
+    if (tab) {
+        setActiveTab(tab);
+    }
+  }, [router, searchParams]);
 
   const handleTabClick = (tabName: string) => {
+    let route = '';
     if (project?.type === 'Proyecto') {
-        if (tabName === 'Backlog') router.push('/poi/backlog');
-        else if (tabName === 'Tablero') router.push('/poi/tablero');
-    } else { // Actividad
-        if (tabName === 'Detalles') router.push('/poi/detalles');
-        else if (tabName === 'Lista') router.push('/poi/lista');
-        else if (tabName === 'Tablero') router.push('/poi/tablero');
+        if (tabName === 'Backlog') route = '/poi/backlog';
+        else if (tabName === 'Tablero') route = '/poi/tablero';
+    } else if (project?.type === 'Actividad') {
+        if (tabName === 'Detalles') route = '/poi/detalles';
+        else if (tabName === 'Lista') route = '/poi/lista';
+        else if (tabName === 'Tablero') route = '/poi/tablero';
     }
-    setActiveTab(tabName);
+    
+    if (route) {
+        router.push(route);
+    } else {
+        setActiveTab(tabName);
+    }
   };
   
   if (!project) {
@@ -171,10 +181,14 @@ function DashboardContent() {
     );
   }
 
-  const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N°${project.id}`;
-  const breadcrumbs = project.type === 'Proyecto'
-    ? [{ label: 'POI', href: '/poi' }, { label: 'Dashboard' }]
-    : [{ label: 'POI', href: '/poi' }, { label: 'Dashboard' }];
+  const isProject = project.type === 'Proyecto';
+  const projectCode = `${isProject ? 'PROY' : 'ACT'} N°${project.id}`;
+  
+  const breadcrumbs = [
+    { label: 'POI', href: '/poi' }, 
+    isProject ? { label: 'Backlog', href: '/poi/backlog'} : { label: 'Lista', href: '/poi/lista' },
+    { label: 'Dashboard' }
+];
 
   const secondaryHeader = (
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
@@ -186,22 +200,10 @@ function DashboardContent() {
     </div>
   );
 
-  const tabs = project.type === 'Proyecto'
-    ? ['Backlog', 'Tablero', 'Dashboard']
-    : ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
+  const projectTabs = ['Backlog', 'Tablero', 'Dashboard'];
+  const activityTabs = ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
+  const tabs = isProject ? projectTabs : activityTabs;
   
-  const currentTabPath = (tab: string) => {
-      switch(tab.toLowerCase()) {
-          case 'detalles': return '/poi/detalles';
-          case 'backlog': return '/poi/backlog';
-          case 'tablero': return '/poi/tablero';
-          case 'dashboard': return '/poi/dashboard';
-          case 'lista': return '/poi/lista';
-          default: return '/poi';
-      }
-  }
-
-
   return (
     <AppLayout
       navItems={navItems}

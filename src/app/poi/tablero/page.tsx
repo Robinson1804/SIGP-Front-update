@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -32,7 +31,6 @@ import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
-    DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 
 
@@ -47,7 +45,7 @@ const navItems = [
 type KanbanItem = {
     id: string;
     title: string;
-    category: string; // Epic for projects, could be something else for activities
+    category: string; 
     date: string;
     points?: number;
     comments: number;
@@ -59,7 +57,6 @@ const userStoriesData: KanbanItem[] = [
     { id: 'HU-1', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', category: 'NOMBRE EPICA 1', date: '01 FEB', points: 80, comments: 0, assignee: 'U', status: 'Por hacer' },
     { id: 'HU-3', title: 'Desarrollo e Implementación del módulo de reclutamiento', category: 'NOMBRE EPICA 1', date: '06 FEB', points: 80, comments: 0, assignee: 'U', status: 'En progreso' },
 ];
-
 const tasksData: KanbanItem[] = [
     { id: 'TAR-1', title: 'Actualizar datos del usuario', category: 'General', date: '10 FEB', comments: 2, assignee: 'N1', status: 'Por hacer' },
     { id: 'TAR-2', title: 'Crear componente de tabla reutilizable', category: 'UI', date: '11 FEB', comments: 5, assignee: 'N3', status: 'Completado' },
@@ -67,7 +64,6 @@ const tasksData: KanbanItem[] = [
 ];
 
 const KanbanCard = ({ item }: { item: KanbanItem }) => {
-    const isTask = item.id.startsWith('TAR') || item.id.startsWith('SUB');
     return (
         <div className="bg-white p-3 rounded-md border border-gray-200 shadow-sm mb-3 cursor-grab">
             <div className="flex justify-between items-start">
@@ -91,7 +87,7 @@ const KanbanCard = ({ item }: { item: KanbanItem }) => {
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Bookmark className="w-4 h-4 text-green-500"/>
                     <span>{item.id}</span>
-                    {!isTask && item.points && <span className="font-bold text-blue-600">{item.points}</span>}
+                    {item.points && <span className="font-bold text-blue-600">{item.points}</span>}
                     <div className="flex items-center gap-1">
                         <MessageSquare className="w-4 h-4"/>
                         <span>{item.comments}</span>
@@ -142,15 +138,21 @@ function TableroContent() {
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
+    let route = '';
     if (project?.type === 'Proyecto') {
-        if (tabName === 'Backlog') router.push('/poi/backlog');
-        else if (tabName === 'Dashboard') router.push('/poi/dashboard');
-    } else { // Actividad
-        if (tabName === 'Detalles') router.push('/poi/detalles');
-        else if (tabName === 'Lista') router.push('/poi/lista');
-        else if (tabName === 'Dashboard') router.push('/poi/dashboard');
+        if (tabName === 'Backlog') route = '/poi/backlog';
+        else if (tabName === 'Dashboard') route = '/poi/dashboard';
+    } else if (project?.type === 'Actividad') {
+        if (tabName === 'Detalles') route = '/poi/detalles';
+        else if (tabName === 'Lista') route = '/poi/lista';
+        else if (tabName === 'Dashboard') route = '/poi/dashboard';
     }
-    setActiveTab(tabName);
+    
+    if (route) {
+        router.push(route);
+    } else {
+        setActiveTab(tabName);
+    }
   };
 
   const handleCloseSprint = () => {
@@ -165,28 +167,28 @@ function TableroContent() {
     );
   }
 
-  const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N°${project.id}`;
+  const isProject = project.type === 'Proyecto';
+  const projectCode = `${isProject ? 'PROY' : 'ACT'} N°${project.id}`;
 
-  const breadcrumbs = project.type === 'Proyecto'
-    ? [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }]
-    : [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }];
+  const breadcrumbs = [
+    { label: 'POI', href: '/poi' }, 
+    isProject ? { label: 'Backlog', href: '/poi/backlog' } : { label: 'Lista', href: '/poi/lista' },
+    { label: 'Tablero' }
+];
   
-  const isActivity = project.type === 'Actividad';
-  const boardData = isActivity ? tasksData : userStoriesData;
-  const statusOrder: KanbanItem['status'][] = ['Por hacer', 'En progreso', 'En revisión', 'Finalizado'];
-  if (isActivity) {
-      statusOrder.splice(2, 1, 'Completado' as any);
-      statusOrder.pop();
-  }
+  const statusOrder: KanbanItem['status'][] = isProject
+    ? ['Por hacer', 'En progreso', 'En revisión', 'Finalizado']
+    : ['Por hacer', 'En progreso', 'Completado'];
 
+  const data = isProject ? userStoriesData : tasksData;
   const columns = statusOrder.map(status => ({
         title: status,
-        items: boardData.filter(item => item.status === status),
+        items: data.filter(item => item.status === status),
   }));
   
-  const tabs = project.type === 'Proyecto' 
-    ? ['Backlog', 'Tablero', 'Dashboard']
-    : ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
+  const projectTabs = ['Backlog', 'Tablero', 'Dashboard'];
+  const activityTabs = ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
+  const tabs = isProject ? projectTabs : activityTabs;
 
   const secondaryHeader = (
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
@@ -224,7 +226,7 @@ function TableroContent() {
                 <div className="flex-1 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                          <div className="flex items-center gap-4">
-                            {!isActivity && (
+                            {isProject && (
                                 <Select defaultValue="sprint1">
                                     <SelectTrigger className="w-[180px] bg-white">
                                         <SelectValue />
@@ -237,8 +239,11 @@ function TableroContent() {
                             )}
                         </div>
                         <div className="flex items-center gap-2">
-                             {!isActivity && <Button className="bg-[#018CD1]" onClick={handleCloseSprint}>Cerrar Sprint</Button>}
-                             <Button variant="outline" className="h-9 w-9 p-0" disabled><Plus className="h-5 w-5" /></Button>
+                             {isProject ? (
+                                <Button className="bg-[#018CD1]" onClick={handleCloseSprint}>Cerrar Sprint</Button>
+                             ) : (
+                                <Button variant="outline" className="h-9 w-9 p-0" disabled><Plus className="h-5 w-5" /></Button>
+                             )}
                         </div>
                     </div>
                      <div className="flex-1 overflow-x-auto pb-4">
@@ -262,5 +267,3 @@ export default function TableroPage() {
         </React.Suspense>
     );
 }
-
-    

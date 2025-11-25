@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -10,7 +9,6 @@ import {
   BarChart,
   Bell,
   Search,
-  ChevronDown,
   MoreHorizontal,
   ChevronRight,
 } from 'lucide-react';
@@ -123,14 +121,15 @@ function ListaContent() {
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
-    if (tabName === 'Tablero') {
-        router.push('/poi/tablero');
-    } else if (tabName === 'Dashboard') {
-        router.push('/poi/dashboard');
-    } else if (tabName === 'Detalles') {
-        router.push('/poi/detalles');
+    let route = '';
+    if (tabName === 'Detalles') route = '/poi/detalles';
+    else if (tabName === 'Tablero') route = '/poi/tablero';
+    else if (tabName === 'Dashboard') route = '/poi/dashboard';
+
+    if (route) {
+      router.push(route);
     } else {
-        setActiveTab(tabName);
+      setActiveTab(tabName);
     }
   };
   
@@ -148,6 +147,8 @@ function ListaContent() {
     { label: 'POI', href: '/poi' },
     { label: 'Lista' },
   ];
+  
+  const tabs = ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
 
   const secondaryHeader = (
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
@@ -166,10 +167,17 @@ function ListaContent() {
       secondaryHeader={secondaryHeader}
     >
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-            <Button size="sm" onClick={() => handleTabClick('Detalles')} className={cn(activeTab === 'Detalles' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Detalles</Button>
-            <Button size="sm" onClick={() => setActiveTab('Lista')} className={cn(activeTab === 'Lista' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='default'>Lista</Button>
-            <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Tablero</Button>
-            <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Dashboard</Button>
+           {tabs.map(tab => (
+                 <Button 
+                    key={tab}
+                    size="sm" 
+                    onClick={() => handleTabClick(tab)} 
+                    className={cn(activeTab === tab ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
+                    variant={activeTab === tab ? 'default' : 'outline'}
+                >
+                    {tab}
+                </Button>
+            ))}
         </div>
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">
@@ -288,5 +296,3 @@ export default function ListaPage() {
         </React.Suspense>
     );
 }
-
-    

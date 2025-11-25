@@ -1,9 +1,7 @@
-
 "use client";
 
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import {
   FileText,
   Target,
@@ -23,7 +21,6 @@ import {
   Search,
   Download,
   CheckSquare,
-  List,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -52,32 +49,6 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
-
-const projectData: Project = {
-  id: '3',
-  name: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
-  description: 'Implementación de requerimientos y mantenimiento de aplicativo de captura de datos (APK)',
-  strategicAction: 'AE1: Modernizar los servidores, sistemas de almacenamiento y redes críticas del INEI',
-  classification: 'Gestión interna',
-  coordination: 'Son las divisiones',
-  financialArea: ['OTIN', 'DCNC'],
-  coordinator: 'Coordinador1',
-  scrumMaster: 'Mario Casas',
-  responsibles: ['Angella Trujillo', 'Anayeli Monzon', 'Otro Responsable'],
-  years: ['2021', '2022', '2023', '2024'],
-  annualAmount: 2500000,
-  managementMethod: 'Scrum',
-  startDate: '2025-04',
-  endDate: '2025-09',
-  status: 'En planificación',
-  type: 'Proyecto',
-  subProjects: [
-    { id: '1', name: 'Monitoreo', progress: 80, amount: 640000, scrumMaster: 'Responsable 1', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3', 'Dev 4', 'Dev 5'], years: ['2025'], managementMethod: 'Scrum' },
-    { id: '2', name: 'Logística', progress: 60, amount: 360000, scrumMaster: 'Responsable 2', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3', 'Dev 4'], years: ['2025'], managementMethod: 'Scrum' },
-    { id: '3', name: 'Captura', progress: 50, amount: 350000, scrumMaster: 'Responsable 3', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3', 'Dev 4', 'Dev 5', 'Dev 6'], years: ['2025'], managementMethod: 'Scrum' },
-    { id: '4', name: 'BI', progress: 30, amount: 120000, scrumMaster: 'Responsable 4', description: '', responsible: ['Dev 1', 'Dev 2', 'Dev 3'], years: ['2025'], managementMethod: 'Scrum' },
-  ]
-};
 
 const sprints = [
   { name: 'Sprint 1', status: 'Finalizado', progress: 100 },
@@ -271,11 +242,13 @@ function ProjectDetailsContent() {
     React.useEffect(() => {
         const savedProjectData = localStorage.getItem('selectedProject');
         if (savedProjectData) {
-            setProject(JSON.parse(savedProjectData));
+            const projectData = JSON.parse(savedProjectData);
+            setProject(projectData);
         } else {
-            setProject(projectData); // Fallback to mock data
+             // Fallback for direct navigation
+            router.push('/poi');
         }
-    }, []);
+    }, [router]);
 
     const formatMonthYear = (dateString: string) => {
         if (!dateString) return '';
@@ -332,7 +305,7 @@ function ProjectDetailsContent() {
                 subProjects: project.subProjects?.filter(s => s.id !== deletingSubProject.id)
             };
             setProject(updatedProject);
-            localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
         }
         setIsSubProjectDeleteModalOpen(false);
         setDeletingSubProject(null);
@@ -345,14 +318,14 @@ function ProjectDetailsContent() {
     const handleTabClick = (tabName: string) => {
         let route = '';
         if (project?.type === 'Proyecto') {
-             if (tabName === 'Backlog') route = '/poi/backlog';
-        } else { // Actividad
-             if (tabName === 'Lista') route = '/poi/lista';
-             if (tabName === 'Tablero') route = '/poi/tablero';
-             if (tabName === 'Dashboard') route = '/poi/dashboard';
+            if (tabName === 'Backlog') route = '/poi/backlog';
+        } else if (project?.type === 'Actividad') {
+            if (tabName === 'Lista') route = '/poi/lista';
+            else if (tabName === 'Tablero') route = '/poi/tablero';
+            else if (tabName === 'Dashboard') route = '/poi/dashboard';
         }
-
-        if(route){
+        
+        if (route) {
             router.push(route);
         } else {
             const newUrl = new URL(window.location.href);
@@ -365,31 +338,20 @@ function ProjectDetailsContent() {
     if (!project) {
         return (
              <AppLayout navItems={navItems} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
-                <div className="flex-1 flex items-center justify-center">Cargando proyecto...</div>
+                <div className="flex-1 flex items-center justify-center">Cargando...</div>
              </AppLayout>
         )
     }
 
-    const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
+    const isProject = project.type === 'Proyecto';
+    const projectCode = `${isProject ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    const breadcrumbs = project.type === 'Proyecto'
-        ? [{ label: "POI", href: "/poi" }, { label: 'Detalles' }]
-        : [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
+    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
     
-    const projectTabs = [
-        { name: 'Detalles' },
-        { name: 'Documentos' },
-        { name: 'Backlog' },
-    ];
-    
-    const activityTabs = [
-        { name: 'Detalles' },
-        { name: 'Lista' },
-        { name: 'Tablero' },
-        { name: 'Dashboard' },
-    ];
+    const projectTabs = [ { name: 'Detalles' }, { name: 'Documentos' }, { name: 'Backlog' }];
+    const activityTabs = [{ name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }];
+    const currentTabs = isProject ? projectTabs : activityTabs;
 
-    const currentTabs = project.type === 'Proyecto' ? projectTabs : activityTabs;
 
     const secondaryHeader = (
       <>
@@ -447,129 +409,118 @@ function ProjectDetailsContent() {
                                 </Button>
                             </div>
                         </div>
-
-                        {project.type === 'Proyecto' ? (
-                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <Card className="lg:col-span-2">
-                                    <CardContent className="p-6 space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-4">
-                                            <div>
-                                                <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
-                                                <Badge className={statusColors[project.status]}>{project.status}</Badge>
-                                            </div>
-                                            <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
+                        {isProject ? (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <Card className="lg:col-span-2">
+                                <CardContent className="p-6">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-4">
+                                        <div>
+                                            <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
+                                            <Badge className={statusColors[project.status]}>{project.status}</Badge>
                                         </div>
-                                        <div className="md:col-span-2">
-                                            <InfoField label="Descripción"><p>{project.description}</p></InfoField>
+                                        <InfoField label="Gestor/Scrum Master"><p>{project.scrumMaster}</p></InfoField>
+                                    </div>
+                                    <div className="md:col-span-2 mb-4">
+                                        <InfoField label="Descripción"><p>{project.description}</p></InfoField>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                        <div className="space-y-4">
+                                            <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
+                                            <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
+                                            <InfoField label="Área Financiera">
+                                                {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
+                                            </InfoField>
+                                            <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mt-4">
-                                            <div className="space-y-4">
-                                                <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
-                                                <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
-                                                <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
-                                                 <InfoField label="Área Financiera">
-                                                    {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
-                                                </InfoField>
-                                                 <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                            </div>
-                                            <div className="space-y-4">
-                                                <InfoField label="Responsable">
-                                                    {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                                                </InfoField>
-                                                <InfoField label="Año">
-                                                    {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
-                                                </InfoField>
-                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
-                                                <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
-                                                <div className="grid grid-cols-2 gap-4">
-                                                     <div>
-                                                        <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
-                                                        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                            <p>{formatMonthYear(project.startDate || '')}</p>
-                                                        </div>
+                                        <div className="space-y-4">
+                                            <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
+                                            <InfoField label="Responsable">
+                                                {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
+                                            </InfoField>
+                                            <InfoField label="Año">
+                                                {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
+                                            </InfoField>
+                                            <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                 <div>
+                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
+                                                    <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
+                                                        <p>{formatMonthYear(project.startDate || '')}</p>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
-                                                        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                            <p>{formatMonthYear(project.endDate || '')}</p>
-                                                        </div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
+                                                    <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
+                                                        <p>{formatMonthYear(project.endDate || '')}</p>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
                                         </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <div className="flex flex-col gap-6">
+                                <Card>
+                                    <CardHeader className="pb-2">
+                                        <div className="flex justify-between items-center">
+                                            <CardTitle className="text-base font-semibold">Progreso General</CardTitle>
+                                            <span className="font-bold text-base">{generalProgress}%</span>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Progress value={generalProgress} indicatorClassName="bg-blue-500" />
                                     </CardContent>
                                 </Card>
-                                 <div className="flex flex-col gap-6">
-                                     <Card>
-                                        <CardContent className="p-4">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <h4 className="font-semibold text-sm">Progreso General</h4>
-                                                <span className="font-bold text-sm">{generalProgress}%</span>
-                                            </div>
-                                            <Progress value={generalProgress} indicatorClassName="bg-blue-500" />
-                                        </CardContent>
-                                    </Card>
-                                    <Card className="flex-grow flex flex-col">
-                                        <CardHeader><CardTitle className="text-base font-semibold">Progreso por Sprints</CardTitle></CardHeader>
-                                        <CardContent className="space-y-6 flex-grow flex flex-col justify-center">
-                                            {sprints.map((sprint, i) => (
-                                                <div key={i}>
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <span className="text-sm font-medium">{sprint.name}</span>
-                                                        <Badge className={sprintStatusConfig[sprint.status].badge}>{sprint.status}</Badge>
-                                                    </div>
-                                                    <Progress value={sprint.progress} indicatorClassName={sprintStatusConfig[sprint.status].progress} />
+                                <Card className="flex-grow flex flex-col">
+                                    <CardHeader><CardTitle className="text-base font-semibold">Progreso por Sprints</CardTitle></CardHeader>
+                                    <CardContent className="space-y-6 flex-grow flex flex-col justify-center">
+                                        {sprints.map((sprint, i) => (
+                                            <div key={i}>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className="text-sm font-medium">{sprint.name}</span>
+                                                    <Badge className={sprintStatusConfig[sprint.status].badge}>{sprint.status}</Badge>
                                                 </div>
-                                            ))}
-                                        </CardContent>
-                                    </Card>
-                                </div>
+                                                <Progress value={sprint.progress} indicatorClassName={sprintStatusConfig[sprint.status].progress} />
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 gap-6">
-                                <Card className="lg:col-span-3">
-                                    <CardContent className="p-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                                            <div className="space-y-4">
-                                                <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
-                                                <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
-                                                <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
-                                                <InfoField label="Área Financiera">
-                                                    {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
-                                                </InfoField>
-                                                <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                            </div>
-                                            <div className="space-y-4">
-                                                <InfoField label="Responsable">
-                                                    {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
-                                                </InfoField>
-                                                <InfoField label="Año">
-                                                    {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
-                                                </InfoField>
-                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
-                                                <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
-                                                 <div className="grid grid-cols-2 gap-4">
-                                                     <div>
-                                                        <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
-                                                        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                            <p>{formatMonthYear(project.startDate || '')}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
-                                                        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
-                                                            <p>{formatMonthYear(project.endDate || '')}</p>
-                                                        </div>
-                                                    </div>
+                             <div className="grid grid-cols-1 gap-6">
+                                <Card className="lg:col-span-3"><CardContent className="p-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                        <div className="space-y-4">
+                                            <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
+                                            <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
+                                            <InfoField label="Área Financiera">{project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}</InfoField>
+                                            <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
+                                            <InfoField label="Responsable">{project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</InfoField>
+                                            <InfoField label="Año">{project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}</InfoField>
+                                            <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
+                                            <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
+                                             <div className="grid grid-cols-2 gap-4">
+                                                 <div>
+                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
+                                                    <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center"><p>{formatMonthYear(project.startDate || '')}</p></div>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
+                                                    <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center"><p>{formatMonthYear(project.endDate || '')}</p></div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                    </div>
+                                </CardContent></Card>
                             </div>
                         )}
                         
-                        {project.subProjects && project.subProjects.length > 0 && (
+                        {isProject && project.subProjects && project.subProjects.length > 0 && (
                             <div className="mt-6">
                                 <h3 className="text-xl font-bold text-gray-800 mb-4">SUBPROYECTOS</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -699,12 +650,10 @@ function ProjectDetailsContent() {
 }
 
 
-export default function ProjectDetailsPage() {
+export default function DetailsPage() {
     return (
         <React.Suspense fallback={<div>Loading...</div>}>
             <ProjectDetailsContent />
         </React.Suspense>
     )
 }
-
-    
