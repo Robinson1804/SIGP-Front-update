@@ -342,17 +342,24 @@ function ProjectDetailsContent() {
         setDocuments(documents.map(doc => doc.id === docId ? { ...doc, status: newStatus } : doc));
     };
 
-    const handleTabClick = (tabName: string, route?: string) => {
-        if (route) {
-            router.push(route);
+    const handleTabClick = (tabName: string) => {
+        let route = '';
+        if (tabName === 'Backlog') {
+            route = '/poi/backlog';
+        } else if (tabName === 'Lista') {
+            route = '/poi/lista';
+        } else if (tabName === 'Tablero') {
+            route = '/poi/tablero';
+        } else if (tabName === 'Dashboard') {
+            route = '/poi/dashboard';
+        } else {
+             const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('tab', tabName);
+            setActiveTab(tabName);
+            window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
             return;
         }
-        
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.set('tab', tabName);
-
-        setActiveTab(tabName);
-        window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
+        router.push(route);
     };
 
     if (!project) {
@@ -367,20 +374,21 @@ function ProjectDetailsContent() {
     
     const breadcrumbs = [
       { label: 'POI', href: '/poi' },
-      { label: project.name }
+      { label: project.type, href: `/poi/detalles` },
+      { label: activeTab }
     ];
     
     const projectTabs = [
-        { name: 'Detalles', route: undefined },
-        { name: 'Documentos', route: undefined },
-        { name: 'Backlog', route: '/poi/backlog' },
+        { name: 'Detalles' },
+        { name: 'Documentos' },
+        { name: 'Backlog' },
     ];
     
     const activityTabs = [
-        { name: 'Detalles', route: undefined },
-        { name: 'Lista', route: '/poi/lista' },
-        { name: 'Tablero', route: '/poi/tablero' },
-        { name: 'Dashboard', route: '/poi/dashboard' },
+        { name: 'Detalles' },
+        { name: 'Lista' },
+        { name: 'Tablero' },
+        { name: 'Dashboard' },
     ];
 
     const currentTabs = project.type === 'Proyecto' ? projectTabs : activityTabs;
@@ -400,7 +408,7 @@ function ProjectDetailsContent() {
                  <Button 
                     key={tab.name}
                     size="sm" 
-                    onClick={() => handleTabClick(tab.name, tab.route)} 
+                    onClick={() => handleTabClick(tab.name)} 
                     className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
                     variant={activeTab === tab.name ? 'default' : 'outline'}
                 >

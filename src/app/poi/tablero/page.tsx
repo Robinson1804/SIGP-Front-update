@@ -31,6 +31,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 
 
@@ -137,7 +139,12 @@ function TableroContent() {
         router.push('/poi/backlog');
     } else if (tabName === 'Dashboard') {
         router.push('/poi/dashboard');
-    } else {
+    } else if (tabName === 'Detalles') {
+        router.push('/poi/detalles');
+    } else if (tabName === 'Lista') {
+        router.push('/poi/lista');
+    }
+     else {
         setActiveTab(tabName);
     }
   };
@@ -154,11 +161,11 @@ function TableroContent() {
     );
   }
 
-  const projectCode = `PROY N°${project.id}`;
+  const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N°${project.id}`;
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Proyecto', href: `/poi/detalles` },
+    { label: project.type, href: `/poi/detalles` },
     { label: 'Tablero' },
   ];
 
@@ -178,6 +185,10 @@ function TableroContent() {
     { title: 'En revisión', stories: userStoriesData.filter(s => s.status === 'En revisión') },
     { title: 'Finalizado', stories: userStoriesData.filter(s => s.status === 'Finalizado') },
   ];
+  
+  const tabs = project.type === 'Proyecto' 
+    ? ['Backlog', 'Tablero', 'Dashboard']
+    : ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
 
 
   return (
@@ -187,9 +198,17 @@ function TableroContent() {
       secondaryHeader={secondaryHeader}
     >
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-            <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Backlog</Button>
-            <Button size="sm" onClick={() => setActiveTab('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='default'>Tablero</Button>
-            <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Dashboard</Button>
+            {tabs.map(tab => (
+                 <Button 
+                    key={tab}
+                    size="sm" 
+                    onClick={() => handleTabClick(tab)} 
+                    className={cn(activeTab === tab ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
+                    variant={activeTab === tab ? 'default' : 'outline'}
+                >
+                    {tab}
+                </Button>
+            ))}
         </div>
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">

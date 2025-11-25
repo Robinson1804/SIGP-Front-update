@@ -156,6 +156,8 @@ function DashboardContent() {
         router.push('/poi/backlog');
     } else if (tabName === 'Tablero') {
         router.push('/poi/tablero');
+    } else if (tabName === 'Detalles') {
+        router.push('/poi/detalles');
     } else {
         setActiveTab(tabName);
     }
@@ -169,11 +171,10 @@ function DashboardContent() {
     );
   }
 
-  const projectCode = `PROY N°${project.id}`;
-
+  const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N°${project.id}`;
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Proyecto', href: `/poi/detalles` },
+    { label: project.type, href: `/poi/detalles` },
     { label: 'Dashboard' },
   ];
 
@@ -187,6 +188,22 @@ function DashboardContent() {
     </div>
   );
 
+  const tabs = project.type === 'Proyecto'
+    ? ['Backlog', 'Tablero', 'Dashboard']
+    : ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
+  
+  const currentTabPath = (tab: string) => {
+      switch(tab.toLowerCase()) {
+          case 'detalles': return '/poi/detalles';
+          case 'backlog': return '/poi/backlog';
+          case 'tablero': return '/poi/tablero';
+          case 'dashboard': return '/poi/dashboard';
+          case 'lista': return '/poi/lista';
+          default: return '/poi';
+      }
+  }
+
+
   return (
     <AppLayout
       navItems={navItems}
@@ -194,9 +211,17 @@ function DashboardContent() {
       secondaryHeader={secondaryHeader}
     >
       <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-        <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Backlog</Button>
-        <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='outline'>Tablero</Button>
-        <Button size="sm" onClick={() => setActiveTab('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant='default'>Dashboard</Button>
+         {tabs.map(tab => (
+            <Button 
+                key={tab}
+                size="sm" 
+                onClick={() => router.push(currentTabPath(tab))} 
+                className={cn(activeTab === tab ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
+                variant={activeTab === tab ? 'default' : 'outline'}
+            >
+                {tab}
+            </Button>
+        ))}
       </div>
       <div className="flex-1 bg-[#F9F9F9] px-4 pb-4">
         {activeTab === 'Dashboard' && (
@@ -213,9 +238,8 @@ function DashboardContent() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-              <div className="lg:col-span-2 grid grid-cols-1 gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+                <div className="grid grid-cols-1 gap-4">
                     <Card>
                       <CardHeader><CardTitle className="text-base">RESUMEN DE ESTADO</CardTitle></CardHeader>
                       <CardContent className="flex flex-col items-center justify-center">
@@ -243,24 +267,6 @@ function DashboardContent() {
                       </CardContent>
                     </Card>
                     <Card>
-                      <CardHeader><CardTitle className="text-base">RESUMEN DE PRIORIDAD</CardTitle></CardHeader>
-                      <CardContent>
-                          <ChartContainer config={{}} className="h-64 w-full">
-                              <RechartsBarChart data={priorityChartData} layout="vertical" margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
-                                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
-                                  <XAxis type="number" hide />
-                                  <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
-                                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                                  <Bar dataKey="value" fill="#8884d8" radius={4}>
-                                    <LabelList dataKey="value" position="right" />
-                                  </Bar>
-                              </RechartsBarChart>
-                          </ChartContainer>
-                      </CardContent>
-                    </Card>
-                </div>
-                <div className="md:col-span-2">
-                    <Card>
                       <CardHeader><CardTitle className="text-base">TIPOS DE TRABAJO</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                           {workTypesData.map(item => (
@@ -278,36 +284,52 @@ function DashboardContent() {
                       </CardContent>
                     </Card>
                 </div>
-              </div>
-
-              <Card className="lg:col-span-1 h-full">
-                <CardHeader><CardTitle className="text-base">ACTIVIDAD RECIENTE</CardTitle></CardHeader>
-                <CardContent className="h-[calc(100%-4rem)] overflow-y-auto custom-scrollbar">
-                    <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en todo el proyecto</p>
-                    <p className="font-semibold text-sm mb-2">Hoy</p>
-                    <div className="space-y-4">
-                        {recentActivity.map((item, index) => (
-                             <TooltipProvider key={index} delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className="flex items-start gap-3 text-sm">
-                                            <Avatar className="w-7 h-7 text-xs"><AvatarFallback>AM</AvatarFallback></Avatar>
-                                            <div>
-                                                <p><span className="font-semibold">{item.user}</span> {item.action} <span className="font-semibold">{item.task}</span></p>
-                                                <Badge variant="outline" className="mr-2">{item.id}</Badge>
-                                                <Badge className={cn(statusColors[item.status as keyof typeof statusColors])}>{item.status}</Badge>
-                                            </div>
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="bottom" align="start" className="p-0 border-none bg-transparent shadow-none">
-                                        <ActivityItemTooltip item={item} />
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        ))}
-                    </div>
-                </CardContent>
-              </Card>
+                <div className="grid grid-cols-1 gap-4">
+                    <Card>
+                      <CardHeader><CardTitle className="text-base">RESUMEN DE PRIORIDAD</CardTitle></CardHeader>
+                      <CardContent>
+                          <ChartContainer config={{}} className="h-64 w-full">
+                              <RechartsBarChart data={priorityChartData} layout="vertical" margin={{ top: 0, right: 20, left: -20, bottom: 0 }}>
+                                  <CartesianGrid horizontal={false} strokeDasharray="3 3" />
+                                  <XAxis type="number" hide />
+                                  <YAxis dataKey="name" type="category" tickLine={false} axisLine={false} />
+                                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                  <Bar dataKey="value" fill="#8884d8" radius={4}>
+                                    <LabelList dataKey="value" position="right" />
+                                  </Bar>
+                              </RechartsBarChart>
+                          </ChartContainer>
+                      </CardContent>
+                    </Card>
+                </div>
+                <Card className="h-full">
+                  <CardHeader><CardTitle className="text-base">ACTIVIDAD RECIENTE</CardTitle></CardHeader>
+                  <CardContent className="h-[calc(100%-4rem)] overflow-y-auto custom-scrollbar">
+                      <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en todo el proyecto</p>
+                      <p className="font-semibold text-sm mb-2">Hoy</p>
+                      <div className="space-y-4">
+                          {recentActivity.map((item, index) => (
+                               <TooltipProvider key={index} delayDuration={100}>
+                                  <Tooltip>
+                                      <TooltipTrigger asChild>
+                                          <div className="flex items-start gap-3 text-sm">
+                                              <Avatar className="w-7 h-7 text-xs"><AvatarFallback>AM</AvatarFallback></Avatar>
+                                              <div>
+                                                  <p><span className="font-semibold">{item.user}</span> {item.action} <span className="font-semibold">{item.task}</span></p>
+                                                  <Badge variant="outline" className="mr-2">{item.id}</Badge>
+                                                  <Badge className={cn(statusColors[item.status as keyof typeof statusColors])}>{item.status}</Badge>
+                                              </div>
+                                          </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="bottom" align="start" className="p-0 border-none bg-transparent shadow-none">
+                                          <ActivityItemTooltip item={item} />
+                                      </TooltipContent>
+                                  </Tooltip>
+                              </TooltipProvider>
+                          ))}
+                      </div>
+                  </CardContent>
+                </Card>
             </div>
           </div>
         )}
