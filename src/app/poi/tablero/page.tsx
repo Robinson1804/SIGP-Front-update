@@ -52,7 +52,7 @@ type KanbanItem = {
     points?: number;
     comments: number;
     assignee: string;
-    status: 'Por hacer' | 'En progreso' | 'En revisión' | 'Finalizado';
+    status: 'Por hacer' | 'En progreso' | 'En revisión' | 'Finalizado' | 'Completado';
 };
 
 const userStoriesData: KanbanItem[] = [
@@ -187,6 +187,16 @@ function TableroContent() {
   const tabs = project.type === 'Proyecto' 
     ? ['Backlog', 'Tablero', 'Dashboard']
     : ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
+
+  const secondaryHeader = (
+    <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
+      <div className="p-2 flex items-center justify-between w-full">
+        <h2 className="font-bold text-black pl-2">
+          {projectCode}: {project.name}
+        </h2>
+      </div>
+    </div>
+  );
 
 
   return (
