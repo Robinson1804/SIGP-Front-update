@@ -45,7 +45,7 @@ import { Pie, PieChart, Cell } from "recharts";
 
 
 const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pmo-dashboard' },
+  { label: 'PGD', icon: FileText, href: '/pgd' },
   { label: 'POI', icon: Target, href: '/poi' },
   { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
   { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
@@ -159,7 +159,7 @@ function DashboardContent() {
     let route = '';
     if (project?.type === 'Proyecto') {
         if (tabName === 'Backlog') route = '/poi/backlog';
-        else if (tabName === 'Tablero') route = '/poi/tablero';
+        else if (tabName === 'Tablero') route = '/poi/tablero-proyecto';
     } else if (project?.type === 'Actividad') {
         if (tabName === 'Detalles') route = '/poi/detalles';
         else if (tabName === 'Lista') route = '/poi/lista';
@@ -186,7 +186,6 @@ function DashboardContent() {
   
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
-    isProject ? { label: 'Backlog', href: '/poi/backlog'} : { label: 'Lista', href: '/poi/lista' },
     { label: 'Dashboard' }
 ];
 

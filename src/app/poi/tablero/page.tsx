@@ -35,7 +35,7 @@ import {
 
 
 const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pmo-dashboard' },
+  { label: 'PGD', icon: FileText, href: '/pgd' },
   { label: 'POI', icon: Target, href: '/poi' },
   { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
   { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
@@ -141,7 +141,7 @@ function TableroContent() {
     let route = '';
     if (project?.type === 'Proyecto') {
         if (tabName === 'Backlog') route = '/poi/backlog';
-        else if (tabName === 'Dashboard') route = '/poi/dashboard';
+        else if (tabName === 'Dashboard') route = '/poi/dashboard-proyecto';
     } else if (project?.type === 'Actividad') {
         if (tabName === 'Detalles') route = '/poi/detalles';
         else if (tabName === 'Lista') route = '/poi/lista';
@@ -171,8 +171,7 @@ function TableroContent() {
   const projectCode = `${isProject ? 'PROY' : 'ACT'} N°${project.id}`;
 
   const breadcrumbs = [
-    { label: 'POI', href: '/poi' }, 
-    isProject ? { label: 'Backlog', href: '/poi/backlog' } : { label: 'Lista', href: '/poi/lista' },
+    { label: 'POI', href: '/poi' },
     { label: 'Tablero' }
 ];
   
