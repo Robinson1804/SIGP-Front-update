@@ -163,11 +163,9 @@ function TableroContent() {
 
   const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N°${project.id}`;
 
-  const breadcrumbs = [
-    { label: 'POI', href: '/poi' },
-    { label: project.type, href: `/poi/detalles` },
-    { label: 'Tablero' },
-  ];
+  const breadcrumbs = project.type === 'Proyecto'
+    ? [{ label: 'POI', href: '/poi' }, { label: 'Proyecto', href: '/poi/detalles' }, { label: 'Tablero' }]
+    : [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }];
 
   const secondaryHeader = (
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">

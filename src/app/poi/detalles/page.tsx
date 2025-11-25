@@ -377,11 +377,7 @@ function ProjectDetailsContent() {
         ? (activeTab === 'Backlog' 
             ? [{ label: 'POI', href: '/poi' }, { label: 'Proyecto', href: '/poi/detalles'}, { label: activeTab }]
             : [{ label: 'POI', href: '/poi' }, { label: activeTab }])
-        : [
-            { label: 'POI', href: '/poi' },
-            { label: 'Actividad', href: '/poi/detalles' },
-            { label: activeTab }
-        ];
+        : [{ label: 'POI', href: '/poi' }, { label: activeTab }];
 
     const projectTabs = [
         { name: 'Detalles' },
