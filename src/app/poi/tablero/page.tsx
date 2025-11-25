@@ -44,27 +44,34 @@ const navItems = [
   { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
 ];
 
-type UserStory = {
+type KanbanItem = {
     id: string;
     title: string;
-    epic: string;
+    category: string; // Epic for projects, could be something else for activities
     date: string;
-    points: number;
+    points?: number;
     comments: number;
     assignee: string;
     status: 'Por hacer' | 'En progreso' | 'En revisión' | 'Finalizado';
 };
 
-const userStoriesData: UserStory[] = [
-    { id: 'HU-1', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', epic: 'NOMBRE EPICA 1', date: '01 FEB', points: 80, comments: 0, assignee: 'U', status: 'Por hacer' },
-    { id: 'HU-3', title: 'Desarrollo e Implementación del módulo de reclutamiento', epic: 'NOMBRE EPICA 1', date: '06 FEB', points: 80, comments: 0, assignee: 'U', status: 'En progreso' },
+const userStoriesData: KanbanItem[] = [
+    { id: 'HU-1', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', category: 'NOMBRE EPICA 1', date: '01 FEB', points: 80, comments: 0, assignee: 'U', status: 'Por hacer' },
+    { id: 'HU-3', title: 'Desarrollo e Implementación del módulo de reclutamiento', category: 'NOMBRE EPICA 1', date: '06 FEB', points: 80, comments: 0, assignee: 'U', status: 'En progreso' },
 ];
 
-const KanbanCard = ({ story }: { story: UserStory }) => {
+const tasksData: KanbanItem[] = [
+    { id: 'TAR-1', title: 'Actualizar datos del usuario', category: 'General', date: '10 FEB', comments: 2, assignee: 'N1', status: 'Por hacer' },
+    { id: 'TAR-2', title: 'Crear componente de tabla reutilizable', category: 'UI', date: '11 FEB', comments: 5, assignee: 'N3', status: 'Completado' },
+    { id: 'SUB-1', title: 'El campo residencia que muestre distintas opciones de selección', category: 'Backend', date: '12 FEB', comments: 0, assignee: 'N2', status: 'Por hacer' },
+];
+
+const KanbanCard = ({ item }: { item: KanbanItem }) => {
+    const isTask = item.id.startsWith('TAR') || item.id.startsWith('SUB');
     return (
         <div className="bg-white p-3 rounded-md border border-gray-200 shadow-sm mb-3 cursor-grab">
             <div className="flex justify-between items-start">
-                <p className="font-semibold text-sm mb-2 pr-2">{story.title}</p>
+                <p className="font-semibold text-sm mb-2 pr-2">{item.title}</p>
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" disabled>
@@ -74,24 +81,24 @@ const KanbanCard = ({ story }: { story: UserStory }) => {
                 </DropdownMenu>
             </div>
             <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs font-bold">{story.epic}</Badge>
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs font-bold">{item.category}</Badge>
                 <div className="flex items-center text-xs text-gray-500 gap-1">
                     <Calendar className="w-3 h-3" />
-                    <span>{story.date}</span>
+                    <span>{item.date}</span>
                 </div>
             </div>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Bookmark className="w-4 h-4 text-green-500"/>
-                    <span>{story.id}</span>
-                    <span className="font-bold text-blue-600">{story.points}</span>
+                    <span>{item.id}</span>
+                    {!isTask && item.points && <span className="font-bold text-blue-600">{item.points}</span>}
                     <div className="flex items-center gap-1">
                         <MessageSquare className="w-4 h-4"/>
-                        <span>{story.comments}</span>
+                        <span>{item.comments}</span>
                     </div>
                 </div>
                 <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs bg-gray-300">{story.assignee}</AvatarFallback>
+                    <AvatarFallback className="text-xs bg-gray-300">{item.assignee}</AvatarFallback>
                 </Avatar>
             </div>
         </div>
@@ -99,7 +106,7 @@ const KanbanCard = ({ story }: { story: UserStory }) => {
 };
 
 
-const KanbanColumn = ({ title, stories }: { title: string, stories: UserStory[] }) => {
+const KanbanColumn = ({ title, items }: { title: string, items: KanbanItem[] }) => {
     return (
         <div className="bg-gray-100 rounded-lg p-3 w-72 flex-shrink-0">
             <div className="flex items-center justify-between mb-3">
@@ -107,8 +114,8 @@ const KanbanColumn = ({ title, stories }: { title: string, stories: UserStory[] 
                 <MoreHorizontal className="w-5 h-5 text-gray-400" />
             </div>
             <div className="space-y-3">
-                {stories.map(story => (
-                    <KanbanCard key={story.id} story={story} />
+                {items.map(item => (
+                    <KanbanCard key={item.id} item={item} />
                 ))}
             </div>
              <Button variant="ghost" className="w-full justify-start mt-2 text-gray-500" disabled>
@@ -163,23 +170,19 @@ function TableroContent() {
   const breadcrumbs = project.type === 'Proyecto'
     ? [{ label: 'POI', href: '/poi' }, { label: 'Proyecto', href: '/poi/detalles' }, { label: 'Tablero' }]
     : [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }];
-
-  const secondaryHeader = (
-    <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
-      <div className="p-2 flex items-center justify-between w-full">
-        <h2 className="font-bold text-black pl-2">
-          {projectCode}: {project.name}
-        </h2>
-      </div>
-    </div>
-  );
   
-  const columns: { title: UserStory['status'], stories: UserStory[] }[] = [
-    { title: 'Por hacer', stories: userStoriesData.filter(s => s.status === 'Por hacer') },
-    { title: 'En progreso', stories: userStoriesData.filter(s => s.status === 'En progreso') },
-    { title: 'En revisión', stories: userStoriesData.filter(s => s.status === 'En revisión') },
-    { title: 'Finalizado', stories: userStoriesData.filter(s => s.status === 'Finalizado') },
-  ];
+  const isActivity = project.type === 'Actividad';
+  const boardData = isActivity ? tasksData : userStoriesData;
+  const statusOrder: KanbanItem['status'][] = ['Por hacer', 'En progreso', 'En revisión', 'Finalizado'];
+  if (isActivity) {
+      statusOrder.splice(2, 1, 'Completado' as any);
+      statusOrder.pop();
+  }
+
+  const columns = statusOrder.map(status => ({
+        title: status,
+        items: boardData.filter(item => item.status === status),
+  }));
   
   const tabs = project.type === 'Proyecto' 
     ? ['Backlog', 'Tablero', 'Dashboard']
@@ -211,25 +214,27 @@ function TableroContent() {
                 <div className="flex-1 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                          <div className="flex items-center gap-4">
-                            <Select defaultValue="sprint1">
-                                <SelectTrigger className="w-[180px] bg-white">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="sprint1">Sprint 1</SelectItem>
-                                    <SelectItem value="sprint2">Sprint 2</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            {!isActivity && (
+                                <Select defaultValue="sprint1">
+                                    <SelectTrigger className="w-[180px] bg-white">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="sprint1">Sprint 1</SelectItem>
+                                        <SelectItem value="sprint2">Sprint 2</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
-                             <Button className="bg-[#018CD1]" onClick={handleCloseSprint}>Cerrar Sprint</Button>
+                             {!isActivity && <Button className="bg-[#018CD1]" onClick={handleCloseSprint}>Cerrar Sprint</Button>}
                              <Button variant="outline" className="h-9 w-9 p-0" disabled><Plus className="h-5 w-5" /></Button>
                         </div>
                     </div>
                      <div className="flex-1 overflow-x-auto pb-4">
                         <div className="flex gap-4">
                             {columns.map(col => (
-                                <KanbanColumn key={col.title} title={col.title} stories={col.stories} />
+                                <KanbanColumn key={col.title} title={col.title} items={col.items} />
                             ))}
                         </div>
                     </div>
