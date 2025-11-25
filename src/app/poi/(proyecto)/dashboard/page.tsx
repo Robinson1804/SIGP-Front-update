@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import React, { useState } from 'react';
@@ -42,6 +44,7 @@ import {
 } from "@/components/ui/chart"
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, LabelList } from "recharts"
 import { Pie, PieChart, Cell } from "recharts";
+import Link from 'next/link';
 
 
 const navItems = [
@@ -157,14 +160,8 @@ function DashboardContent() {
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (project?.type === 'Proyecto') {
-        if (tabName === 'Backlog') route = '/poi/backlog';
-        else if (tabName === 'Tablero') route = '/poi/tablero-proyecto';
-    } else if (project?.type === 'Actividad') {
-        if (tabName === 'Detalles') route = '/poi/detalles';
-        else if (tabName === 'Lista') route = '/poi/lista';
-        else if (tabName === 'Tablero') route = '/poi/tablero';
-    }
+    if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
+    else if (tabName === 'Tablero') route = '/poi/proyecto/backlog/tablero';
     
     if (route) {
         router.push(route);
@@ -181,11 +178,11 @@ function DashboardContent() {
     );
   }
 
-  const isProject = project.type === 'Proyecto';
-  const projectCode = `${isProject ? 'PROY' : 'ACT'} N°${project.id}`;
+  const projectCode = `PROY N°${project.id}`;
   
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
+    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
     { label: 'Dashboard' }
 ];
 
@@ -200,8 +197,6 @@ function DashboardContent() {
   );
 
   const projectTabs = ['Backlog', 'Tablero', 'Dashboard'];
-  const activityTabs = ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
-  const tabs = isProject ? projectTabs : activityTabs;
   
   return (
     <AppLayout
@@ -210,7 +205,7 @@ function DashboardContent() {
       secondaryHeader={secondaryHeader}
     >
       <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-         {tabs.map(tab => (
+         {projectTabs.map(tab => (
             <Button 
                 key={tab}
                 size="sm" 
@@ -336,7 +331,7 @@ function DashboardContent() {
   );
 }
 
-export default function DashboardPage() {
+export default function DashboardProyectoPage() {
     return (
         <React.Suspense fallback={<div>Cargando...</div>}>
             <DashboardContent />

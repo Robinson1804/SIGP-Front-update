@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import React, { useState } from 'react';
@@ -30,8 +32,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuTrigger,
-    DropdownMenuContent,
 } from '@/components/ui/dropdown-menu';
+import Link from 'next/link';
 
 
 const navItems = [
@@ -56,11 +58,6 @@ type KanbanItem = {
 const userStoriesData: KanbanItem[] = [
     { id: 'HU-1', title: 'Implementación del módulo de reclutamiento en el sistema ENDES', category: 'NOMBRE EPICA 1', date: '01 FEB', points: 80, comments: 0, assignee: 'U', status: 'Por hacer' },
     { id: 'HU-3', title: 'Desarrollo e Implementación del módulo de reclutamiento', category: 'NOMBRE EPICA 1', date: '06 FEB', points: 80, comments: 0, assignee: 'U', status: 'En progreso' },
-];
-const tasksData: KanbanItem[] = [
-    { id: 'TAR-1', title: 'Actualizar datos del usuario', category: 'General', date: '10 FEB', comments: 2, assignee: 'N1', status: 'Por hacer' },
-    { id: 'TAR-2', title: 'Crear componente de tabla reutilizable', category: 'UI', date: '11 FEB', comments: 5, assignee: 'N3', status: 'Completado' },
-    { id: 'SUB-1', title: 'El campo residencia que muestre distintas opciones de selección', category: 'Backend', date: '12 FEB', comments: 0, assignee: 'N2', status: 'Por hacer' },
 ];
 
 const KanbanCard = ({ item }: { item: KanbanItem }) => {
@@ -139,14 +136,8 @@ function TableroContent() {
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (project?.type === 'Proyecto') {
-        if (tabName === 'Backlog') route = '/poi/backlog';
-        else if (tabName === 'Dashboard') route = '/poi/dashboard-proyecto';
-    } else if (project?.type === 'Actividad') {
-        if (tabName === 'Detalles') route = '/poi/detalles';
-        else if (tabName === 'Lista') route = '/poi/lista';
-        else if (tabName === 'Dashboard') route = '/poi/dashboard';
-    }
+    if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
+    else if (tabName === 'Dashboard') route = '/poi/proyecto/backlog/dashboard';
     
     if (route) {
         router.push(route);
@@ -156,7 +147,7 @@ function TableroContent() {
   };
 
   const handleCloseSprint = () => {
-    router.push('/poi/backlog');
+    router.push('/poi/proyecto/backlog');
   }
   
   if (!project) {
@@ -167,27 +158,23 @@ function TableroContent() {
     );
   }
 
-  const isProject = project.type === 'Proyecto';
-  const projectCode = `${isProject ? 'PROY' : 'ACT'} N°${project.id}`;
+  const projectCode = `PROY N°${project.id}`;
 
   const breadcrumbs = [
-    { label: 'POI', href: '/poi' },
+    { label: 'POI', href: '/poi' }, 
+    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
     { label: 'Tablero' }
-];
+  ];
   
-  const statusOrder: KanbanItem['status'][] = isProject
-    ? ['Por hacer', 'En progreso', 'En revisión', 'Finalizado']
-    : ['Por hacer', 'En progreso', 'Completado'];
+  const statusOrder: KanbanItem['status'][] = ['Por hacer', 'En progreso', 'En revisión', 'Finalizado'];
 
-  const data = isProject ? userStoriesData : tasksData;
+  const data = userStoriesData;
   const columns = statusOrder.map(status => ({
         title: status,
         items: data.filter(item => item.status === status),
   }));
   
-  const projectTabs = ['Backlog', 'Tablero', 'Dashboard'];
-  const activityTabs = ['Detalles', 'Lista', 'Tablero', 'Dashboard'];
-  const tabs = isProject ? projectTabs : activityTabs;
+  const tabs = ['Backlog', 'Tablero', 'Dashboard'];
 
   const secondaryHeader = (
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
@@ -225,24 +212,18 @@ function TableroContent() {
                 <div className="flex-1 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                          <div className="flex items-center gap-4">
-                            {isProject && (
-                                <Select defaultValue="sprint1">
-                                    <SelectTrigger className="w-[180px] bg-white">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="sprint1">Sprint 1</SelectItem>
-                                        <SelectItem value="sprint2">Sprint 2</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            )}
+                            <Select defaultValue="sprint1">
+                                <SelectTrigger className="w-[180px] bg-white">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="sprint1">Sprint 1</SelectItem>
+                                    <SelectItem value="sprint2">Sprint 2</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="flex items-center gap-2">
-                             {isProject ? (
-                                <Button className="bg-[#018CD1]" onClick={handleCloseSprint}>Cerrar Sprint</Button>
-                             ) : (
-                                <Button variant="outline" className="h-9 w-9 p-0" disabled><Plus className="h-5 w-5" /></Button>
-                             )}
+                            <Button className="bg-[#018CD1]" onClick={handleCloseSprint}>Cerrar Sprint</Button>
                         </div>
                     </div>
                      <div className="flex-1 overflow-x-auto pb-4">
@@ -259,7 +240,7 @@ function TableroContent() {
   );
 }
 
-export default function TableroPage() {
+export default function TableroProyectoPage() {
     return (
         <React.Suspense fallback={<div>Cargando...</div>}>
             <TableroContent />

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -50,6 +51,7 @@ import {
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Project } from '@/lib/definitions';
+import Link from 'next/link';
 
 
 const navItems = [
@@ -145,13 +147,15 @@ function BacklogContent() {
   }, [router, searchParams]);
 
   const handleTabClick = (tabName: string) => {
-    if (tabName === 'Tablero') {
-        router.push('/poi/tablero-proyecto');
-    } else if (tabName === 'Dashboard') {
-        router.push('/poi/dashboard-proyecto');
+    let route = '';
+    if (tabName === 'Tablero') route = '/poi/proyecto/backlog/tablero';
+    else if (tabName === 'Dashboard') route = '/poi/proyecto/backlog/dashboard';
+    
+    if (route) {
+        router.push(route);
     } else {
         setActiveTab(tabName);
-        router.push('/poi/backlog');
+        router.push('/poi/proyecto/backlog');
     }
   };
   
@@ -167,7 +171,7 @@ function BacklogContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Proyecto', href: '/poi/detalles' },
+    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
     { label: 'Backlog' },
   ];
 
@@ -416,5 +420,3 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-    

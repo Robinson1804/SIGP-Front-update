@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import React, { useState } from 'react';
@@ -122,9 +124,9 @@ function ListaContent() {
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Detalles') route = '/poi/detalles';
-    else if (tabName === 'Tablero') route = '/poi/tablero';
-    else if (tabName === 'Dashboard') route = '/poi/dashboard';
+    if (tabName === 'Detalles') route = '/poi/actividad/detalles';
+    else if (tabName === 'Tablero') route = '/poi/actividad/tablero';
+    else if (tabName === 'Dashboard') route = '/poi/actividad/dashboard';
 
     if (route) {
       router.push(route);

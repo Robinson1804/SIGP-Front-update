@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from "react";
@@ -579,6 +580,8 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
         localStorage.setItem('selectedProject', JSON.stringify(project));
     };
 
+    const detailsUrl = project.type === 'Proyecto' ? '/poi/proyecto/detalles' : '/poi/actividad/detalles';
+
     const cardContent = (
          <Card className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
@@ -597,7 +600,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem asChild disabled={project.missingData}>
-                            <Link href={project.missingData ? '#' : '/poi/detalles'} onClick={handleGoToDetails}>Ir a proyecto / Actividad</Link>
+                            <Link href={project.missingData ? '#' : detailsUrl} onClick={handleGoToDetails}>Ir a proyecto / Actividad</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={onEdit}>Editar POI</DropdownMenuItem>
                         <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar POI</DropdownMenuItem>
@@ -646,7 +649,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
 };
 
 const navItems = [
-  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
+  { label: "PGD", icon: FileText, href: "/pgd" },
   { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
