@@ -344,22 +344,22 @@ function ProjectDetailsContent() {
 
     const handleTabClick = (tabName: string) => {
         let route = '';
-        if (tabName === 'Backlog') {
-            route = '/poi/backlog';
-        } else if (tabName === 'Lista') {
-            route = '/poi/lista';
-        } else if (tabName === 'Tablero') {
-            route = '/poi/tablero';
-        } else if (tabName === 'Dashboard') {
-            route = '/poi/dashboard';
+        if (project?.type === 'Proyecto') {
+            if (tabName === 'Backlog') route = '/poi/backlog';
         } else {
-             const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('tab', tabName);
-            setActiveTab(tabName);
-            window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
-            return;
+             if (tabName === 'Lista') route = '/poi/lista';
+             if (tabName === 'Tablero') route = '/poi/tablero';
+             if (tabName === 'Dashboard') route = '/poi/dashboard';
         }
-        router.push(route);
+
+        if(route){
+            router.push(route);
+        } else {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('tab', tabName);
+            window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
+            setActiveTab(tabName);
+        }
     };
 
     if (!project) {
@@ -372,16 +372,15 @@ function ProjectDetailsContent() {
 
     const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    let breadcrumbs = [{ label: "POI", href: "/poi" }];
+    let breadcrumbs;
     if (project.type === "Proyecto") {
-        if (activeTab === "Backlog") {
-            breadcrumbs.push({ label: "Proyecto", href: "/poi/detalles" });
-            breadcrumbs.push({ label: activeTab });
+        if(activeTab === 'Backlog') {
+            breadcrumbs = [{ label: "POI", href: "/poi" }, { label: "Proyecto", href: "/poi/detalles" }, { label: activeTab }];
         } else {
-             breadcrumbs.push({ label: activeTab });
+            breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
         }
-    } else {
-         breadcrumbs.push({ label: activeTab });
+    } else { // Actividad
+        breadcrumbs = [{ label: "POI", href: "/poi" }, { label: activeTab }];
     }
     
 
@@ -504,7 +503,7 @@ function ProjectDetailsContent() {
                                 </Card>
                             </div>
                             {/* Columna Derecha */}
-                            <div className="space-y-6">
+                            <div className="flex flex-col space-y-6">
                                 <Card>
                                     <CardHeader>
                                         <div className="flex justify-between items-center">
@@ -516,11 +515,11 @@ function ProjectDetailsContent() {
                                         <Progress value={45} className="h-2.5" indicatorClassName="bg-[#018CD1]" />
                                     </CardContent>
                                 </Card>
-                                <Card>
+                                <Card className="flex-grow flex flex-col">
                                     <CardHeader>
                                     <CardTitle className="text-base">Progreso por Sprints</CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-6">
+                                    <CardContent className="space-y-6 flex-grow flex flex-col justify-around">
                                         {sprints.map(sprint => (
                                             <div key={sprint.name}>
                                                 <div className="flex justify-between items-center mb-1">
