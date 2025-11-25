@@ -31,6 +31,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { Project } from '@/lib/definitions';
 
@@ -140,6 +146,7 @@ function ListaContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
+    { label: 'Actividad', href: '/poi' },
     { label: 'Lista' },
   ];
 
@@ -171,7 +178,7 @@ function ListaContent() {
                 <div className="flex-1 flex flex-col gap-4">
                     <div className="relative w-full max-w-xs">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input placeholder="Buscar en la lista" className="pl-10 bg-white" disabled/>
+                        <Input placeholder="Buscar en la lista" className="pl-10 bg-white" />
                     </div>
                     <div className="rounded-lg border overflow-hidden bg-white">
                         <Table>
@@ -189,7 +196,8 @@ function ListaContent() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {initialTasks.map(task => (
+                                {initialTasks.length > 0 ? (
+                                    initialTasks.map(task => (
                                     <Collapsible asChild key={task.id}>
                                         <>
                                             <TableRow>
@@ -209,7 +217,20 @@ function ListaContent() {
                                                 <TableCell><Badge style={{ backgroundColor: priorityColors[task.priority as keyof typeof priorityColors].bg}} className={cn(priorityColors[task.priority as keyof typeof priorityColors].text, 'font-semibold')}>{task.priority}</Badge></TableCell>
                                                 <TableCell>{task.startDate}</TableCell>
                                                 <TableCell>{task.endDate}</TableCell>
-                                                <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400 cursor-pointer"/></TableCell>
+                                                <TableCell>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+                                                                <MoreHorizontal className="h-5 w-5 text-gray-400 cursor-pointer"/>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                         <DropdownMenuContent>
+                                                            <DropdownMenuItem>Crear Subtarea</DropdownMenuItem>
+                                                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                                                            <DropdownMenuItem>Eliminar</DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </TableCell>
                                             </TableRow>
                                             <CollapsibleContent asChild>
                                                 <>
@@ -223,14 +244,29 @@ function ListaContent() {
                                                         <TableCell><Badge style={{ backgroundColor: priorityColors[subtask.priority as keyof typeof priorityColors].bg}} className={cn(priorityColors[subtask.priority as keyof typeof priorityColors].text, 'font-semibold')}>{subtask.priority}</Badge></TableCell>
                                                         <TableCell>{subtask.startDate}</TableCell>
                                                         <TableCell>{subtask.endDate}</TableCell>
-                                                        <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400 cursor-pointer"/></TableCell>
+                                                        <TableCell>
+                                                             <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+                                                                        <MoreHorizontal className="h-5 w-5 text-gray-400 cursor-pointer"/>
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                            </DropdownMenu>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                                 </>
                                             </CollapsibleContent>
                                         </>
                                     </Collapsible>
-                                ))}
+                                ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="text-center h-24 text-gray-500">
+                                            La lista se encuentra vacía
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                                 <TableRow>
                                     <TableCell colSpan={9} className="py-2">
                                         <Input className="w-full bg-gray-100 mt-1 border-dashed" placeholder="+ Agregar tarea" disabled />
@@ -253,3 +289,5 @@ export default function ListaPage() {
         </React.Suspense>
     );
 }
+
+    

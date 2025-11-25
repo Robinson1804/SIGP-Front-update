@@ -168,8 +168,8 @@ function TableroContent() {
   const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N°${project.id}`;
 
   const breadcrumbs = project.type === 'Proyecto'
-    ? [{ label: 'POI', href: '/poi' }, { label: 'Proyecto', href: '/poi/detalles' }, { label: 'Tablero' }]
-    : [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }];
+    ? [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }]
+    : [{ label: 'POI', href: '/poi' }, { label: 'Actividad', href: '/poi' }, { label: 'Tablero' }];
   
   const isActivity = project.type === 'Actividad';
   const boardData = isActivity ? tasksData : userStoriesData;
@@ -262,3 +262,5 @@ export default function TableroPage() {
         </React.Suspense>
     );
 }
+
+    
