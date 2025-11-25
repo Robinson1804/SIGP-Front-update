@@ -546,7 +546,9 @@ function DeleteConfirmationModal({
                  <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
                     <DialogTitle>AVISO</DialogTitle>
                      <DialogClose asChild>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+                            <X className="h-4 w-4" />
+                        </Button>
                     </DialogClose>
                 </DialogHeader>
                 <div className="p-6 text-center flex flex-col items-center">

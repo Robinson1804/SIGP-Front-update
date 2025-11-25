@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -147,8 +148,8 @@ function BacklogContent() {
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Tablero') route = '/poi/proyecto/tablero';
-    else if (tabName === 'Dashboard') route = '/poi/proyecto/dashboard';
+    if (tabName === 'Tablero') route = '/poi/proyecto/backlog/tablero';
+    else if (tabName === 'Dashboard') route = '/poi/proyecto/backlog/dashboard';
     
     if (route) {
         router.push(route);
@@ -419,3 +420,5 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
+
+    

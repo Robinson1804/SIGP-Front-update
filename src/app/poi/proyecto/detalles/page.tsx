@@ -518,3 +518,5 @@ export default function DetailsPage() {
         </React.Suspense>
     )
 }
+
+    

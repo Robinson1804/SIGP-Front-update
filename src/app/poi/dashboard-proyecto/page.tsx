@@ -160,8 +160,8 @@ function DashboardContent() {
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
-    else if (tabName === 'Tablero') route = '/poi/proyecto/backlog/tablero';
+    if (tabName === 'Backlog') route = '/poi/backlog';
+    else if (tabName === 'Tablero') route = '/poi/tablero-proyecto';
     
     if (route) {
         router.push(route);
@@ -182,7 +182,7 @@ function DashboardContent() {
   
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
-    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
+    { label: <Link href="/poi/detalles">Proyecto</Link> },
     { label: 'Dashboard' }
 ];
 

@@ -247,3 +247,5 @@ export default function TableroProyectoPage() {
         </React.Suspense>
     );
 }
+
+    
