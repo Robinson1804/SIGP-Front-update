@@ -55,14 +55,14 @@ export async function authenticate(
   
   switch (user.role) {
     case 'PMO':
-      redirect('/pmo-dashboard');
+      redirect('/pgd');
     // Add other role redirects here
     // case 'Administrator':
     //   redirect('/admin-dashboard');
     // ...
     default:
       // Fallback for demo purposes
-      redirect('/pmo-dashboard');
+      redirect('/pgd');
   }
 }
 
