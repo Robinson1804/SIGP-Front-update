@@ -393,9 +393,6 @@ function ProjectDetailsContent() {
     
     const activityTabs = [
         { name: 'Detalles' },
-        { name: 'Lista' },
-        { name: 'Tablero' },
-        { name: 'Dashboard' },
     ];
 
     const currentTabs = project.type === 'Proyecto' ? projectTabs : activityTabs;
@@ -461,7 +458,7 @@ function ProjectDetailsContent() {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <Card className="lg:col-span-2">
                                     <CardContent className="p-6 space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-4">
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-500 mb-1">Estado</p>
                                                 <Badge className={statusColors[project.status]}>{project.status}</Badge>
