@@ -372,12 +372,18 @@ function ProjectDetailsContent() {
 
     const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    const breadcrumbs = 
-        project.type === 'Proyecto'
-        ? (activeTab === 'Backlog' 
-            ? [{ label: 'POI', href: '/poi' }, { label: 'Proyecto', href: '/poi/detalles'}, { label: activeTab }]
-            : [{ label: 'POI', href: '/poi' }, { label: activeTab }])
-        : [{ label: 'POI', href: '/poi' }, { label: activeTab }];
+    let breadcrumbs = [{ label: "POI", href: "/poi" }];
+    if (project.type === "Proyecto") {
+        if (activeTab === "Backlog") {
+            breadcrumbs.push({ label: "Proyecto", href: "/poi/detalles" });
+            breadcrumbs.push({ label: activeTab });
+        } else {
+             breadcrumbs.push({ label: activeTab });
+        }
+    } else {
+         breadcrumbs.push({ label: activeTab });
+    }
+    
 
     const projectTabs = [
         { name: 'Detalles' },
@@ -514,7 +520,7 @@ function ProjectDetailsContent() {
                                     <CardHeader>
                                     <CardTitle className="text-base">Progreso por Sprints</CardTitle>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
+                                    <CardContent className="space-y-6">
                                         {sprints.map(sprint => (
                                             <div key={sprint.name}>
                                                 <div className="flex justify-between items-center mb-1">
