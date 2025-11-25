@@ -145,13 +145,13 @@ function BacklogContent() {
   }, [router, searchParams]);
 
   const handleTabClick = (tabName: string) => {
-    let route = '';
     if (tabName === 'Tablero') {
         router.push('/poi/tablero-proyecto');
     } else if (tabName === 'Dashboard') {
         router.push('/poi/dashboard-proyecto');
     } else {
         setActiveTab(tabName);
+        router.push('/poi/backlog');
     }
   };
   
@@ -167,7 +167,7 @@ function BacklogContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Detalles', href: `/poi/detalles` },
+    { label: 'Proyecto' },
     { label: 'Backlog' },
   ];
 
@@ -188,7 +188,7 @@ function BacklogContent() {
       secondaryHeader={secondaryHeader}
     >
         <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-            <Button size="sm" onClick={() => setActiveTab('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
+            <Button size="sm" onClick={() => handleTabClick('Backlog')} className={cn(activeTab === 'Backlog' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={activeTab === 'Backlog' ? 'default' : 'outline'}>Backlog</Button>
             <Button size="sm" onClick={() => handleTabClick('Tablero')} className={cn(activeTab === 'Tablero' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={'outline'}>Tablero</Button>
             <Button size="sm" onClick={() => handleTabClick('Dashboard')} className={cn(activeTab === 'Dashboard' ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} variant={'outline'}>Dashboard</Button>
         </div>
@@ -416,3 +416,5 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
+
+    
