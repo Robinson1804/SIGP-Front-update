@@ -372,10 +372,17 @@ function ProjectDetailsContent() {
 
     const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    const breadcrumbs = [
-        { label: "POI", href: "/poi" }, 
-        { label: activeTab }
-    ];
+    let breadcrumbs = [{ label: "POI", href: "/poi" }];
+    if (project.type === 'Proyecto') {
+        if (activeTab === 'Backlog') {
+            breadcrumbs.push({ label: 'Proyecto', href: '/poi/detalles' });
+            breadcrumbs.push({ label: activeTab });
+        } else {
+            breadcrumbs.push({ label: activeTab });
+        }
+    } else {
+        breadcrumbs.push({ label: activeTab });
+    }
     
 
     const projectTabs = [
@@ -419,6 +426,9 @@ function ProjectDetailsContent() {
         </div>
       </>
     );
+
+    const totalProgress = sprints.reduce((acc, sprint) => acc + sprint.progress, 0);
+    const generalProgress = sprints.length > 0 ? Math.round(totalProgress / sprints.length) : 0;
 
     return (
         <AppLayout
@@ -470,7 +480,6 @@ function ProjectDetailsContent() {
                                                 <InfoField label="Área Financiera">
                                                     {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                                 </InfoField>
-                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                             </div>
                                             {/* Columna 2 */}
                                             <div className="space-y-4">
@@ -482,7 +491,8 @@ function ProjectDetailsContent() {
                                                     {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                                 </InfoField>
                                                 <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
+                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
                                                         <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
                                                         <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
@@ -500,24 +510,19 @@ function ProjectDetailsContent() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                                <div className="flex flex-col gap-6">
+                                 <div className="flex flex-col gap-6">
                                      <Card>
-                                        <CardHeader><CardTitle className="text-base font-semibold">Progreso general</CardTitle></CardHeader>
-                                        <CardContent className="text-center">
-                                            <div className="relative w-32 h-32 mx-auto">
-                                                <svg className="w-full h-full" viewBox="0 0 36 36">
-                                                    <path className="text-gray-200" strokeWidth="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                                    <path className="text-blue-500" strokeWidth="3" strokeDasharray="60, 100" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                                                </svg>
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="text-2xl font-bold">60%</span>
-                                                </div>
+                                        <CardContent className="p-4">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="font-semibold text-sm">Progreso General</h4>
+                                                <span className="font-bold text-sm">{generalProgress}%</span>
                                             </div>
+                                            <Progress value={generalProgress} indicatorClassName="bg-blue-500" />
                                         </CardContent>
                                     </Card>
-                                    <Card className="flex-grow">
+                                    <Card className="flex-grow flex flex-col">
                                         <CardHeader><CardTitle className="text-base font-semibold">Progreso por Sprints</CardTitle></CardHeader>
-                                        <CardContent className="space-y-6">
+                                        <CardContent className="space-y-6 flex-grow flex flex-col justify-center">
                                             {sprints.map((sprint, i) => (
                                                 <div key={i}>
                                                     <div className="flex justify-between items-center mb-1">
@@ -532,7 +537,7 @@ function ProjectDetailsContent() {
                                 </div>
                             </div>
                         ) : (
-                             <Card>
+                             <Card className="lg:col-span-3">
                                 <CardContent className="p-6 space-y-4">
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-4">
                                         <div>
@@ -553,7 +558,6 @@ function ProjectDetailsContent() {
                                             <InfoField label="Área Financiera">
                                                 {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                             </InfoField>
-                                            <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                         </div>
                                         {/* Columna 2 */}
                                         <div className="space-y-4">
@@ -565,6 +569,7 @@ function ProjectDetailsContent() {
                                                 {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                             </InfoField>
                                             <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
+                                             <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
@@ -722,3 +727,5 @@ export default function ProjectDetailsPage() {
         </React.Suspense>
     )
 }
+
+    
