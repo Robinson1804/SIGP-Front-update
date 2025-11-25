@@ -372,12 +372,17 @@ function ProjectDetailsContent() {
 
     const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    const breadcrumbs = [
-      { label: 'POI', href: '/poi' },
-      { label: project.type, href: `/poi/detalles` },
-      { label: activeTab }
-    ];
-    
+    const breadcrumbs = 
+        project.type === 'Proyecto'
+        ? (activeTab === 'Backlog' 
+            ? [{ label: 'POI', href: '/poi' }, { label: 'Proyecto', href: '/poi/detalles'}, { label: activeTab }]
+            : [{ label: 'POI', href: '/poi' }, { label: activeTab }])
+        : [
+            { label: 'POI', href: '/poi' },
+            { label: 'Actividad', href: '/poi/detalles' },
+            { label: activeTab }
+        ];
+
     const projectTabs = [
         { name: 'Detalles' },
         { name: 'Documentos' },
