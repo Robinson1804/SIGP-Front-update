@@ -13,7 +13,7 @@ import {
 import AppLayout from '@/components/layout/app-layout';
 
 const navItems = [
-  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
+  { label: "PGD", icon: FileText, href: "/pgd" },
   { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },

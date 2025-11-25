@@ -395,7 +395,7 @@ const OgdCard = ({ ogd, onEdit, onDelete }: { ogd: OGD, onEdit: () => void; onDe
 );
 
 const navItems = [
-  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
+  { label: "PGD", icon: FileText, href: "/pgd" },
   { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
@@ -490,7 +490,7 @@ export default function OgdDashboardPage() {
     <AppLayout
       navItems={navItems}
       breadcrumbs={[
-          { label: "PGD", href: "/pmo-dashboard" },
+          { label: "PGD", href: "/pgd" },
           { label: "OGD" },
         ]}
     >

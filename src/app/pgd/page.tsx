@@ -206,7 +206,7 @@ const CardItem = ({
 );
 
 const navItems = [
-  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
+  { label: "PGD", icon: FileText, href: "/pgd" },
   { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
@@ -255,11 +255,11 @@ export default function PmoDashboardPage() {
   };
   
   const cardsData = [
-    { icon: Landmark, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]", href: "/oei-dashboard" },
-    { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]", href: "/ogd-dashboard" },
-    { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]", href: "/oegd-dashboard" },
-    { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "/ae-dashboard" },
-    { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "/poi-dashboard" },
+    { icon: Landmark, title: "OEI", subtitle: "(Objetivo Estratégico Institucional)", bgColor: "bg-[#EFF4FF]", href: "/pgd/oei" },
+    { icon: Target, title: "OGD", subtitle: "(Objetivo de Gobierno Digital)", bgColor: "bg-[#FFD8D8]", href: "/pgd/ogd" },
+    { icon: Briefcase, title: "OEGD", subtitle: "(Objetivo Específico de Gobierno Digital)", bgColor: "bg-[#FCF3EA]", href: "/pgd/oegd" },
+    { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "/pgd/ae" },
+    { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "/pgd/proyectos" },
   ];
 
   return (

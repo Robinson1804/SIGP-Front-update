@@ -486,7 +486,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
 };
 
 const navItems = [
-  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
+  { label: "PGD", icon: FileText, href: "/pgd" },
   { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
@@ -577,8 +577,8 @@ export default function PoiDashboardPage() {
     <AppLayout
       navItems={navItems}
       breadcrumbs={[
-        { label: "PGD", href: "/pmo-dashboard" },
-        { label: "POI" },
+        { label: "PGD", href: "/pgd" },
+        { label: "Proyectos PGD" },
       ]}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581] w-full">

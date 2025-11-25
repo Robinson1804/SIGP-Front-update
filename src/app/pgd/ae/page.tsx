@@ -382,7 +382,7 @@ const AeCard = ({ ae, onEdit, onDelete }: { ae: AE, onEdit: () => void; onDelete
 );
 
 const navItems = [
-  { label: "PGD", icon: FileText, href: "/pmo-dashboard" },
+  { label: "PGD", icon: FileText, href: "/pgd" },
   { label: "POI", icon: Target, href: "/poi" },
   { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
@@ -476,7 +476,7 @@ export default function AeDashboardPage() {
     <AppLayout
       navItems={navItems}
       breadcrumbs={[
-          { label: "PGD", href: "/pmo-dashboard" },
+          { label: "PGD", href: "/pgd" },
           { label: "AE" },
         ]}
     >

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -52,7 +53,7 @@ import { Project } from '@/lib/definitions';
 
 
 const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pmo-dashboard' },
+  { label: 'PGD', icon: FileText, href: '/pgd' },
   { label: 'POI', icon: Target, href: '/poi' },
   { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
   { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
@@ -146,9 +147,9 @@ function BacklogContent() {
   const handleTabClick = (tabName: string) => {
     let route = '';
     if (tabName === 'Tablero') {
-        router.push('/poi/tablero');
+        router.push('/poi/tablero-proyecto');
     } else if (tabName === 'Dashboard') {
-        router.push('/poi/dashboard');
+        router.push('/poi/dashboard-proyecto');
     } else {
         setActiveTab(tabName);
     }
