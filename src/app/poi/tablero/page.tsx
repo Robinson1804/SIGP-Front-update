@@ -169,7 +169,7 @@ function TableroContent() {
 
   const breadcrumbs = project.type === 'Proyecto'
     ? [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }]
-    : [{ label: 'POI', href: '/poi' }, { label: 'Actividad', href: '/poi' }, { label: 'Tablero' }];
+    : [{ label: 'POI', href: '/poi' }, { label: 'Tablero' }];
   
   const isActivity = project.type === 'Actividad';
   const boardData = isActivity ? tasksData : userStoriesData;

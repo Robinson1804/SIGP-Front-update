@@ -374,7 +374,7 @@ function ProjectDetailsContent() {
     
     const breadcrumbs = project.type === 'Proyecto'
         ? [{ label: "POI", href: "/poi" }, { label: 'Detalles' }]
-        : [{ label: "POI", href: "/poi" }, { label: 'Actividad', href: '/poi' }, { label: 'Detalles' }];
+        : [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
     
     const projectTabs = [
         { name: 'Detalles' },
@@ -417,7 +417,7 @@ function ProjectDetailsContent() {
         </div>
       </>
     );
-
+    
     const totalProgress = sprints.reduce((acc, sprint) => acc + sprint.progress, 0);
     const generalProgress = sprints.length > 0 ? Math.round(totalProgress / sprints.length) : 0;
 
@@ -449,7 +449,7 @@ function ProjectDetailsContent() {
                         </div>
 
                         {project.type === 'Proyecto' ? (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <Card className="lg:col-span-2">
                                     <CardContent className="p-6 space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-4">
@@ -526,7 +526,7 @@ function ProjectDetailsContent() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 gap-6">
                                 <Card className="lg:col-span-3">
                                     <CardContent className="p-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
@@ -537,6 +537,7 @@ function ProjectDetailsContent() {
                                                 <InfoField label="Área Financiera">
                                                     {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                                 </InfoField>
+                                                <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                             </div>
                                             <div className="space-y-4">
                                                 <InfoField label="Responsable">
@@ -546,7 +547,8 @@ function ProjectDetailsContent() {
                                                     {project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}
                                                 </InfoField>
                                                 <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
+                                                 <div className="grid grid-cols-2 gap-4">
                                                      <div>
                                                         <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
                                                         <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center">
@@ -560,10 +562,6 @@ function ProjectDetailsContent() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div className="md:col-span-2 space-y-4">
-                                                 <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                                 <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
                                             </div>
                                         </div>
                                     </CardContent>

@@ -173,7 +173,7 @@ function DashboardContent() {
 
   const projectCode = `${project.type === 'Proyecto' ? 'PROY' : 'ACT'} N°${project.id}`;
   const breadcrumbs = project.type === 'Proyecto'
-    ? [{ label: 'POI', href: '/poi' }, { label: 'Proyecto', href: '/poi/detalles' }, { label: 'Dashboard' }]
+    ? [{ label: 'POI', href: '/poi' }, { label: 'Dashboard' }]
     : [{ label: 'POI', href: '/poi' }, { label: 'Dashboard' }];
 
   const secondaryHeader = (
