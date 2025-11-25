@@ -1,0 +1,283 @@
+
+"use client";
+
+import React from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  FileText,
+  Target,
+  Users,
+  BarChart,
+  Bell,
+  Folder,
+  Trash2,
+  Pencil,
+  AlertTriangle,
+  X,
+} from 'lucide-react';
+import AppLayout from '@/components/layout/app-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { POIModal } from '@/app/poi/page';
+import { Project } from '@/lib/definitions';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
+
+const InfoField = ({ label, children }: { label: string, children: React.ReactNode }) => (
+    <div>
+        <p className="text-sm font-semibold text-gray-500 mb-1">{label}</p>
+        <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center flex-wrap gap-1">
+            {children}
+        </div>
+    </div>
+);
+
+function DeleteConfirmationModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+    message,
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    message: string;
+}) {
+    if (!isOpen) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
+                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+                    <DialogTitle>{title}</DialogTitle>
+                     <DialogClose asChild>
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </DialogClose>
+                </DialogHeader>
+                <div className="p-6 text-center flex flex-col items-center">
+                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
+                    <p className="font-bold text-lg">¿Estás seguro?</p>
+                    <p className="text-muted-foreground">{message}</p>
+                </div>
+                <DialogFooter className="px-6 pb-6 flex justify-center gap-4">
+                    <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
+                    <Button onClick={onConfirm} style={{backgroundColor: '#018CD1', color: 'white'}}>Sí, eliminar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+const navItems = [
+  { label: "PGD", icon: FileText, href: "/pgd" },
+  { label: "POI", icon: Target, href: "/poi" },
+  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
+  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
+];
+
+function ActivityDetailsContent() {
+    const [project, setProject] = React.useState<Project | null>(null);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    
+    const [activeTab, setActiveTab] = React.useState('Detalles');
+    
+    const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+
+    React.useEffect(() => {
+        const tabParam = searchParams.get('tab');
+        if (tabParam) {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
+    
+    React.useEffect(() => {
+        const savedProjectData = localStorage.getItem('selectedProject');
+        if (savedProjectData) {
+            const projectData = JSON.parse(savedProjectData);
+            setProject(projectData);
+        } else {
+            router.push('/poi');
+        }
+    }, [router]);
+
+    const formatMonthYear = (dateString: string) => {
+        if (!dateString) return '';
+        const [year, month] = dateString.split('-');
+        const date = new Date(Number(year), Number(month) - 1);
+        return date.toLocaleString('es-ES', { month: 'short', year: 'numeric' });
+    }
+
+    const handleSaveProject = (updatedProject: Project) => {
+        setProject(updatedProject);
+        localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+        setIsEditModalOpen(false);
+    };
+
+    const handleDeleteProject = () => {
+        localStorage.removeItem('selectedProject');
+        setIsDeleteModalOpen(false);
+        router.push('/poi');
+    };
+    
+    const handleTabClick = (tabName: string) => {
+        let route = '';
+        if (tabName === 'Lista') route = '/poi/actividad/lista';
+        else if (tabName === 'Tablero') route = '/poi/actividad/tablero';
+        else if (tabName === 'Dashboard') route = '/poi/actividad/dashboard';
+        
+        if (route) {
+            router.push(route);
+        } else {
+            setActiveTab(tabName);
+        }
+    };
+
+    if (!project) {
+        return (
+             <AppLayout navItems={navItems} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
+                <div className="flex-1 flex items-center justify-center">Cargando...</div>
+             </AppLayout>
+        )
+    }
+
+    const projectCode = `ACT N° ${project.id}`;
+    
+    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
+    
+    const activityTabs = [{ name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }];
+
+    const secondaryHeader = (
+      <>
+        <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
+            <div className="p-2 flex items-center justify-between w-full">
+                <h2 className="font-bold text-black pl-2">
+                    {`${projectCode}: ${project.name}`}
+                </h2>
+            </div>
+        </div>
+        <div className="sticky top-[104px] z-10 bg-[#F9F9F9] px-6 pt-4">
+          <div className="flex items-center gap-2">
+            {activityTabs.map(tab => (
+                 <Button 
+                    key={tab.name}
+                    size="sm" 
+                    onClick={() => handleTabClick(tab.name)} 
+                    className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
+                    variant={activeTab === tab.name ? 'default' : 'outline'}
+                >
+                    {tab.name}
+                </Button>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+    
+    return (
+        <AppLayout
+            navItems={navItems}
+            breadcrumbs={breadcrumbs}
+            secondaryHeader={secondaryHeader}
+        >
+            <div className="flex-1 flex flex-col bg-[#F9F9F9]">
+                <div className="p-6">
+                    {activeTab === 'Detalles' && (
+                        <>
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-2">
+                                <Folder className="w-6 h-6 text-gray-700" />
+                                <h3 className="text-xl font-bold">{`${projectCode}: ${project.name}`}</h3>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="destructive" size="sm" className="bg-[#EC221F] text-white" onClick={() => setIsDeleteModalOpen(true)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                </Button>
+                                <Button size="sm" className="bg-[#018CD1] text-white" onClick={() => setIsEditModalOpen(true)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                </Button>
+                            </div>
+                        </div>
+                        
+                         <div className="grid grid-cols-1 gap-6">
+                            <Card className="lg:col-span-3"><CardContent className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                    <div className="space-y-4">
+                                        <InfoField label="Acción estratégica"><p>{project.strategicAction}</p></InfoField>
+                                        <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
+                                        <InfoField label="Área Financiera">{project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}</InfoField>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
+                                        <InfoField label="Responsable">{project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}</InfoField>
+                                        <InfoField label="Año">{project.years?.map(y => <Badge key={y} variant="secondary">{y}</Badge>)}</InfoField>
+                                        <InfoField label="Monto Anual"><p>S/ {project.annualAmount.toLocaleString('es-PE')}</p></InfoField>
+                                    </div>
+                                    <div className="space-y-4">
+                                       <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
+                                       <InfoField label="Método de Gestión de Proyecto"><p>{project.managementMethod || ''}</p></InfoField>
+                                    </div>
+                                     <div className="space-y-4">
+                                         <div className="grid grid-cols-2 gap-4">
+                                             <div>
+                                                <p className="text-sm font-semibold text-gray-500 mb-1">Fecha inicio</p>
+                                                <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center"><p>{formatMonthYear(project.startDate || '')}</p></div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-500 mb-1">Fecha fin</p>
+                                                <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center"><p>{formatMonthYear(project.endDate || '')}</p></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent></Card>
+                        </div>
+                        </>
+                    )}
+                </div>
+            </div>
+
+             {isEditModalOpen && project && (
+                <POIModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    project={project}
+                    onSave={handleSaveProject}
+                />
+             )}
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleDeleteProject}
+                title="AVISO"
+                message="El Plan Operativo Informático será eliminado"
+            />
+        </AppLayout>
+    );
+}
+
+export default function DetailsPage() {
+    return (
+        <React.Suspense fallback={<div>Loading...</div>}>
+            <ActivityDetailsContent />
+        </React.Suspense>
+    )
+}

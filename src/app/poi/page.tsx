@@ -20,6 +20,7 @@ import {
   List,
 } from "lucide-react";
 import Link from 'next/link';
+import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -564,6 +565,7 @@ function DeleteConfirmationModal({
 
 const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: () => void, onDelete: () => void }) => {
     const isMissingData = project.missingData;
+    const router = useRouter();
 
     const formatMonthYear = (dateString: string) => {
         if (!dateString) return '';
@@ -578,12 +580,12 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
 
     const handleGoToDetails = () => {
         localStorage.setItem('selectedProject', JSON.stringify(project));
+        const detailsUrl = project.type === 'Proyecto' ? '/poi/proyecto/detalles' : '/poi/actividad/detalles';
+        router.push(detailsUrl);
     };
 
-    const detailsUrl = project.type === 'Proyecto' ? '/poi/proyecto/detalles' : '/poi/actividad/detalles';
-
     const cardContent = (
-         <Card className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
+         <Card onClick={handleGoToDetails} className={`w-full h-full flex flex-col shadow-md rounded-lg hover:shadow-xl transition-shadow duration-300 ${isMissingData ? 'bg-[#FEE9E7]' : 'bg-white'}`}>
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-2">
                     <Folder className="w-6 h-6 text-[#008ED2]" />
@@ -594,13 +596,13 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild disabled={project.missingData}>
-                            <Link href={project.missingData ? '#' : detailsUrl} onClick={handleGoToDetails}>Ir a proyecto / Actividad</Link>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={handleGoToDetails} disabled={project.missingData}>
+                            Ir a proyecto / Actividad
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={onEdit}>Editar POI</DropdownMenuItem>
                         <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar POI</DropdownMenuItem>
