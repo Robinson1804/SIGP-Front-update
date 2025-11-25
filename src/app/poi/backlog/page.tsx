@@ -167,7 +167,7 @@ function BacklogContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Proyecto' },
+    { label: 'Proyecto', href: '/poi/detalles' },
     { label: 'Backlog' },
   ];
 
