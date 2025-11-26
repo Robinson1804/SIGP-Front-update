@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -30,6 +31,7 @@ export async function authenticate(
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Por favor, corrija los errores en el formulario.',
+      success: false,
     };
   }
 
@@ -39,6 +41,7 @@ export async function authenticate(
     return {
       errors: { captcha: ['Código captcha incorrecto.'] },
       message: 'Error de validación.',
+      success: false,
     };
   }
 
@@ -47,34 +50,18 @@ export async function authenticate(
   if (!user || user.password !== password) {
     return {
       message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
+      errors: {},
+      success: false
     };
   }
   
-  // In a real app, you would set an HTTP-only cookie for session management.
-  // The redirect will happen on the server side now.
-  switch (user.role) {
-    case 'PMO':
-      redirect('/pgd');
-      break;
-    case 'Scrum Master':
-      redirect('/poi');
-      break;
-    case 'Administrator':
-      redirect('/pgd');
-      break;
-    case 'Coordinator':
-      redirect('/poi');
-      break;
-    case 'Developer':
-      redirect('/poi');
-      break;
-    case 'User':
-      redirect('/poi');
-      break;
-    default:
-      redirect('/pgd');
-      break;
-  }
+  // On success, return a state with success flag.
+  // The client-side form will handle the redirection.
+  return {
+    message: null,
+    errors: {},
+    success: true,
+  };
 }
 
 export async function signOut() {

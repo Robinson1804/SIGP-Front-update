@@ -97,7 +97,6 @@ export default function AppLayout({
   children,
   breadcrumbs,
   secondaryHeader,
-  isPmo,
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();

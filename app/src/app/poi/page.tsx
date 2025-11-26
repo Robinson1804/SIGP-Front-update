@@ -349,10 +349,10 @@ function ScrumMasterPoiView() {
 }
 
 function PoiPageContent() {
-    const [role, setRole] = React.useState<string | null>(null);
+    const [role, setRole] = useState<string | null>(null);
 
     useEffect(() => {
-        // This runs on the client-side
+        // This runs on the client-side, ensuring localStorage is available.
         const storedRole = localStorage.getItem('userRole');
         setRole(storedRole);
     }, []);
@@ -360,7 +360,7 @@ function PoiPageContent() {
     if (role === null) {
       return (
         <AppLayout isPmo={false} breadcrumbs={[{ label: "Cargando..." }]}>
-          <div>Cargando...</div>
+          <div className="flex h-full w-full items-center justify-center">Cargando...</div>
         </AppLayout>
       );
     }
