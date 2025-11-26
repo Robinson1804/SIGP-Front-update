@@ -8,8 +8,7 @@ export const LoginFormSchema = z.object({
 });
 
 export type LoginFormState = {
-  success?: boolean;
-  message?: string | null;
+  message: string | null;
   errors?: {
     username?: string[];
     password?: string[];

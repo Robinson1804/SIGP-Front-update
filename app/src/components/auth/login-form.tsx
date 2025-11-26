@@ -29,14 +29,16 @@ export function LoginForm() {
     setState(undefined);
 
     const formData = new FormData(event.currentTarget);
+    const username = formData.get('username') as string;
+
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('userRole', username.toLowerCase());
+    }
+
     const result = await authenticate(undefined, formData);
 
-    if (result.success) {
-        const username = formData.get('username') as string;
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('userRole', username.toLowerCase());
-        }
-        const role = username.toLowerCase();
+    if (result.message === null) {
+        const role = localStorage.getItem('userRole');
         let targetPath = '/';
         if (role === 'pmo') {
             targetPath = '/pgd';

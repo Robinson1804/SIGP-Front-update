@@ -1,6 +1,7 @@
 
 'use server';
 
+import { redirect } from 'next/navigation';
 import { LoginFormSchema, type LoginFormState } from '@/lib/definitions';
 
 // Mock CAPTCHA value
@@ -50,14 +51,14 @@ export async function authenticate(
     };
   }
   
-  // On success, return a success state. The client will handle the redirect.
+  // On success, return a state with no message. The client will handle the redirect.
   return {
-    success: true,
+    message: null,
+    errors: {}
   };
 }
 
 export async function signOut() {
   // In a real app, you would clear the session cookie here.
-  const { redirect } = await import('next/navigation');
   redirect('/');
 }
