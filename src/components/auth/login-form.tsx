@@ -3,8 +3,9 @@
 
 import Image from "next/image";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 
 import { authenticate } from "@/lib/actions";
 import { type LoginFormState } from "@/lib/definitions";
@@ -31,16 +32,33 @@ function LoginButton() {
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [state, dispatch] = useFormState(authenticate, undefined);
-  
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('userRole', e.target.value.toLowerCase());
+  const router = useRouter();
+
+  const handleFormAction = (formData: FormData) => {
+    const username = formData.get('username') as string;
+    if (username) {
+        if (typeof window !== 'undefined') {
+            const role = username.toLowerCase() === 'pmo' ? 'pmo' : 'scrum';
+            localStorage.setItem('userRole', role);
+        }
     }
-  }
+    dispatch(formData);
+  };
+  
+  useEffect(() => {
+    if (state?.message === 'Success') {
+        const role = localStorage.getItem('userRole');
+        if (role === 'pmo') {
+            router.push('/pgd');
+        } else {
+            router.push('/poi');
+        }
+    }
+  }, [state, router]);
 
   return (
     <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm shadow-2xl border-2 border-white/20">
-      <form action={dispatch}>
+      <form action={handleFormAction}>
         <CardHeader className="items-center text-center p-6">
           {ineiLogo && (
             <Image
@@ -69,11 +87,10 @@ export function LoginForm() {
                 id="username"
                 name="username"
                 type="text"
-                placeholder="pmo"
+                placeholder="pmo / scrum"
                 required
                 className="pl-10 text-base"
                 aria-describedby="username-error"
-                onChange={handleUsernameChange}
               />
             </div>
             {state?.errors?.username && (
@@ -96,6 +113,7 @@ export function LoginForm() {
                 required
                 className="pl-10 pr-10 text-base"
                 aria-describedby="password-error"
+                defaultValue="password"
               />
               <button
                 type="button"
@@ -137,6 +155,7 @@ export function LoginForm() {
                 autoCapitalize="off"
                 autoCorrect="off"
                 aria-describedby="captcha-error"
+                defaultValue="A4B2C"
               />
             </div>
              {state?.errors?.captcha && (
@@ -147,7 +166,7 @@ export function LoginForm() {
               </div>
             )}
           </div>
-           {state?.message && (
+           {state?.message && state.message !== 'Success' && (
             <Alert variant="destructive" className="mt-4">
               <AlertDescription>{state.message}</AlertDescription>
             </Alert>
