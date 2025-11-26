@@ -2,14 +2,8 @@
 "use client";
 
 import React from 'react';
-import { useSearchParams } from 'next/navigation';
-import AppLayout from '@/components/layout/app-layout';
+import { useRouter } from "next/navigation";
 import {
-  FileText,
-  Target,
-  Users,
-  BarChart,
-  Bell,
   HardHat,
   Search,
   Folder,
@@ -19,7 +13,8 @@ import {
   AlertTriangle,
   Users as UsersIcon,
 } from 'lucide-react';
-import { useRouter } from "next/navigation";
+
+import AppLayout from '@/components/layout/app-layout';
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -230,13 +225,9 @@ const ProjectCard = ({ project }: { project: Project }) => {
     return cardContent;
 };
 
-
 function PmoPoiView() {
   return (
-    <AppLayout
-      breadcrumbs={[{ label: 'POI' }]}
-      isPmo={true}
-    >
+    <>
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
         <div className="p-2 flex items-center justify-between w-full">
           <h2 className="font-bold text-black pl-2">PLAN OPERATIVO INFORMÁTICO (POI)</h2>
@@ -247,7 +238,7 @@ function PmoPoiView() {
         <h3 className="text-2xl font-bold">Módulo en Construcción para PMO</h3>
         <p>Esta sección para el rol PMO estará disponible próximamente.</p>
       </div>
-    </AppLayout>
+    </>
   );
 }
 
@@ -260,10 +251,7 @@ function ScrumMasterPoiView() {
     const SectionIcon = Folder;
 
     return (
-        <AppLayout
-            breadcrumbs={[{ label: "POI" }]}
-            isPmo={false}
-        >
+        <>
             <div className="bg-[#D5D5D5] border-y border-[#1A5581] w-full">
                 <div className="p-2 flex items-center justify-between w-full">
                     <h2 className="font-bold text-black pl-2">
@@ -356,22 +344,30 @@ function ScrumMasterPoiView() {
                     </Pagination>
                 </div>
             </div>
-        </AppLayout>
+        </>
     )
 }
 
 function PoiPageContent() {
-    const searchParams = useSearchParams();
-    // In a real app, role would come from a session.
-    // We simulate it here for demonstration.
-    // If we navigate from PGD, we assume PMO. Otherwise, Scrum Master.
-    const role = searchParams.get('from') === 'pgd' ? 'PMO' : 'Scrum Master';
+    const [role, setRole] = React.useState<string | null>(null);
 
-    if (role === 'PMO') {
-        return <PmoPoiView />;
+    React.useEffect(() => {
+        // This runs on the client-side
+        const storedRole = localStorage.getItem('userRole');
+        setRole(storedRole);
+    }, []);
+
+    if (role === null) {
+      return <div>Cargando...</div>; // Or a loading spinner
     }
     
-    return <ScrumMasterPoiView />;
+    const isPmo = role === 'pmo';
+    
+    return (
+        <AppLayout isPmo={isPmo} breadcrumbs={[{ label: "POI" }]}>
+            {isPmo ? <PmoPoiView /> : <ScrumMasterPoiView />}
+        </AppLayout>
+    )
 }
 
 export default function PoiPage() {

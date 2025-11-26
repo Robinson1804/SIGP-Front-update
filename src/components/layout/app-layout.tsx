@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -133,7 +133,7 @@ export default function AppLayout({
           </div>
           <nav className="flex-grow p-4 space-y-[25px]">
             {navItems.map((item) => {
-              const isActive = pathname.startsWith(item.href.split('?')[0]);
+              const isActive = item.href === '/pgd' ? pathname.startsWith('/pgd') : pathname.startsWith(item.href.split('?')[0]);
               return (
               <Link
                 key={item.label}

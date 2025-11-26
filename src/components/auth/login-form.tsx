@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useActionState } from "react";
+import { useState, useActionState, useRef } from "react";
 
 import { authenticate } from "@/lib/actions";
 import { type LoginFormState } from "@/lib/definitions";
@@ -30,10 +30,23 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const initialState: LoginFormState = { message: null, errors: {} };
   const [state, dispatch] = useActionState(authenticate, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const username = formData.get('username') as string;
+    
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('userRole', username.toLowerCase());
+    }
+
+    dispatch(formData);
+  }
 
   return (
     <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm shadow-2xl border-2 border-white/20">
-      <form action={dispatch}>
+      <form ref={formRef} onSubmit={handleFormSubmit}>
         <CardHeader className="items-center text-center p-6">
           {ineiLogo && (
             <Image

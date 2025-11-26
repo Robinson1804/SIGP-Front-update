@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileText,
   Target,
@@ -60,18 +60,19 @@ const roleColors: { [key in Person['role']]: string } = {
   'Programador': '#A1BFFF',
 };
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 export default function RecursosHumanosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const [role, setRole] = React.useState<string | null>(null);
+
+  useEffect(() => {
+    // This runs on the client-side
+    const storedRole = localStorage.getItem('userRole');
+    setRole(storedRole);
+  }, []);
+
 
   const filteredData = initialData.filter((person) =>
     Object.values(person).some((value) =>
@@ -85,9 +86,15 @@ export default function RecursosHumanosPage() {
     currentPage * itemsPerPage
   );
 
+  if (role === null) {
+      return <div>Cargando...</div>; // Or a loading spinner
+  }
+
+  const isPmo = role === 'pmo';
+
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={isPmo}
       breadcrumbs={[{ label: 'RECURSOS HUMANOS' }]}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
