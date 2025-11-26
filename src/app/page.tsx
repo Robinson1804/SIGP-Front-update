@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from 'react';
@@ -13,7 +14,7 @@ export default function RootPage() {
 
   return (
     <div className="flex h-screen w-full items-center justify-center">
-      <p>Redirigiendo...</p>
+      <p>Redirigiendo a la página de inicio de sesión...</p>
     </div>
   );
 }
