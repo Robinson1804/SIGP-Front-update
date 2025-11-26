@@ -52,24 +52,36 @@ export async function authenticate(
   }
   
   // In a real app, you would set an HTTP-only cookie for session management.
+  // Instead of redirecting here, we just return a success state (or nothing)
+  // The client will handle the redirect.
   
+  let targetPath = '/';
   switch (user.role) {
     case 'PMO':
-      redirect('/pgd');
+      targetPath = '/pgd';
+      break;
     case 'Scrum Master':
-      redirect('/poi');
+      targetPath = '/poi';
+      break;
     case 'Administrator':
-        redirect('/pgd');
+      targetPath = '/pgd';
+      break;
     case 'Coordinator':
-        redirect('/poi');
+      targetPath = '/poi';
+      break;
     case 'Developer':
-        redirect('/poi');
+      targetPath = '/poi';
+      break;
     case 'User':
-        redirect('/poi');
+      targetPath = '/poi';
+      break;
     default:
-      // Fallback for demo purposes
-      redirect('/pgd');
+      targetPath = '/pgd';
+      break;
   }
+  
+  // The redirect will happen on the client side now
+  redirect(targetPath);
 }
 
 export async function signOut() {
