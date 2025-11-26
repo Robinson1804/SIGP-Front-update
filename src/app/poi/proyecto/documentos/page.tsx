@@ -221,7 +221,3 @@ export default function DocumentsPage() {
         </React.Suspense>
     )
 }
-
-    
-
-    

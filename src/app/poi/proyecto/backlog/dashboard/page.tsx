@@ -335,7 +335,3 @@ export default function DashboardProyectoPage() {
         </React.Suspense>
     );
 }
-
-    
-
-    

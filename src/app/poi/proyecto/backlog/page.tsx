@@ -420,7 +420,3 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
-
-    
-
-    
