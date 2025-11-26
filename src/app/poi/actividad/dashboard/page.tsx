@@ -73,6 +73,11 @@ const priorityChartData = [
     { name: 'Alto', value: 1 },
 ];
 
+const workTypesData = [
+    { name: 'Tarea', percentage: 60, icon: ClipboardCheck, color: 'bg-blue-500' },
+    { name: 'Subtarea', percentage: 40, icon: ChevronsRight, color: 'bg-gray-500' },
+];
+
 const recentActivity = [
     {
         user: 'Marco Polo',
@@ -96,6 +101,17 @@ const recentActivity = [
         startDate: '03/02/25',
         endDate: '05/02/25',
     },
+    {
+        user: 'Anayeli Monzon Narvaez',
+        action: 'ha comentado en la subtarea',
+        task: 'Diseñar campos del formulario',
+        id: 'SUB-1',
+        type: 'Subtarea',
+        status: 'Completado',
+        priority: 'Alta',
+        startDate: '01/02/25',
+        endDate: '02/02/25',
+    }
 ];
 
 const statusColors: { [key: string]: string } = {
@@ -103,6 +119,7 @@ const statusColors: { [key: string]: string } = {
   'En progreso': 'bg-[#FDE68A] text-yellow-800',
   'En revisión': 'bg-[#A78BFA] text-purple-800',
   'Finalizado': 'bg-[#A7F3D0] text-green-800',
+  'Completado': 'bg-[#A7F3D0] text-green-800',
 };
 
 const priorityColors: { [key: string]: { bg: string, text: string } } = {
@@ -259,9 +276,26 @@ function DashboardContent() {
                           </ChartContainer>
                       </CardContent>
                     </Card>
+                     <Card className="md:col-span-2">
+                      <CardHeader><CardTitle className="text-base">TIPOS DE TRABAJO</CardTitle></CardHeader>
+                      <CardContent className="space-y-4">
+                          {workTypesData.map(item => (
+                              <div key={item.name} className="flex items-center gap-4">
+                                  <item.icon className="w-5 h-5 text-gray-600" />
+                                  <div className="flex-1">
+                                      <div className="flex justify-between text-sm mb-1">
+                                          <span>{item.name}</span>
+                                          <span>{item.percentage}%</span>
+                                      </div>
+                                      <Progress value={item.percentage} indicatorClassName={item.color} className="h-2" />
+                                  </div>
+                              </div>
+                          ))}
+                      </CardContent>
+                    </Card>
                 </div>
                 
-                <Card className="h-full lg:row-span-1">
+                <Card className="h-full lg:row-span-2">
                   <CardHeader><CardTitle className="text-base">ACTIVIDAD RECIENTE</CardTitle></CardHeader>
                   <CardContent className="h-[calc(100%-4rem)] overflow-y-auto custom-scrollbar">
                       <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en toda la actividad</p>
@@ -272,7 +306,7 @@ function DashboardContent() {
                                   <Tooltip>
                                       <TooltipTrigger asChild>
                                           <div className="flex items-start gap-3 text-sm">
-                                              <Avatar className="w-7 h-7 text-xs"><AvatarFallback>AM</AvatarFallback></Avatar>
+                                              <Avatar className="w-7 h-7 text-xs"><AvatarFallback>{item.user.substring(0,2)}</AvatarFallback></Avatar>
                                               <div>
                                                   <p><span className="font-semibold">{item.user}</span> {item.action} <span className="font-semibold">{item.task}</span></p>
                                                   <Badge variant="outline" className="mr-2">{item.id}</Badge>
