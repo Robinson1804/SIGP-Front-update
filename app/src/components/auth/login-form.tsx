@@ -4,8 +4,7 @@
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useActionState, useRef, useEffect } from "react";
-import { useRouter } from 'next/navigation';
+import { useState, useActionState, useRef } from "react";
 
 import { authenticate } from "@/lib/actions";
 import { type LoginFormState } from "@/lib/definitions";
@@ -33,20 +32,6 @@ export function LoginForm() {
   const initialState: LoginFormState = { message: null, errors: {} };
   const [state, dispatch] = useActionState(authenticate, initialState);
   const formRef = useRef<HTMLFormElement>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (state.message === null && !state.errors) {
-      const role = localStorage.getItem('userRole');
-      let targetPath = '/';
-      if (role === 'pmo') {
-        targetPath = '/pgd';
-      } else if (role === 'scrum') {
-        targetPath = '/poi';
-      }
-      router.push(targetPath);
-    }
-  }, [state, router]);
 
   const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -168,7 +153,7 @@ export function LoginForm() {
               </div>
             )}
           </div>
-           {state?.message && (
+           {state?.message && !state?.errors && (
             <Alert variant="destructive" className="mt-4">
               <AlertDescription>{state.message}</AlertDescription>
             </Alert>

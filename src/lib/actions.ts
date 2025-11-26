@@ -51,21 +51,11 @@ export async function authenticate(
     };
   }
   
-  // In a real app, you would set an HTTP-only cookie for session management.
-  
-  switch (user.role) {
-    case 'PMO':
-      redirect('/pgd');
-    case 'Scrum Master':
-      redirect('/poi');
-    // Add other role redirects here
-    // case 'Administrator':
-    //   redirect('/admin-dashboard');
-    // ...
-    default:
-      // Fallback for demo purposes
-      redirect('/pgd');
-  }
+  // On success, return a state with no errors. The client will handle the redirect.
+  return {
+    message: null,
+    errors: {}
+  };
 }
 
 export async function signOut() {

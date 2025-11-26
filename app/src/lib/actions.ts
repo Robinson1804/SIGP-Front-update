@@ -52,8 +52,7 @@ export async function authenticate(
   }
   
   // In a real app, you would set an HTTP-only cookie for session management.
-  // Instead of redirecting here, we just return a success state (or nothing)
-  // The client will handle the redirect.
+  // The redirect will happen on the server side now.
   
   let targetPath = '/';
   switch (user.role) {
@@ -64,23 +63,22 @@ export async function authenticate(
       targetPath = '/poi';
       break;
     case 'Administrator':
-      targetPath = '/pgd';
+      targetPath = '/pgd'; // Fallback for demo
       break;
     case 'Coordinator':
-      targetPath = '/poi';
+      targetPath = '/poi'; // Fallback for demo
       break;
     case 'Developer':
-      targetPath = '/poi';
+      targetPath = '/poi'; // Fallback for demo
       break;
     case 'User':
-      targetPath = '/poi';
+      targetPath = '/poi'; // Fallback for demo
       break;
     default:
-      targetPath = '/pgd';
+      targetPath = '/pgd'; // Default fallback
       break;
   }
   
-  // The redirect will happen on the client side now
   redirect(targetPath);
 }
 

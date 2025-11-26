@@ -1,5 +1,6 @@
 
 import Image from 'next/image';
+import React from 'react';
 
 import { LoginForm } from '@/components/auth/login-form';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -19,7 +20,9 @@ export default function LoginPage() {
           data-ai-hint={bgImage.imageHint}
         />
       )}
-      <LoginForm />
+      <React.Suspense fallback={<div>Cargando formulario...</div>}>
+         <LoginForm />
+      </React.Suspense>
     </main>
   );
 }
