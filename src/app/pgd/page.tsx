@@ -257,6 +257,7 @@ export default function PmoDashboardPage() {
   return (
     <AppLayout
       breadcrumbs={[{ label: "PGD" }]}
+      isPmo
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
         <div className="p-2 flex items-center justify-between w-full">

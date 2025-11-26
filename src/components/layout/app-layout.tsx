@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 const ineiLogo = PlaceHolderImages.find((img) => img.id === "inei-logo");
 
-const UserProfile = ({ isScrumMaster = false }: { isScrumMaster?: boolean }) => (
+const UserProfile = ({ isPmo = false }: { isPmo?: boolean }) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <button className="flex items-center gap-3 text-white">
@@ -41,8 +41,8 @@ const UserProfile = ({ isScrumMaster = false }: { isScrumMaster?: boolean }) => 
           <User className="h-6 w-6 text-white" />
         </div>
         <div className="text-left hidden md:block">
-          <p className="font-bold">{isScrumMaster ? "ROBINSON CERRON" : "EDUARDO CORILLA"}</p>
-          <p className="text-xs">{isScrumMaster ? "Scrum Master" : "PMO"}</p>
+          <p className="font-bold">{isPmo ? "EDUARDO CORILLA" : "ROBINSON CERRON"}</p>
+          <p className="text-xs">{isPmo ? "PMO" : "Scrum Master"}</p>
         </div>
       </button>
     </DropdownMenuTrigger>
@@ -74,7 +74,7 @@ type NavItem = {
 
 const pmoNavItems: NavItem[] = [
   { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
+  { label: "POI", icon: Target, href: "/poi?from=pgd" },
   { label: "RECURSOS HUMANOS", icon: UsersIcon, href: "/recursos-humanos" },
   { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
   { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
@@ -90,19 +90,19 @@ type AppLayoutProps = {
   children: ReactNode;
   breadcrumbs: { label: string; href?: string }[];
   secondaryHeader?: ReactNode;
-  isScrumMaster?: boolean;
+  isPmo?: boolean;
 };
 
 export default function AppLayout({
   children,
   breadcrumbs,
   secondaryHeader,
-  isScrumMaster = false
+  isPmo = false
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
   
-  const navItems = isScrumMaster ? scrumMasterNavItems : pmoNavItems;
+  const navItems = isPmo ? pmoNavItems : scrumMasterNavItems;
   
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
@@ -114,7 +114,7 @@ export default function AppLayout({
           </h1>
         </div>
         <div className="flex-1 flex justify-end pr-4">
-          <UserProfile isScrumMaster={isScrumMaster} />
+          <UserProfile isPmo={isPmo} />
         </div>
       </header>
       <div className="flex flex-1 overflow-hidden">
@@ -133,9 +133,9 @@ export default function AppLayout({
           </div>
           <nav className="flex-grow p-4 space-y-[25px]">
             {navItems.map((item) => {
-              const isActive = pathname.startsWith(item.href);
+              const isActive = pathname.startsWith(item.href.split('?')[0]);
               return (
-              <a
+              <Link
                 key={item.label}
                 href={item.href}
                 className={cn(
@@ -147,7 +147,7 @@ export default function AppLayout({
               >
                 <item.icon className={cn("h-5 w-5 mr-3", !isActive ? 'text-[#004272]' : '')} />
                 <span className="flex-1">{item.label}</span>
-              </a>
+              </Link>
             )})}
           </nav>
           {ineiLogo && (
