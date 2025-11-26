@@ -395,9 +395,9 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
                                                 {project.financialArea?.map(area => <Badge key={area} variant="secondary">{area}</Badge>)}
                                             </InfoField>
                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
+                                            <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
                                         </div>
                                         <div className="space-y-4">
-                                            <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
                                             <InfoField label="Responsable">
                                                 {project.responsibles?.map(r => <Badge key={r} variant="secondary">{r}</Badge>)}
                                             </InfoField>
