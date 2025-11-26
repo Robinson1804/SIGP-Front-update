@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useActionState } from "react";
+import { useState, useActionState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 
 import { authenticate } from "@/lib/actions";
@@ -30,8 +30,26 @@ function LoginButton() {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const initialState: LoginFormState = { message: null, errors: {} };
+  const initialState: LoginFormState = { message: null };
   const [state, dispatch] = useActionState(authenticate, initialState);
+  const router = useRouter();
+
+  useEffect(() => {
+    // This effect runs when the server action state changes.
+    // If there's no message and no errors, the action was successful.
+    if (state.message === null && !state.errors) {
+        const role = localStorage.getItem('userRole');
+        let targetPath = '/poi'; // Default fallback
+        if (role === 'pmo') {
+            targetPath = '/pgd';
+        } else if (role === 'scrum') {
+            targetPath = '/poi';
+        }
+        
+        router.refresh(); // Refresh the current route to update server components if any
+        router.push(targetPath); // Then navigate to the new page
+    }
+  }, [state, router]);
 
   const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

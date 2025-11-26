@@ -48,21 +48,15 @@ export async function authenticate(
   if (!user || user.password !== password) {
     return {
       message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
+      errors: {},
     };
   }
   
-  // Redirect on success
-  switch (user.username.toLowerCase()) {
-    case 'pmo':
-      redirect('/pgd');
-      break;
-    case 'scrum':
-      redirect('/poi');
-      break;
-    default:
-      redirect('/poi'); 
-      break;
-  }
+  // On success, return a state with no message and no errors.
+  // The client-side form will handle the redirect.
+  return {
+    message: null
+  };
 }
 
 export async function signOut() {
