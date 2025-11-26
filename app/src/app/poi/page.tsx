@@ -374,7 +374,7 @@ function PoiPageContent() {
 
 export default function PoiPage() {
   return (
-    <React.Suspense fallback={<div>Cargando...</div>}>
+    <React.Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Cargando...</div>}>
       <PoiPageContent />
     </React.Suspense>
   )
