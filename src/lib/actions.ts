@@ -51,11 +51,6 @@ export async function authenticate(
     };
   }
   
-  // This must be a Server Action to work with cookies
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('userRole', user.username.toLowerCase());
-  }
-
   let targetPath = '/';
   if (user.username.toLowerCase() === 'pmo') {
       targetPath = '/pgd';
@@ -68,5 +63,5 @@ export async function authenticate(
 
 export async function signOut() {
   // In a real app, you would clear the session cookie here.
-  redirect('/');
+  redirect('/login');
 }
