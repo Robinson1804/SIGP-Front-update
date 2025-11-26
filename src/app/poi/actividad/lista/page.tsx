@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
   Target,
@@ -13,14 +13,12 @@ import {
   MoreHorizontal,
   Plus,
   X,
-  Info,
-  List
+  ChevronDown,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -36,14 +34,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { Project, Task, Subtask } from '@/lib/definitions';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
-import { Project } from '@/lib/definitions';
-import Link from 'next/link';
+} from "@/components/ui/collapsible"
+
 
 const navItems = [
   { label: 'PGD', icon: FileText, href: '/pgd' },
@@ -53,29 +58,128 @@ const navItems = [
   { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
 ];
 
-const taskStatusColors: { [key: string]: string } = {
+const taskStatusColors: { [key in Task['state']]: string } = {
   'Por hacer': 'bg-[#BFDBFE] text-blue-800',
-  'En progreso': 'bg-[#FDE68A] text-yellow-800',
-  'En revisión': 'bg-[#A78BFA] text-purple-800',
-  'Finalizado': 'bg-[#A7F3D0] text-green-800',
+  'En progreso': 'bg-[#FACC15] text-yellow-900',
+  'Completado': 'bg-[#34D399] text-green-900',
+  'En revisión': 'bg-purple-200 text-purple-800', // Assuming a color for this state
 };
 
-const priorityColors: { [key: string]: { bg: string, text: string } } = {
-    'Alta': { bg: 'bg-red-200', text: 'text-red-800' },
-    'Media': { bg: 'bg-yellow-200', text: 'text-yellow-800' },
-    'Baja': { bg: 'bg-green-200', text: 'text-green-800' }
+const priorityColors: { [key in Task['priority']]: { bg: string, text: string } } = {
+    'Alta': { bg: '#F2B5B5', text: 'text-red-900' },
+    'Media': { bg: '#FFD29F', text: 'text-orange-900' },
+    'Baja': { bg: '#C5E3B5', text: 'text-green-900' }
 };
 
-const initialTasks = [
-    { id: 'TAR-1', title: 'Crear formulario digital con validaciones para encuestas', state: 'Por hacer', responsible: 'Nombre 1', priority: 'Media', startDate: '01/02/2025', endDate: '05/02/2025' },
-    { id: 'TAR-2', title: 'Diseño de la base de datos para almacenar respuestas', state: 'Por hacer', responsible: 'Nombre 1', priority: 'Alta', startDate: '03/02/2025', endDate: '05/02/2025' },
-    { id: 'TAR-3', title: 'Implementar backend para recepción de datos', state: 'Finalizado', responsible: 'Nombre 2', priority: 'Media', startDate: '05/02/2025', endDate: '08/02/2025' },
+const initialTasks: Task[] = [
+    { 
+      id: 'TAR-1', 
+      title: 'Crear formulario digital con validaciones para encuestas', 
+      state: 'Por hacer', 
+      responsible: ['Nombre 1'], 
+      priority: 'Media', 
+      startDate: '01/02/2025', 
+      endDate: '05/02/2025',
+      subtasks: [
+        { id: 'SUB-1', title: 'Diseñar campos del formulario', state: 'Completado', responsible: ['Nombre 1'], priority: 'Alta', startDate: '01/02/2025', endDate: '02/02/2025', parentTaskId: 'TAR-1' },
+        { id: 'SUB-2', title: 'Implementar validaciones de frontend', state: 'En progreso', responsible: ['Nombre 1'], priority: 'Media', startDate: '02/02/2025', endDate: '04/02/2025', parentTaskId: 'TAR-1' },
+      ]
+    },
+    { id: 'TAR-2', title: 'Diseño de la base de datos para almacenar respuestas', state: 'Completado', responsible: ['Nombre 2'], priority: 'Alta', startDate: '03/02/2025', endDate: '05/02/2025', subtasks: [] },
+    { id: 'TAR-3', title: 'Implementar backend para recepción de datos', state: 'En progreso', responsible: ['Nombre 3'], priority: 'Baja', startDate: '05/02/2025', endDate: '08/02/2025', subtasks: [] },
 ];
+
+// Placeholder for Task/Subtask Modals (for future implementation for other roles)
+function TaskModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    if (!isOpen) return null;
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Gestionar Tarea</DialogTitle>
+                </DialogHeader>
+                <p>La funcionalidad para crear/editar tareas está deshabilitada para el rol PMO.</p>
+                <DialogFooter>
+                    <Button onClick={onClose}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function SubtaskModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    if (!isOpen) return null;
+     return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Gestionar Subtarea</DialogTitle>
+                </DialogHeader>
+                <p>La funcionalidad para crear/editar subtareas está deshabilitada para el rol PMO.</p>
+                <DialogFooter>
+                    <Button onClick={onClose}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
+const TaskRow = ({ task, isSubtask = false }: { task: Task | Subtask, isSubtask?: boolean }) => {
+    const isCompleted = task.state === 'Completado';
+    const hasSubtasks = 'subtasks' in task && task.subtasks && task.subtasks.length > 0;
+    
+    const [isTaskModalOpen, setTaskModalOpen] = useState(false);
+    const [isSubtaskModalOpen, setSubtaskModalOpen] = useState(false);
+
+    return (
+        <>
+            <TableRow className={cn(isSubtask ? "bg-gray-50" : "bg-white")}>
+                <TableCell className="w-12">
+                   {hasSubtasks ? (
+                       <CollapsibleTrigger asChild>
+                           <Button variant="ghost" size="icon" className="h-8 w-8">
+                               <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:-rotate-90" />
+                           </Button>
+                       </CollapsibleTrigger>
+                   ) : (
+                       !isSubtask && <div className="w-8"></div>
+                   )}
+                </TableCell>
+                <TableCell className={cn("font-medium", isCompleted && "line-through")}>{task.id}</TableCell>
+                <TableCell className={cn(isCompleted && "line-through")}>{task.title}</TableCell>
+                <TableCell><Badge className={cn(taskStatusColors[task.state], 'font-semibold')}>{task.state}</Badge></TableCell>
+                <TableCell>{Array.isArray(task.responsible) ? task.responsible.join(', ') : task.responsible}</TableCell>
+                <TableCell>
+                    <Badge style={{ backgroundColor: priorityColors[task.priority].bg }} className={cn(priorityColors[task.priority].text, 'w-16 justify-center font-semibold')}>{task.priority}</Badge>
+                </TableCell>
+                <TableCell>{task.startDate}</TableCell>
+                <TableCell>{task.endDate}</TableCell>
+                <TableCell className="text-center">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" disabled>
+                                <MoreHorizontal className="h-5 w-5 text-gray-400"/>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            {!isSubtask && <DropdownMenuItem onClick={() => setSubtaskModalOpen(true)}>Crear Subtarea</DropdownMenuItem>}
+                            <DropdownMenuItem onClick={() => setTaskModalOpen(true)}>Editar</DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-500">Eliminar</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
+            </TableRow>
+            {isSubtask ? <SubtaskModal isOpen={isSubtaskModalOpen} onClose={() => setIsSubtaskModalOpen(false)} /> : <TaskModal isOpen={isTaskModalOpen} onClose={() => setTaskModalOpen(false)} />}
+        </>
+    );
+};
 
 
 function ListaContent() {
   const [project, setProject] = useState<Project | null>(null);
   const [activeTab, setActiveTab] = useState('Lista');
+  const [tasks, setTasks] = useState(initialTasks);
   const router = useRouter();
 
   React.useEffect(() => {
@@ -112,10 +216,11 @@ function ListaContent() {
     );
   }
 
-  const projectCode = `ACT N°${project.id}`;
+  const projectCode = `ACT Nº${project.id}`;
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
+    { label: 'Actividad', href: '/poi?type=Actividad' },
     { label: 'Lista' },
   ];
 
@@ -159,16 +264,14 @@ function ListaContent() {
                         <Input placeholder="Buscar tareas" className="pl-10 bg-white" />
                     </div>
                 </div>
-                 <div className="flex items-center gap-2">
-                    <Button variant="outline" className="bg-white">Crear Tarea</Button>
-                </div>
             </div>
             
             <div className="flex-1 overflow-y-auto max-h-[calc(100vh-320px)] custom-scrollbar">
                 <div className="bg-white rounded-lg border">
                     <Table>
-                        <TableHeader className="bg-gray-50">
+                        <TableHeader className="bg-gray-50 sticky top-0">
                             <TableRow>
+                                <TableHead className="w-12"></TableHead>
                                 <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Título</TableHead>
                                 <TableHead>Estado</TableHead>
@@ -176,25 +279,41 @@ function ListaContent() {
                                 <TableHead>Prioridad</TableHead>
                                 <TableHead>Fecha Inicio</TableHead>
                                 <TableHead>Fecha Fin</TableHead>
-                                <TableHead></TableHead>
+                                <TableHead className="text-center">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {initialTasks.map(task => (
-                            <TableRow key={task.id}>
-                                <TableCell>{task.id}</TableCell>
-                                <TableCell>{task.title}</TableCell>
-                                <TableCell><Badge className={cn(taskStatusColors[task.state as keyof typeof taskStatusColors], 'font-semibold')}>{task.state}</Badge></TableCell>
-                                <TableCell>{task.responsible}</TableCell>
-                                <TableCell>
-                                    <Badge className={cn(priorityColors[task.priority as keyof typeof priorityColors].bg, priorityColors[task.priority as keyof typeof priorityColors].text, 'w-16 justify-center')}>{task.priority}</Badge>
+                        {tasks.length > 0 ? (
+                            tasks.map(task => (
+                                <Collapsible key={task.id} asChild>
+                                    <>
+                                        <TaskRow task={task} />
+                                        <CollapsibleContent asChild>
+                                            <>
+                                                {task.subtasks?.map(subtask => <TaskRow key={subtask.id} task={subtask} isSubtask />)}
+                                            </>
+                                        </CollapsibleContent>
+                                    </>
+                                </Collapsible>
+                            ))
+                        ) : (
+                             <TableRow>
+                                <TableCell colSpan={9} className="h-48 text-center text-gray-500">
+                                    La lista se encuentra vacía
                                 </TableCell>
-                                <TableCell>{task.startDate}</TableCell>
-                                <TableCell>{task.endDate}</TableCell>
-                                <TableCell><MoreHorizontal className="h-5 w-5 text-gray-400"/></TableCell>
                             </TableRow>
-                        ))}
+                        )}
                         </TableBody>
+                         <tfoot className="border-t">
+                            <TableRow>
+                                <TableCell colSpan={9}>
+                                    <Button variant="ghost" className="text-gray-500 hover:text-gray-800" disabled>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Agregar tarea
+                                    </Button>
+                                </TableCell>
+                            </TableRow>
+                        </tfoot>
                     </Table>
                 </div>
             </div>
@@ -210,4 +329,3 @@ export default function ListaPage() {
         </React.Suspense>
     );
 }
-

@@ -27,6 +27,34 @@ export type SubProject = {
     progress?: number;
 }
 
+export type Subtask = {
+    id: string;
+    title: string;
+    description?: string;
+    state: 'Por hacer' | 'En progreso' | 'Completado' | 'En revisión';
+    responsible: string[];
+    priority: 'Alta' | 'Media' | 'Baja';
+    startDate: string;
+    endDate: string;
+    informer?: string;
+    attachments?: File[];
+    parentTaskId: string;
+};
+
+export type Task = {
+    id: string;
+    title: string;
+    description?: string;
+    state: 'Por hacer' | 'En progreso' | 'Completado' | 'En revisión';
+    responsible: string[];
+    priority: 'Alta' | 'Media' | 'Baja';
+    startDate: string;
+    endDate: string;
+    informer?: string;
+    attachments?: File[];
+    subtasks?: Subtask[];
+};
+
 export type Project = {
     id: string;
     code?: string;
@@ -49,5 +77,3 @@ export type Project = {
     startDate?: string;
     endDate?: string;
 };
-
-    
