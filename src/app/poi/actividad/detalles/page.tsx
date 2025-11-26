@@ -39,7 +39,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { POIModal } from '@/app/poi/page';
+import { POIModal } from '@/components/poi/poi-modal';
 import { Project } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';

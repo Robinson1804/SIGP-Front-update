@@ -40,7 +40,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { POIModal, SubProjectModal } from '@/app/poi/page';
+import { POIModal, SubProjectModal } from '@/components/poi/poi-modal';
 import { SubProject, Project } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -312,7 +312,10 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
     const isProject = project.type === 'Proyecto';
     const projectCode = `${isProject ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
+    const breadcrumbs = [
+        { label: "POI", href: "/poi" }, 
+        { label: 'Detalles' }
+    ];
     
     const projectTabs = [ { name: 'Detalles' }, { name: 'Documentos' }, { name: 'Backlog' }];
 
@@ -514,5 +517,3 @@ export default function DetailsPage() {
         </React.Suspense>
     )
 }
-
-    

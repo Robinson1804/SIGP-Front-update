@@ -4,18 +4,13 @@
 
 import React from "react";
 import {
-  FileText,
-  Target,
-  Users,
-  BarChart,
-  Bell,
   Search,
   Folder,
   CheckCircle,
   Calendar,
   MoreHorizontal,
   AlertTriangle,
-  List,
+  Users as UsersIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/app-layout";
@@ -201,7 +196,7 @@ const ProjectCard = ({ project }: { project: Project }) => {
                     <span className="break-words capitalize text-xs">{displayDate}</span>
                 </div>
                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#272E35] shrink-0" />
+                    <UsersIcon className="w-4 h-4 text-[#272E35] shrink-0" />
                     <span className="font-semibold shrink-0 text-xs">Scrum Master:</span>
                     <span className="truncate text-xs">{project.scrumMaster}</span>
                 </div>
@@ -236,7 +231,7 @@ const ScrumMasterPOI = () => {
     const [selectedType, setSelectedType] = React.useState<string>("Proyecto");
 
     const filteredProjects = projects.filter(p => p.type === selectedType);
-    const sectionTitle = selectedType === "Proyecto" ? "Proyectos" : "Actividades";
+    const sectionTitle = selectedType === "Proyecto" ? "Mis Proyectos" : "Mis Actividades";
     const SectionIcon = Folder;
 
     return (
@@ -285,7 +280,7 @@ const ScrumMasterPOI = () => {
                         </Select>
                     </div>
                     <div className="flex items-center gap-2">
-                        <label className="text-sm text-black">Clasificación</label>
+                        <label className="text-sm text-black">Cualificación</label>
                         <Select>
                             <SelectTrigger className="w-[180px] bg-white border-[#CFD6DD] text-black">
                                 <SelectValue placeholder="Seleccionar" />
