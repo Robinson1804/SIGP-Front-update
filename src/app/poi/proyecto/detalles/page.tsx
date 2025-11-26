@@ -312,7 +312,7 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
     const isProject = project.type === 'Proyecto';
     const projectCode = `${isProject ? 'PROY' : 'ACT'} N° ${project.id}`;
     
-    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Proyecto' }, {label: 'Detalles'}];
+    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
     
     const projectTabs = [ { name: 'Detalles' }, { name: 'Documentos' }, { name: 'Backlog' }];
 
@@ -514,3 +514,5 @@ export default function DetailsPage() {
         </React.Suspense>
     )
 }
+
+    

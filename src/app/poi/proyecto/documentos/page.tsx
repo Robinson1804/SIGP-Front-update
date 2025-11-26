@@ -97,7 +97,7 @@ function ProjectDocumentsContent() {
     }
 
     const projectCode = `PROY N° ${project.id}`;
-    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> }, {label: 'Documentos'}];
+    const breadcrumbs = [{ label: "POI", href: "/poi" }, {label: 'Documentos'}];
     const projectTabs = [ { name: 'Detalles' }, { name: 'Documentos' }, { name: 'Backlog' }];
 
     const secondaryHeader = (
@@ -221,5 +221,7 @@ export default function DocumentsPage() {
         </React.Suspense>
     )
 }
+
+    
 
     

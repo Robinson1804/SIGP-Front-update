@@ -171,7 +171,7 @@ function BacklogContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
+    { label: 'Proyecto', href: '/poi/proyecto/detalles' },
     { label: 'Backlog' },
   ];
 
@@ -420,5 +420,7 @@ export default function BacklogPage() {
         </React.Suspense>
     );
 }
+
+    
 
     

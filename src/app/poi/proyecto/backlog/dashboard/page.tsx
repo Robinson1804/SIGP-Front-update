@@ -181,8 +181,7 @@ function DashboardContent() {
   
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
-    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
-    { label: <Link href="/poi/proyecto/backlog">Backlog</Link> },
+    { label: 'Proyecto', href: '/poi/proyecto/detalles' },
     { label: 'Dashboard' }
 ];
 
@@ -336,5 +335,7 @@ export default function DashboardProyectoPage() {
         </React.Suspense>
     );
 }
+
+    
 
     

@@ -162,7 +162,7 @@ function TableroContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
-    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
+    { label: 'Proyecto', href: '/poi/proyecto/detalles' },
     { label: 'Tablero' }
   ];
   
@@ -247,5 +247,7 @@ export default function TableroProyectoPage() {
         </React.Suspense>
     );
 }
+
+    
 
     
