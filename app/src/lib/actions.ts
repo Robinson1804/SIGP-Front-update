@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -50,10 +51,18 @@ export async function authenticate(
     };
   }
   
-  // On success, return a success state. The client will handle the redirect.
-  return {
-    success: true,
-  };
+  // Redirect on success
+  switch (user.username.toLowerCase()) {
+    case 'pmo':
+      redirect('/pgd');
+      break;
+    case 'scrum':
+      redirect('/poi');
+      break;
+    default:
+      redirect('/poi'); 
+      break;
+  }
 }
 
 export async function signOut() {

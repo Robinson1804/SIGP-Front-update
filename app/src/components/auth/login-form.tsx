@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useActionState, useEffect } from "react";
+import { useState, useActionState } from "react";
 import { useRouter } from 'next/navigation';
 
 import { authenticate } from "@/lib/actions";
@@ -30,22 +30,8 @@ function LoginButton() {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const initialState: LoginFormState = {};
+  const initialState: LoginFormState = { message: null, errors: {} };
   const [state, dispatch] = useActionState(authenticate, initialState);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (state.success) {
-      const role = localStorage.getItem('userRole');
-      let targetPath = '/';
-      if (role === 'pmo') {
-        targetPath = '/pgd';
-      } else if (role === 'scrum') {
-        targetPath = '/poi';
-      }
-      router.push(targetPath);
-    }
-  }, [state, router]);
 
   const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

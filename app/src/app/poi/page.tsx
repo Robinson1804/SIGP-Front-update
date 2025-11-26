@@ -359,9 +359,7 @@ function PoiPageContent() {
 
     if (role === null) {
       return (
-        <AppLayout isPmo={false} breadcrumbs={[{ label: "Cargando..." }]}>
-          <div className="flex h-full w-full items-center justify-center">Cargando...</div>
-        </AppLayout>
+        <div className="flex h-screen w-full items-center justify-center">Cargando...</div>
       );
     }
     

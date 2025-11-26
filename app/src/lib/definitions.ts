@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const LoginFormSchema = z.object({
@@ -13,7 +14,6 @@ export type LoginFormState = {
     password?: string[];
     captcha?: string[];
   };
-  success?: boolean;
 };
 
 export type SubProject = {
