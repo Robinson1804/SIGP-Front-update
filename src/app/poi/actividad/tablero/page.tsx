@@ -18,7 +18,7 @@ import {
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Project, Task } from '@/lib/definitions';
+import { Project } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -38,17 +38,24 @@ const navItems = [
 type KanbanItem = {
     id: string;
     title: string;
+    category: string; 
     date: string;
     comments: number;
-    assignee: string;
-    status: 'Por hacer' | 'En progreso' | 'En revisión' | 'Finalizado';
+    assigneeInitials: string;
+    priority: string;
+    status: 'Por hacer' | 'En progreso' | 'Completado';
 };
 
 const tasksData: KanbanItem[] = [
-    { id: 'TAR-1', title: 'Crear formulario digital con validaciones para encuestas', date: '01 FEB', comments: 0, assignee: 'AM', status: 'Por hacer' },
-    { id: 'TAR-2', title: 'Diseño de la base de datos para almacenar respuestas', date: '03 FEB', comments: 0, assignee: 'EC', status: 'Por hacer' },
-    { id: 'TAR-3', title: 'Implementar backend para recepción de datos', date: '06 FEB', comments: 0, assignee: 'JP', status: 'En progreso' },
+    { id: 'TAR-1', title: 'Actualizar datos del usuario', category: 'General', date: '10 FEB', comments: 2, assigneeInitials: 'N1', priority: 'Media', status: 'Por hacer' },
+    { id: 'TAR-2', title: 'Crear componente de tabla reutilizable', category: 'UI', date: '11 FEB', comments: 5, assigneeInitials: 'N3', priority: 'Alta', status: 'Completado' },
 ];
+
+const categoryColors: {[key: string]: string} = {
+    'General': 'bg-green-100 text-green-800',
+    'Backend': 'bg-blue-100 text-blue-800',
+    'UI': 'bg-purple-100 text-purple-800',
+}
 
 const KanbanCard = ({ item }: { item: KanbanItem }) => {
     return (
@@ -58,12 +65,13 @@ const KanbanCard = ({ item }: { item: KanbanItem }) => {
                  <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" disabled>
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="h-4 w-4 text-gray-400" />
                         </Button>
                     </DropdownMenuTrigger>
                 </DropdownMenu>
             </div>
             <div className="flex items-center gap-2 mb-2">
+                <Badge variant="secondary" className={cn("text-xs font-bold", categoryColors[item.category] || 'bg-gray-100 text-gray-800')}>{item.category}</Badge>
                 <div className="flex items-center text-xs text-gray-500 gap-1">
                     <Calendar className="w-3 h-3" />
                     <span>{item.date}</span>
@@ -79,7 +87,7 @@ const KanbanCard = ({ item }: { item: KanbanItem }) => {
                     </div>
                 </div>
                 <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-xs bg-gray-300">{item.assignee}</AvatarFallback>
+                    <AvatarFallback className="text-xs bg-gray-300">{item.assigneeInitials}</AvatarFallback>
                 </Avatar>
             </div>
         </div>
@@ -87,14 +95,14 @@ const KanbanCard = ({ item }: { item: KanbanItem }) => {
 };
 
 
-const KanbanColumn = ({ title, items }: { title: string, items: KanbanItem[] }) => {
+const KanbanColumn = ({ title, items, onAddTask }: { title: string, items: KanbanItem[], onAddTask: () => void }) => {
     return (
         <div className="bg-gray-100 rounded-lg p-3 w-72 flex-shrink-0">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="font-bold text-gray-800">{title}</h3>
                 <MoreHorizontal className="w-5 h-5 text-gray-400" />
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3 min-h-[100px]">
                 {items.map(item => (
                     <KanbanCard key={item.id} item={item} />
                 ))}
@@ -155,7 +163,7 @@ function TableroContent() {
     { label: 'Tablero' }
   ];
   
-  const statusOrder: KanbanItem['status'][] = ['Por hacer', 'En progreso', 'En revisión', 'Finalizado'];
+  const statusOrder: KanbanItem['status'][] = ['Por hacer', 'En progreso', 'Completado'];
 
   const data = tasksData;
   const columns = statusOrder.map(status => ({
@@ -182,25 +190,28 @@ function TableroContent() {
       breadcrumbs={breadcrumbs}
       secondaryHeader={secondaryHeader}
     >
-        <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-            {activityTabs.map(tab => (
-                 <Button 
-                    key={tab.name}
-                    size="sm" 
-                    onClick={() => handleTabClick(tab.name)} 
-                    className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
-                    variant={activeTab === tab.name ? 'default' : 'outline'}
-                >
-                    {tab.name}
-                </Button>
-            ))}
+        <div className="flex items-center justify-between p-4 bg-[#F9F9F9]">
+            <div className="flex items-center gap-2">
+                {activityTabs.map(tab => (
+                     <Button 
+                        key={tab.name}
+                        size="sm" 
+                        onClick={() => handleTabClick(tab.name)} 
+                        className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
+                        variant={activeTab === tab.name ? 'default' : 'outline'}
+                    >
+                        {tab.name}
+                    </Button>
+                ))}
+            </div>
+            <Button size="icon" variant="ghost" disabled><Plus className="h-5 w-5 text-gray-600" /></Button>
         </div>
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">
             <div className="flex-1 overflow-x-auto pb-4">
                 <div className="flex gap-4">
                     {columns.map(col => (
-                        <KanbanColumn key={col.title} title={col.title} items={col.items} />
+                        <KanbanColumn key={col.title} title={col.title} items={col.items} onAddTask={() => {}} />
                     ))}
                 </div>
             </div>
