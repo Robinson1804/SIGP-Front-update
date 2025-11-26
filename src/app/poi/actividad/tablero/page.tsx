@@ -159,13 +159,12 @@ function TableroContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
-    { label: 'Actividad', href: '/poi?type=Actividad' },
     { label: 'Tablero' }
   ];
   
   const statusOrder: KanbanItem['status'][] = ['Por hacer', 'En progreso', 'Completado'];
 
-  const data = tasksData;
+  const data = tasksData.filter(item => item.id.startsWith('TAR-'));
   const columns = statusOrder.map(status => ({
         title: status,
         items: data.filter(item => item.status === status),

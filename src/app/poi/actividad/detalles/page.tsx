@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from 'react';
@@ -176,7 +175,6 @@ function ActividadDetailsContent() {
     
     const breadcrumbs = [
         { label: "POI", href: "/poi" }, 
-        { label: 'Actividad', href: '/poi?type=Actividad' },
         { label: 'Detalles' }
     ];
     

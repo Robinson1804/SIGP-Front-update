@@ -218,7 +218,6 @@ function ListaContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' },
-    { label: 'Actividad', href: '/poi?type=Actividad' },
     { label: 'Lista' },
   ];
 
