@@ -1,4 +1,3 @@
-
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -51,9 +50,9 @@ export async function authenticate(
     };
   }
   
-  // On success, return a state with no errors. The client will handle the redirect.
+  // On success, return a success state. The client will handle the redirect.
   return {
-    message: null,
+    success: true,
   };
 }
 

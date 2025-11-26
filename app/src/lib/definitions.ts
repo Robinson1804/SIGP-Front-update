@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const LoginFormSchema = z.object({
@@ -8,12 +7,13 @@ export const LoginFormSchema = z.object({
 });
 
 export type LoginFormState = {
-  message: string | null;
+  message?: string | null;
   errors?: {
     username?: string[];
     password?: string[];
     captcha?: string[];
   };
+  success?: boolean;
 };
 
 export type SubProject = {

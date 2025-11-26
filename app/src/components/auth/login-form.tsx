@@ -30,13 +30,12 @@ function LoginButton() {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const initialState: LoginFormState = { message: null };
+  const initialState: LoginFormState = {};
   const [state, dispatch] = useActionState(authenticate, initialState);
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect only on a clean success state from the server action.
-    if (state.message === null && !state.errors) {
+    if (state.success) {
       const role = localStorage.getItem('userRole');
       let targetPath = '/';
       if (role === 'pmo') {
@@ -53,7 +52,6 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const username = formData.get('username') as string;
     
-    // Set role in localStorage before dispatching the action.
     if (typeof window !== 'undefined' && username) {
         localStorage.setItem('userRole', username.toLowerCase());
     }
