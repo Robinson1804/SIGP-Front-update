@@ -3,9 +3,8 @@
 
 import Image from "next/image";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { useRouter } from "next/navigation";
 
 import { authenticate } from "@/lib/actions";
 import { type LoginFormState } from "@/lib/definitions";
@@ -32,7 +31,6 @@ function LoginButton() {
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [state, dispatch] = useFormState(authenticate, undefined);
-  const router = useRouter();
 
   const handleFormAction = (formData: FormData) => {
     const username = formData.get('username') as string;
@@ -44,17 +42,6 @@ export function LoginForm() {
     }
     dispatch(formData);
   };
-  
-  useEffect(() => {
-    if (state?.message === 'Success') {
-        const role = localStorage.getItem('userRole');
-        if (role === 'pmo') {
-            router.push('/pgd');
-        } else {
-            router.push('/poi');
-        }
-    }
-  }, [state, router]);
 
   return (
     <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm shadow-2xl border-2 border-white/20">
@@ -166,7 +153,7 @@ export function LoginForm() {
               </div>
             )}
           </div>
-           {state?.message && state.message !== 'Success' && (
+           {state?.message && (
             <Alert variant="destructive" className="mt-4">
               <AlertDescription>{state.message}</AlertDescription>
             </Alert>

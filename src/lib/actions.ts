@@ -21,41 +21,54 @@ export async function authenticate(
   prevState: LoginFormState | undefined,
   formData: FormData,
 ): Promise<LoginFormState> {
-  await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
 
-  const validatedFields = LoginFormSchema.safeParse(
-    Object.fromEntries(formData.entries()),
-  );
+    const validatedFields = LoginFormSchema.safeParse(
+      Object.fromEntries(formData.entries()),
+    );
 
-  if (!validatedFields.success) {
-    return {
-      errors: validatedFields.error.flatten().fieldErrors,
-      message: 'Por favor, corrija los errores en el formulario.',
-    };
+    if (!validatedFields.success) {
+      return {
+        errors: validatedFields.error.flatten().fieldErrors,
+        message: 'Por favor, corrija los errores en el formulario.',
+      };
+    }
+
+    const { username, password, captcha } = validatedFields.data;
+
+    if (captcha.toUpperCase() !== MOCK_CAPTCHA_CODE) {
+      return {
+        errors: { captcha: ['Código captcha incorrecto.'] },
+        message: 'Error de validación.',
+      };
+    }
+
+    const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
+
+    if (!user || user.password !== password) {
+      return {
+        message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
+      };
+    }
+    
+    // Server-side redirection is more robust.
+    let targetPath = '/';
+    if (user.username.toLowerCase() === 'pmo') {
+        targetPath = '/pgd';
+    } else {
+        targetPath = '/poi';
+    }
+    
+    redirect(targetPath);
+
+  } catch (error) {
+    if ((error as Error).message.includes('NEXT_REDIRECT')) {
+      throw error;
+    }
+    console.error('Authentication Error:', error);
+    return { message: 'Ha ocurrido un error inesperado.' };
   }
-
-  const { username, password, captcha } = validatedFields.data;
-
-  if (captcha.toUpperCase() !== MOCK_CAPTCHA_CODE) {
-    return {
-      errors: { captcha: ['Código captcha incorrecto.'] },
-      message: 'Error de validación.',
-    };
-  }
-
-  const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
-
-  if (!user || user.password !== password) {
-    return {
-      message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
-    };
-  }
-  
-  // Return a success state without redirection
-  return {
-    message: 'Success',
-    errors: {},
-  };
 }
 
 export async function signOut() {
