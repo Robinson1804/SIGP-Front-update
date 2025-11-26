@@ -51,10 +51,19 @@ export async function authenticate(
     };
   }
   
-  // On success, return a state with no message. The client will handle the redirect.
-  return {
-    message: null
-  };
+  // This must be a Server Action to work with cookies
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('userRole', user.username.toLowerCase());
+  }
+
+  let targetPath = '/';
+  if (user.username.toLowerCase() === 'pmo') {
+      targetPath = '/pgd';
+  } else {
+      targetPath = '/poi';
+  }
+  
+  redirect(targetPath);
 }
 
 export async function signOut() {

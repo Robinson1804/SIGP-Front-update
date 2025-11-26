@@ -206,14 +206,14 @@ const CardItem = ({
   </Card>
 );
 
-function PmoDashboardPageContent() {
+function PgdDashboardPageContent() {
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const storedRole = localStorage.getItem("userRole");
     setRole(storedRole);
-    if (storedRole !== 'pmo') {
+    if (storedRole && storedRole !== 'pmo') {
       router.push('/poi'); 
     }
   }, [router]);
@@ -338,10 +338,10 @@ function PmoDashboardPageContent() {
   );
 }
 
-export default function PmoDashboardPage() {
+export default function PgdPage() {
   return (
     <React.Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Cargando...</div>}>
-      <PmoDashboardPageContent />
+      <PgdDashboardPageContent />
     </React.Suspense>
   )
 }
