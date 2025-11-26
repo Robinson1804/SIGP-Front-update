@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState } from 'react';
@@ -56,65 +55,53 @@ const navItems = [
 ];
 
 const summaryCards = [
-    { title: 'Finalizadas', value: 4, icon: CheckCircle, color: 'text-green-500' },
-    { title: 'Actualizadas', value: 2, icon: Edit, color: 'text-blue-500' },
-    { title: 'Creadas', value: 8, icon: PlusCircle, color: 'text-yellow-500' },
+    { title: 'Finalizadas', value: 1, icon: CheckCircle, color: 'text-green-500' },
+    { title: 'Actualizadas', value: 1, icon: Edit, color: 'text-blue-500' },
+    { title: 'Creadas', value: 3, icon: PlusCircle, color: 'text-yellow-500' },
     { title: 'Vencen Pronto', value: 1, icon: Clock, color: 'text-red-500' },
 ];
 
 const stateChartData = [
-  { name: 'Finalizado', value: 4, fill: '#A7F3D0' },
-  { name: 'En progreso', value: 2, fill: '#FDE68A' },
-  { name: 'Por hacer', value: 2, fill: '#BFDBFE' },
-  { name: 'Revisión', value: 1, fill: '#A78BFA'}
+  { name: 'Finalizado', value: 1, fill: '#A7F3D0' },
+  { name: 'En progreso', value: 1, fill: '#FDE68A' },
+  { name: 'Por hacer', value: 1, fill: '#BFDBFE' },
 ];
 
 const priorityChartData = [
-    { name: 'Baja', value: 2 },
-    { name: 'Medio', value: 4 },
-    { name: 'Alto', value: 2 },
+    { name: 'Baja', value: 0 },
+    { name: 'Medio', value: 2 },
+    { name: 'Alto', value: 1 },
 ];
-
-const workTypesData = [
-    { name: 'Épica', percentage: 38, icon: Layers, color: 'bg-purple-500' },
-    { name: 'Tarea', percentage: 38, icon: ClipboardCheck, color: 'bg-blue-500' },
-    { name: 'Subtarea', percentage: 20, icon: ChevronsRight, color: 'bg-gray-500' },
-];
-
 
 const recentActivity = [
     {
-        user: 'Anayeli Monzon Narvaez',
+        user: 'Marco Polo',
         action: 'ha actualizado el estado en',
-        task: 'Crear formulario digital con validaciones para encuestas',
-        id: 'TAR - 1',
+        task: 'Implementar backend para recepción de datos',
+        id: 'TAR-3',
         type: 'Tarea',
-        status: 'En Progreso',
+        status: 'Finalizado',
         priority: 'Media',
-        epic: 'Epica 1',
-        main: 'HU - 1',
-        startDate: '01/02/25',
-        endDate: '05/02/25',
+        startDate: '05/02/25',
+        endDate: '08/02/25',
     },
     {
         user: 'Anayeli Monzon Narvaez',
         action: 'ha creado la tarea',
-        task: 'Crear formulario digital con validaciones para encuestas',
-        id: 'TAR - 1',
+        task: 'Diseño de la base de datos para almacenar respuestas',
+        id: 'TAR-2',
         type: 'Tarea',
         status: 'Por hacer',
-        priority: 'Media',
-        epic: 'Epica 1',
-        main: 'HU - 1',
-        startDate: '01/02/25',
+        priority: 'Alta',
+        startDate: '03/02/25',
         endDate: '05/02/25',
     },
 ];
 
 const statusColors: { [key: string]: string } = {
   'Por hacer': 'bg-[#BFDBFE] text-blue-800',
-  'En Progreso': 'bg-[#FDE68A] text-yellow-800',
-  'Revisión': 'bg-[#A78BFA] text-purple-800',
+  'En progreso': 'bg-[#FDE68A] text-yellow-800',
+  'En revisión': 'bg-[#A78BFA] text-purple-800',
   'Finalizado': 'bg-[#A7F3D0] text-green-800',
 };
 
@@ -131,8 +118,6 @@ const ActivityItemTooltip = ({ item }: { item: any }) => (
             <div className="flex items-center gap-2"><User className="w-4 h-4 text-gray-500"/> Responsable: {item.user}</div>
             <div className="flex items-center gap-2"><Tag className="w-4 h-4 text-gray-500"/> Estado: <Badge className={cn(statusColors[item.status as keyof typeof statusColors])}>{item.status}</Badge></div>
             <div className="flex items-center gap-2"><Flag className="w-4 h-4 text-gray-500"/> Prioridad: <Badge className={cn(priorityColors[item.priority as keyof typeof priorityColors].bg, priorityColors[item.priority as keyof typeof priorityColors].text)}>{item.priority}</Badge></div>
-            <div className="flex items-center gap-2"><Layers className="w-4 h-4 text-gray-500"/> Épica: {item.epic}</div>
-            {item.type === 'Tarea' && <div className="flex items-center gap-2"><Paperclip className="w-4 h-4 text-gray-500"/> Principal: {item.main}</div>}
             <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-500"/> Fechas: {item.startDate} - {item.endDate}</div>
         </div>
     </div>
@@ -149,8 +134,8 @@ function DashboardContent() {
     if (savedProjectData) {
       const projectData = JSON.parse(savedProjectData);
       setProject(projectData);
-       if(projectData.type !== 'Proyecto') {
-          router.push('/poi');
+      if(projectData.type !== 'Actividad') {
+        router.push('/poi');
       }
     } else {
       router.push('/poi');
@@ -159,8 +144,9 @@ function DashboardContent() {
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
-    else if (tabName === 'Tablero') route = '/poi/proyecto/backlog/tablero';
+    if (tabName === 'Detalles') route = '/poi/actividad/detalles';
+    else if (tabName === 'Lista') route = '/poi/actividad/lista';
+    else if (tabName === 'Tablero') route = '/poi/actividad/tablero';
     
     if (route) {
         router.push(route);
@@ -177,12 +163,10 @@ function DashboardContent() {
     );
   }
 
-  const projectCode = `PROY N°${project.id}`;
+  const projectCode = `ACT N°${project.id}`;
   
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
-    { label: <Link href="/poi/proyecto/detalles">Proyecto</Link> },
-    { label: <Link href="/poi/proyecto/backlog">Backlog</Link> },
     { label: 'Dashboard' }
 ];
 
@@ -196,7 +180,7 @@ function DashboardContent() {
     </div>
   );
 
-  const projectTabs = ['Backlog', 'Tablero', 'Dashboard'];
+  const activityTabs = [ { name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }];
   
   return (
     <AppLayout
@@ -205,15 +189,15 @@ function DashboardContent() {
       secondaryHeader={secondaryHeader}
     >
       <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-         {projectTabs.map(tab => (
+         {activityTabs.map(tab => (
             <Button 
                 key={tab}
                 size="sm" 
-                onClick={() => handleTabClick(tab)} 
-                className={cn(activeTab === tab ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
-                variant={activeTab === tab ? 'default' : 'outline'}
+                onClick={() => handleTabClick(tab.name)} 
+                className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
+                variant={activeTab === tab.name ? 'default' : 'outline'}
             >
-                {tab}
+                {tab.name}
             </Button>
         ))}
       </div>
@@ -275,29 +259,12 @@ function DashboardContent() {
                           </ChartContainer>
                       </CardContent>
                     </Card>
-                    <Card className="md:col-span-2">
-                      <CardHeader><CardTitle className="text-base">TIPOS DE TRABAJO</CardTitle></CardHeader>
-                      <CardContent className="space-y-4">
-                          {workTypesData.map(item => (
-                              <div key={item.name} className="flex items-center gap-4">
-                                  <item.icon className="w-5 h-5 text-gray-600" />
-                                  <div className="flex-1">
-                                      <div className="flex justify-between text-sm mb-1">
-                                          <span>{item.name}</span>
-                                          <span>{item.percentage}%</span>
-                                      </div>
-                                      <Progress value={item.percentage} indicatorClassName={item.color} className="h-2" />
-                                  </div>
-                              </div>
-                          ))}
-                      </CardContent>
-                    </Card>
                 </div>
                 
-                <Card className="h-full lg:row-span-2">
+                <Card className="h-full lg:row-span-1">
                   <CardHeader><CardTitle className="text-base">ACTIVIDAD RECIENTE</CardTitle></CardHeader>
                   <CardContent className="h-[calc(100%-4rem)] overflow-y-auto custom-scrollbar">
-                      <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en todo el proyecto</p>
+                      <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en toda la actividad</p>
                       <p className="font-semibold text-sm mb-2">Hoy</p>
                       <div className="space-y-4">
                           {recentActivity.map((item, index) => (
@@ -323,13 +290,13 @@ function DashboardContent() {
                   </CardContent>
                 </Card>
             </div>
-          </div>
+        </div>
       </div>
     </AppLayout>
   );
 }
 
-export default function DashboardProyectoPage() {
+export default function DashboardActividadPage() {
     return (
         <React.Suspense fallback={<div>Cargando...</div>}>
             <DashboardContent />
@@ -337,4 +304,3 @@ export default function DashboardProyectoPage() {
     );
 }
 
-    

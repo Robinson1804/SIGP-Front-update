@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from 'react';
@@ -40,11 +39,10 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { POIModal, SubProjectModal } from '@/app/poi/page';
-import { SubProject, Project } from '@/lib/definitions';
+import { POIModal } from '@/app/poi/page';
+import { Project } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-
 
 const sprints = [
   { name: 'Sprint 1', status: 'Finalizado', progress: 100 },
@@ -59,14 +57,6 @@ const statusColors: { [key: string]: string } = {
   'En desarrollo': 'bg-[#559FFE] text-white',
   'Finalizado': 'bg-[#2FD573] text-white',
 };
-
-const subProjectStatusColors: { [key: string]: string } = {
-    'Pendiente': 'bg-[#FF9F43] text-black',
-    'En planificación': 'bg-[#FFD700] text-black',
-    'En desarrollo': 'bg-[#54A0FF] text-white',
-    'Finalizado': 'bg-[#2ED573] text-white',
-};
-
 
 const sprintStatusConfig: { [key: string]: { badge: string; progress: string } } = {
     'Por hacer': { badge: 'bg-[#FFD29F] text-black', progress: 'bg-[#FFD29F]' },
@@ -83,59 +73,6 @@ const InfoField = ({ label, children }: { label: string, children: React.ReactNo
         </div>
     </div>
 );
-
-const SubProjectCard = ({ subProject, onEdit, onDelete }: { subProject: SubProject, onEdit: () => void, onDelete: () => void }) => {
-    const formatAmount = (amount: number) => {
-        if (amount >= 1000) {
-            return `S/ ${amount / 1000}k`;
-        }
-        return `S/ ${amount}`;
-    }
-    
-    return (
-    <Card className="bg-white">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-gray-500" />
-                <CardTitle className="text-base font-bold">{subProject.name}</CardTitle>
-            </div>
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
-                    <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar</DropdownMenuItem>
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </CardHeader>
-        <CardContent>
-            <Progress value={subProject.progress} indicatorClassName="bg-[#559FFE]" />
-            <div className="flex justify-between items-center mt-2 text-sm text-gray-600">
-                <span>{subProject.progress}%</span>
-            </div>
-            <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-gray-500" />
-                    <span>Estado:</span>
-                    <Badge className={`${subProjectStatusColors['En desarrollo']}`}>En desarrollo</Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-gray-500" />
-                    <span>Monto:</span>
-                    <span>{formatAmount(subProject.amount)}</span>
-                </div>
-                 <div className="flex items-center gap-2">
-                    <UsersIcon className="w-4 h-4 text-gray-500" />
-                    <span>Responsable:</span>
-                    <span>{subProject.responsible.length}</span>
-                </div>
-            </div>
-        </CardContent>
-    </Card>
-)};
 
 function DeleteConfirmationModal({
     isOpen,
@@ -185,39 +122,25 @@ const navItems = [
   { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
 ];
 
-function ProjectDetailsContent() {
+function ActividadDetailsContent() {
     const [project, setProject] = React.useState<Project | null>(null);
-    const searchParams = useSearchParams();
     const router = useRouter();
     
     const [activeTab, setActiveTab] = React.useState('Detalles');
     
     const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
-
-    const [isSubProjectModalOpen, setIsSubProjectModalOpen] = React.useState(false);
-    const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
-    const [isSubProjectDeleteModalOpen, setIsSubProjectDeleteModalOpen] = React.useState(false);
-    const [deletingSubProject, setDeletingSubProject] = React.useState<SubProject | null>(null);
     
 
-    React.useEffect(() => {
-        const tabParam = searchParams.get('tab');
-        if (tabParam) {
-            setActiveTab(tabParam);
-        }
-    }, [searchParams]);
-    
     React.useEffect(() => {
         const savedProjectData = localStorage.getItem('selectedProject');
         if (savedProjectData) {
             const projectData = JSON.parse(savedProjectData);
             setProject(projectData);
-            if(projectData.type !== 'Proyecto') {
+            if(projectData.type !== 'Actividad') {
                 router.push('/poi');
             }
         } else {
-             // Fallback for direct navigation
             router.push('/poi');
         }
     }, [router]);
@@ -241,63 +164,16 @@ function ProjectDetailsContent() {
         router.push('/poi');
     };
     
-    const openSubProjectModal = (sub?: SubProject) => {
-        setEditingSubProject(sub || null);
-        setIsSubProjectModalOpen(true);
-    };
-
-    const handleSaveSubProject = (subProject: SubProject) => {
-        if (!project) return;
-        const updatedSubProjects = project.subProjects ? [...project.subProjects] : [];
-        const index = updatedSubProjects.findIndex(s => s.id === subProject.id);
-
-        if (index > -1) {
-            updatedSubProjects[index] = subProject;
-        } else {
-            updatedSubProjects.push({ ...subProject, id: Date.now().toString() });
-        }
-        
-        const updatedProject = { ...project, subProjects: updatedSubProjects };
-        setProject(updatedProject);
-        localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
-
-        setIsSubProjectModalOpen(false);
-        setEditingSubProject(null);
-    };
-
-    const openDeleteSubProjectModal = (sub: SubProject) => {
-        setDeletingSubProject(sub);
-        setIsSubProjectDeleteModalOpen(true);
-    };
-
-    const handleDeleteSubProject = () => {
-        if (deletingSubProject && project && project.subProjects) {
-            const updatedProject = {
-                ...project,
-                subProjects: project.subProjects?.filter(s => s.id !== deletingSubProject.id)
-            };
-            setProject(updatedProject);
-localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
-        }
-        setIsSubProjectDeleteModalOpen(false);
-        setDeletingSubProject(null);
-    };
-    
     const handleTabClick = (tabName: string) => {
         let route = '';
-        if (project?.type === 'Proyecto') {
-            if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
-            else if (tabName === 'Documentos') route = '/poi/proyecto/documentos';
-        } 
+        if (tabName === 'Lista') route = '/poi/actividad/lista';
+        else if (tabName === 'Tablero') route = '/poi/actividad/tablero';
+        else if (tabName === 'Dashboard') route = '/poi/actividad/dashboard';
         
         if (route) {
             router.push(route);
         } else {
             setActiveTab(tabName);
-             const newUrl = new URL(window.location.href);
-            newUrl.pathname = '/poi/proyecto/detalles';
-            newUrl.searchParams.set('tab', tabName);
-            window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
         }
     };
 
@@ -309,13 +185,11 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
         )
     }
 
-    const isProject = project.type === 'Proyecto';
-    const projectCode = `${isProject ? 'PROY' : 'ACT'} N° ${project.id}`;
+    const projectCode = `ACT N° ${project.id}`;
     
-    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Proyecto' }, {label: 'Detalles'}];
+    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
     
-    const projectTabs = [ { name: 'Detalles' }, { name: 'Documentos' }, { name: 'Backlog' }];
-
+    const activityTabs = [ { name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }];
 
     const secondaryHeader = (
       <>
@@ -328,7 +202,7 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
         </div>
         <div className="sticky top-[104px] z-10 bg-[#F9F9F9] px-6 pt-4">
           <div className="flex items-center gap-2">
-            {projectTabs.map(tab => (
+            {activityTabs.map(tab => (
                  <Button 
                     key={tab.name}
                     size="sm" 
@@ -452,15 +326,6 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
                             </Card>
                         </div>
                         </div>
-                        
-                        {project.subProjects && project.subProjects.length > 0 && (
-                            <div className="mt-6">
-                                <h3 className="text-xl font-bold text-gray-800 mb-4">SUBPROYECTOS</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                    {project.subProjects.map(sub => <SubProjectCard key={sub.id} subProject={sub} onEdit={() => openSubProjectModal(sub)} onDelete={() => openDeleteSubProjectModal(sub)} />)}
-                                </div>
-                            </div>
-                        )}
                         </>
                     )}
                 </div>
@@ -481,27 +346,8 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={handleDeleteProject}
                 title="AVISO"
-                message="El Plan Operativo Informático será eliminado"
+                message="La Actividad será eliminada"
             />
-            
-            {isSubProjectModalOpen && (
-                 <SubProjectModal
-                    isOpen={isSubProjectModalOpen}
-                    onClose={() => setIsSubProjectModalOpen(false)}
-                    onSave={handleSaveSubProject}
-                    subProject={editingSubProject}
-                />
-            )}
-
-           {deletingSubProject && (
-             <DeleteConfirmationModal
-                isOpen={isSubProjectDeleteModalOpen}
-                onClose={() => setIsSubProjectDeleteModalOpen(false)}
-                onConfirm={handleDeleteSubProject}
-                title="AVISO"
-                message="El subproyecto será eliminado"
-            />
-           )}
         </AppLayout>
     );
 }
@@ -510,7 +356,7 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
 export default function DetailsPage() {
     return (
         <React.Suspense fallback={<div>Loading...</div>}>
-            <ProjectDetailsContent />
+            <ActividadDetailsContent />
         </React.Suspense>
     )
 }

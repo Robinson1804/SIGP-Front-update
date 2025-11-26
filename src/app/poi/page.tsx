@@ -604,7 +604,7 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuItem onClick={handleGoToDetails} disabled={project.missingData}>
-                            Ir a proyecto / Actividad
+                            Ir a {project.type}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={onEdit}>Editar POI</DropdownMenuItem>
                         <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar POI</DropdownMenuItem>
