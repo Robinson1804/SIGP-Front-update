@@ -2,9 +2,8 @@
 "use client";
 
 import Image from "next/image";
-import { useFormStatus } from "react-dom";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useActionState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from 'next/navigation';
 
 import { authenticate } from "@/lib/actions";
@@ -18,51 +17,44 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const ineiLogo = PlaceHolderImages.find((img) => img.id === "inei-logo");
 
-function LoginButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" className="w-full text-lg font-bold" disabled={pending}>
-      {pending && <Loader2 className="mr-2 h-6 w-6 animate-spin" />}
-      Ingresar
-    </Button>
-  );
-}
-
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const initialState: LoginFormState = { message: null, errors: {} };
-  const [state, dispatch] = useActionState(authenticate, initialState);
-  const formRef = useRef<HTMLFormElement>(null);
+  const [state, setState] = useState<LoginFormState | undefined>();
+  const [isPending, setIsPending] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    if (state.message === null && !state.errors) {
-      const role = localStorage.getItem('userRole');
-      let targetPath = '/';
-      if (role === 'pmo') {
-        targetPath = '/pgd';
-      } else if (role === 'scrum') {
-        targetPath = '/poi';
-      }
-      router.push(targetPath);
-    }
-  }, [state, router]);
-
-  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsPending(true);
+    setState(undefined);
+
     const formData = new FormData(event.currentTarget);
     const username = formData.get('username') as string;
-    
+
     if (typeof window !== 'undefined') {
         localStorage.setItem('userRole', username.toLowerCase());
     }
 
-    dispatch(formData);
-  }
+    const result = await authenticate(undefined, formData);
+
+    if (result.message === null) {
+        const role = localStorage.getItem('userRole');
+        let targetPath = '/';
+        if (role === 'pmo') {
+            targetPath = '/pgd';
+        } else if (role === 'scrum') {
+            targetPath = '/poi';
+        }
+        router.push(targetPath);
+    } else {
+        setState(result);
+        setIsPending(false);
+    }
+  };
 
   return (
     <Card className="w-full max-w-md bg-card/90 backdrop-blur-sm shadow-2xl border-2 border-white/20">
-      <form ref={formRef} onSubmit={handleFormSubmit}>
+      <form onSubmit={handleSubmit}>
         <CardHeader className="items-center text-center p-6">
           {ineiLogo && (
             <Image
@@ -175,7 +167,10 @@ export function LoginForm() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col p-6 pt-2">
-          <LoginButton />
+           <Button type="submit" className="w-full text-lg font-bold" disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-6 w-6 animate-spin" />}
+            Ingresar
+          </Button>
         </CardFooter>
       </form>
     </Card>

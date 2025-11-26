@@ -34,24 +34,7 @@ export function LoginForm() {
   const [state, dispatch] = useActionState(authenticate, initialState);
   const router = useRouter();
 
-  useEffect(() => {
-    // This effect runs when the server action state changes.
-    // If there's no message and no errors, the action was successful.
-    if (state.message === null && !state.errors) {
-        const role = localStorage.getItem('userRole');
-        let targetPath = '/poi'; // Default fallback
-        if (role === 'pmo') {
-            targetPath = '/pgd';
-        } else if (role === 'scrum') {
-            targetPath = '/poi';
-        }
-        
-        router.refresh(); // Refresh the current route to update server components if any
-        router.push(targetPath); // Then navigate to the new page
-    }
-  }, [state, router]);
-
-  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const username = formData.get('username') as string;
@@ -60,7 +43,19 @@ export function LoginForm() {
         localStorage.setItem('userRole', username.toLowerCase());
     }
 
-    dispatch(formData);
+    const resultState = await dispatch(formData);
+
+    if (resultState.message === null && !resultState.errors) {
+        const role = localStorage.getItem('userRole');
+        let targetPath = '/poi'; // Default fallback
+        if (role === 'pmo') {
+            targetPath = '/pgd';
+        } else if (role === 'scrum') {
+            targetPath = '/poi';
+        }
+        
+        router.push(targetPath);
+    }
   }
 
   return (

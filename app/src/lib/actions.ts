@@ -48,7 +48,6 @@ export async function authenticate(
   if (!user || user.password !== password) {
     return {
       message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
-      errors: {},
     };
   }
   
