@@ -48,15 +48,12 @@ export async function authenticate(
   if (!user || user.password !== password) {
     return {
       message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
-      errors: {},
     };
   }
   
-  // On success, return a state with no errors.
-  // The client-side form will handle the redirection.
+  // On success, return a state with no errors. The client will handle the redirect.
   return {
     message: null,
-    errors: {},
   };
 }
 

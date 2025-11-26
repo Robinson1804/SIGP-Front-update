@@ -4,7 +4,7 @@
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useActionState, useRef, useEffect } from "react";
+import { useState, useActionState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 
 import { authenticate } from "@/lib/actions";
@@ -30,11 +30,12 @@ function LoginButton() {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const initialState: LoginFormState = { message: null, errors: {} };
+  const initialState: LoginFormState = { message: null };
   const [state, dispatch] = useActionState(authenticate, initialState);
   const router = useRouter();
 
   useEffect(() => {
+    // Redirect only on a clean success state from the server action.
     if (state.message === null && !state.errors) {
       const role = localStorage.getItem('userRole');
       let targetPath = '/';
@@ -52,7 +53,8 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const username = formData.get('username') as string;
     
-    if (typeof window !== 'undefined') {
+    // Set role in localStorage before dispatching the action.
+    if (typeof window !== 'undefined' && username) {
         localStorage.setItem('userRole', username.toLowerCase());
     }
 
