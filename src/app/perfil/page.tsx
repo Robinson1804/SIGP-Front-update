@@ -4,12 +4,14 @@
 import Image from "next/image";
 import React, { useState, useEffect } from 'react';
 import { User as UserIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import AppLayout from "@/components/layout/app-layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { paths } from "@/lib/paths";
 
 const userAvatar = PlaceHolderImages.find((img) => img.id === "user-avatar");
 
@@ -42,11 +44,16 @@ const InfoField = ({ label, value }: { label: string; value: string }) => (
 
 export default function ProfilePage() {
     const [role, setRole] = useState<string | null>(null);
+    const router = useRouter();
     
     useEffect(() => {
         const storedRole = localStorage.getItem('userRole');
+        if (!storedRole) {
+            router.push(paths.login);
+            return;
+        }
         setRole(storedRole);
-    }, []);
+    }, [router]);
 
     if (role === null) {
       return (

@@ -2,12 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { paths } from '@/lib/paths';
 
 export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/login');
+    router.replace(paths.login);
   }, [router]);
 
   return (

@@ -25,6 +25,7 @@ import {
     DropdownMenu,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { paths } from '@/lib/paths';
 
 
 type KanbanItem = {
@@ -119,18 +120,18 @@ function TableroContent() {
       const projectData = JSON.parse(savedProjectData);
       setProject(projectData);
       if(projectData.type !== 'Actividad') {
-        router.push('/poi');
+        router.push(paths.poi.base);
       }
     } else {
-      router.push('/poi');
+      router.push(paths.poi.base);
     }
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Detalles') route = '/poi/actividad/detalles';
-    else if (tabName === 'Lista') route = '/poi/actividad/lista';
-    else if (tabName === 'Dashboard') route = '/poi/actividad/dashboard';
+    if (tabName === 'Detalles') route = paths.poi.actividad.detalles;
+    else if (tabName === 'Lista') route = paths.poi.actividad.lista;
+    else if (tabName === 'Dashboard') route = paths.poi.actividad.dashboard;
     
     if (route) {
         router.push(route);
@@ -150,7 +151,7 @@ function TableroContent() {
   const projectCode = `ACT N°${project.id}`;
 
   const breadcrumbs = [
-    { label: 'POI', href: '/poi' }, 
+    { label: 'POI', href: paths.poi.base }, 
     { label: 'Tablero' }
   ];
   

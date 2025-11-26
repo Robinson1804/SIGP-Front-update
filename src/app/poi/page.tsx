@@ -48,6 +48,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { type Project } from '@/lib/definitions';
+import { paths } from '@/lib/paths';
 
 
 const initialProjects: Project[] = [
@@ -157,7 +158,7 @@ const ProjectCard = ({ project }: { project: Project }) => {
 
     const handleGoToDetails = () => {
         localStorage.setItem('selectedProject', JSON.stringify(project));
-        const detailsUrl = project.type === 'Proyecto' ? '/poi/proyecto/detalles' : '/poi/actividad/detalles';
+        const detailsUrl = project.type === 'Proyecto' ? paths.poi.proyecto.detalles : paths.poi.actividad.detalles;
         router.push(detailsUrl);
     };
 
@@ -350,11 +351,16 @@ function ScrumMasterPoiView() {
 
 function PoiPageContent() {
     const [role, setRole] = useState<string | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         const storedRole = localStorage.getItem('userRole');
+        if (!storedRole) {
+            router.push(paths.login);
+            return;
+        }
         setRole(storedRole);
-    }, []);
+    }, [router]);
 
     if (role === null) {
       return (

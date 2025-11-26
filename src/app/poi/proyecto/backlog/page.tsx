@@ -52,14 +52,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { cn } from '@/lib/utils';
 import { Project } from '@/lib/definitions';
 import Link from 'next/link';
+import { paths } from '@/lib/paths';
 
 
 const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pgd' },
-  { label: 'POI', icon: Target, href: '/poi' },
-  { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
-  { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
-  { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
+  { label: 'PGD', icon: FileText, href: paths.pgd.base },
+  { label: 'POI', icon: Target, href: paths.poi.base },
+  { label: 'RECURSOS HUMANOS', icon: Users, href: paths.recursosHumanos },
+  { label: 'DASHBOARD', icon: BarChart, href: paths.dashboard },
+  { label: 'NOTIFICACIONES', icon: Bell, href: paths.notificaciones },
 ];
 
 const huStatusColors: { [key: string]: string } = {
@@ -137,7 +138,7 @@ function BacklogContent() {
     if (savedProjectData) {
         setProject(JSON.parse(savedProjectData));
     } else {
-        router.push('/poi');
+        router.push(paths.poi.base);
     }
 
     const tab = searchParams.get('tab');
@@ -148,20 +149,20 @@ function BacklogContent() {
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Tablero') route = '/poi/proyecto/backlog/tablero';
-    else if (tabName === 'Dashboard') route = '/poi/proyecto/backlog/dashboard';
+    if (tabName === 'Tablero') route = paths.poi.proyecto.backlog.tablero;
+    else if (tabName === 'Dashboard') route = paths.poi.proyecto.backlog.dashboard;
     
     if (route) {
         router.push(route);
     } else {
         setActiveTab(tabName);
-        router.push('/poi/proyecto/backlog');
+        router.push(paths.poi.proyecto.backlog.base);
     }
   };
   
   if (!project) {
     return (
-      <AppLayout navItems={navItems} breadcrumbs={[{ label: 'Cargando...' }]}>
+      <AppLayout isPmo={true} breadcrumbs={[{ label: 'Cargando...' }]}>
         <div className="flex-1 flex items-center justify-center">Cargando...</div>
       </AppLayout>
     );
@@ -170,8 +171,8 @@ function BacklogContent() {
   const projectCode = `PROY N°${project.id}`;
 
   const breadcrumbs = [
-    { label: 'POI', href: '/poi' },
-    { label: 'Proyecto', href: '/poi/proyecto/detalles' },
+    { label: 'POI', href: paths.poi.base },
+    { label: 'Proyecto', href: paths.poi.proyecto.detalles },
     { label: 'Backlog' },
   ];
 
@@ -187,7 +188,7 @@ function BacklogContent() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={true}
       breadcrumbs={breadcrumbs}
       secondaryHeader={secondaryHeader}
     >

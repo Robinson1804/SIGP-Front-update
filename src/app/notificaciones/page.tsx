@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { type Project } from '@/lib/definitions';
+import { paths } from '@/lib/paths';
 
 type NotificationStatus = 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
 type NotificationType = 'project' | 'sprint' | 'delay';
@@ -154,10 +155,10 @@ export default function NotificationsPage() {
     };
     localStorage.setItem('selectedProject', JSON.stringify(mockProject));
 
-    let route = clickedNotification.projectType === 'Proyecto' ? '/poi/proyecto/detalles' : '/poi/actividad/detalles';
+    let route = clickedNotification.projectType === 'Proyecto' ? paths.poi.proyecto.detalles : paths.poi.actividad.detalles;
 
     if (clickedNotification.type === 'sprint' || clickedNotification.type === 'delay') {
-        const backlogRoute = clickedNotification.projectType === 'Proyecto' ? '/poi/proyecto/backlog' : '/poi/actividad/lista';
+        const backlogRoute = clickedNotification.projectType === 'Proyecto' ? paths.poi.proyecto.backlog.base : paths.poi.actividad.lista;
         router.push(`${backlogRoute}?tab=Backlog`);
     } else {
         router.push(route);

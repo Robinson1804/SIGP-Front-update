@@ -45,14 +45,15 @@ import {
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, LabelList } from "recharts"
 import { Pie, PieChart, Cell } from "recharts";
 import Link from 'next/link';
+import { paths } from '@/lib/paths';
 
 
 const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pgd' },
-  { label: 'POI', icon: Target, href: '/poi' },
-  { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
-  { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
-  { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
+  { label: 'PGD', icon: FileText, href: paths.pgd.base },
+  { label: 'POI', icon: Target, href: paths.poi.base },
+  { label: 'RECURSOS HUMANOS', icon: Users, href: paths.recursosHumanos },
+  { label: 'DASHBOARD', icon: BarChart, href: paths.dashboard },
+  { label: 'NOTIFICACIONES', icon: Bell, href: paths.notificaciones },
 ];
 
 const summaryCards = [
@@ -150,17 +151,17 @@ function DashboardContent() {
       const projectData = JSON.parse(savedProjectData);
       setProject(projectData);
        if(projectData.type !== 'Proyecto') {
-          router.push('/poi');
+          router.push(paths.poi.base);
       }
     } else {
-      router.push('/poi');
+      router.push(paths.poi.base);
     }
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
-    else if (tabName === 'Tablero') route = '/poi/proyecto/backlog/tablero';
+    if (tabName === 'Backlog') route = paths.poi.proyecto.backlog.base;
+    else if (tabName === 'Tablero') route = paths.poi.proyecto.backlog.tablero;
     
     if (route) {
         router.push(route);
@@ -171,7 +172,7 @@ function DashboardContent() {
   
   if (!project) {
     return (
-      <AppLayout navItems={navItems} breadcrumbs={[{ label: 'Cargando...' }]}>
+      <AppLayout isPmo={true} breadcrumbs={[{ label: 'Cargando...' }]}>
         <div className="flex-1 flex items-center justify-center">Cargando...</div>
       </AppLayout>
     );
@@ -180,8 +181,8 @@ function DashboardContent() {
   const projectCode = `PROY N°${project.id}`;
   
   const breadcrumbs = [
-    { label: 'POI', href: '/poi' }, 
-    { label: 'Proyecto', href: '/poi/proyecto/detalles' },
+    { label: 'POI', href: paths.poi.base }, 
+    { label: 'Proyecto', href: paths.poi.proyecto.detalles },
     { label: 'Dashboard' }
 ];
 
@@ -199,7 +200,7 @@ function DashboardContent() {
   
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={true}
       breadcrumbs={breadcrumbs}
       secondaryHeader={secondaryHeader}
     >

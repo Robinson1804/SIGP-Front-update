@@ -29,6 +29,7 @@ import {
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { signOut } from "@/lib/actions";
 import { cn } from "@/lib/utils";
+import { paths } from "@/lib/paths";
 
 
 const ineiLogo = PlaceHolderImages.find((img) => img.id === "inei-logo");
@@ -48,7 +49,7 @@ const UserProfile = ({ isPmo = false }: { isPmo?: boolean }) => (
     </DropdownMenuTrigger>
     <DropdownMenuContent className="w-56" align="end">
       <DropdownMenuItem asChild>
-        <Link href="/perfil">
+        <Link href={paths.perfil}>
           <User className="mr-2 h-4 w-4" />
           <span>Ir a perfil</span>
         </Link>
@@ -73,17 +74,17 @@ type NavItem = {
 };
 
 const pmoNavItems: NavItem[] = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi?from=pgd" },
-  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
+  { label: "PGD", icon: FileText, href: paths.pgd.base },
+  { label: "POI", icon: Target, href: paths.poi.base },
+  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: paths.recursosHumanos },
+  { label: "DASHBOARD", icon: BarChart, href: paths.dashboard },
+  { label: "NOTIFICACIONES", icon: Bell, href: paths.notificaciones },
 ];
 
 const scrumMasterNavItems: NavItem[] = [
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: "/recursos-humanos" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
+  { label: "POI", icon: Target, href: paths.poi.base },
+  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: paths.recursosHumanos },
+  { label: "NOTIFICACIONES", icon: Bell, href: paths.notificaciones },
 ];
 
 type AppLayoutProps = {
@@ -133,7 +134,7 @@ export default function AppLayout({
           </div>
           <nav className="flex-grow p-4 space-y-[25px]">
             {navItems.map((item) => {
-              const isActive = item.href === '/pgd' ? pathname.startsWith('/pgd') : pathname.startsWith(item.href.split('?')[0]);
+              const isActive = item.href === paths.pgd.base ? pathname.startsWith(paths.pgd.base) : pathname.startsWith(item.href.split('?')[0]);
               return (
               <Link
                 key={item.label}

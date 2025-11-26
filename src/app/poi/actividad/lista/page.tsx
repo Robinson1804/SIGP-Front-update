@@ -46,7 +46,8 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
+import { paths } from '@/lib/paths';
 
 const taskStatusColors: { [key in Task['state']]: string } = {
   'Por hacer': 'bg-[#BFDBFE] text-blue-800',
@@ -177,18 +178,18 @@ function ListaContent() {
         const projectData = JSON.parse(savedProjectData);
         setProject(projectData);
         if(projectData.type !== 'Actividad') {
-            router.push('/poi');
+            router.push(paths.poi.base);
         }
     } else {
-        router.push('/poi');
+        router.push(paths.poi.base);
     }
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Detalles') route = '/poi/actividad/detalles';
-    else if (tabName === 'Tablero') route = '/poi/actividad/tablero';
-    else if (tabName === 'Dashboard') route = '/poi/actividad/dashboard';
+    if (tabName === 'Detalles') route = paths.poi.actividad.detalles;
+    else if (tabName === 'Tablero') route = paths.poi.actividad.tablero;
+    else if (tabName === 'Dashboard') route = paths.poi.actividad.dashboard;
     
     if (route) {
         router.push(route);
@@ -208,7 +209,7 @@ function ListaContent() {
   const projectCode = `ACT Nº${project.id}`;
 
   const breadcrumbs = [
-    { label: 'POI', href: '/poi' },
+    { label: 'POI', href: paths.poi.base },
     { label: 'Lista' },
   ];
 

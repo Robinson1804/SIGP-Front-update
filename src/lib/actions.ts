@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { LoginFormSchema, type LoginFormState } from '@/lib/definitions';
+import { paths } from '@/lib/paths';
 
 // Mock CAPTCHA value
 const MOCK_CAPTCHA_CODE = 'A4B2C'; 
@@ -52,11 +53,9 @@ export async function authenticate(
     }
     
     // Server-side redirection is more robust.
-    let targetPath = '/';
+    let targetPath = paths.poi.base;
     if (user.username.toLowerCase() === 'pmo') {
-        targetPath = '/pgd';
-    } else {
-        targetPath = '/poi';
+        targetPath = paths.pgd.base;
     }
     
     redirect(targetPath);
@@ -72,5 +71,5 @@ export async function authenticate(
 
 export async function signOut() {
   // In a real app, you would clear the session cookie here.
-  redirect('/login');
+  redirect(paths.login);
 }

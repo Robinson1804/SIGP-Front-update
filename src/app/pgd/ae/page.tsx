@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { paths } from '@/lib/paths';
 
 type PGD = {
   id: string;
@@ -468,7 +469,7 @@ export default function AeDashboardPage() {
     <AppLayout
       isPmo={true}
       breadcrumbs={[
-          { label: "PGD", href: "/pgd" },
+          { label: "PGD", href: paths.pgd.base },
           { label: "AE" },
         ]}
     >

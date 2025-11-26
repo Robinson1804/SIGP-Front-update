@@ -44,6 +44,7 @@ import {
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, LabelList } from "recharts"
 import { Pie, PieChart, Cell } from "recharts";
 import Link from 'next/link';
+import { paths } from '@/lib/paths';
 
 const summaryCards = [
     { title: 'Finalizadas', value: 1, icon: CheckCircle, color: 'text-green-500' },
@@ -143,18 +144,18 @@ function DashboardContent() {
       const projectData = JSON.parse(savedProjectData);
       setProject(projectData);
       if(projectData.type !== 'Actividad') {
-        router.push('/poi');
+        router.push(paths.poi.base);
       }
     } else {
-      router.push('/poi');
+      router.push(paths.poi.base);
     }
   }, [router]);
 
   const handleTabClick = (tabName: string) => {
     let route = '';
-    if (tabName === 'Detalles') route = '/poi/actividad/detalles';
-    else if (tabName === 'Lista') route = '/poi/actividad/lista';
-    else if (tabName === 'Tablero') route = '/poi/actividad/tablero';
+    if (tabName === 'Detalles') route = paths.poi.actividad.detalles;
+    else if (tabName === 'Lista') route = paths.poi.actividad.lista;
+    else if (tabName === 'Tablero') route = paths.poi.actividad.tablero;
     
     if (route) {
         router.push(route);
@@ -174,7 +175,7 @@ function DashboardContent() {
   const projectCode = `ACT N°${project.id}`;
   
   const breadcrumbs = [
-    { label: 'POI', href: '/poi' }, 
+    { label: 'POI', href: paths.poi.base }, 
     { label: 'Dashboard' }
 ];
 

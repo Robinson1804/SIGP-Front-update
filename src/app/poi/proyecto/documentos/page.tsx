@@ -24,6 +24,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { paths } from '@/lib/paths';
 
 type DocumentStatus = 'Pendiente' | 'Aprobado' | 'No aprobado';
 type Document = {
@@ -49,14 +50,6 @@ const documentStatusConfig: { [key: string]: { bg: string; text: string } } = {
     'No aprobado': { bg: '#FFC8C8', text: '#A90000' },
 };
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 function ProjectDocumentsContent() {
     const [project, setProject] = React.useState<Project | null>(null);
     const router = useRouter();
@@ -68,14 +61,14 @@ function ProjectDocumentsContent() {
         if (savedProjectData) {
             setProject(JSON.parse(savedProjectData));
         } else {
-            router.push('/poi');
+            router.push(paths.poi.base);
         }
     }, [router]);
 
     const handleTabClick = (tabName: string) => {
         let route = '';
-        if (tabName === 'Detalles') route = '/poi/proyecto/detalles';
-        else if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
+        if (tabName === 'Detalles') route = paths.poi.proyecto.detalles;
+        else if (tabName === 'Backlog') route = paths.poi.proyecto.backlog.base;
 
         if (route) {
             router.push(route);
@@ -90,14 +83,14 @@ function ProjectDocumentsContent() {
 
     if (!project) {
         return (
-             <AppLayout navItems={navItems} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
+             <AppLayout isPmo={true} breadcrumbs={[{ label: 'POI', href: paths.poi.base }, { label: 'Cargando...' }]}>
                 <div className="flex-1 flex items-center justify-center">Cargando...</div>
              </AppLayout>
         )
     }
 
     const projectCode = `PROY N° ${project.id}`;
-    const breadcrumbs = [{ label: "POI", href: "/poi" }, {label: 'Documentos'}];
+    const breadcrumbs = [{ label: "POI", href: paths.poi.base }, {label: 'Documentos'}];
     const projectTabs = [ { name: 'Detalles' }, { name: 'Documentos' }, { name: 'Backlog' }];
 
     const secondaryHeader = (
@@ -129,7 +122,7 @@ function ProjectDocumentsContent() {
 
     return (
         <AppLayout
-            navItems={navItems}
+            isPmo={true}
             breadcrumbs={breadcrumbs}
             secondaryHeader={secondaryHeader}
         >

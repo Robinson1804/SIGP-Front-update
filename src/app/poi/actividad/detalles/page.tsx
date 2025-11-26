@@ -43,6 +43,7 @@ import { POIModal } from '@/components/poi/poi-modal';
 import { Project } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { paths } from '@/lib/paths';
 
 const statusColors: { [key: string]: string } = {
   'Pendiente': 'bg-[#FE9F43] text-black',
@@ -116,10 +117,10 @@ function ActividadDetailsContent() {
             const projectData = JSON.parse(savedProjectData);
             setProject(projectData);
             if(projectData.type !== 'Actividad') {
-                router.push('/poi');
+                router.push(paths.poi.base);
             }
         } else {
-            router.push('/poi');
+            router.push(paths.poi.base);
         }
     }, [router]);
 
@@ -139,14 +140,14 @@ function ActividadDetailsContent() {
     const handleDeleteProject = () => {
         localStorage.removeItem('selectedProject');
         setIsDeleteModalOpen(false);
-        router.push('/poi');
+        router.push(paths.poi.base);
     };
     
     const handleTabClick = (tabName: string) => {
         let route = '';
-        if (tabName === 'Lista') route = '/poi/actividad/lista';
-        else if (tabName === 'Tablero') route = '/poi/actividad/tablero';
-        else if (tabName === 'Dashboard') route = '/poi/actividad/dashboard';
+        if (tabName === 'Lista') route = paths.poi.actividad.lista;
+        else if (tabName === 'Tablero') route = paths.poi.actividad.tablero;
+        else if (tabName === 'Dashboard') route = paths.poi.actividad.dashboard;
         
         if (route) {
             router.push(route);
@@ -157,7 +158,7 @@ function ActividadDetailsContent() {
 
     if (!project) {
         return (
-             <AppLayout isPmo={false} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
+             <AppLayout isPmo={false} breadcrumbs={[{ label: 'POI', href: paths.poi.base }, { label: 'Cargando...' }]}>
                 <div className="flex-1 flex items-center justify-center">Cargando...</div>
              </AppLayout>
         )
@@ -166,7 +167,7 @@ function ActividadDetailsContent() {
     const projectCode = `ACT N° ${project.id}`;
     
     const breadcrumbs = [
-        { label: "POI", href: "/poi" }, 
+        { label: "POI", href: paths.poi.base }, 
         { label: 'Detalles' }
     ];
     

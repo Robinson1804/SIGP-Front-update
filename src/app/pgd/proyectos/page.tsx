@@ -55,6 +55,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
+import { paths } from "@/lib/paths";
 
 type PGD = {
   id: string;
@@ -568,7 +569,7 @@ export default function PoiDashboardPage() {
     <AppLayout
       isPmo={true}
       breadcrumbs={[
-        { label: "PGD", href: "/pgd" },
+        { label: "PGD", href: paths.pgd.base },
         { label: "Proyectos PGD" },
       ]}
     >

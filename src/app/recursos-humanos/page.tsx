@@ -10,6 +10,7 @@ import {
   Bell,
   Search,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import AppLayout from '@/components/layout/app-layout';
 import { Input } from '@/components/ui/input';
 import {
@@ -30,6 +31,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { paths } from '@/lib/paths';
 
 type Person = {
   id: number;
@@ -64,13 +66,18 @@ export default function RecursosHumanosPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const router = useRouter();
 
   const [role, setRole] = React.useState<string | null>(null);
 
   useEffect(() => {
     const storedRole = localStorage.getItem('userRole');
+    if (!storedRole) {
+      router.push(paths.login);
+      return;
+    }
     setRole(storedRole);
-  }, []);
+  }, [router]);
 
 
   const filteredData = initialData.filter((person) =>

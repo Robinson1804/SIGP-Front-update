@@ -44,6 +44,7 @@ import { POIModal, SubProjectModal } from '@/components/poi/poi-modal';
 import { SubProject, Project } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { paths } from '@/lib/paths';
 
 
 const sprints = [
@@ -177,14 +178,6 @@ function DeleteConfirmationModal({
     );
 }
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 function ProjectDetailsContent() {
     const [project, setProject] = React.useState<Project | null>(null);
     const searchParams = useSearchParams();
@@ -214,11 +207,11 @@ function ProjectDetailsContent() {
             const projectData = JSON.parse(savedProjectData);
             setProject(projectData);
             if(projectData.type !== 'Proyecto') {
-                router.push('/poi');
+                router.push(paths.poi.base);
             }
         } else {
              // Fallback for direct navigation
-            router.push('/poi');
+            router.push(paths.poi.base);
         }
     }, [router]);
 
@@ -238,7 +231,7 @@ function ProjectDetailsContent() {
     const handleDeleteProject = () => {
         localStorage.removeItem('selectedProject');
         setIsDeleteModalOpen(false);
-        router.push('/poi');
+        router.push(paths.poi.base);
     };
     
     const openSubProjectModal = (sub?: SubProject) => {
@@ -286,8 +279,8 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
     const handleTabClick = (tabName: string) => {
         let route = '';
         if (project?.type === 'Proyecto') {
-            if (tabName === 'Backlog') route = '/poi/proyecto/backlog';
-            else if (tabName === 'Documentos') route = '/poi/proyecto/documentos';
+            if (tabName === 'Backlog') route = paths.poi.proyecto.backlog.base;
+            else if (tabName === 'Documentos') route = paths.poi.proyecto.documentos;
         } 
         
         if (route) {
@@ -295,7 +288,7 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
         } else {
             setActiveTab(tabName);
              const newUrl = new URL(window.location.href);
-            newUrl.pathname = '/poi/proyecto/detalles';
+            newUrl.pathname = paths.poi.proyecto.detalles;
             newUrl.searchParams.set('tab', tabName);
             window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
         }
@@ -303,7 +296,7 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
 
     if (!project) {
         return (
-             <AppLayout navItems={navItems} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
+             <AppLayout isPmo={true} breadcrumbs={[{ label: 'POI', href: paths.poi.base }, { label: 'Cargando...' }]}>
                 <div className="flex-1 flex items-center justify-center">Cargando...</div>
              </AppLayout>
         )
@@ -313,7 +306,7 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
     const projectCode = `${isProject ? 'PROY' : 'ACT'} N° ${project.id}`;
     
     const breadcrumbs = [
-        { label: "POI", href: "/poi" }, 
+        { label: "POI", href: paths.poi.base }, 
         { label: 'Detalles' }
     ];
     
@@ -352,7 +345,7 @@ localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
 
     return (
         <AppLayout
-            navItems={navItems}
+            isPmo={true}
             breadcrumbs={breadcrumbs}
             secondaryHeader={secondaryHeader}
         >
