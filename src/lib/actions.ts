@@ -73,5 +73,5 @@ export async function authenticate(
 
 export async function signOut() {
   // In a real app, you would clear the session cookie here.
-  redirect('/');
+  redirect('/login');
 }
