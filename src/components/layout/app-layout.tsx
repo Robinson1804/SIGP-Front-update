@@ -112,7 +112,7 @@ export default function AppLayout({
           </div>
           <nav className="flex-grow p-4 space-y-[25px]">
             {navItems.map((item) => {
-              const isActive = pathname.startsWith(item.href) && (item.href !== '/pgd' || pathname === '/pgd');
+              const isActive = pathname.startsWith(item.href);
               return (
               <a
                 key={item.label}
