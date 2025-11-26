@@ -167,6 +167,7 @@ function DashboardContent() {
   
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
+    { label: 'Actividad', href: '/poi?type=Actividad' },
     { label: 'Dashboard' }
 ];
 
@@ -191,7 +192,7 @@ function DashboardContent() {
       <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
          {activityTabs.map(tab => (
             <Button 
-                key={tab}
+                key={tab.name}
                 size="sm" 
                 onClick={() => handleTabClick(tab.name)} 
                 className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')} 
@@ -303,4 +304,3 @@ export default function DashboardActividadPage() {
         </React.Suspense>
     );
 }
-

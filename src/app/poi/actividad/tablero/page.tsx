@@ -18,14 +18,14 @@ import {
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Project } from '@/lib/definitions';
+import { Project, Task } from '@/lib/definitions';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
+
 
 const navItems = [
   { label: 'PGD', icon: FileText, href: '/pgd' },
@@ -151,6 +151,7 @@ function TableroContent() {
 
   const breadcrumbs = [
     { label: 'POI', href: '/poi' }, 
+    { label: 'Actividad', href: '/poi?type=Actividad' },
     { label: 'Tablero' }
   ];
   

@@ -39,7 +39,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { Project, Task, Subtask } from '@/lib/definitions';
@@ -62,7 +61,7 @@ const taskStatusColors: { [key in Task['state']]: string } = {
   'Por hacer': 'bg-[#BFDBFE] text-blue-800',
   'En progreso': 'bg-[#FACC15] text-yellow-900',
   'Completado': 'bg-[#34D399] text-green-900',
-  'En revisión': 'bg-purple-200 text-purple-800', // Assuming a color for this state
+  'En revisión': 'bg-purple-200 text-purple-800', 
 };
 
 const priorityColors: { [key in Task['priority']]: { bg: string, text: string } } = {
@@ -89,7 +88,6 @@ const initialTasks: Task[] = [
     { id: 'TAR-3', title: 'Implementar backend para recepción de datos', state: 'En progreso', responsible: ['Nombre 3'], priority: 'Baja', startDate: '05/02/2025', endDate: '08/02/2025', subtasks: [] },
 ];
 
-// Placeholder for Task/Subtask Modals (for future implementation for other roles)
 function TaskModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
     if (!isOpen) return null;
     return (
@@ -139,7 +137,7 @@ const TaskRow = ({ task, isSubtask = false }: { task: Task | Subtask, isSubtask?
                    {hasSubtasks ? (
                        <CollapsibleTrigger asChild>
                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                               <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:-rotate-90" />
+                               <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-[-90deg]" />
                            </Button>
                        </CollapsibleTrigger>
                    ) : (

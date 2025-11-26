@@ -174,7 +174,11 @@ function ActividadDetailsContent() {
 
     const projectCode = `ACT N° ${project.id}`;
     
-    const breadcrumbs = [{ label: "POI", href: "/poi" }, { label: 'Detalles' }];
+    const breadcrumbs = [
+        { label: "POI", href: "/poi" }, 
+        { label: 'Actividad', href: '/poi?type=Actividad' },
+        { label: 'Detalles' }
+    ];
     
     const activityTabs = [ { name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }];
 
