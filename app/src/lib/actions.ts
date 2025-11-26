@@ -1,4 +1,3 @@
-
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -53,33 +52,29 @@ export async function authenticate(
   
   // In a real app, you would set an HTTP-only cookie for session management.
   // The redirect will happen on the server side now.
-  
-  let targetPath = '/';
   switch (user.role) {
     case 'PMO':
-      targetPath = '/pgd';
+      redirect('/pgd');
       break;
     case 'Scrum Master':
-      targetPath = '/poi';
+      redirect('/poi');
       break;
     case 'Administrator':
-      targetPath = '/pgd'; // Fallback for demo
+      redirect('/pgd');
       break;
     case 'Coordinator':
-      targetPath = '/poi'; // Fallback for demo
+      redirect('/poi');
       break;
     case 'Developer':
-      targetPath = '/poi'; // Fallback for demo
+      redirect('/poi');
       break;
     case 'User':
-      targetPath = '/poi'; // Fallback for demo
+      redirect('/poi');
       break;
     default:
-      targetPath = '/pgd'; // Default fallback
+      redirect('/pgd');
       break;
   }
-  
-  redirect(targetPath);
 }
 
 export async function signOut() {
