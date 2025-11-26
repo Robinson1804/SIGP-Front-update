@@ -45,26 +45,12 @@ import { Project } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
-const sprints = [
-  { name: 'Sprint 1', status: 'Finalizado', progress: 100 },
-  { name: 'Sprint 2', status: 'En progreso', progress: 50 },
-  { name: 'Sprint 3', status: 'En progreso', progress: 25 },
-  { name: 'Sprint 4', status: 'Por hacer', progress: 0 },
-];
-
 const statusColors: { [key: string]: string } = {
   'Pendiente': 'bg-[#FE9F43] text-black',
   'En planificación': 'bg-[#FFD700] text-black',
   'En desarrollo': 'bg-[#559FFE] text-white',
   'Finalizado': 'bg-[#2FD573] text-white',
 };
-
-const sprintStatusConfig: { [key: string]: { badge: string; progress: string } } = {
-    'Por hacer': { badge: 'bg-[#FFD29F] text-black', progress: 'bg-[#FFD29F]' },
-    'En progreso': { badge: 'bg-[#BFDBFE] text-black', progress: 'bg-[#BFDBFE]' },
-    'Finalizado': { badge: 'bg-[#34D399] text-black', progress: 'bg-[#34D399]' },
-};
-
 
 const InfoField = ({ label, children }: { label: string, children: React.ReactNode }) => (
     <div>
@@ -218,9 +204,6 @@ function ActividadDetailsContent() {
         </div>
       </>
     );
-    
-    const totalProgress = sprints.reduce((acc, sprint) => acc + sprint.progress, 0);
-    const generalProgress = sprints.length > 0 ? Math.round(totalProgress / sprints.length) : 0;
 
     return (
         <AppLayout
@@ -249,8 +232,8 @@ function ActividadDetailsContent() {
                             </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <Card className="lg:col-span-2">
+                        <div className="grid grid-cols-1 gap-6">
+                            <Card>
                                 <CardContent className="p-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 mb-4">
                                         <div>
@@ -299,33 +282,6 @@ function ActividadDetailsContent() {
                                     </div>
                                 </CardContent>
                             </Card>
-                            <div className="flex flex-col gap-6">
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <div className="flex justify-between items-center">
-                                        <CardTitle className="text-base font-semibold">Progreso General</CardTitle>
-                                        <span className="font-bold text-base">{generalProgress}%</span>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <Progress value={generalProgress} indicatorClassName="bg-blue-500" />
-                                </CardContent>
-                            </Card>
-                            <Card className="flex-grow flex flex-col">
-                                <CardHeader><CardTitle className="text-base font-semibold">Progreso por Sprints</CardTitle></CardHeader>
-                                <CardContent className="space-y-6 flex-grow flex flex-col justify-center">
-                                    {sprints.map((sprint, i) => (
-                                        <div key={i}>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-sm font-medium">{sprint.name}</span>
-                                                <Badge className={sprintStatusConfig[sprint.status].badge}>{sprint.status}</Badge>
-                                            </div>
-                                            <Progress value={sprint.progress} indicatorClassName={sprintStatusConfig[sprint.status].progress} />
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </div>
                         </div>
                         </>
                     )}
