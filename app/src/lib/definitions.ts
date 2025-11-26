@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const LoginFormSchema = z.object({
@@ -7,7 +8,6 @@ export const LoginFormSchema = z.object({
 });
 
 export type LoginFormState = {
-  success: boolean;
   message: string | null;
   errors?: {
     username?: string[];

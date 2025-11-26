@@ -31,7 +31,6 @@ export async function authenticate(
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Por favor, corrija los errores en el formulario.',
-      success: false,
     };
   }
 
@@ -41,7 +40,6 @@ export async function authenticate(
     return {
       errors: { captcha: ['Código captcha incorrecto.'] },
       message: 'Error de validación.',
-      success: false,
     };
   }
 
@@ -51,16 +49,14 @@ export async function authenticate(
     return {
       message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
       errors: {},
-      success: false
     };
   }
   
-  // On success, return a state with success flag.
+  // On success, return a state with no errors.
   // The client-side form will handle the redirection.
   return {
     message: null,
     errors: {},
-    success: true,
   };
 }
 

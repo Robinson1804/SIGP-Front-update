@@ -30,12 +30,12 @@ function LoginButton() {
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const initialState: LoginFormState = { message: null, errors: {}, success: false };
+  const initialState: LoginFormState = { message: null, errors: {} };
   const [state, dispatch] = useActionState(authenticate, initialState);
   const router = useRouter();
 
   useEffect(() => {
-    if (state.success) {
+    if (state.message === null && !state.errors) {
       const role = localStorage.getItem('userRole');
       let targetPath = '/';
       if (role === 'pmo') {
