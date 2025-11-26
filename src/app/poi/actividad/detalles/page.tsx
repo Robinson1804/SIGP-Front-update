@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
@@ -100,14 +100,6 @@ function DeleteConfirmationModal({
     );
 }
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 function ActividadDetailsContent() {
     const [project, setProject] = React.useState<Project | null>(null);
     const router = useRouter();
@@ -165,7 +157,7 @@ function ActividadDetailsContent() {
 
     if (!project) {
         return (
-             <AppLayout navItems={navItems} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
+             <AppLayout isPmo={false} breadcrumbs={[{ label: 'POI', href: '/poi' }, { label: 'Cargando...' }]}>
                 <div className="flex-1 flex items-center justify-center">Cargando...</div>
              </AppLayout>
         )
@@ -209,7 +201,7 @@ function ActividadDetailsContent() {
 
     return (
         <AppLayout
-            navItems={navItems}
+            isPmo={false}
             breadcrumbs={breadcrumbs}
             secondaryHeader={secondaryHeader}
         >

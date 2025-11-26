@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FileText,
@@ -47,15 +47,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-
-
-const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pgd' },
-  { label: 'POI', icon: Target, href: '/poi' },
-  { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
-  { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
-  { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
-];
 
 const taskStatusColors: { [key in Task['state']]: string } = {
   'Por hacer': 'bg-[#BFDBFE] text-blue-800',
@@ -168,7 +159,7 @@ const TaskRow = ({ task, isSubtask = false }: { task: Task | Subtask, isSubtask?
                     </DropdownMenu>
                 </TableCell>
             </TableRow>
-            {isSubtask ? <SubtaskModal isOpen={isSubtaskModalOpen} onClose={() => setIsSubtaskModalOpen(false)} /> : <TaskModal isOpen={isTaskModalOpen} onClose={() => setTaskModalOpen(false)} />}
+            {isSubtask ? <SubtaskModal isOpen={isSubtaskModalOpen} onClose={() => setSubtaskModalOpen(false)} /> : <TaskModal isOpen={isTaskModalOpen} onClose={() => setTaskModalOpen(false)} />}
         </>
     );
 };
@@ -208,7 +199,7 @@ function ListaContent() {
   
   if (!project) {
     return (
-      <AppLayout navItems={navItems} breadcrumbs={[{ label: 'Cargando...' }]}>
+      <AppLayout isPmo={false} breadcrumbs={[{ label: 'Cargando...' }]}>
         <div className="flex-1 flex items-center justify-center">Cargando...</div>
       </AppLayout>
     );
@@ -235,7 +226,7 @@ function ListaContent() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={false}
       breadcrumbs={breadcrumbs}
       secondaryHeader={secondaryHeader}
     >

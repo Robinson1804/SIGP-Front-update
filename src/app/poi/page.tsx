@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
 import {
   HardHat,
@@ -349,16 +349,17 @@ function ScrumMasterPoiView() {
 }
 
 function PoiPageContent() {
-    const [role, setRole] = React.useState<string | null>(null);
+    const [role, setRole] = useState<string | null>(null);
 
-    React.useEffect(() => {
-        // This runs on the client-side
+    useEffect(() => {
         const storedRole = localStorage.getItem('userRole');
         setRole(storedRole);
     }, []);
 
     if (role === null) {
-      return <div>Cargando...</div>; // Or a loading spinner
+      return (
+        <div className="flex h-screen w-full items-center justify-center">Cargando...</div>
+      );
     }
     
     const isPmo = role === 'pmo';
@@ -372,7 +373,7 @@ function PoiPageContent() {
 
 export default function PoiPage() {
   return (
-    <React.Suspense fallback={<div>Cargando...</div>}>
+    <React.Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Cargando...</div>}>
       <PoiPageContent />
     </React.Suspense>
   )

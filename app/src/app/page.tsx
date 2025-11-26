@@ -1,4 +1,5 @@
-
+// This file is deprecated. The correct file is /src/app/page.tsx
+// This content will be removed in a future step.
 import Image from 'next/image';
 import React from 'react';
 

@@ -1,7 +1,9 @@
 
+
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   FileText,
   Target,
@@ -12,18 +14,25 @@ import {
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 export default function DashboardPage() {
+    const [role, setRole] = useState<string | null>(null);
+    const router = useRouter();
+
+    useEffect(() => {
+        const storedRole = localStorage.getItem("userRole");
+        setRole(storedRole);
+        if (storedRole !== 'pmo') {
+            router.push('/poi'); 
+        }
+    }, [router]);
+
+    if (!role) {
+        return <div className="flex h-screen w-full items-center justify-center">Cargando...</div>;
+    }
+
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo
       breadcrumbs={[{ label: 'DASHBOARD' }]}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">

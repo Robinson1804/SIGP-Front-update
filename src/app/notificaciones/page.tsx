@@ -119,14 +119,6 @@ const NotificationCard = ({ notification, onClick }: { notification: Notificatio
 };
 
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState('Proyectos');
   const [notifications, setNotifications] = useState(initialNotifications);
@@ -181,10 +173,23 @@ export default function NotificationsPage() {
   const currentTabType = TABS.find(t => t.name === activeTab)?.type;
   const filteredNotifications = notifications.filter(n => currentTabType ? n.type === currentTabType : true);
 
+  const [role, setRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        const storedRole = localStorage.getItem('userRole');
+        setRole(storedRole);
+    }, []);
+
+    if (role === null) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">Cargando...</div>
+      );
+    }
+
 
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={role === 'pmo'}
       breadcrumbs={[{ label: 'NOTIFICACIONES' }]}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">

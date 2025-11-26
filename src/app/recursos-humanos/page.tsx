@@ -68,7 +68,6 @@ export default function RecursosHumanosPage() {
   const [role, setRole] = React.useState<string | null>(null);
 
   useEffect(() => {
-    // This runs on the client-side
     const storedRole = localStorage.getItem('userRole');
     setRole(storedRole);
   }, []);
@@ -87,7 +86,7 @@ export default function RecursosHumanosPage() {
   );
 
   if (role === null) {
-      return <div>Cargando...</div>; // Or a loading spinner
+      return <div>Cargando...</div>;
   }
 
   const isPmo = role === 'pmo';
@@ -111,7 +110,7 @@ export default function RecursosHumanosPage() {
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset page on new search
+              setCurrentPage(1);
             }}
           />
         </div>

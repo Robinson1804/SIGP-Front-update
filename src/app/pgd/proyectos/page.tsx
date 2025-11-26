@@ -485,15 +485,6 @@ const ProjectCard = ({ project, onEdit, onDelete }: { project: Project, onEdit: 
     );
 };
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
-
 export default function PoiDashboardPage() {
   const [pgds, setPgds] = React.useState<PGD[]>(initialPgds);
   const [selectedPgd, setSelectedPgd] = React.useState<string | undefined>(
@@ -575,7 +566,7 @@ export default function PoiDashboardPage() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={true}
       breadcrumbs={[
         { label: "PGD", href: "/pgd" },
         { label: "Proyectos PGD" },

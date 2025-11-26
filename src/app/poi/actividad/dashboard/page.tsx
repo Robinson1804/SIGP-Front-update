@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FileText,
@@ -44,15 +44,6 @@ import {
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, LabelList } from "recharts"
 import { Pie, PieChart, Cell } from "recharts";
 import Link from 'next/link';
-
-
-const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pgd' },
-  { label: 'POI', icon: Target, href: '/poi' },
-  { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
-  { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
-  { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
-];
 
 const summaryCards = [
     { title: 'Finalizadas', value: 1, icon: CheckCircle, color: 'text-green-500' },
@@ -174,7 +165,7 @@ function DashboardContent() {
   
   if (!project) {
     return (
-      <AppLayout navItems={navItems} breadcrumbs={[{ label: 'Cargando...' }]}>
+      <AppLayout isPmo={false} breadcrumbs={[{ label: 'Cargando...' }]}>
         <div className="flex-1 flex items-center justify-center">Cargando...</div>
       </AppLayout>
     );
@@ -201,7 +192,7 @@ function DashboardContent() {
   
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={false}
       breadcrumbs={breadcrumbs}
       secondaryHeader={secondaryHeader}
     >

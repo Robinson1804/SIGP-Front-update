@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FileText,
@@ -26,14 +26,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-
-const navItems = [
-  { label: 'PGD', icon: FileText, href: '/pgd' },
-  { label: 'POI', icon: Target, href: '/poi' },
-  { label: 'RECURSOS HUMANOS', icon: Users, href: '/recursos-humanos' },
-  { label: 'DASHBOARD', icon: BarChart, href: '/dashboard' },
-  { label: 'NOTIFICACIONES', icon: Bell, href: '/notificaciones' },
-];
 
 type KanbanItem = {
     id: string;
@@ -149,7 +141,7 @@ function TableroContent() {
   
   if (!project) {
     return (
-      <AppLayout navItems={navItems} breadcrumbs={[{ label: 'Cargando...' }]}>
+      <AppLayout isPmo={false} breadcrumbs={[{ label: 'Cargando...' }]}>
         <div className="flex-1 flex items-center justify-center">Cargando...</div>
       </AppLayout>
     );
@@ -185,7 +177,7 @@ function TableroContent() {
 
   return (
     <AppLayout
-      navItems={navItems}
+      isPmo={false}
       breadcrumbs={breadcrumbs}
       secondaryHeader={secondaryHeader}
     >

@@ -2,7 +2,8 @@
 "use client";
 
 import Image from "next/image";
-import { FileText, Target, Users, BarChart, Bell, User as UserIcon } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { User as UserIcon } from "lucide-react";
 
 import AppLayout from "@/components/layout/app-layout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const userAvatar = PlaceHolderImages.find((img) => img.id === "user-avatar");
 
-const user = {
+const pmoUser = {
   name: "Eduardo",
   lastName: "Corilla",
   phone: "987654321",
@@ -22,6 +23,16 @@ const user = {
   roleDescription: "Project Manager",
 };
 
+const scrumUser = {
+  name: "Robinson",
+  lastName: "Cerron",
+  phone: "123456789",
+  location: "Lima, Perú",
+  email: "robinson.cerron@inei.gob.pe",
+  role: "Scrum Master",
+  roleDescription: "Scrum Master",
+}
+
 const InfoField = ({ label, value }: { label: string; value: string }) => (
   <div className="space-y-1">
     <Label htmlFor={label.toLowerCase()}>{label}</Label>
@@ -29,19 +40,28 @@ const InfoField = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 export default function ProfilePage() {
+    const [role, setRole] = useState<string | null>(null);
+    
+    useEffect(() => {
+        const storedRole = localStorage.getItem('userRole');
+        setRole(storedRole);
+    }, []);
+
+    if (role === null) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">Cargando...</div>
+      );
+    }
+    
+    const isPmo = role === 'pmo';
+    const user = isPmo ? pmoUser : scrumUser;
+
+
   return (
     <AppLayout
+      isPmo={isPmo}
       breadcrumbs={[{ label: "PERFIL" }]}
-      navItems={navItems}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
         <div className="p-2 flex items-center w-full">

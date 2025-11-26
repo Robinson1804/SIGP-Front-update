@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   FileText,
   Target,
@@ -36,6 +36,7 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type PGD = {
   id: string;
@@ -205,7 +206,18 @@ const CardItem = ({
   </Card>
 );
 
-export default function PmoDashboardPage() {
+function PmoDashboardPageContent() {
+  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const storedRole = localStorage.getItem("userRole");
+    setRole(storedRole);
+    if (storedRole !== 'pmo') {
+      router.push('/poi'); 
+    }
+  }, [router]);
+
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingPgd, setEditingPgd] = React.useState<PGD | null>(null);
   const [pgds, setPgds] = React.useState<PGD[]>(initialPgds);
@@ -253,6 +265,10 @@ export default function PmoDashboardPage() {
     { icon: ListTodo, title: "AE", subtitle: "(Acción Estratégica)", bgColor: "bg-[#EAEAEA]", href: "/pgd/ae" },
     { icon: FolderKanban, title: "Proyectos PGD", subtitle: "(Plan Operativo Informático)", bgColor: "bg-[#E7F5DF]", href: "/pgd/proyectos" },
   ];
+
+  if (role !== 'pmo') {
+    return <div className="flex h-screen w-full items-center justify-center">Cargando...</div>;
+  }
 
   return (
     <AppLayout
@@ -320,4 +336,12 @@ export default function PmoDashboardPage() {
       />
     </AppLayout>
   );
+}
+
+export default function PmoDashboardPage() {
+  return (
+    <React.Suspense fallback={<div className="flex h-screen w-full items-center justify-center">Cargando...</div>}>
+      <PmoDashboardPageContent />
+    </React.Suspense>
+  )
 }
