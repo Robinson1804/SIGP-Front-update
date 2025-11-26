@@ -232,14 +232,6 @@ const ProjectCard = ({ project }: { project: Project }) => {
 
 
 function PmoPoiView() {
-  const navItems = [
-    { label: "PGD", icon: FileText, href: "/pgd" },
-    { label: "POI", icon: Target, href: "/poi?from=pgd" },
-    { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-    { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-    { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-  ];
-
   return (
     <AppLayout
       breadcrumbs={[{ label: 'POI' }]}
@@ -368,7 +360,7 @@ function ScrumMasterPoiView() {
     )
 }
 
-export default function PoiPage() {
+function PoiPageContent() {
     const searchParams = useSearchParams();
     // In a real app, role would come from a session.
     // We simulate it here for demonstration.
@@ -380,4 +372,12 @@ export default function PoiPage() {
     }
     
     return <ScrumMasterPoiView />;
+}
+
+export default function PoiPage() {
+  return (
+    <React.Suspense fallback={<div>Cargando...</div>}>
+      <PoiPageContent />
+    </React.Suspense>
+  )
 }

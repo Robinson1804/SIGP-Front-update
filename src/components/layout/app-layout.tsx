@@ -90,14 +90,14 @@ type AppLayoutProps = {
   children: ReactNode;
   breadcrumbs: { label: string; href?: string }[];
   secondaryHeader?: ReactNode;
-  isPmo?: boolean;
+  isPmo: boolean;
 };
 
 export default function AppLayout({
   children,
   breadcrumbs,
   secondaryHeader,
-  isPmo = false
+  isPmo,
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
