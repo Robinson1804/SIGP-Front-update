@@ -56,6 +56,8 @@ export async function authenticate(
   switch (user.role) {
     case 'PMO':
       redirect('/pgd');
+    case 'Scrum Master':
+      redirect('/poi');
     // Add other role redirects here
     // case 'Administrator':
     //   redirect('/admin-dashboard');

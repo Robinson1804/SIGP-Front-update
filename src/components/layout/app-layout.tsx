@@ -10,6 +10,11 @@ import {
   LogOut,
   Menu,
   User,
+  FileText,
+  Target,
+  Users as UsersIcon,
+  BarChart,
+  Bell,
 } from "lucide-react";
 import { usePathname } from 'next/navigation';
 
@@ -28,7 +33,7 @@ import { cn } from "@/lib/utils";
 
 const ineiLogo = PlaceHolderImages.find((img) => img.id === "inei-logo");
 
-const UserProfile = () => (
+const UserProfile = ({ isScrumMaster = false }: { isScrumMaster?: boolean }) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <button className="flex items-center gap-3 text-white">
@@ -36,8 +41,8 @@ const UserProfile = () => (
           <User className="h-6 w-6 text-white" />
         </div>
         <div className="text-left hidden md:block">
-          <p className="font-bold">EDUARDO CORILLA</p>
-          <p className="text-xs">PMO</p>
+          <p className="font-bold">{isScrumMaster ? "ROBINSON CERRON" : "EDUARDO CORILLA"}</p>
+          <p className="text-xs">{isScrumMaster ? "Scrum Master" : "PMO"}</p>
         </div>
       </button>
     </DropdownMenuTrigger>
@@ -67,21 +72,37 @@ type NavItem = {
     href: string;
 };
 
+const pmoNavItems: NavItem[] = [
+  { label: "PGD", icon: FileText, href: "/pgd" },
+  { label: "POI", icon: Target, href: "/poi" },
+  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: "/recursos-humanos" },
+  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
+];
+
+const scrumMasterNavItems: NavItem[] = [
+  { label: "POI", icon: Target, href: "/poi" },
+  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: "/recursos-humanos" },
+  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
+];
+
 type AppLayoutProps = {
   children: ReactNode;
-  navItems?: NavItem[];
   breadcrumbs: { label: string; href?: string }[];
   secondaryHeader?: ReactNode;
+  isScrumMaster?: boolean;
 };
 
 export default function AppLayout({
   children,
-  navItems = [],
   breadcrumbs,
   secondaryHeader,
+  isScrumMaster = false
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
+  
+  const navItems = isScrumMaster ? scrumMasterNavItems : pmoNavItems;
   
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
@@ -93,7 +114,7 @@ export default function AppLayout({
           </h1>
         </div>
         <div className="flex-1 flex justify-end pr-4">
-          <UserProfile />
+          <UserProfile isScrumMaster={isScrumMaster} />
         </div>
       </header>
       <div className="flex flex-1 overflow-hidden">

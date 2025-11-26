@@ -205,14 +205,6 @@ const CardItem = ({
   </Card>
 );
 
-const navItems = [
-  { label: "PGD", icon: FileText, href: "/pgd" },
-  { label: "POI", icon: Target, href: "/poi" },
-  { label: "RECURSOS HUMANOS", icon: Users, href: "/recursos-humanos" },
-  { label: "DASHBOARD", icon: BarChart, href: "/dashboard" },
-  { label: "NOTIFICACIONES", icon: Bell, href: "/notificaciones" },
-];
-
 export default function PmoDashboardPage() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [editingPgd, setEditingPgd] = React.useState<PGD | null>(null);
@@ -264,7 +256,6 @@ export default function PmoDashboardPage() {
 
   return (
     <AppLayout
-      navItems={navItems}
       breadcrumbs={[{ label: "PGD" }]}
     >
       <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
