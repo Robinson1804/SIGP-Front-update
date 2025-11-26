@@ -1,15 +1,9 @@
 
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FileText,
-  Target,
-  Users,
-  BarChart,
-  Bell,
   HardHat,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
@@ -21,13 +15,24 @@ export default function DashboardPage() {
     useEffect(() => {
         const storedRole = localStorage.getItem("userRole");
         setRole(storedRole);
-        if (storedRole !== 'pmo') {
-            router.push('/poi'); 
-        }
-    }, [router]);
+    }, []);
 
-    if (!role) {
+    if (role === null) {
         return <div className="flex h-screen w-full items-center justify-center">Cargando...</div>;
+    }
+
+    if (role !== 'pmo') {
+        return (
+            <AppLayout
+                isPmo={false}
+                breadcrumbs={[{ label: 'ACCESO DENEGADO' }]}
+            >
+                <div className="flex-1 flex flex-col items-center justify-center bg-[#F9F9F9] p-6 text-gray-500">
+                    <h3 className="text-2xl font-bold">Acceso Denegado</h3>
+                    <p>No tienes permiso para ver esta página.</p>
+                </div>
+            </AppLayout>
+        );
     }
 
   return (
