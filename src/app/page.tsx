@@ -1,20 +1,12 @@
-
-"use client";
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { paths } from '@/lib/paths';
 
+/**
+ * Root page - Redirige automáticamente a login
+ *
+ * El middleware ya maneja la redirección basada en autenticación,
+ * pero esta página asegura que siempre haya un redirect por defecto.
+ */
 export default function RootPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace(paths.login);
-  }, [router]);
-
-  return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <p>Redirigiendo a la página de inicio de sesión...</p>
-    </div>
-  );
+  redirect(paths.login);
 }

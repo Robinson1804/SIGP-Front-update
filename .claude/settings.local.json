@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(dir:*)",
+      "SlashCommand(/sigp-crud-generator:*)",
+      "Bash(mkdir:*)",
+      "Bash(test:*)",
+      "Bash(if [ -d \"hooks\" ])",
+      "Bash(then mv hooks lib/hooks)",
+      "Bash(fi)",
+      "Bash(for feature in auth proyectos actividades sprints historias tareas planning rrhh dashboard reportes)",
+      "Bash(do mkdir -p \"$feature/components\" \"$feature/hooks\" \"$feature/services\" \"$feature/types\")",
+      "Bash(done)",
+      "Bash(find:*)",
+      "Bash(xargs:*)",
+      "Bash(cd:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(for:*)",
+      "Bash(do sed -i \"s|from [''\"\"]@/contexts/auth-context[''\"\"]|from ''@/stores''|g\" \"$file\")",
+      "Bash(if [ -d \"src/components/poi\" ])",
+      "Bash(then ls -la src/components/poi)",
+      "Bash(else echo \"Folder src/components/poi does not exist\")",
+      "Bash(if [ -d \"src/features/proyectos/components\" ])",
+      "Bash(then ls -la src/features/proyectos/components)",
+      "Bash(else echo \"Folder does not exist\")",
+      "Bash(npm uninstall:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

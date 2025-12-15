@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, type ReactNode, useEffect } from "react";
+import { type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,7 +17,6 @@ import {
 } from "lucide-react";
 import { usePathname } from 'next/navigation';
 
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,85 +24,106 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { signOut } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { paths } from "@/lib/paths";
+import { MODULES, type Role, ROLES } from "@/lib/definitions";
+import { canAccessModule } from "@/lib/permissions";
+import { useAuth } from "@/stores";
+import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
 
 
-const ineiLogo = PlaceHolderImages.find((img) => img.id === "inei-logo");
-
-const UserProfile = ({ isPmo = false }: { isPmo?: boolean }) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <button className="flex items-center gap-3 text-white">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200/50">
-          <User className="h-6 w-6 text-white" />
-        </div>
-        <div className="text-left hidden md:block">
-          <p className="font-bold">{isPmo ? "EDUARDO CORILLA" : "ROBINSON CERRON"}</p>
-          <p className="text-xs">{isPmo ? "PMO" : "Scrum Master"}</p>
-        </div>
-      </button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent className="w-56" align="end">
-      <DropdownMenuItem asChild>
-        <Link href={paths.perfil}>
-          <User className="mr-2 h-4 w-4" />
-          <span>Ir a perfil</span>
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuSeparator />
-      <form action={signOut}>
-        <DropdownMenuItem asChild>
-            <button type="submit" className="w-full">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Cerrar sesión</span>
-            </button>
-        </DropdownMenuItem>
-      </form>
-    </DropdownMenuContent>
-  </DropdownMenu>
-);
-
-type NavItem = {
-    label: string;
-    icon: React.ElementType;
-    href: string;
+// Mapeo de roles a nombres legibles
+const ROLE_DISPLAY_NAMES: Record<Role, string> = {
+  [ROLES.ADMINISTRADOR]: 'Administrador',
+  [ROLES.PMO]: 'PMO',
+  [ROLES.SCRUM_MASTER]: 'Scrum Master',
+  [ROLES.DESARROLLADOR]: 'Desarrollador',
+  [ROLES.IMPLEMENTADOR]: 'Implementador',
+  [ROLES.COORDINADOR]: 'Coordinador',
+  [ROLES.USUARIO]: 'Usuario',
 };
 
-const pmoNavItems: NavItem[] = [
-  { label: "PGD", icon: FileText, href: paths.pgd.base },
-  { label: "POI", icon: Target, href: paths.poi.base },
-  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: paths.recursosHumanos },
-  { label: "DASHBOARD", icon: BarChart, href: paths.dashboard },
-  { label: "NOTIFICACIONES", icon: Bell, href: paths.notificaciones },
+function UserProfile() {
+  const { user, logout } = useAuth();
+
+  if (!user) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-3 text-white">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200/50">
+            <User className="h-6 w-6 text-white" />
+          </div>
+          <div className="text-left hidden md:block">
+            <p className="font-bold">{user.name.toUpperCase()}</p>
+            <p className="text-xs">{ROLE_DISPLAY_NAMES[user.role]}</p>
+          </div>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-56" align="end">
+        <DropdownMenuItem asChild>
+          <Link href={paths.perfil}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Ir a perfil</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={logout} className="cursor-pointer">
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>Cerrar sesión</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+type NavItemConfig = {
+  label: string;
+  icon: React.ElementType;
+  href: string;
+  module: typeof MODULES[keyof typeof MODULES];
+};
+
+// Todos los items de navegación con su módulo asociado
+const allNavItems: NavItemConfig[] = [
+  { label: "PGD", icon: FileText, href: paths.pgd.base, module: MODULES.PGD },
+  { label: "POI", icon: Target, href: paths.poi.base, module: MODULES.POI },
+  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: paths.recursosHumanos, module: MODULES.RECURSOS_HUMANOS },
+  { label: "DASHBOARD", icon: BarChart, href: paths.dashboard, module: MODULES.DASHBOARD },
+  { label: "NOTIFICACIONES", icon: Bell, href: paths.notificaciones, module: MODULES.NOTIFICACIONES },
 ];
 
-const scrumMasterNavItems: NavItem[] = [
-  { label: "POI", icon: Target, href: paths.poi.base },
-  { label: "RECURSOS HUMANOS", icon: UsersIcon, href: paths.recursosHumanos },
-  { label: "NOTIFICACIONES", icon: Bell, href: paths.notificaciones },
-];
+// Función para obtener los items de navegación según el rol
+function getNavItemsForRole(role: Role): NavItemConfig[] {
+  return allNavItems.filter(item => canAccessModule(role, item.module));
+}
 
 type AppLayoutProps = {
   children: ReactNode;
-  breadcrumbs: { label: string; href?: string }[];
+  breadcrumbs?: { label: string; href?: string }[];
   secondaryHeader?: ReactNode;
-  isPmo: boolean;
 };
 
-export default function AppLayout({
+function AppLayoutContent({
   children,
   breadcrumbs,
   secondaryHeader,
-  isPmo,
 }: AppLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { sidebarOpen, setSidebarOpen } = useSidebar();
   const pathname = usePathname();
-  
-  const navItems = isPmo ? pmoNavItems : scrumMasterNavItems;
-  
+  const { user } = useAuth();
+
+  // Obtener items de navegación según el rol del usuario
+  const navItems = user ? getNavItemsForRole(user.role) : [];
+
+  // DESARROLLADOR e IMPLEMENTADOR no tienen sidebar (solo tienen acceso a POI)
+  // También ocultar sidebar si no hay usuario (durante logout)
+  const isDeveloper = user?.role === ROLES.DESARROLLADOR;
+  const isImplementador = user?.role === ROLES.IMPLEMENTADOR;
+  const hideSidebar = isDeveloper || isImplementador;
+  const showSidebar = user && !hideSidebar && sidebarOpen;
+
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-30 h-16 shrink-0">
@@ -115,60 +134,61 @@ export default function AppLayout({
           </h1>
         </div>
         <div className="flex-1 flex justify-end pr-4">
-          <UserProfile isPmo={isPmo} />
+          <UserProfile />
         </div>
       </header>
       <div className="flex flex-1 overflow-hidden">
-        <aside
-          className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
-            sidebarOpen ? "w-64" : "w-0"
-          } overflow-hidden h-full z-20 flex flex-col shrink-0`}
-        >
-          <div className="p-2 flex justify-end">
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-1 rounded hover:bg-gray-400/50"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
-          <nav className="flex-grow p-4 space-y-[25px]">
-            {navItems.map((item) => {
-              const isActive = item.href === paths.pgd.base ? pathname.startsWith(paths.pgd.base) : pathname.startsWith(item.href.split('?')[0]);
-              return (
-              <Link
-                key={item.label}
-                href={item.href}
-                className={cn(
-                  "flex items-center p-2 rounded-md border",
-                  isActive
-                    ? "bg-[#005999] text-white border-transparent"
-                    : "bg-white text-[#004272] border-[#7E7E7E]"
-                )}
+        {/* Sidebar - No se muestra para DESARROLLADOR, IMPLEMENTADOR ni cuando no hay usuario */}
+        {user && !hideSidebar && (
+          <aside
+            className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
+              showSidebar ? "w-64" : "w-0"
+            } overflow-hidden h-full z-20 flex flex-col shrink-0`}
+          >
+            <div className="p-2 flex justify-end">
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-1 rounded hover:bg-gray-400/50"
               >
-                <item.icon className={cn("h-5 w-5 mr-3", !isActive ? 'text-[#004272]' : '')} />
-                <span className="flex-1">{item.label}</span>
-              </Link>
-            )})}
-          </nav>
-          {ineiLogo && (
-            <div className="p-4 mt-auto flex justify-center">
-              <Image
-                src={ineiLogo.imageUrl}
-                alt={ineiLogo.description}
-                width={100}
-                height={50}
-                data-ai-hint={ineiLogo.imageHint}
-              />
+                <Menu className="h-5 w-5" />
+              </button>
             </div>
-          )}
-        </aside>
+            <nav className="flex-grow p-4 space-y-[25px]">
+              {navItems.map((item) => {
+                const isActive = item.href === paths.pgd.base ? pathname.startsWith(paths.pgd.base) : pathname.startsWith(item.href.split('?')[0]);
+                return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center p-2 rounded-md border",
+                    isActive
+                      ? "bg-[#005999] text-white border-transparent"
+                      : "bg-white text-[#004272] border-[#7E7E7E]"
+                  )}
+                >
+                  <item.icon className={cn("h-5 w-5 mr-3", !isActive ? 'text-[#004272]' : '')} />
+                  <span className="flex-1">{item.label}</span>
+                </Link>
+              )})}
+            </nav>
+            <div className="p-4 mt-auto flex justify-center">
+                <Image
+                  src="/images/logo_inei.svg"
+                  alt="INEI institution logo"
+                  width={100}
+                  height={50}
+                />
+              </div>
+          </aside>
+        )}
 
         <div className="flex flex-1 flex-col overflow-y-auto">
           <div className="sticky top-0 z-10 bg-background">
             <div className="bg-[#D5D5D5]">
               <div className="p-2 flex items-center gap-2 w-full">
-                {!sidebarOpen && (
+                {/* Botón de menú - No se muestra para DESARROLLADOR, IMPLEMENTADOR ni cuando no hay usuario */}
+                {user && !hideSidebar && !showSidebar && (
                   <button
                     onClick={() => setSidebarOpen(true)}
                     className="p-1 rounded hover:bg-gray-700/20"
@@ -177,7 +197,7 @@ export default function AppLayout({
                   </button>
                 )}
                 <Home className="h-5 w-5" />
-                {breadcrumbs.map((crumb, index) => (
+                {breadcrumbs?.map((crumb, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <ChevronRight className="h-4 w-4 text-gray-600" />
                     {crumb.href ? (
@@ -197,5 +217,13 @@ export default function AppLayout({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AppLayout(props: AppLayoutProps) {
+  return (
+    <SidebarProvider>
+      <AppLayoutContent {...props} />
+    </SidebarProvider>
   );
 }

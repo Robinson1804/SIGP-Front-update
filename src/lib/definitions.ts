@@ -1,5 +1,99 @@
 import { z } from 'zod';
 
+// ============================================
+// SISTEMA DE ROLES Y PERMISOS
+// ============================================
+
+/**
+ * Roles del sistema
+ */
+export const ROLES = {
+  ADMINISTRADOR: 'ADMINISTRADOR',
+  PMO: 'PMO',
+  SCRUM_MASTER: 'SCRUM_MASTER',
+  DESARROLLADOR: 'DESARROLLADOR',
+  IMPLEMENTADOR: 'IMPLEMENTADOR',
+  COORDINADOR: 'COORDINADOR',
+  USUARIO: 'USUARIO',
+} as const;
+
+export type Role = typeof ROLES[keyof typeof ROLES];
+
+/**
+ * Módulos del sistema
+ */
+export const MODULES = {
+  PGD: 'PGD',
+  POI: 'POI',
+  RECURSOS_HUMANOS: 'RECURSOS_HUMANOS',
+  DASHBOARD: 'DASHBOARD',
+  NOTIFICACIONES: 'NOTIFICACIONES',
+} as const;
+
+export type Module = typeof MODULES[keyof typeof MODULES];
+
+/**
+ * Acciones/Permisos disponibles en cada módulo
+ */
+export const PERMISSIONS = {
+  // Permisos generales
+  VIEW: 'VIEW',           // Ver/Listar
+  CREATE: 'CREATE',       // Crear
+  EDIT: 'EDIT',           // Editar
+  DELETE: 'DELETE',       // Eliminar
+  EXPORT: 'EXPORT',       // Exportar datos
+
+  // Permisos específicos POI
+  MANAGE_BACKLOG: 'MANAGE_BACKLOG',       // Gestionar backlog
+  MANAGE_SPRINTS: 'MANAGE_SPRINTS',       // Gestionar sprints
+  ASSIGN_TASKS: 'ASSIGN_TASKS',           // Asignar tareas
+  UPDATE_TASK_STATUS: 'UPDATE_TASK_STATUS', // Actualizar estado de tareas
+  VIEW_REPORTS: 'VIEW_REPORTS',           // Ver reportes
+
+  // Permisos específicos RRHH
+  MANAGE_USERS: 'MANAGE_USERS',           // Gestionar usuarios
+  ASSIGN_ROLES: 'ASSIGN_ROLES',           // Asignar roles
+
+  // Permisos específicos PGD
+  MANAGE_OBJECTIVES: 'MANAGE_OBJECTIVES', // Gestionar objetivos
+  APPROVE_PROJECTS: 'APPROVE_PROJECTS',   // Aprobar proyectos
+} as const;
+
+export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+
+/**
+ * Tipo para definir permisos por módulo
+ */
+export type ModulePermissions = {
+  [key in Module]?: Permission[];
+};
+
+/**
+ * Configuración de permisos por rol
+ */
+export type RolePermissionConfig = {
+  [key in Role]: {
+    modules: Module[];
+    permissions: ModulePermissions;
+  };
+};
+
+/**
+ * Usuario autenticado
+ */
+export type AuthUser = {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: Role;
+  avatar?: string;
+};
+
+// ============================================
+// ESQUEMAS DE VALIDACIÓN
+// ============================================
+
 export const LoginFormSchema = z.object({
   username: z.string().min(1, { message: 'Nombre de usuario es requerido.' }),
   password: z.string().min(1, { message: 'Contraseña es requerida.' }),
@@ -24,6 +118,7 @@ export type SubProject = {
     years: string[];
     amount: number; // Changed from annualAmount to amount
     managementMethod: string;
+    financialArea?: string[];
     progress?: number;
 }
 
@@ -76,4 +171,119 @@ export type Project = {
     subProjects?: SubProject[];
     startDate?: string;
     endDate?: string;
+    gestor?: string;
 };
+
+// ============================================
+// PROYECTO (POI - SCRUM) Types
+// ============================================
+
+/**
+ * Estados posibles de un proyecto
+ */
+export type ProyectoEstado =
+  | 'Pendiente'
+  | 'En planificacion'
+  | 'En desarrollo'
+  | 'Finalizado'
+  | 'Cancelado';
+
+/**
+ * Clasificación del proyecto
+ */
+export type ProyectoClasificacion =
+  | 'Al ciudadano'
+  | 'Gestion interna';
+
+/**
+ * Método de gestión del proyecto
+ */
+export type MetodoGestion = 'Scrum' | 'Kanban';
+
+/**
+ * Interfaz completa de Proyecto basada en backend schema
+ */
+export interface Proyecto {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  tipo: 'Proyecto';
+  clasificacion: ProyectoClasificacion | null;
+  estado: ProyectoEstado;
+
+  // Vinculación estratégica
+  accionEstrategicaId: number | null;
+
+  // Responsables
+  coordinadorId: number | null;
+  scrumMasterId: number | null;
+  patrocinadorId: number | null;
+
+  // Financiero
+  coordinacion: string | null;
+  areasFinancieras: string[] | null;
+  montoAnual: number | null;
+  anios: number[] | null;
+
+  // Fechas
+  fechaInicio: string | null;
+  fechaFin: string | null;
+
+  // Metodología
+  metodoGestion: MetodoGestion;
+
+  // Auditoría
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: number;
+}
+
+/**
+ * Input para crear un proyecto
+ */
+export interface CreateProyectoInput {
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  clasificacion?: ProyectoClasificacion;
+  accionEstrategicaId?: number;
+  coordinadorId?: number;
+  scrumMasterId?: number;
+  patrocinadorId?: number;
+  coordinacion?: string;
+  areasFinancieras?: string[];
+  montoAnual?: number;
+  anios?: number[];
+  fechaInicio?: string;
+  fechaFin?: string;
+}
+
+/**
+ * Input para actualizar un proyecto
+ */
+export interface UpdateProyectoInput extends Partial<CreateProyectoInput> {
+  id: number;
+  estado?: ProyectoEstado;
+}
+
+/**
+ * Schema de validación para crear proyecto
+ */
+export const CreateProyectoSchema = z.object({
+  codigo: z.string().min(3, 'Código debe tener al menos 3 caracteres').max(20),
+  nombre: z.string().min(3, 'Nombre debe tener al menos 3 caracteres').max(200),
+  descripcion: z.string().optional(),
+  clasificacion: z.enum(['Al ciudadano', 'Gestion interna']).optional(),
+  accionEstrategicaId: z.number().int().positive().optional(),
+  coordinadorId: z.number().int().positive().optional(),
+  scrumMasterId: z.number().int().positive().optional(),
+  patrocinadorId: z.number().int().positive().optional(),
+  coordinacion: z.string().max(100).optional(),
+  areasFinancieras: z.array(z.string()).optional(),
+  montoAnual: z.number().positive().optional(),
+  anios: z.array(z.number().int().min(2024).max(2050)).optional(),
+  fechaInicio: z.string().optional(),
+  fechaFin: z.string().optional(),
+});

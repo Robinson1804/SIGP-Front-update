@@ -48,7 +48,7 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
     };
 
     return (
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
           <Button
             ref={ref}
@@ -56,7 +56,12 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
             role="combobox"
             aria-expanded={open}
             className={cn("w-full justify-between h-auto min-h-10", className)}
-            onClick={() => setOpen(!open)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(!open);
+            }}
+            type="button"
             {...props}
           >
             <div className="flex gap-1 flex-wrap">
@@ -77,6 +82,8 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
                         className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
                             handleRemove(value);
                           }
                         }}
@@ -102,16 +109,21 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+        <PopoverContent
+          className="w-[var(--radix-popover-trigger-width)] p-0 z-[9999]"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+        >
           <Command>
-            <CommandInput placeholder="Search..." />
+            <CommandInput placeholder="Buscar..." />
             <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandEmpty>No se encontraron resultados.</CommandEmpty>
               <CommandGroup>
                 {options.map((option) => (
                   <CommandItem
                     key={option.value}
                     onSelect={() => handleSelect(option.value)}
+                    onMouseDown={(e) => e.preventDefault()}
                   >
                     <Check
                       className={cn(
