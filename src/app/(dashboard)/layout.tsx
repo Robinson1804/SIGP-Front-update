@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores';
 import { paths } from '@/lib/paths';
-import AppLayout from '@/components/layout/app-layout';
+// AppLayout se maneja en cada página individual para permitir breadcrumbs personalizados
+import { WebSocketProvider } from '@/contexts/websocket-context';
 
 /**
  * Layout para rutas protegidas del dashboard
@@ -12,6 +13,8 @@ import AppLayout from '@/components/layout/app-layout';
  * Este layout envuelve todas las rutas dentro del route group (dashboard).
  * Valida autenticación y permisos antes de renderizar el contenido.
  * Todas las rutas protegidas comparten el AppLayout (sidebar, header, etc.)
+ *
+ * IMPORTANTE: WebSocketProvider está dentro porque necesita acceso al token de auth
  */
 
 export default function DashboardLayout({
@@ -60,6 +63,11 @@ export default function DashboardLayout({
     return null;
   }
 
-  // Renderizar con AppLayout compartido
-  return <AppLayout>{children}</AppLayout>;
+  // Renderizar con WebSocket para tiempo real
+  // AppLayout se maneja en cada página individual para permitir breadcrumbs personalizados
+  return (
+    <WebSocketProvider>
+      {children}
+    </WebSocketProvider>
+  );
 }

@@ -1,178 +1,53 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { revalidatePath } from 'next/cache';
 import {
-  LoginFormSchema,
   type LoginFormState,
   type AuthUser,
-  type Role,
-  ROLES
 } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
+import type { Proyecto, CreateProyectoInput, UpdateProyectoInput } from './definitions';
 
-// Mock CAPTCHA value
-const MOCK_CAPTCHA_CODE = 'A4B2C';
+// Base URL del API
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3010';
 
-// Base de datos mock de usuarios con el nuevo sistema de roles
-const users: Array<{
-  id: string;
-  username: string;
-  password: string;
-  name: string;
-  email: string;
-  role: Role;
-}> = [
-  {
-    id: '1',
-    username: 'admin',
-    password: 'password',
-    name: 'Carlos Administrador',
-    email: 'admin@inei.gob.pe',
-    role: ROLES.ADMINISTRADOR
-  },
-  {
-    id: '2',
-    username: 'pmo',
-    password: 'password',
-    name: 'Eduardo Corilla',
-    email: 'ecorilla@inei.gob.pe',
-    role: ROLES.PMO
-  },
-  {
-    id: '3',
-    username: 'rcerron',
-    password: 'password',
-    name: 'Robinson Cerron',
-    email: 'rcerron@inei.gob.pe',
-    role: ROLES.SCRUM_MASTER
-  },
-  {
-    id: '4',
-    username: 'atrujillo',
-    password: 'password',
-    name: 'Angella Trujillo',
-    email: 'atrujillo@inei.gob.pe',
-    role: ROLES.DESARROLLADOR
-  },
-  {
-    id: '5',
-    username: 'clazaro',
-    password: 'password',
-    name: 'Carlos Lázaro',
-    email: 'clazaro@inei.gob.pe',
-    role: ROLES.IMPLEMENTADOR
-  },
-  {
-    id: '6',
-    username: 'coord',
-    password: 'password',
-    name: 'María Coordinadora',
-    email: 'mcoordinadora@inei.gob.pe',
-    role: ROLES.COORDINADOR
-  },
-  {
-    id: '7',
-    username: 'user',
-    password: 'password',
-    name: 'Pedro Usuario',
-    email: 'pusuario@inei.gob.pe',
-    role: ROLES.USUARIO
-  },
-];
+// ============================================
+// AUTH ACTIONS
+// ============================================
 
-// Tipo extendido para incluir datos del usuario autenticado
-export type AuthenticateResult = LoginFormState & {
-  user?: AuthUser;
-};
-
-export async function authenticate(
-  prevState: LoginFormState | undefined,
-  formData: FormData,
-): Promise<AuthenticateResult> {
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate network delay
-
-    const validatedFields = LoginFormSchema.safeParse(
-      Object.fromEntries(formData.entries()),
-    );
-
-    if (!validatedFields.success) {
-      return {
-        errors: validatedFields.error.flatten().fieldErrors,
-        message: 'Por favor, corrija los errores en el formulario.',
-      };
-    }
-
-    const { username, password, captcha } = validatedFields.data;
-
-    if (captcha.toUpperCase() !== MOCK_CAPTCHA_CODE) {
-      return {
-        errors: { captcha: ['Código captcha incorrecto.'] },
-        message: 'Error de validación.',
-      };
-    }
-
-    const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
-
-    if (!user || user.password !== password) {
-      return {
-        message: 'Credenciales inválidas. Por favor, inténtelo de nuevo.',
-      };
-    }
-
-    // Devolver los datos del usuario para que el cliente los guarde
-    const authUser: AuthUser = {
-      id: user.id,
-      username: user.username,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    };
-
-    return {
-      message: null,
-      user: authUser,
-    };
-
-  } catch (error) {
-    if ((error as Error).message.includes('NEXT_REDIRECT')) {
-      throw error;
-    }
-    console.error('Authentication Error:', error);
-    return { message: 'Ha ocurrido un error inesperado.' };
-  }
-}
-
+/**
+ * Cerrar sesión - Server Action
+ * Limpia la cookie de autenticación y redirige al login
+ */
 export async function signOut() {
-  // In a real app, you would clear the session cookie here.
+  const cookieStore = await cookies();
+  cookieStore.delete('auth-token');
   redirect(paths.login);
 }
 
-// ============================================
-// HELPER: Get Auth Token
-// ============================================
-
 /**
- * Obtiene el token de autenticación del usuario actual
- * TODO: Implementar con el sistema de autenticación real
+ * Obtener el token de autenticación desde las cookies del servidor
+ * Para uso en Server Actions
  */
-async function getAuthToken(): Promise<string> {
-  // Por ahora retorna un token mock
-  // En producción, obtener del cookie o session storage
-  return 'mock-jwt-token';
+async function getAuthToken(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    return token || null;
+  } catch {
+    return null;
+  }
 }
 
 // ============================================
-// PROYECTOS (POI - SCRUM) Actions
+// PROYECTOS (POI - SCRUM) Server Actions
 // ============================================
-
-import { revalidatePath } from 'next/cache';
-import type { Proyecto, CreateProyectoInput, UpdateProyectoInput } from './definitions';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3010';
 
 /**
  * Obtiene todos los proyectos
+ * @deprecated Usar el servicio del cliente en features/proyectos/services
  */
 export async function getProyectos(): Promise<Proyecto[]> {
   try {
@@ -180,10 +55,10 @@ export async function getProyectos(): Promise<Proyecto[]> {
 
     const response = await fetch(`${API_BASE}/api/v1/proyectos`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         'Content-Type': 'application/json',
       },
-      cache: 'no-store', // O usar tags para revalidación
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -191,7 +66,7 @@ export async function getProyectos(): Promise<Proyecto[]> {
     }
 
     const data = await response.json();
-    return data.data || data; // Ajustar según formato backend
+    return data.data || data;
   } catch (error) {
     console.error('Error in getProyectos:', error);
     throw error;
@@ -200,6 +75,7 @@ export async function getProyectos(): Promise<Proyecto[]> {
 
 /**
  * Obtiene un proyecto por ID
+ * @deprecated Usar el servicio del cliente en features/proyectos/services
  */
 export async function getProyecto(id: number): Promise<Proyecto> {
   try {
@@ -207,7 +83,7 @@ export async function getProyecto(id: number): Promise<Proyecto> {
 
     const response = await fetch(`${API_BASE}/api/v1/proyectos/${id}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
       cache: 'no-store',
     });
@@ -229,6 +105,7 @@ export async function getProyecto(id: number): Promise<Proyecto> {
 
 /**
  * Crea un nuevo proyecto
+ * @deprecated Usar el servicio del cliente en features/proyectos/services
  */
 export async function createProyecto(input: CreateProyectoInput): Promise<Proyecto> {
   try {
@@ -237,7 +114,7 @@ export async function createProyecto(input: CreateProyectoInput): Promise<Proyec
     const response = await fetch(`${API_BASE}/api/v1/proyectos`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(input),
@@ -262,6 +139,7 @@ export async function createProyecto(input: CreateProyectoInput): Promise<Proyec
 
 /**
  * Actualiza un proyecto
+ * @deprecated Usar el servicio del cliente en features/proyectos/services
  */
 export async function updateProyecto(input: UpdateProyectoInput): Promise<Proyecto> {
   try {
@@ -271,7 +149,7 @@ export async function updateProyecto(input: UpdateProyectoInput): Promise<Proyec
     const response = await fetch(`${API_BASE}/api/v1/proyectos/${id}`, {
       method: 'PATCH',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(updateData),
@@ -297,6 +175,7 @@ export async function updateProyecto(input: UpdateProyectoInput): Promise<Proyec
 
 /**
  * Elimina (soft delete) un proyecto
+ * @deprecated Usar el servicio del cliente en features/proyectos/services
  */
 export async function deleteProyecto(id: number): Promise<void> {
   try {
@@ -305,7 +184,7 @@ export async function deleteProyecto(id: number): Promise<void> {
     const response = await fetch(`${API_BASE}/api/v1/proyectos/${id}`, {
       method: 'DELETE',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
     });
 

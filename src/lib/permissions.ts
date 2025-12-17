@@ -17,11 +17,39 @@ import {
 export const ROLE_PERMISSIONS: RolePermissionConfig = {
   // ============================================
   // ADMINISTRADOR
-  // Solo acceso a RRHH con permisos completos
+  // Acceso completo a TODOS los módulos del sistema
   // ============================================
   [ROLES.ADMINISTRADOR]: {
-    modules: [MODULES.RECURSOS_HUMANOS],
+    modules: [
+      MODULES.PGD,
+      MODULES.POI,
+      MODULES.RECURSOS_HUMANOS,
+      MODULES.DASHBOARD,
+      MODULES.NOTIFICACIONES,
+    ],
     permissions: {
+      [MODULES.PGD]: [
+        PERMISSIONS.VIEW,
+        PERMISSIONS.CREATE,
+        PERMISSIONS.EDIT,
+        PERMISSIONS.DELETE,
+        PERMISSIONS.EXPORT,
+        PERMISSIONS.MANAGE_OBJECTIVES,
+        PERMISSIONS.APPROVE_PROJECTS,
+        PERMISSIONS.VIEW_REPORTS,
+      ],
+      [MODULES.POI]: [
+        PERMISSIONS.VIEW,
+        PERMISSIONS.CREATE,
+        PERMISSIONS.EDIT,
+        PERMISSIONS.DELETE,
+        PERMISSIONS.EXPORT,
+        PERMISSIONS.MANAGE_BACKLOG,
+        PERMISSIONS.MANAGE_SPRINTS,
+        PERMISSIONS.ASSIGN_TASKS,
+        PERMISSIONS.UPDATE_TASK_STATUS,
+        PERMISSIONS.VIEW_REPORTS,
+      ],
       [MODULES.RECURSOS_HUMANOS]: [
         PERMISSIONS.VIEW,
         PERMISSIONS.CREATE,
@@ -30,6 +58,16 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
         PERMISSIONS.EXPORT,
         PERMISSIONS.MANAGE_USERS,
         PERMISSIONS.ASSIGN_ROLES,
+      ],
+      [MODULES.DASHBOARD]: [
+        PERMISSIONS.VIEW,
+        PERMISSIONS.EXPORT,
+        PERMISSIONS.VIEW_REPORTS,
+      ],
+      [MODULES.NOTIFICACIONES]: [
+        PERMISSIONS.VIEW,
+        PERMISSIONS.CREATE,
+        PERMISSIONS.DELETE,
       ],
     },
   },
@@ -363,10 +401,10 @@ export function getNavItemsForRole(role: Role): NavItem[] {
  */
 export function getDefaultRouteForRole(role: Role): string {
   switch (role) {
+    case ROLES.ADMINISTRADOR:
+      return '/dashboard'; // Admin tiene acceso a todo, inicia en Dashboard
     case ROLES.PMO:
       return '/pgd';
-    case ROLES.ADMINISTRADOR:
-      return '/recursos-humanos';
     case ROLES.SCRUM_MASTER:
     case ROLES.COORDINADOR:
     case ROLES.DESARROLLADOR:

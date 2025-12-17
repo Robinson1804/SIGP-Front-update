@@ -45,6 +45,9 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== 'undefined') {
           localStorage.setItem('auth-token', token);
           localStorage.setItem('auth-user', JSON.stringify(user));
+
+          // Guardar en cookie para el middleware (edge runtime)
+          document.cookie = `auth-token=${token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
         }
 
         set({
@@ -66,10 +69,13 @@ export const useAuthStore = create<AuthState>()(
 
       // Cerrar sesión
       logout: () => {
-        // Limpiar localStorage
+        // Limpiar localStorage y cookie
         if (typeof window !== 'undefined') {
           localStorage.removeItem('auth-token');
           localStorage.removeItem('auth-user');
+
+          // Eliminar cookie
+          document.cookie = 'auth-token=; path=/; max-age=0; SameSite=Lax';
         }
 
         set({

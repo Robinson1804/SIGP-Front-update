@@ -12,18 +12,20 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * Respuesta de login
+ * Respuesta de login - Coincide con el formato del backend
  */
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
+  expiresIn: number;
   user: {
     id: number;
-    name: string;
     email: string;
-    role: string;
-    division?: string;
-    cargo?: string;
+    username: string;
+    nombre: string;
+    apellido: string;
+    rol: string;
+    avatarUrl?: string | null;
   };
 }
 
@@ -64,3 +66,5 @@ export enum HttpStatus {
   CONFLICT = 409,
   INTERNAL_SERVER_ERROR = 500,
 }
+
+// PaginatedResponse and PaginationParams are exported from common.types.ts

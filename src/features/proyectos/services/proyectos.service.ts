@@ -6,25 +6,39 @@
 
 import { apiClient, del, ENDPOINTS } from '@/lib/api';
 import type { Proyecto } from '@/lib/definitions';
-import type { PaginatedResponse } from '@/types';
+
+// The backend returns projects as a simple array, not paginated
+export interface ProyectosResponse {
+  data: Proyecto[];
+}
 
 export interface ProyectoQueryFilters {
   search?: string;
   estado?: string;
+  clasificacion?: string;
   tipo?: 'Proyecto' | 'Actividad';
   anno?: number;
+  accionEstrategicaId?: number;
+  activo?: boolean;
   page?: number;
   pageSize?: number;
 }
 
 export interface CreateProyectoData {
+  codigo: string;
   nombre: string;
   descripcion?: string;
-  tipo: 'Proyecto' | 'Actividad';
-  anno: number;
-  estadoInicial?: string;
+  clasificacion?: 'Al ciudadano' | 'Gestion interna';
   accionEstrategicaId?: number;
-  responsableId?: number;
+  coordinadorId?: number;
+  scrumMasterId?: number;
+  patrocinadorId?: number;
+  coordinacion?: string;
+  areasFinancieras?: string[];
+  montoAnual?: number;
+  anios?: number[];
+  fechaInicio?: string;
+  fechaFin?: string;
 }
 
 export interface UpdateProyectoData extends Partial<CreateProyectoData> {
@@ -36,12 +50,15 @@ export interface UpdateProyectoData extends Partial<CreateProyectoData> {
  */
 export async function getProyectos(
   filters?: ProyectoQueryFilters
-): Promise<PaginatedResponse<Proyecto>> {
-  const response = await apiClient.get<PaginatedResponse<Proyecto>>(
+): Promise<ProyectosResponse> {
+  const response = await apiClient.get<Proyecto[]>(
     ENDPOINTS.PROYECTOS.BASE,
     { params: filters }
   );
-  return response.data;
+  // The API returns { success: true, data: [...] } - apiClient extracts the body
+  // response.data is the full API response, we need to handle both cases
+  const data = Array.isArray(response.data) ? response.data : (response.data as unknown as ProyectosResponse).data || [];
+  return { data };
 }
 
 /**
@@ -168,4 +185,67 @@ export async function getProyectoEquipo(proyectoId: number | string) {
     ENDPOINTS.PROYECTOS.EQUIPO(proyectoId)
   );
   return response.data;
+}
+
+/**
+ * Cambiar estado de un proyecto
+ */
+export async function cambiarEstadoProyecto(
+  id: number | string,
+  estado: string
+): Promise<Proyecto> {
+  const response = await apiClient.post<Proyecto>(
+    `${ENDPOINTS.PROYECTOS.BY_ID(id)}/cambiar-estado`,
+    { estado }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener requerimientos de un proyecto
+ */
+export async function getProyectoRequerimientos(proyectoId: number | string) {
+  const response = await apiClient.get(
+    ENDPOINTS.PROYECTOS.REQUERIMIENTOS(proyectoId)
+  );
+  return response.data;
+}
+
+/**
+ * Obtener métricas de velocidad del proyecto
+ */
+export async function getProyectoVelocity(proyectoId: number | string) {
+  const response = await apiClient.get(
+    ENDPOINTS.PROYECTOS.VELOCITY(proyectoId)
+  );
+  return response.data;
+}
+
+/**
+ * Obtener proyectos por Acción Estratégica
+ */
+export async function getProyectosByAccionEstrategica(
+  accionEstrategicaId: number | string
+): Promise<Proyecto[]> {
+  const response = await getProyectos({ accionEstrategicaId: Number(accionEstrategicaId) });
+  return response.data || [];
+}
+
+/**
+ * Obtener proyectos vinculados a un PGD
+ * (a través de las Acciones Estratégicas)
+ */
+export async function getProyectosByPGD(
+  pgdId: number | string,
+  accionesEstrategicasIds: number[]
+): Promise<Proyecto[]> {
+  if (accionesEstrategicasIds.length === 0) return [];
+
+  // Get all projects and filter by the AE IDs
+  const response = await getProyectos({});
+  const allProyectos = response.data || [];
+
+  return allProyectos.filter(
+    (p: Proyecto) => p.accionEstrategicaId && accionesEstrategicasIds.includes(p.accionEstrategicaId)
+  );
 }

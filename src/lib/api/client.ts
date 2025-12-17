@@ -22,12 +22,16 @@ export const apiClient = axios.create({
 
 /**
  * Request Interceptor
- * Agrega el Bearer token a todas las peticiones si existe
+ * Agrega el Bearer token a todas las peticiones excepto autenticación
  */
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Intentar obtener token de localStorage
-    if (typeof window !== 'undefined') {
+    // No agregar token para rutas de autenticación
+    const authRoutes = ['/auth/login', '/auth/register', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password'];
+    const isAuthRoute = authRoutes.some(route => config.url?.includes(route));
+
+    // Intentar obtener token de localStorage solo si NO es ruta de auth
+    if (typeof window !== 'undefined' && !isAuthRoute) {
       const token = localStorage.getItem('auth-token');
 
       if (token && config.headers) {

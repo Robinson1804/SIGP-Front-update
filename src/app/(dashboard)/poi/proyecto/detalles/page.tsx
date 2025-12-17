@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Folder,
@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   AlertTriangle,
   X,
+  Loader2,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -40,21 +41,151 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { POIFullModal, SubProjectModal } from '@/features/proyectos';
-import { SubProject, Project, MODULES, ROLES, PERMISSIONS } from '@/lib/definitions';
+import { SubProject, Project, MODULES, ROLES, PERMISSIONS, type Proyecto } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { paths } from '@/lib/paths';
 import { ProtectedRoute } from "@/features/auth";
 import { useAuth } from '@/stores';
 import { hasPermission } from "@/lib/permissions";
+import {
+  getProyectoById,
+  getProyectoEquipo,
+  deleteProyecto,
+} from '@/features/proyectos/services';
+import {
+  getSprintsByProyecto,
+  type Sprint,
+} from '@/features/proyectos/services';
+import {
+  getEpicasByProyecto,
+  type Epica,
+} from '@/features/proyectos/services';
+import { useToast } from '@/lib/hooks/use-toast';
+import {
+    DocumentoPhaseAccordion,
+    useDocumentos,
+} from '@/features/documentos';
+import { RequerimientoList } from '@/features/requerimientos';
+import { FolderOpen, FileText, Calendar, LayoutList } from 'lucide-react';
 
+// Interfaz para miembro de equipo
+interface TeamMember {
+  id: number;
+  nombre: string;
+  cargo?: string;
+  rol?: string;
+}
 
-const sprints = [
-  { name: 'Sprint 1', status: 'Completado', progress: 100 },
-  { name: 'Sprint 2', status: 'En progreso', progress: 65 },
-  { name: 'Sprint 3', status: 'En progreso', progress: 30 },
-  { name: 'Sprint 4', status: 'Por hacer', progress: 0 },
-];
+// Interfaz para sprint con progreso calculado
+interface SprintWithProgress {
+  id: number;
+  name: string;
+  status: string;
+  progress: number;
+}
+
+/**
+ * Mapea estado de sprint del API al frontend
+ */
+function mapSprintStatus(estado: string): string {
+  const statusMap: Record<string, string> = {
+    'Planificado': 'Por hacer',
+    'Activo': 'En progreso',
+    'Completado': 'Completado',
+  };
+  return statusMap[estado] || 'Por hacer';
+}
+
+/**
+ * Calcula el progreso de un sprint basado en puntos completados
+ */
+function calculateSprintProgress(sprint: Sprint): number {
+  if (!sprint.totalPuntos || sprint.totalPuntos === 0) return 0;
+  const completed = sprint.puntosCompletados || 0;
+  return Math.round((completed / sprint.totalPuntos) * 100);
+}
+
+// Tipo extendido de Project con IDs para el modal
+type ProjectWithIds = Project & {
+  accionEstrategicaId?: number;
+  coordinadorId?: number;
+  scrumMasterId?: number;
+  patrocinadorId?: number;
+};
+
+/**
+ * Mapea un proyecto del API (Proyecto) al formato del frontend (Project)
+ * Incluye los IDs para que el modal de edición pueda usarlos
+ */
+function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = []): ProjectWithIds {
+  // Mapear estado
+  const mapEstado = (estado: string): Project['status'] => {
+    const estadoMap: Record<string, Project['status']> = {
+      'Pendiente': 'Pendiente',
+      'En planificacion': 'En planificación',
+      'En desarrollo': 'En desarrollo',
+      'Finalizado': 'Finalizado',
+      'Cancelado': 'Finalizado',
+    };
+    return estadoMap[estado] || 'Pendiente';
+  };
+
+  // Mapear clasificación
+  const mapClasificacion = (clasificacion: string | null): Project['classification'] => {
+    if (!clasificacion) return 'Gestión interna';
+    if (clasificacion.toLowerCase().includes('ciudadano')) return 'Al ciudadano';
+    return 'Gestión interna';
+  };
+
+  // Convertir años
+  const aniosToYears = (anios: number[] | null): string[] => {
+    if (!anios || anios.length === 0) return [new Date().getFullYear().toString()];
+    return anios.map(a => a.toString());
+  };
+
+  // Formatear fecha
+  const formatDateToMonthYear = (dateStr: string | null): string | undefined => {
+    if (!dateStr) return undefined;
+    try {
+      const date = new Date(dateStr);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Obtener nombres de equipo como responsables
+  const responsables = equipo.map(m => m.nombre);
+
+  return {
+    id: proyecto.id.toString(),
+    code: proyecto.codigo,
+    name: proyecto.nombre,
+    description: proyecto.descripcion || '',
+    type: proyecto.tipo === 'Proyecto' ? 'Proyecto' : 'Actividad',
+    classification: mapClasificacion(proyecto.clasificacion),
+    status: mapEstado(proyecto.estado),
+    scrumMaster: proyecto.scrumMasterId ? `Scrum Master #${proyecto.scrumMasterId}` : 'Sin asignar',
+    annualAmount: proyecto.montoAnual || 0,
+    strategicAction: proyecto.accionEstrategicaId ? `AE N${proyecto.accionEstrategicaId}` : 'Sin AE',
+    missingData: !proyecto.descripcion || !proyecto.scrumMasterId,
+    years: aniosToYears(proyecto.anios),
+    responsibles: responsables.length > 0 ? responsables : [],
+    financialArea: proyecto.areasFinancieras || [],
+    coordination: proyecto.coordinacion || undefined,
+    coordinator: proyecto.coordinadorId ? `Coordinador #${proyecto.coordinadorId}` : undefined,
+    managementMethod: proyecto.metodoGestion || 'Scrum',
+    subProjects: [],
+    startDate: formatDateToMonthYear(proyecto.fechaInicio),
+    endDate: formatDateToMonthYear(proyecto.fechaFin),
+    // IDs para el modal de edición
+    accionEstrategicaId: proyecto.accionEstrategicaId || undefined,
+    coordinadorId: proyecto.coordinadorId || undefined,
+    scrumMasterId: proyecto.scrumMasterId || undefined,
+    patrocinadorId: proyecto.patrocinadorId || undefined,
+  };
+}
 
 const statusColors: { [key: string]: string } = {
   'Pendiente': 'bg-[#FE9F43] text-black',
@@ -216,23 +347,189 @@ const ProgressBarWithTooltip = ({
     </TooltipProvider>
 );
 
+// ============================================
+// COMPONENTES DE CONTENIDO PARA CADA TAB
+// ============================================
+
+/**
+ * Contenido del Tab Documentos
+ * Usa los componentes de documentos existentes
+ */
+function DocumentosTabContent({ proyectoId }: { proyectoId: number }) {
+    const { user } = useAuth();
+    const {
+        documentos,
+        isLoading,
+        fetchDocumentos,
+        aprobarExistingDocumento,
+    } = useDocumentos({
+        proyectoId,
+        autoFetch: true,
+    });
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                    <FolderOpen className="h-6 w-6 text-gray-700" />
+                    Documentos del Proyecto
+                </h3>
+            </div>
+
+            <DocumentoPhaseAccordion
+                proyectoId={proyectoId}
+                documentos={documentos}
+                isLoading={isLoading}
+                onRefresh={fetchDocumentos}
+                onApprove={aprobarExistingDocumento}
+            />
+        </div>
+    );
+}
+
+/**
+ * Contenido del Tab Requerimientos
+ * Usa el componente RequerimientoList de features/requerimientos
+ */
+function RequerimientosTabContent({ proyectoId }: { proyectoId: number }) {
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                    <FileText className="h-6 w-6 text-gray-700" />
+                    Requerimientos del Proyecto
+                </h3>
+            </div>
+
+            <RequerimientoList proyectoId={proyectoId} />
+        </div>
+    );
+}
+
+/**
+ * Contenido del Tab Backlog
+ * Muestra el Product Backlog con épicas e historias de usuario
+ */
+function BacklogTabContent({ proyectoId }: { proyectoId: number }) {
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                    <LayoutList className="h-6 w-6 text-gray-700" />
+                    Product Backlog
+                </h3>
+            </div>
+
+            <Card>
+                <CardContent className="p-6">
+                    <div className="text-center py-8 text-gray-500">
+                        <LayoutList className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg font-medium">Product Backlog</p>
+                        <p className="text-sm mt-2">Gestiona épicas, historias de usuario y sprints</p>
+                        <Button className="mt-4 bg-[#018CD1] text-white">
+                            Ir al Backlog Completo
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+/**
+ * Contenido del Tab Actas del proyecto
+ */
+function ActasTabContent({ proyectoId }: { proyectoId: number }) {
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                    <FileText className="h-6 w-6 text-gray-700" />
+                    Actas del Proyecto
+                </h3>
+            </div>
+
+            <Card>
+                <CardContent className="p-6">
+                    <div className="text-center py-8 text-gray-500">
+                        <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg font-medium">Actas de Reunión</p>
+                        <p className="text-sm mt-2">Registro de actas de constitución, kickoff, y reuniones</p>
+                        <Button className="mt-4 bg-[#018CD1] text-white">
+                            Nueva Acta
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+/**
+ * Contenido del Tab Cronograma
+ */
+function CronogramaTabContent({ proyectoId }: { proyectoId: number }) {
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                    <Calendar className="h-6 w-6 text-gray-700" />
+                    Cronograma del Proyecto
+                </h3>
+            </div>
+
+            <Card>
+                <CardContent className="p-6">
+                    <div className="text-center py-8 text-gray-500">
+                        <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg font-medium">Cronograma</p>
+                        <p className="text-sm mt-2">Timeline y planificación temporal del proyecto</p>
+                        <Button className="mt-4 bg-[#018CD1] text-white">
+                            Ver Cronograma
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
+
 function ProjectDetailsContent() {
     const { user } = useAuth();
-    const [project, setProject] = React.useState<Project | null>(null);
+    const { toast } = useToast();
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const [activeTab, setActiveTab] = React.useState('Detalles');
+    // Estado del proyecto (con IDs para edición)
+    const [project, setProject] = useState<ProjectWithIds | null>(null);
+    const [proyectoId, setProyectoId] = useState<string | null>(null);
 
-    const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+    // Estados de carga
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingSprints, setIsLoadingSprints] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const [isSubProjectModalOpen, setIsSubProjectModalOpen] = React.useState(false);
-    const [editingSubProject, setEditingSubProject] = React.useState<SubProject | null>(null);
-    const [isSubProjectDeleteModalOpen, setIsSubProjectDeleteModalOpen] = React.useState(false);
-    const [deletingSubProject, setDeletingSubProject] = React.useState<SubProject | null>(null);
+    // Datos adicionales del API
+    const [sprints, setSprints] = useState<SprintWithProgress[]>([]);
+    const [epicas, setEpicas] = useState<Epica[]>([]);
+    const [equipo, setEquipo] = useState<TeamMember[]>([]);
 
-    const [progressAnimated, setProgressAnimated] = React.useState(false);
+    const [activeTab, setActiveTab] = useState('Detalles');
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const [isSubProjectModalOpen, setIsSubProjectModalOpen] = useState(false);
+    const [editingSubProject, setEditingSubProject] = useState<SubProject | null>(null);
+    const [isSubProjectDeleteModalOpen, setIsSubProjectDeleteModalOpen] = useState(false);
+    const [deletingSubProject, setDeletingSubProject] = useState<SubProject | null>(null);
+
+    const [progressAnimated, setProgressAnimated] = useState(false);
 
     // Permisos basados en el rol del usuario
     const userRole = user?.role;
@@ -242,30 +539,112 @@ function ProjectDetailsContent() {
     const canEdit = userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.EDIT) && !isScrumMaster : false;
     const canDelete = userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.DELETE) && !isScrumMaster : false;
 
-    React.useEffect(() => {
+    // Obtener el ID del proyecto de los query params o localStorage
+    useEffect(() => {
+        const idFromParams = searchParams.get('id');
         const tabParam = searchParams.get('tab');
+
         if (tabParam) {
             setActiveTab(tabParam);
         }
-    }, [searchParams]);
 
-    React.useEffect(() => {
-        const savedProjectData = localStorage.getItem('selectedProject');
-        if (savedProjectData) {
-            const projectData = JSON.parse(savedProjectData);
-            setProject(projectData);
-            if(projectData.type !== 'Proyecto') {
+        if (idFromParams) {
+            setProyectoId(idFromParams);
+        } else {
+            // Fallback: intentar obtener del localStorage
+            const savedProjectData = localStorage.getItem('selectedProject');
+            if (savedProjectData) {
+                try {
+                    const projectData = JSON.parse(savedProjectData);
+                    if (projectData.id) {
+                        setProyectoId(projectData.id.toString());
+                    }
+                } catch {
+                    // Si no se puede parsear, redirigir
+                    router.push(paths.poi.base);
+                }
+            } else {
                 router.push(paths.poi.base);
             }
-        } else {
-             // Fallback for direct navigation
-            router.push(paths.poi.base);
         }
+    }, [searchParams, router]);
 
-        // Animar las barras de progreso después de montar
-        const timer = setTimeout(() => setProgressAnimated(true), 100);
-        return () => clearTimeout(timer);
-    }, [router]);
+    /**
+     * Función para cargar datos del proyecto desde la API
+     */
+    const fetchProjectData = useCallback(async () => {
+        if (!proyectoId) return;
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            // Cargar proyecto, sprints y equipo en paralelo
+            const [proyectoData, sprintsData, equipoData] = await Promise.all([
+                getProyectoById(proyectoId),
+                getSprintsByProyecto(proyectoId).catch(() => []),
+                getProyectoEquipo(proyectoId).catch(() => []),
+            ]);
+
+            // Verificar que es un proyecto (no actividad)
+            if (proyectoData.tipo !== 'Proyecto') {
+                router.push(paths.poi.base);
+                return;
+            }
+
+            // Mapear equipo
+            const equipoMapped: TeamMember[] = Array.isArray(equipoData)
+                ? equipoData.map((m: any) => ({
+                    id: m.id || m.personalId,
+                    nombre: m.nombre || m.personal?.nombre || `Usuario #${m.id}`,
+                    cargo: m.cargo,
+                    rol: m.rol,
+                }))
+                : [];
+
+            setEquipo(equipoMapped);
+
+            // Mapear sprints con progreso
+            const sprintsMapped: SprintWithProgress[] = Array.isArray(sprintsData)
+                ? sprintsData.map((s: Sprint) => ({
+                    id: s.id,
+                    name: s.nombre,
+                    status: mapSprintStatus(s.estado),
+                    progress: calculateSprintProgress(s),
+                }))
+                : [];
+
+            setSprints(sprintsMapped);
+
+            // Mapear proyecto al formato del frontend
+            const mappedProject = mapProyectoToProject(proyectoData, equipoMapped);
+            setProject(mappedProject);
+
+            // Guardar en localStorage para navegación entre pestañas
+            localStorage.setItem('selectedProject', JSON.stringify(mappedProject));
+
+            // Animar las barras de progreso
+            setTimeout(() => setProgressAnimated(true), 100);
+
+        } catch (err) {
+            console.error('Error fetching project data:', err);
+            setError('No se pudieron cargar los datos del proyecto');
+            toast({
+                title: 'Error',
+                description: 'No se pudieron cargar los datos del proyecto. Intente nuevamente.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [proyectoId, router, toast]);
+
+    // Cargar datos cuando cambie el ID del proyecto
+    useEffect(() => {
+        if (proyectoId) {
+            fetchProjectData();
+        }
+    }, [proyectoId, fetchProjectData]);
 
     const formatMonthYear = (dateString: string) => {
         if (!dateString) return '';
@@ -275,15 +654,39 @@ function ProjectDetailsContent() {
     }
 
     const handleSaveProject = (updatedProject: Project) => {
-        setProject(updatedProject);
-        localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+        // Después de editar, recargar datos desde la API
         setIsEditModalOpen(false);
+        toast({
+            title: 'Proyecto actualizado',
+            description: 'El proyecto se ha actualizado correctamente.',
+        });
+        // Recargar datos del proyecto
+        fetchProjectData();
     };
 
-    const handleDeleteProject = () => {
-        localStorage.removeItem('selectedProject');
-        setIsDeleteModalOpen(false);
-        router.push(paths.poi.base);
+    const handleDeleteProject = async () => {
+        if (!proyectoId) return;
+
+        setIsDeleting(true);
+        try {
+            await deleteProyecto(proyectoId);
+            localStorage.removeItem('selectedProject');
+            toast({
+                title: 'Proyecto eliminado',
+                description: 'El proyecto se ha eliminado correctamente.',
+            });
+            setIsDeleteModalOpen(false);
+            router.push(paths.poi.base);
+        } catch (err) {
+            console.error('Error deleting project:', err);
+            toast({
+                title: 'Error',
+                description: 'No se pudo eliminar el proyecto. Intente nuevamente.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const openSubProjectModal = (sub?: SubProject) => {
@@ -329,32 +732,60 @@ function ProjectDetailsContent() {
     };
 
     const handleTabClick = (tabName: string) => {
-        let route = '';
-        // Navegación para todas las pestañas del proyecto
-        if (tabName === 'Backlog') route = paths.poi.proyecto.backlog.base;
-        else if (tabName === 'Documentos') route = paths.poi.proyecto.documentos;
-        else if (tabName === 'Actas del proyecto') route = paths.poi.proyecto.actas;
-        else if (tabName === 'Requerimientos') route = paths.poi.proyecto.requerimientos;
-        else if (tabName === 'Cronograma') route = paths.poi.proyecto.cronograma;
-
-        if (route) {
-            router.push(route);
-        } else {
-            setActiveTab(tabName);
-             const newUrl = new URL(window.location.href);
-            newUrl.pathname = paths.poi.proyecto.detalles;
-            newUrl.searchParams.set('tab', tabName);
-            window.history.pushState({ ...window.history.state, as: newUrl.href, url: newUrl.href }, '', newUrl.href);
-        }
+        // Cambiar tab sin navegar a otra página
+        setActiveTab(tabName);
+        // Actualizar URL sin recargar
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('tab', tabName);
+        window.history.pushState({}, '', newUrl.href);
     };
 
     // Obtener el año actual para resaltarlo
     const currentYear = new Date().getFullYear().toString();
 
+    // Estado de carga inicial
+    if (isLoading) {
+        return (
+            <AppLayout breadcrumbs={[{ label: "POI", href: paths.poi.base }, { label: 'Cargando...' }]}>
+                <div className="flex flex-col items-center justify-center h-[60vh]">
+                    <Loader2 className="h-12 w-12 animate-spin text-[#018CD1] mb-4" />
+                    <p className="text-gray-500">Cargando datos del proyecto...</p>
+                </div>
+            </AppLayout>
+        );
+    }
+
+    // Estado de error
+    if (error && !project) {
+        return (
+            <AppLayout breadcrumbs={[{ label: "POI", href: paths.poi.base }, { label: 'Error' }]}>
+                <div className="flex flex-col items-center justify-center h-[60vh] text-red-500">
+                    <AlertTriangle className="h-12 w-12 mb-4" />
+                    <p className="text-lg font-medium">Error al cargar el proyecto</p>
+                    <p className="text-sm mb-4">{error}</p>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => router.push(paths.poi.base)}
+                        >
+                            Volver al listado
+                        </Button>
+                        <Button
+                            onClick={fetchProjectData}
+                            className="bg-[#018CD1] text-white"
+                        >
+                            Reintentar
+                        </Button>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
+
     if (!project) {
         return (
             <div className="flex h-screen w-full items-center justify-center">Cargando...</div>
-        )
+        );
     }
 
     const isProject = project.type === 'Proyecto';
@@ -368,10 +799,11 @@ function ProjectDetailsContent() {
     // Pestañas según el rol del usuario
     const getProjectTabs = () => {
         if (userRole === ROLES.PMO) {
-            // PMO: Detalles, Documentos, Backlog
+            // PMO: Detalles, Documentos, Requerimientos, Backlog
             return [
                 { name: 'Detalles' },
                 { name: 'Documentos' },
+                { name: 'Requerimientos' },
                 { name: 'Backlog' },
             ];
         } else if (userRole === ROLES.SCRUM_MASTER) {
@@ -385,10 +817,11 @@ function ProjectDetailsContent() {
                 { name: 'Backlog' },
             ];
         }
-        // Por defecto (otros roles): Detalles, Documentos, Backlog
+        // Por defecto (otros roles): Detalles, Documentos, Requerimientos, Backlog
         return [
             { name: 'Detalles' },
             { name: 'Documentos' },
+            { name: 'Requerimientos' },
             { name: 'Backlog' },
         ];
     };
@@ -593,19 +1026,26 @@ function ProjectDetailsContent() {
                                         <CardTitle className="text-base font-semibold">Progreso por Sprints</CardTitle>
                                     </CardHeader>
                                     <CardContent className="space-y-4">
-                                        {sprints.map((sprint, i) => (
-                                            <ProgressBarWithTooltip
-                                                key={i}
-                                                value={progressAnimated ? sprint.progress : 0}
-                                                label={sprint.name}
-                                                statusBadge={
-                                                    <Badge className={sprintStatusConfig[sprint.status]?.badge || 'bg-gray-400'}>
-                                                        {sprint.status}
-                                                    </Badge>
-                                                }
-                                                indicatorClassName={`${sprintStatusConfig[sprint.status]?.progress || 'bg-gray-400'} transition-all duration-1000 ease-out`}
-                                            />
-                                        ))}
+                                        {sprints.length === 0 ? (
+                                            <div className="text-center py-4 text-gray-500">
+                                                <p className="text-sm">No hay sprints registrados</p>
+                                                <p className="text-xs mt-1">Cree sprints desde el Backlog</p>
+                                            </div>
+                                        ) : (
+                                            sprints.map((sprint, i) => (
+                                                <ProgressBarWithTooltip
+                                                    key={sprint.id || i}
+                                                    value={progressAnimated ? sprint.progress : 0}
+                                                    label={sprint.name}
+                                                    statusBadge={
+                                                        <Badge className={sprintStatusConfig[sprint.status]?.badge || 'bg-gray-400'}>
+                                                            {sprint.status}
+                                                        </Badge>
+                                                    }
+                                                    indicatorClassName={`${sprintStatusConfig[sprint.status]?.progress || 'bg-gray-400'} transition-all duration-1000 ease-out`}
+                                                />
+                                            ))
+                                        )}
                                     </CardContent>
                                 </Card>
                             </div>
@@ -631,15 +1071,29 @@ function ProjectDetailsContent() {
                         </>
                     )}
 
-                    {/* Placeholder para otras pestañas */}
-                    {activeTab !== 'Detalles' && (
-                        <div className="flex items-center justify-center h-64 text-gray-500">
-                            <div className="text-center">
-                                <Folder className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                                <p className="text-lg font-medium">Sección: {activeTab}</p>
-                                <p className="text-sm">Esta sección está en desarrollo</p>
-                            </div>
-                        </div>
+                    {/* Tab Documentos */}
+                    {activeTab === 'Documentos' && proyectoId && (
+                        <DocumentosTabContent proyectoId={parseInt(proyectoId)} />
+                    )}
+
+                    {/* Tab Requerimientos */}
+                    {activeTab === 'Requerimientos' && proyectoId && (
+                        <RequerimientosTabContent proyectoId={parseInt(proyectoId)} />
+                    )}
+
+                    {/* Tab Backlog */}
+                    {activeTab === 'Backlog' && proyectoId && (
+                        <BacklogTabContent proyectoId={parseInt(proyectoId)} />
+                    )}
+
+                    {/* Tab Actas del proyecto */}
+                    {activeTab === 'Actas del proyecto' && proyectoId && (
+                        <ActasTabContent proyectoId={parseInt(proyectoId)} />
+                    )}
+
+                    {/* Tab Cronograma */}
+                    {activeTab === 'Cronograma' && proyectoId && (
+                        <CronogramaTabContent proyectoId={parseInt(proyectoId)} />
                     )}
                 </div>
 

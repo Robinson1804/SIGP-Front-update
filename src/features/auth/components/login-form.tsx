@@ -2,47 +2,115 @@
 
 import Image from "next/image";
 import { AtSign, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-import { authenticate, type AuthenticateResult } from "@/lib/actions";
+import { login } from "@/features/auth/services/auth.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuthStore } from "@/stores";
+import { getDefaultRouteForRole } from "@/lib/permissions";
+import type { AuthUser, Role } from "@/lib/definitions";
+import { ROLES } from "@/lib/definitions";
 
-function LoginButton() {
-  const { pending } = useFormStatus();
+// Mock CAPTCHA value (mismo que antes)
+const MOCK_CAPTCHA_CODE = "A4B2C";
 
-  return (
-    <Button type="submit" className="w-full text-lg font-bold" aria-disabled={pending} disabled={pending}>
-      {pending && <Loader2 className="mr-2 h-6 w-6 animate-spin" />}
-      Ingresar
-    </Button>
-  );
-}
+// Mapeo de roles del backend al frontend
+const BACKEND_ROLE_MAP: Record<string, Role> = {
+  "ADMIN": ROLES.ADMINISTRADOR,
+  "ADMINISTRADOR": ROLES.ADMINISTRADOR,
+  "PMO": ROLES.PMO,
+  "SCRUM_MASTER": ROLES.SCRUM_MASTER,
+  "COORDINADOR": ROLES.COORDINADOR,
+  "DESARROLLADOR": ROLES.DESARROLLADOR,
+  "IMPLEMENTADOR": ROLES.IMPLEMENTADOR,
+  "USUARIO": ROLES.USUARIO,
+  "PATROCINADOR": ROLES.COORDINADOR, // Mapear PATROCINADOR a COORDINADOR
+};
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [state, dispatch] = useFormState<AuthenticateResult | undefined, FormData>(authenticate, undefined);
-  const setUser = useAuthStore((state) => state.setUser);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Cuando la autenticación es exitosa, usar el Zustand store para hacer login
-  useEffect(() => {
-    if (state?.user) {
-      setUser(state.user);
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    // Validar captcha
+    if (captcha.toUpperCase() !== MOCK_CAPTCHA_CODE) {
+      setError("Código captcha incorrecto.");
+      return;
     }
-  }, [state?.user, setUser]);
 
-  const handleFormAction = (formData: FormData) => {
-    dispatch(formData);
+    // Validar campos
+    if (!email.trim()) {
+      setError("El email es requerido.");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("La contraseña es requerida.");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Llamar al backend real
+      const response = await login({ email, password });
+
+      // Mapear el rol del backend al frontend
+      const backendRole = response.user.rol;
+      const mappedRole = BACKEND_ROLE_MAP[backendRole] || ROLES.USUARIO;
+
+      // Mapear la respuesta del backend al formato AuthUser
+      const authUser: AuthUser = {
+        id: response.user.id.toString(),
+        username: response.user.username,
+        name: `${response.user.nombre} ${response.user.apellido}`.trim(),
+        email: response.user.email,
+        role: mappedRole,
+      };
+
+      // Guardar en el store
+      setAuth(authUser, response.accessToken);
+
+      // Redirigir según el rol
+      const defaultRoute = getDefaultRouteForRole(authUser.role);
+      router.push(defaultRoute);
+
+    } catch (err: any) {
+      console.error("Login error:", err);
+
+      // Manejar errores específicos del backend
+      if (err.response?.data?.error?.message) {
+        setError(err.response.data.error.message);
+      } else if (err.response?.status === 401) {
+        setError("Credenciales inválidas. Por favor, inténtelo de nuevo.");
+      } else if (err.message) {
+        setError(err.message);
+      } else {
+        setError("Error de conexión. Verifique que el servidor esté disponible.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <Card className="w-full max-w-md bg-white shadow-2xl border-2 border-white/20">
-      <form action={handleFormAction}>
+      <form onSubmit={handleSubmit}>
         <CardHeader className="items-center text-center p-6">
           <Image
             src="/images/logo_inei.svg"
@@ -61,26 +129,21 @@ export function LoginForm() {
         </CardHeader>
         <CardContent className="space-y-6 px-6">
           <div className="space-y-2">
-            <Label htmlFor="username">Nombre de usuario</Label>
+            <Label htmlFor="email">Correo electrónico</Label>
             <div className="relative">
               <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
-                id="username"
-                name="username"
-                type="text"
-                placeholder="Ingresar usuario"
+                id="email"
+                name="email"
+                type="email"
+                placeholder="usuario@inei.gob.pe"
                 required
                 className="pl-10 text-base"
-                aria-describedby="username-error"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
               />
             </div>
-            {state?.errors?.username && (
-              <div id="username-error" aria-live="polite" className="text-sm font-medium text-destructive pt-1">
-                {state.errors.username.map((error: string) => (
-                    <p key={error}>{error}</p>
-                ))}
-              </div>
-            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
@@ -93,8 +156,9 @@ export function LoginForm() {
                 placeholder="••••••••"
                 required
                 className="pl-10 pr-10 text-base"
-                aria-describedby="password-error"
-                defaultValue="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
               />
               <button
                 type="button"
@@ -109,22 +173,15 @@ export function LoginForm() {
                 )}
               </button>
             </div>
-             {state?.errors?.password && (
-              <div id="password-error" aria-live="polite" className="text-sm font-medium text-destructive pt-1">
-                {state.errors.password.map((error: string) => (
-                    <p key={error}>{error}</p>
-                ))}
-              </div>
-            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="captcha">Código captcha</Label>
             <div className="flex items-center justify-center gap-4 rounded-md border border-input bg-muted/50 p-2">
               <div className="font-bold tracking-[0.5em] text-lg text-foreground select-none">
-                A4B2C
+                {MOCK_CAPTCHA_CODE}
               </div>
             </div>
-             <div className="relative mt-2">
+            <div className="relative mt-2">
               <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 id="captcha"
@@ -135,26 +192,27 @@ export function LoginForm() {
                 className="pl-10 text-base"
                 autoCapitalize="off"
                 autoCorrect="off"
-                aria-describedby="captcha-error"
-                defaultValue="A4B2C"
+                value={captcha}
+                onChange={(e) => setCaptcha(e.target.value)}
+                disabled={isLoading}
               />
             </div>
-             {state?.errors?.captcha && (
-              <div id="captcha-error" aria-live="polite" className="text-sm font-medium text-destructive pt-1">
-                 {state.errors.captcha.map((error: string) => (
-                    <p key={error}>{error}</p>
-                ))}
-              </div>
-            )}
           </div>
-           {state?.message && (
+          {error && (
             <Alert variant="destructive" className="mt-4">
-              <AlertDescription>{state.message}</AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
         </CardContent>
         <CardFooter className="flex flex-col p-6 pt-2">
-           <LoginButton />
+          <Button
+            type="submit"
+            className="w-full text-lg font-bold"
+            disabled={isLoading}
+          >
+            {isLoading && <Loader2 className="mr-2 h-6 w-6 animate-spin" />}
+            Ingresar
+          </Button>
         </CardFooter>
       </form>
     </Card>

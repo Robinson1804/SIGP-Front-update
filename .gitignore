@@ -1,5 +1,12 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Claude Code - archivos de configuracion local
+/.claude/
+CLAUDE.md
+
+# documentation (generated)
+/docs/
+
 # dependencies
 /node_modules
 /.pnp
@@ -9,6 +16,7 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
 
 # testing
 /coverage
@@ -43,3 +51,8 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# temp files
+temp_login.json
+test-login.json
+nul

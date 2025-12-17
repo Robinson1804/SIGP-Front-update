@@ -1,13 +1,12 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Edit, Calendar, Users, DollarSign, Target } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, DollarSign, Target, FileText, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PermissionGate } from '@/features/auth';
+import { ProyectoActions } from '@/features/proyectos';
 import { getProyecto } from '@/lib/actions';
 import { paths } from '@/lib/paths';
-import { MODULES, PERMISSIONS } from '@/lib/definitions';
 
 interface ProyectoDetallesPageProps {
   params: {
@@ -52,17 +51,11 @@ export default async function ProyectoDetallesPage({
           </div>
         </div>
 
-        <PermissionGate
-          module={MODULES.POI}
-          permission={PERMISSIONS.EDIT}
-        >
-          <Button asChild>
-            <Link href={paths.poi.proyectos.editar(proyecto.id)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Link>
-          </Button>
-        </PermissionGate>
+        <ProyectoActions
+          proyectoId={proyecto.id}
+          proyectoCodigo={proyecto.codigo}
+          proyectoNombre={proyecto.nombre}
+        />
       </div>
 
       {/* Estado y Clasificación */}
@@ -258,20 +251,27 @@ export default async function ProyectoDetallesPage({
           <CardTitle>Secciones del Proyecto</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4">
             <Button variant="outline" asChild>
               <Link href={paths.poi.proyecto.backlog.base}>
                 Product Backlog
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link href={paths.poi.proyecto.documentos}>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.proyectos.requerimientos(proyecto.id)}>
+                <FileText className="h-4 w-4" />
+                Requerimientos
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.proyectos.documentos(proyecto.id)}>
+                <FolderOpen className="h-4 w-4" />
                 Documentos
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={paths.poi.proyecto.detalles}>
-                Configuración
+              <Link href={paths.poi.proyecto.backlog.tablero}>
+                Tablero Kanban
               </Link>
             </Button>
           </div>

@@ -1,13 +1,14 @@
-
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Plus,
   Pencil,
   Trash2,
   X,
   AlertTriangle,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -28,238 +29,96 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { paths } from '@/lib/paths';
+import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
+import { useToast } from "@/lib/hooks/use-toast";
 
-type PGD = {
-  id: string;
-  startYear: number;
-  endYear: number;
-};
+// Import from planning module
+import {
+  getPGDs,
+  getOGDsByPGD,
+  getOEGDsByOGD,
+  createOEGD,
+  updateOEGD,
+  deleteOEGD,
+  type PGD,
+  type OGD,
+  type OEGD,
+  type CreateOEGDInput,
+  type UpdateOEGDInput,
+} from "@/features/planning";
 
-type OGD = {
-    id: string;
-    name: string;
-    description: string;
-};
-
-type OEGD = {
-    id: string;
-    name: string;
-    description: string;
-    relatedOgd: OGD | null;
-};
-
-const initialPgds: PGD[] = [
-  { id: "1", startYear: 2021, endYear: 2025 },
-];
-
-const availableOgds: OGD[] = [
-    { id: '1', name: 'OGD N°1', description: 'Implementar una infraestructura tecnológica moderna para optimizar la producción y difusión de información estadística nacional.' },
-    { id: '2', name: 'OGD N°2', description: 'Mantener e implementar sistemas de información eficientes y eficaces garantizando la calidad y seguridad en el INEI.' },
-    { id: '3', name: 'OGD N°3', description: 'Proveer el soporte e infraestructura TIC que viabilice las actividades del INEI y del SEN.' },
-    { id: '4', name: 'OGD N°4', description: 'Promover el uso de tecnologías emergentes para la innovación en la producción estadística.' },
-];
-
-const initialOegds: OEGD[] = [
-    { id: '1.1', name: 'OEGD N°1.1', description: 'Fortalecer el uso de la Plataforma de Interoperabilidad del Estado (PIDE) para el intercambio de información con otras entidades públicas.', relatedOgd: availableOgds[0] },
-    { id: '2.1', name: 'OEGD N°2.1', description: 'Implementar un sistema de gestión de la seguridad de la información basado en estándares internacionales.', relatedOgd: availableOgds[1] },
-    { id: '3.1', name: 'OEGD N°3.1', description: 'Renovar la infraestructura de servidores y almacenamiento para mejorar el rendimiento y la disponibilidad de los servicios TIC.', relatedOgd: availableOgds[2] },
-    { id: '4.1', name: 'OEGD N°4.1', description: 'Desarrollar proyectos piloto utilizando Big Data y Machine Learning para la generación de nuevas estadísticas.', relatedOgd: availableOgds[3] },
-];
-
-
-const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
-
-function PGDModal({
-  isOpen,
-  onClose,
-  pgd,
-  onSave,
-  onDelete,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  pgd: PGD | null;
-  onSave: (data: { startYear: number; endYear: number }) => void;
-  onDelete?: (id: string) => void;
-}) {
-  const [startYear, setStartYear] = React.useState<number | undefined>(pgd?.startYear);
-  const [endYear, setEndYear] = React.useState<number | undefined>(pgd?.endYear);
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-
-  React.useEffect(() => {
-    if (pgd) {
-      setStartYear(pgd.startYear);
-      setEndYear(pgd.endYear);
-    } else {
-      setStartYear(undefined);
-      setEndYear(undefined);
-    }
-  }, [pgd, isOpen]);
-
-  const handleSave = () => {
-    if (startYear && endYear) {
-      if (endYear - startYear !== 4) {
-        alert("El rango debe ser de 4 años.");
-        return;
-      }
-       if (endYear < startYear) {
-        alert("El año final no puede ser menor al año de inicio.");
-        return;
-      }
-      onSave({ startYear, endYear });
-      onClose();
-    }
-  };
-  
-  const handleDelete = () => {
-      if (pgd?.id) {
-          onDelete?.(pgd.id);
-          setShowDeleteConfirm(false);
-          onClose();
-      }
-  }
-
-  if (!isOpen) return null;
-
-  return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] p-0" showCloseButton={false}>
-          <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
-            <DialogTitle>
-              {pgd ? "EDITAR PLAN DE GOBIERNO DIGITAL (PGD)" : "REGISTRAR PLAN DE GOBIERNO DIGITAL (PGD)"}
-            </DialogTitle>
-            <DialogClose asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
-                    <X className="h-4 w-4" />
-                </Button>
-            </DialogClose>
-          </DialogHeader>
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label htmlFor="startYear" className="block text-sm font-medium text-gray-700 mb-1">Año Inicio:</label>
-                    <Select onValueChange={(value) => setStartYear(Number(value))} defaultValue={startYear?.toString()}>
-                        <SelectTrigger id="startYear">
-                            <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div>
-                    <label htmlFor="endYear" className="block text-sm font-medium text-gray-700 mb-1">Año Final:</label>
-                    <Select onValueChange={(value) => setEndYear(Number(value))} defaultValue={endYear?.toString()}>
-                        <SelectTrigger id="endYear">
-                            <SelectValue placeholder="Seleccionar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-          </div>
-          <DialogFooter className="px-6 pb-6 flex justify-between">
-            {pgd ? (
-              <>
-                <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)}>Eliminar</Button>
-                <Button onClick={handleSave}>Guardar</Button>
-              </>
-            ) : (
-                <div className="w-full flex justify-end gap-2">
-                 <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-                 <Button onClick={handleSave}>Guardar</Button>
-                </div>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {showDeleteConfirm && (
-        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Confirmar Eliminación</DialogTitle>
-                </DialogHeader>
-                <p>¿Está seguro de que desea eliminar el plan {pgd?.startYear} - {pgd?.endYear}? Esta acción no se puede deshacer.</p>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)}>Cancelar</Button>
-                    <Button variant="destructive" onClick={handleDelete}>Eliminar</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-      )}
-    </>
-  );
-}
-
-
+// ============================================
+// OEGD Modal Component
+// ============================================
 function OEGDModal({
   isOpen,
   onClose,
   oegd,
+  ogdId,
   onSave,
 }: {
   isOpen: boolean;
   onClose: () => void;
   oegd: OEGD | null;
-  onSave: (data: OEGD) => void;
+  ogdId: number;
+  onSave: (data: CreateOEGDInput | UpdateOEGDInput, id?: number) => Promise<void>;
 }) {
-  const [name, setName] = React.useState("");
-  const [description, setDescription] = React.useState("");
-  const [relatedOgd, setRelatedOgd] = React.useState<OGD | null>(null);
-  const [errors, setErrors] = React.useState<{ [key: string]: string }>({});
+  const [codigo, setCodigo] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [descripcion, setDescripcion] = useState("");
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [saving, setSaving] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (oegd) {
-      setName(oegd.name);
-      setDescription(oegd.description);
-      setRelatedOgd(oegd.relatedOgd);
+      setCodigo(oegd.codigo);
+      setNombre(oegd.nombre);
+      setDescripcion(oegd.descripcion || "");
     } else {
-      setName("");
-      setDescription("");
-      setRelatedOgd(null);
+      setCodigo("");
+      setNombre("");
+      setDescripcion("");
     }
     setErrors({});
   }, [oegd, isOpen]);
-  
+
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!name.trim()) newErrors.name = "El nombre es requerido.";
-    if (!description.trim()) newErrors.description = "La descripción es requerida.";
-    if (!relatedOgd) newErrors.relatedOgd = "Debe seleccionar un OGD relacionado.";
+    if (!codigo.trim()) newErrors.codigo = "El código es requerido.";
+    if (!nombre.trim()) newErrors.nombre = "El nombre es requerido.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    
-    onSave({
-      id: oegd?.id || `${relatedOgd?.id}.${Math.floor(Math.random() * 10)}`,
-      name,
-      description,
-      relatedOgd,
-    });
-    onClose();
-  };
 
-  const handleSelectOgd = (ogdId: string) => {
-    const selected = availableOgds.find(ogd => ogd.id === ogdId);
-    setRelatedOgd(selected || null);
-  }
+    setSaving(true);
+    try {
+      const data: CreateOEGDInput | UpdateOEGDInput = {
+        codigo,
+        nombre,
+        descripcion: descripcion || undefined,
+      };
+
+      if (!oegd) {
+        (data as CreateOEGDInput).ogdId = ogdId;
+      }
+
+      await onSave(data, oegd?.id);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] p-0" showCloseButton={false}>
+      <DialogContent className="sm:max-w-[600px] p-0" showCloseButton={false}>
         <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
           <DialogTitle>
             {oegd ? "EDITAR OBJETIVO ESPECÍFICO DE GOBIERNO DIGITAL (OEGD)" : "REGISTRAR OBJETIVO ESPECÍFICO DE GOBIERNO DIGITAL (OEGD)"}
@@ -272,161 +131,237 @@ function OEGDModal({
         </DialogHeader>
         <div className="p-6 space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nombre y/o ID</label>
-            <Input id="name" value={name} onChange={e => setName(e.target.value)} className={errors.name ? 'border-red-500' : ''} />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+            <label htmlFor="codigo" className="block text-sm font-medium text-gray-700 mb-1">
+              Código *
+            </label>
+            <Input
+              id="codigo"
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              placeholder="Ej: OEGD-001"
+              className={errors.codigo ? "border-red-500" : ""}
+            />
+            {errors.codigo && <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>}
           </div>
           <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-            <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} className={errors.description ? 'border-red-500' : ''} />
-            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+            <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre *
+            </label>
+            <Input
+              id="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className={errors.nombre ? "border-red-500" : ""}
+            />
+            {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
           </div>
-           <div>
-            <label htmlFor="ogd-select" className="block text-sm font-medium text-gray-700 mb-1">Objetivo de Gobierno Digital (OGD) del INEI</label>
-            <Select onValueChange={handleSelectOgd} disabled={!!relatedOgd}>
-                <SelectTrigger id="ogd-select" className={errors.relatedOgd ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Seleccionar OGD" />
-                </SelectTrigger>
-                <SelectContent>
-                    {availableOgds.map(ogd => <SelectItem key={ogd.id} value={ogd.id}>{ogd.name}</SelectItem>)}
-                </SelectContent>
-            </Select>
-            {errors.relatedOgd && <p className="text-red-500 text-xs mt-1">{errors.relatedOgd}</p>}
-
-            {relatedOgd && (
-                 <Table className="mt-4">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nombre y/o ID</TableHead>
-                            <TableHead>Descripción</TableHead>
-                            <TableHead></TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell>{relatedOgd.name}</TableCell>
-                            <TableCell>{relatedOgd.description}</TableCell>
-                            <TableCell>
-                                <Button variant="destructive" size="icon" onClick={() => setRelatedOgd(null)} className="h-8 w-8">
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            )}
-           </div>
+          <div>
+            <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
+              Descripción
+            </label>
+            <Textarea id="descripcion" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
+          </div>
         </div>
         <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
-            <Button onClick={handleSave} style={{backgroundColor: '#018CD1', color: 'white'}}>Guardar</Button>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving} style={{ backgroundColor: "#018CD1" }}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Guardar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
+// ============================================
+// Delete Confirmation Modal
+// ============================================
 function DeleteConfirmationModal({
-    isOpen,
-    onClose,
-    onConfirm,
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  isLoading,
 }: {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  isLoading?: boolean;
 }) {
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
-                 <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
-                    <DialogTitle>AVISO</DialogTitle>
-                     <DialogClose asChild>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
-                            <X className="h-4 w-4" />
-                        </Button>
-                    </DialogClose>
-                </DialogHeader>
-                <div className="p-6 text-center flex flex-col items-center">
-                    <AlertTriangle className="h-16 w-16 text-black mb-4" strokeWidth={1.5}/>
-                    <p className="font-bold text-lg">¿Estás seguro?</p>
-                    <p className="text-muted-foreground">El Objetivo Específico de Gobierno Digital será eliminado</p>
-                </div>
-                <DialogFooter className="justify-center px-6 pb-6 flex gap-4">
-                    <Button variant="outline" onClick={onClose} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
-                    <Button onClick={onConfirm} style={{backgroundColor: '#018CD1', color: 'white'}}>Sí, eliminar</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
+        <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+          <DialogTitle>AVISO</DialogTitle>
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogClose>
+        </DialogHeader>
+        <div className="p-6 text-center flex flex-col items-center">
+          <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" strokeWidth={1.5} />
+          <p className="font-bold text-lg">¿Estás seguro?</p>
+          <p className="text-muted-foreground">{title}</p>
+        </div>
+        <DialogFooter className="justify-center px-6 pb-6 flex gap-4">
+          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button onClick={onConfirm} disabled={isLoading} style={{ backgroundColor: "#018CD1" }}>
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+            Sí, eliminar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-const OegdCard = ({ oegd, onEdit, onDelete }: { oegd: OEGD, onEdit: () => void; onDelete: () => void; }) => (
-    <div className="rounded-lg shadow-md border border-[#9A9A9A] overflow-hidden flex flex-col">
-        <div className="bg-[#EAE7E7] p-4 flex-grow text-center">
-            <div className="bg-[#1A5581] text-white py-2 px-4 rounded-lg inline-block mb-4">
-                <h3 className="text-base font-bold">{oegd.name}</h3>
-            </div>
-            <p className="text-sm text-gray-700 min-h-[40px]">{oegd.description}</p>
-        </div>
-        <div className="bg-white p-4 flex justify-center gap-2 border-t border-[#9A9A9A]">
-            <Button size="icon" onClick={onEdit} className="bg-[#1A5581] hover:bg-[#1A5581]/90 h-10 w-10">
-                <Pencil className="h-5 w-5 text-white" />
-            </Button>
-            <Button size="icon" onClick={onDelete} className="bg-[#1A5581] hover:bg-[#1A5581]/90 h-10 w-10">
-                <Trash2 className="h-5 w-5 text-white" />
-            </Button>
-        </div>
+// ============================================
+// OEGD Card Component
+// ============================================
+const OegdCard = ({
+  oegd,
+  onEdit,
+  onDelete,
+}: {
+  oegd: OEGD;
+  onEdit: () => void;
+  onDelete: () => void;
+}) => (
+  <div className="rounded-lg shadow-md border border-[#9A9A9A] overflow-hidden flex flex-col">
+    <div className="bg-[#FCF3EA] p-4 flex-grow text-center">
+      <div className="bg-[#E65100] text-white py-2 px-4 rounded-lg inline-block mb-4">
+        <h3 className="text-base font-bold">{oegd.codigo}</h3>
+      </div>
+      <h4 className="font-semibold text-sm mb-2">{oegd.nombre}</h4>
+      <p className="text-sm text-gray-700 min-h-[40px] line-clamp-3">{oegd.descripcion}</p>
+      {oegd._count?.accionesEstrategicas !== undefined && (
+        <p className="text-xs text-gray-500 mt-2">
+          <span className="font-medium">Acciones Estratégicas:</span> {oegd._count.accionesEstrategicas}
+        </p>
+      )}
     </div>
+    <div className="bg-white p-4 flex justify-center gap-2 border-t border-[#9A9A9A]">
+      <Button size="icon" onClick={onEdit} className="bg-[#E65100] hover:bg-[#E65100]/90 h-10 w-10">
+        <Pencil className="h-5 w-5 text-white" />
+      </Button>
+      <Button size="icon" onClick={onDelete} className="bg-[#E65100] hover:bg-[#E65100]/90 h-10 w-10">
+        <Trash2 className="h-5 w-5 text-white" />
+      </Button>
+    </div>
+  </div>
 );
 
+// ============================================
+// Main Page Component
+// ============================================
 export default function OegdDashboardPage() {
-  const [pgds, setPgds] = React.useState<PGD[]>(initialPgds);
-  const [selectedPgd, setSelectedPgd] = React.useState<string | undefined>(
-    pgds.length > 0 ? pgds[0].id : undefined
-  );
-  const [isPgdModalOpen, setIsPgdModalOpen] = React.useState(false);
-  const [editingPgd, setEditingPgd] = React.useState<PGD | null>(null);
-  
-  const [oegds, setOegds] = React.useState<OEGD[]>(initialOegds);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [editingOegd, setEditingOegd] = React.useState<OEGD | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
-  const [deletingOegd, setDeletingOegd] = React.useState<OEGD | null>(null);
+  const [pgds, setPgds] = useState<PGD[]>([]);
+  const [ogds, setOgds] = useState<OGD[]>([]);
+  const [oegds, setOegds] = useState<OEGD[]>([]);
 
-  const handleOpenPgdModal = (pgd: PGD | null = null) => {
-    setEditingPgd(pgd);
-    setIsPgdModalOpen(true);
-  };
+  const [selectedPgdId, setSelectedPgdId] = useState<string | undefined>(undefined);
+  const [selectedOgdId, setSelectedOgdId] = useState<string | undefined>(undefined);
 
-  const handleClosePgdModal = () => {
-    setIsPgdModalOpen(false);
-    setEditingPgd(null);
-  };
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingOgds, setIsLoadingOgds] = useState(false);
+  const [isLoadingOegds, setIsLoadingOegds] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSavePgd = (data: { startYear: number; endYear: number }) => {
-    if (editingPgd) {
-      const updatedPgds = pgds.map((p) =>
-        p.id === editingPgd.id ? { ...p, ...data } : p
-      );
-      setPgds(updatedPgds);
-    } else {
-      const newPgd = { id: (Date.now()).toString(), ...data };
-      const updatedPgds = [...pgds, newPgd];
-      setPgds(updatedPgds);
-      setSelectedPgd(newPgd.id);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingOegd, setEditingOegd] = useState<OEGD | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletingOegd, setDeletingOegd] = useState<OEGD | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const { toast } = useToast();
+
+  // Load PGDs
+  const loadPGDs = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getPGDs();
+      setPgds(data);
+      if (data.length > 0 && !selectedPgdId) {
+        setSelectedPgdId(data[0].id.toString());
+      }
+    } catch (err: any) {
+      console.error("Error loading PGDs:", err);
+      setError("Error al cargar los planes de gobierno digital");
+      toast({ title: "Error", description: "No se pudieron cargar los PGDs", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [selectedPgdId, toast]);
 
-  const handleDeletePgd = (id: string) => {
-    const updatedPgds = pgds.filter((p) => p.id !== id);
-    setPgds(updatedPgds);
-    if (selectedPgd === id) {
-      const newSelectedId = updatedPgds.length > 0 ? updatedPgds[0].id : undefined;
-      setSelectedPgd(newSelectedId);
+  // Load OGDs when PGD changes
+  const loadOGDs = useCallback(async () => {
+    if (!selectedPgdId) {
+      setOgds([]);
+      setSelectedOgdId(undefined);
+      return;
     }
-  };
+
+    setIsLoadingOgds(true);
+    try {
+      const data = await getOGDsByPGD(selectedPgdId);
+      setOgds(data);
+      if (data.length > 0) {
+        setSelectedOgdId(data[0].id.toString());
+      } else {
+        setSelectedOgdId(undefined);
+      }
+    } catch (err: any) {
+      console.error("Error loading OGDs:", err);
+      toast({ title: "Error", description: "No se pudieron cargar los OGDs", variant: "destructive" });
+    } finally {
+      setIsLoadingOgds(false);
+    }
+  }, [selectedPgdId, toast]);
+
+  // Load OEGDs when OGD changes
+  const loadOEGDs = useCallback(async () => {
+    if (!selectedOgdId) {
+      setOegds([]);
+      return;
+    }
+
+    setIsLoadingOegds(true);
+    try {
+      const data = await getOEGDsByOGD(selectedOgdId);
+      setOegds(data);
+    } catch (err: any) {
+      console.error("Error loading OEGDs:", err);
+      toast({ title: "Error", description: "No se pudieron cargar los OEGDs", variant: "destructive" });
+    } finally {
+      setIsLoadingOegds(false);
+    }
+  }, [selectedOgdId, toast]);
+
+  useEffect(() => {
+    loadPGDs();
+  }, []);
+
+  useEffect(() => {
+    if (selectedPgdId) {
+      loadOGDs();
+    }
+  }, [selectedPgdId]);
+
+  useEffect(() => {
+    if (selectedOgdId) {
+      loadOEGDs();
+    }
+  }, [selectedOgdId, loadOEGDs]);
 
   const handleOpenModal = (oegd: OEGD | null = null) => {
     setEditingOegd(oegd);
@@ -438,12 +373,20 @@ export default function OegdDashboardPage() {
     setEditingOegd(null);
   };
 
-  const handleSaveOegd = (oegd: OEGD) => {
-    const exists = oegds.some(o => o.id === oegd.id);
-    if (exists) {
-        setOegds(oegds.map(o => o.id === oegd.id ? oegd : o));
-    } else {
-        setOegds([...oegds, oegd]);
+  const handleSaveOegd = async (data: CreateOEGDInput | UpdateOEGDInput, id?: number) => {
+    try {
+      if (id) {
+        await updateOEGD(id, data as UpdateOEGDInput);
+        toast({ title: "Éxito", description: "OEGD actualizado correctamente" });
+      } else {
+        await createOEGD(data as CreateOEGDInput);
+        toast({ title: "Éxito", description: "OEGD creado correctamente" });
+      }
+      await loadOEGDs();
+    } catch (err: any) {
+      console.error("Error saving OEGD:", err);
+      toast({ title: "Error", description: err.message || "Error al guardar el OEGD", variant: "destructive" });
+      throw err;
     }
   };
 
@@ -457,13 +400,22 @@ export default function OegdDashboardPage() {
     setDeletingOegd(null);
   };
 
-  const handleDeleteOegd = () => {
-    if (deletingOegd) {
-        setOegds(oegds.filter(o => o.id !== deletingOegd.id));
-        handleCloseDeleteModal();
+  const handleDeleteOegd = async () => {
+    if (!deletingOegd) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteOEGD(deletingOegd.id);
+      toast({ title: "Éxito", description: "OEGD eliminado correctamente" });
+      await loadOEGDs();
+      handleCloseDeleteModal();
+    } catch (err: any) {
+      console.error("Error deleting OEGD:", err);
+      toast({ title: "Error", description: err.message || "Error al eliminar el OEGD", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
     }
   };
-
 
   return (
     <ProtectedRoute module={MODULES.PGD}>
@@ -473,82 +425,114 @@ export default function OegdDashboardPage() {
           { label: "OEGD" },
         ]}
       >
-      <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
-        <div className="p-2 flex items-center justify-between w-full">
-          <h2 className="font-bold text-black pl-2">
-            OBJETIVO ESPECÍFICO DE GOBIERNO DIGITAL (OEGD)
-          </h2>
-          <div className="flex items-center gap-2">
-            <Select value={selectedPgd} onValueChange={setSelectedPgd}>
-              <SelectTrigger className="w-[180px] bg-white border-[#484848]">
-                <SelectValue placeholder="Seleccionar" />
-              </SelectTrigger>
-              <SelectContent>
-                {pgds.map((pgd) => (
-                  <SelectItem
-                    key={pgd.id}
-                    value={pgd.id}
-                  >{`${pgd.startYear} - ${pgd.endYear}`}</SelectItem>
+        <div className="bg-[#D5D5D5] border-y border-[#1A5581]">
+          <div className="p-2 flex items-center justify-between w-full">
+            <h2 className="font-bold text-black pl-2">OBJETIVO ESPECÍFICO DE GOBIERNO DIGITAL (OEGD)</h2>
+            <div className="flex items-center gap-2">
+              {isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando...
+                </div>
+              ) : error ? (
+                <Button variant="outline" size="sm" onClick={loadPGDs}>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Reintentar
+                </Button>
+              ) : (
+                <>
+                  <Select value={selectedPgdId} onValueChange={setSelectedPgdId}>
+                    <SelectTrigger className="w-[150px] bg-white border-[#484848]">
+                      <SelectValue placeholder="Seleccionar PGD" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pgds.map((pgd) => (
+                        <SelectItem key={pgd.id} value={pgd.id.toString()}>
+                          {`${pgd.anioInicio} - ${pgd.anioFin}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select
+                    value={selectedOgdId}
+                    onValueChange={setSelectedOgdId}
+                    disabled={isLoadingOgds || ogds.length === 0}
+                  >
+                    <SelectTrigger className="w-[180px] bg-white border-[#484848]">
+                      <SelectValue placeholder={isLoadingOgds ? "Cargando..." : "Seleccionar OGD"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ogds.map((ogd) => (
+                        <SelectItem key={ogd.id} value={ogd.id.toString()}>
+                          {ogd.codigo} - {ogd.nombre.substring(0, 20)}...
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={() => handleOpenModal()}
+                    disabled={!selectedOgdId}
+                    style={{ backgroundColor: "#018CD1", color: "white" }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> NUEVO OEGD
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col bg-[#F9F9F9]">
+          <div className="p-6 flex-1">
+            {isLoadingOegds ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-[#004272]" />
+              </div>
+            ) : !selectedOgdId ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                <p className="text-lg">Seleccione un OGD para ver sus objetivos específicos</p>
+              </div>
+            ) : oegds.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                <p className="text-lg">No hay OEGDs registrados para este OGD</p>
+                <Button
+                  onClick={() => handleOpenModal()}
+                  className="mt-4"
+                  style={{ backgroundColor: "#018CD1" }}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Crear primer OEGD
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl mx-auto">
+                {oegds.map((oegd) => (
+                  <OegdCard
+                    key={oegd.id}
+                    oegd={oegd}
+                    onEdit={() => handleOpenModal(oegd)}
+                    onDelete={() => handleOpenDeleteModal(oegd)}
+                  />
                 ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="icon"
-              style={{ backgroundColor: "#3B4466", color: "white" }}
-              className="border border-[#979797]"
-              onClick={() => handleOpenPgdModal()}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              style={{ backgroundColor: "#3B4466", color: "white" }}
-              className="border border-[#979797]"
-              disabled={!selectedPgd}
-              onClick={() =>
-                handleOpenPgdModal(pgds.find((p) => p.id === selectedPgd) || null)
-              }
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button onClick={() => handleOpenModal()} style={{backgroundColor: '#018CD1', color: 'white'}}>
-              <Plus className="mr-2 h-4 w-4" /> NUEVO OEGD
-            </Button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      <div className="flex-1 flex flex-col bg-[#F9F9F9]">
-        <div className="p-6 flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-7xl mx-auto">
-            {oegds.map((oegd) => (
-              <OegdCard key={oegd.id} oegd={oegd} onEdit={() => handleOpenModal(oegd)} onDelete={() => handleOpenDeleteModal(oegd)} />
-            ))}
-          </div>
-        </div>
-      </div>
+        <OEGDModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          oegd={editingOegd}
+          ogdId={selectedOgdId ? Number(selectedOgdId) : 0}
+          onSave={handleSaveOegd}
+        />
 
-      <PGDModal
-        isOpen={isPgdModalOpen}
-        onClose={handleClosePgdModal}
-        pgd={editingPgd}
-        onSave={handleSavePgd}
-        onDelete={handleDeletePgd}
-      />
-
-      <OEGDModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        oegd={editingOegd}
-        onSave={handleSaveOegd}
-      />
-      
-      <DeleteConfirmationModal
-        isOpen={isDeleteModalOpen}
-        onClose={handleCloseDeleteModal}
-        onConfirm={handleDeleteOegd}
-      />
-
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={handleCloseDeleteModal}
+          onConfirm={handleDeleteOegd}
+          title={`El OEGD "${deletingOegd?.codigo}" será eliminado`}
+          isLoading={isDeleting}
+        />
       </AppLayout>
     </ProtectedRoute>
   );

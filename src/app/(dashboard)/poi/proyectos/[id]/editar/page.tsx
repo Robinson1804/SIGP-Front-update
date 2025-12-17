@@ -14,6 +14,11 @@ interface EditarProyectoPageProps {
   };
 }
 
+export const metadata = {
+  title: 'Editar Proyecto | SIGP',
+  description: 'Editar proyecto POI',
+};
+
 export default async function EditarProyectoPage({
   params,
 }: EditarProyectoPageProps) {
@@ -37,15 +42,17 @@ export default async function EditarProyectoPage({
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Editar Proyecto</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Editar: {proyecto.codigo} - {proyecto.nombre}
+            </h1>
             <p className="text-muted-foreground">
-              {proyecto.codigo} - {proyecto.nombre}
+              Modifica los datos del proyecto POI
             </p>
           </div>
         </div>
 
         {/* Form */}
-        <ProyectoForm initialData={proyecto} mode="edit" />
+        <ProyectoForm mode="edit" initialData={proyecto} />
       </div>
     </PermissionGate>
   );

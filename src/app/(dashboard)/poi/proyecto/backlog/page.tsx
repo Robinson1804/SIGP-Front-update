@@ -79,15 +79,11 @@ import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
 import { jsPDF } from 'jspdf';
 import {
-    sprints as initialSprints,
-    epics as initialEpics,
-    availableResponsibles,
     getTasksByStoryId,
     storyHasTasks,
     statusColors,
     priorityColors,
     sprintStatusColors,
-    allUserStories,
     type UserStory,
     type UserStoryStatus,
     type Priority,
@@ -96,6 +92,20 @@ import {
     type Epic,
     type Comment,
 } from '@/lib/backlog-data';
+import {
+    getSprintsByProyecto,
+    type Sprint as ApiSprint,
+} from '@/features/proyectos/services/sprints.service';
+import {
+    getEpicasByProyecto,
+    type Epica,
+} from '@/features/proyectos/services/epicas.service';
+import {
+    getBacklog,
+    getHistoriasBySprint,
+    type HistoriaUsuario,
+} from '@/features/proyectos/services/historias.service';
+import { getPersonalDisponible } from '@/features/rrhh/services/rrhh.service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 
@@ -656,12 +666,14 @@ function EpicModal({
     epic,
     onSave,
     currentUser,
+    availableResponsibles,
 }: {
     isOpen: boolean;
     onClose: () => void;
     epic: Epic | null;
     onSave: (data: Omit<Epic, 'id'> & { id?: string }) => void;
     currentUser: string;
+    availableResponsibles: string[];
 }) {
     const isEditing = epic !== null;
     const [formData, setFormData] = useState({
@@ -2244,6 +2256,7 @@ function TaskModal({
     onSave,
     parentHU,
     currentUser = 'Scrum Master',
+    availableResponsibles = [],
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -2251,6 +2264,7 @@ function TaskModal({
     onSave: (data: TaskFormData) => void;
     parentHU?: { id: string; title: string; startDate: string; endDate: string; responsibles?: string[] };
     currentUser?: string;
+    availableResponsibles?: string[];
 }) {
     const isEditing = task !== null;
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -3198,6 +3212,7 @@ function UserStoryModal({
     epics,
     allStories,
     targetSprint,
+    availableResponsibles,
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -3207,6 +3222,7 @@ function UserStoryModal({
     epics: Epic[];
     allStories: UserStory[];
     targetSprint?: Sprint | null;
+    availableResponsibles: string[];
 }) {
     const isEditing = story !== null;
     const isAIGenerated = story?.isAIGenerated || false;
@@ -3917,6 +3933,7 @@ function UserStoryModal({
                 onSave={handleSaveTask}
                 parentHU={{ id: story?.id || 'Nueva HU', title: formData.title, startDate: formData.startDate, endDate: formData.endDate, responsibles: formData.responsibles }}
                 currentUser={currentUser}
+                availableResponsibles={availableResponsibles}
             />
         </>
     );
@@ -4362,11 +4379,13 @@ function BacklogContent() {
     const [project, setProject] = useState<Project | null>(null);
     const [activeTab, setActiveTab] = useState('Backlog');
 
-    // Estados de datos
-    const [sprintList, setSprintList] = useState<Sprint[]>(initialSprints);
-    const [epicList, setEpicList] = useState<Epic[]>(initialEpics);
-    const [allStories, setAllStories] = useState<UserStory[]>([...allUserStories]);
+    // Estados de datos - inicializados vacíos, se cargan desde el backend
+    const [sprintList, setSprintList] = useState<Sprint[]>([]);
+    const [epicList, setEpicList] = useState<Epic[]>([]);
+    const [allStories, setAllStories] = useState<UserStory[]>([]);
     const [selectedBacklogIds, setSelectedBacklogIds] = useState<string[]>([]);
+    const [availableResponsibles, setAvailableResponsibles] = useState<string[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
 
     // Derivar backlogStories del estado unificado
     const backlogStories = allStories.filter(story => story.sprint === 'backlog' && story.type === 'Historia');
@@ -4710,17 +4729,129 @@ function BacklogContent() {
         }
     };
 
+    // Función para cargar datos del backend
+    const loadBackendData = React.useCallback(async (proyectoId: string) => {
+        setIsLoadingData(true);
+        try {
+            // Cargar sprints, épicas e historias en paralelo
+            const [sprintsData, epicasData, backlogData, personalData] = await Promise.all([
+                getSprintsByProyecto(proyectoId).catch(() => []),
+                getEpicasByProyecto(proyectoId).catch(() => []),
+                getBacklog(proyectoId).catch(() => ({ historias: [] })),
+                getPersonalDisponible().catch(() => []),
+            ]);
+
+            // Convertir sprints del backend al formato local
+            const convertedSprints: Sprint[] = sprintsData.map((s: ApiSprint) => ({
+                id: s.id.toString(),
+                name: s.nombre,
+                number: s.numero,
+                startDate: s.fechaInicio || '',
+                endDate: s.fechaFin || '',
+                status: (s.estado === 'Activo' ? 'En progreso' : s.estado === 'Completado' ? 'Finalizado' : 'Por hacer') as SprintStatus,
+            }));
+
+            // Convertir épicas del backend al formato local
+            const convertedEpics: Epic[] = [
+                { id: 'no-epic', name: 'Sin épica', state: 'Por hacer', priority: 'Media', startDate: '', endDate: '' },
+                ...epicasData.map((e: Epica) => ({
+                    id: e.id.toString(),
+                    name: e.nombre,
+                    description: e.descripcion || undefined,
+                    state: (e.estado === 'Completada' ? 'Finalizado' : e.estado === 'En progreso' ? 'En progreso' : 'Por hacer') as UserStoryStatus,
+                    priority: (e.prioridad === 'Must' ? 'Alta' : e.prioridad === 'Should' ? 'Media' : 'Baja') as Priority,
+                    startDate: e.fechaInicio || '',
+                    endDate: e.fechaFin || '',
+                })),
+            ];
+
+            // Convertir historias del backend al formato local
+            const convertedStories: UserStory[] = backlogData.historias?.map((h: HistoriaUsuario) => ({
+                id: h.codigo || `HU-${h.id}`,
+                title: h.titulo,
+                description: h.descripcion || undefined,
+                state: mapHistoriaEstado(h.estado),
+                epic: h.epica?.nombre || 'Sin épica',
+                responsible: '', // Will be loaded separately
+                priority: (h.prioridad === 'Must' ? 'Alta' : h.prioridad === 'Should' ? 'Media' : 'Baja') as Priority,
+                startDate: h.fechaInicio || '',
+                endDate: h.fechaFin || '',
+                type: 'Historia' as const,
+                sprint: h.sprintId ? h.sprintId.toString() : 'backlog',
+                comments: 0,
+                points: h.puntos || undefined,
+            })) || [];
+
+            // Cargar historias de cada sprint
+            for (const sprint of convertedSprints) {
+                try {
+                    const sprintHistorias = await getHistoriasBySprint(sprint.id);
+                    const convertedSprintStories: UserStory[] = sprintHistorias.map((h: HistoriaUsuario) => ({
+                        id: h.codigo || `HU-${h.id}`,
+                        title: h.titulo,
+                        description: h.descripcion || undefined,
+                        state: mapHistoriaEstado(h.estado),
+                        epic: h.epica?.nombre || 'Sin épica',
+                        responsible: '',
+                        priority: (h.prioridad === 'Must' ? 'Alta' : h.prioridad === 'Should' ? 'Media' : 'Baja') as Priority,
+                        startDate: h.fechaInicio || '',
+                        endDate: h.fechaFin || '',
+                        type: 'Historia' as const,
+                        sprint: sprint.id,
+                        comments: 0,
+                        points: h.puntos || undefined,
+                    }));
+                    convertedStories.push(...convertedSprintStories);
+                } catch (err) {
+                    console.error(`Error loading historias for sprint ${sprint.id}:`, err);
+                }
+            }
+
+            // Convertir personal disponible a lista de nombres
+            const responsibles = personalData.map((p: { nombreCompleto?: string; nombre: string; apellido?: string }) =>
+                p.nombreCompleto || (p.apellido ? `${p.nombre} ${p.apellido}` : p.nombre)
+            );
+
+            setSprintList(convertedSprints);
+            setEpicList(convertedEpics);
+            setAllStories(convertedStories);
+            setAvailableResponsibles(responsibles.length > 0 ? responsibles : ['Sin personal disponible']);
+        } catch (error) {
+            console.error('Error loading backend data:', error);
+            // Keep empty arrays on error
+        } finally {
+            setIsLoadingData(false);
+        }
+    }, []);
+
+    // Helper para mapear estados de historia
+    const mapHistoriaEstado = (estado: string): UserStoryStatus => {
+        const estadoMap: Record<string, UserStoryStatus> = {
+            'Pendiente': 'Por hacer',
+            'En analisis': 'Por hacer',
+            'Lista': 'Por hacer',
+            'En desarrollo': 'En progreso',
+            'En pruebas': 'En progreso',
+            'En revision': 'En revisión',
+            'Terminada': 'Finalizado',
+        };
+        return estadoMap[estado] || 'Por hacer';
+    };
+
     React.useEffect(() => {
         const savedProjectData = localStorage.getItem('selectedProject');
         if (savedProjectData) {
-            setProject(JSON.parse(savedProjectData));
+            const projectData = JSON.parse(savedProjectData);
+            setProject(projectData);
+            // Load backend data when project is available
+            loadBackendData(projectData.id);
         } else {
             router.push(paths.poi.base);
         }
 
         const tab = searchParams.get('tab');
         if (tab) setActiveTab(tab);
-    }, [searchParams, router]);
+    }, [searchParams, router, loadBackendData]);
 
     const handleTabClick = (tabName: string) => {
         if (tabName === 'Tablero') router.push(paths.poi.proyecto.backlog.tablero);
@@ -5489,6 +5620,7 @@ function BacklogContent() {
                 epic={editingEpic}
                 onSave={handleSaveEpic}
                 currentUser={currentUser}
+                availableResponsibles={availableResponsibles}
             />
 
             <UserStoryModal
@@ -5500,6 +5632,7 @@ function BacklogContent() {
                 epics={epicList}
                 allStories={allStories}
                 targetSprint={targetSprintForNewHU}
+                availableResponsibles={availableResponsibles}
             />
 
             <AssignSprintModal
@@ -5530,7 +5663,7 @@ function BacklogContent() {
                         (deleteTarget?.item as UserStory)?.title || ''
                 }
                 extraMessage={
-                    deleteTarget?.type === 'hu' && storyHasTasks((deleteTarget.item as UserStory).id)
+                    deleteTarget?.type === 'hu' && storyHasTasks(allStories, (deleteTarget.item as UserStory).id)
                         ? `Esta HU contiene tareas secundarias que también serán eliminadas.`
                         : undefined
                 }
@@ -5559,6 +5692,7 @@ function BacklogContent() {
                     responsibles: parentStoryForTask.responsibles || [parentStoryForTask.responsible],
                 } : undefined}
                 currentUser={currentUser}
+                availableResponsibles={availableResponsibles}
             />
 
             {/* Modal de Confirmación para Eliminar Tarea */}

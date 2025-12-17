@@ -90,7 +90,7 @@ const allNavItems: NavItemConfig[] = [
   { label: "PGD", icon: FileText, href: paths.pgd.base, module: MODULES.PGD },
   { label: "POI", icon: Target, href: paths.poi.base, module: MODULES.POI },
   { label: "RECURSOS HUMANOS", icon: UsersIcon, href: paths.recursosHumanos, module: MODULES.RECURSOS_HUMANOS },
-  { label: "DASHBOARD", icon: BarChart, href: paths.dashboard, module: MODULES.DASHBOARD },
+  { label: "DASHBOARD", icon: BarChart, href: paths.dashboard.base, module: MODULES.DASHBOARD },
   { label: "NOTIFICACIONES", icon: Bell, href: paths.notificaciones, module: MODULES.NOTIFICACIONES },
 ];
 

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -12,6 +12,7 @@ import {
   User,
   Plus,
   X,
+  Loader2,
 } from 'lucide-react';
 
 import AppLayout from '@/components/layout/app-layout';
@@ -41,7 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { type Project, MODULES, PERMISSIONS, ROLES } from '@/lib/definitions';
+import { type Project, type Proyecto, MODULES, PERMISSIONS, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { ProtectedRoute } from "@/features/auth";
 import { useAuth } from '@/stores';
@@ -56,220 +57,87 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { getProyectos, type ProyectoQueryFilters } from '@/features/proyectos/services';
+import { useToast } from '@/lib/hooks/use-toast';
+import type { PaginatedResponse } from '@/types';
 
+// Tipo extendido de Project con IDs para el modal de edición
+type ProjectWithIds = Project & {
+  accionEstrategicaId?: number;
+  coordinadorId?: number;
+  scrumMasterId?: number;
+  patrocinadorId?: number;
+};
 
-const initialProjects: Project[] = [
-    {
-        id: '1',
-        name: 'Administración de Portafolio de Proyectos',
-        description: 'Descripción del proyecto',
-        type: 'Proyecto',
-        classification: 'Gestión interna',
-        status: 'En planificación',
-        startDate: '2025-01',
-        endDate: '2025-12',
-        scrumMaster: 'Robinson Cerron',
-        annualAmount: 50000,
-        strategicAction: 'AE N°1',
-        missingData: false,
-        years: ['2025'],
-        responsibles: ['Angella Trujillo', 'Ana Garcia'],
-        financialArea: ['OTIN'],
-        coordination: 'Coordinación 1',
-        coordinator: 'Jefe de Proyecto',
-        managementMethod: 'Scrum',
-        subProjects: [],
-    },
-    {
-        id: '2',
-        name: 'UNETE INEI',
-        description: 'Plataforma de atención ciudadana',
-        type: 'Proyecto',
-        classification: 'Al ciudadano',
-        status: 'En planificación',
-        startDate: '2025-06',
-        endDate: '2025-12',
-        scrumMaster: 'Robinson Cerron',
-        annualAmount: 75000,
-        strategicAction: 'AE N°2',
-        missingData: false,
-        years: ['2025'],
-        responsibles: ['Mario Casas'],
-        subProjects: [],
-    },
-    {
-        id: '5',
-        name: 'Sistema de Gestión Documental',
-        description: 'Modernización de gestión de documentos',
-        type: 'Proyecto',
-        classification: 'Gestión interna',
-        status: 'En desarrollo',
-        startDate: '2024-10',
-        endDate: '2025-06',
-        scrumMaster: 'Carlos Ruiz',
-        annualAmount: 120000,
-        strategicAction: 'AE N°1',
-        missingData: false,
-        years: ['2024', '2025'],
-        responsibles: ['Angella Trujillo', 'Ana Garcia'],
-        financialArea: ['DCNC'],
-        coordination: 'Coordinación TI',
-        coordinator: 'Director TI',
-        managementMethod: 'Scrum',
-        subProjects: [],
-    },
-    {
-        id: '6',
-        name: 'Portal de Datos Abiertos',
-        description: 'Plataforma de transparencia y datos públicos',
-        type: 'Proyecto',
-        classification: 'Al ciudadano',
-        status: 'Pendiente',
-        startDate: '2025-03',
-        endDate: '2025-08',
-        scrumMaster: 'Robinson Cerron',
-        annualAmount: 85000,
-        strategicAction: 'AE N°3',
-        missingData: false,
-        years: ['2025'],
-        responsibles: ['Angella Trujillo'],
-        financialArea: ['OTA'],
-        coordination: 'Coordinación Datos',
-        coordinator: 'Jefe de Datos',
-        managementMethod: 'Scrum',
-        subProjects: [],
-    },
-    {
-        id: '3',
-        name: 'Transformación Digital con Blockchain en Sectores Estratégicos',
-        description: 'Descripción de la actividad',
-        type: 'Actividad',
-        classification: 'Gestión interna',
-        status: 'En planificación',
-        startDate: '2025-04',
-        endDate: '2025-09',
-        scrumMaster: 'Robinson Cerron',
-        annualAmount: 25000,
-        strategicAction: 'AE N°3',
-        missingData: false,
-        years: ['2025'],
-        responsibles: ['Carlos Lázaro', 'Carlos Ruiz'],
-        financialArea: ['OTA'],
-        coordination: 'Coordinación 2',
-        coordinator: 'Jefe de Área',
-        managementMethod: 'Kanban',
-        subProjects: [],
-    },
-     {
-        id: '4',
-        name: 'SIRA',
-        description: 'Descripción de la actividad SIRA',
-        type: 'Actividad',
-        classification: 'Gestión interna',
-        status: 'En planificación',
-        startDate: '2025-04',
-        endDate: '2025-09',
-        scrumMaster: 'Robinson Cerron',
-        annualAmount: 30000,
-        strategicAction: 'AE N°4',
-        missingData: false,
-        years: ['2025'],
-        responsibles: ['Carlos Lázaro'],
-        financialArea: ['OTIN'],
-        coordination: 'Coordinación 3',
-        coordinator: 'Líder Técnico',
-        managementMethod: 'Kanban',
-        subProjects: [],
-    },
-    {
-        id: '7',
-        name: 'Modernización de Infraestructura de Servidores',
-        description: 'Implementación de nuevos servidores y migración de sistemas legacy a infraestructura moderna con alta disponibilidad',
-        type: 'Actividad',
-        classification: 'Gestión interna',
-        status: 'En desarrollo',
-        startDate: '2025-10',
-        endDate: '2025-12',
-        scrumMaster: 'Roberto Méndez',
-        annualAmount: 45600,
-        strategicAction: 'AE N°1',
-        missingData: false,
-        years: ['2022', '2023', '2024', '2025'],
-        responsibles: ['Carlos Lázaro', 'Anayeli Monzon'],
-        financialArea: ['OTIN'],
-        coordination: 'División de Infraestructura',
-        coordinator: 'Coordinador 1',
-        gestor: 'Robinson Cerron',
-        managementMethod: 'Kanban',
-        subProjects: [],
-    },
-    {
-        id: '8',
-        name: 'Implementación de Sistema de Monitoreo de Red',
-        description: 'Despliegue de herramientas de monitoreo para supervisión en tiempo real de la infraestructura de red institucional',
-        type: 'Actividad',
-        classification: 'Gestión interna',
-        status: 'En desarrollo',
-        startDate: '2025-11',
-        endDate: '2025-12',
-        scrumMaster: 'Patricia Ruiz',
-        annualAmount: 32000,
-        strategicAction: 'AE N°2',
-        missingData: false,
-        years: ['2025'],
-        responsibles: ['Diego Morales', 'Fernando Rojas'],
-        financialArea: ['OTIN'],
-        coordination: 'División de Redes',
-        coordinator: 'Coordinador 2',
-        gestor: 'Ana Torres',
-        managementMethod: 'Kanban',
-        subProjects: [],
-    },
-    {
-        id: '9',
-        name: 'Capacitación en Ciberseguridad para Personal Técnico',
-        description: 'Programa de formación intensivo en seguridad informática y buenas prácticas de protección de datos',
-        type: 'Actividad',
-        classification: 'Gestión interna',
-        status: 'En planificación',
-        startDate: '2025-12',
-        endDate: '2025-12',
-        scrumMaster: 'Carmen Vega',
-        annualAmount: 18500,
-        strategicAction: 'AE N°3',
-        missingData: false,
-        years: ['2025'],
-        responsibles: ['María López', 'Juan Pérez'],
-        financialArea: ['OTIN'],
-        coordination: 'División de Seguridad',
-        coordinator: 'Coordinador 3',
-        gestor: 'Pedro Sánchez',
-        managementMethod: 'Kanban',
-        subProjects: [],
-    },
-    {
-        id: '10',
-        name: 'Actualización de Licencias de Software Institucional',
-        description: 'Renovación y gestión de licenciamiento de software crítico para operaciones del INEI',
-        type: 'Actividad',
-        classification: 'Gestión interna',
-        status: 'Pendiente',
-        startDate: '2025-12',
-        endDate: '2025-12',
-        scrumMaster: 'Luis García',
-        annualAmount: 75000,
-        strategicAction: 'AE N°1',
-        missingData: false,
-        years: ['2024', '2025'],
-        responsibles: ['Carlos García', 'Ana Pérez'],
-        financialArea: ['OTIN'],
-        coordination: 'División de Sistemas',
-        coordinator: 'Coordinador 4',
-        gestor: 'Rosa Martínez',
-        managementMethod: 'Kanban',
-        subProjects: [],
+/**
+ * Mapea un proyecto del API (Proyecto) al formato del frontend (Project)
+ * Incluye los IDs para que el modal de edición pueda usarlos
+ */
+function mapProyectoToProject(proyecto: Proyecto): ProjectWithIds {
+  // Mapear estado: API usa "En planificacion" (sin tilde), frontend usa "En planificación"
+  const mapEstado = (estado: string): Project['status'] => {
+    const estadoMap: Record<string, Project['status']> = {
+      'Pendiente': 'Pendiente',
+      'En planificacion': 'En planificación',
+      'En desarrollo': 'En desarrollo',
+      'Finalizado': 'Finalizado',
+      'Cancelado': 'Finalizado', // Mapear cancelado a finalizado para UI
+    };
+    return estadoMap[estado] || 'Pendiente';
+  };
+
+  // Mapear clasificación: API puede usar "Gestion interna" (sin tilde)
+  const mapClasificacion = (clasificacion: string | null): Project['classification'] => {
+    if (!clasificacion) return 'Gestión interna';
+    if (clasificacion.toLowerCase().includes('ciudadano')) return 'Al ciudadano';
+    return 'Gestión interna';
+  };
+
+  // Convertir años de number[] a string[]
+  const aniosToYears = (anios: number[] | null): string[] => {
+    if (!anios || anios.length === 0) return [new Date().getFullYear().toString()];
+    return anios.map(a => a.toString());
+  };
+
+  // Formatear fecha de ISO a YYYY-MM
+  const formatDateToMonthYear = (dateStr: string | null): string | undefined => {
+    if (!dateStr) return undefined;
+    try {
+      const date = new Date(dateStr);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    } catch {
+      return undefined;
     }
-];
+  };
+
+  return {
+    id: proyecto.id.toString(),
+    code: proyecto.codigo,
+    name: proyecto.nombre,
+    description: proyecto.descripcion || '',
+    type: proyecto.tipo === 'Proyecto' ? 'Proyecto' : 'Actividad',
+    classification: mapClasificacion(proyecto.clasificacion),
+    status: mapEstado(proyecto.estado),
+    scrumMaster: proyecto.scrumMasterId ? `Scrum Master #${proyecto.scrumMasterId}` : 'Sin asignar',
+    annualAmount: proyecto.montoAnual || 0,
+    strategicAction: proyecto.accionEstrategicaId ? `AE N${proyecto.accionEstrategicaId}` : 'Sin AE',
+    missingData: !proyecto.descripcion || !proyecto.scrumMasterId,
+    years: aniosToYears(proyecto.anios),
+    responsibles: [], // Se cargará con equipo si es necesario
+    financialArea: proyecto.areasFinancieras || [],
+    coordination: proyecto.coordinacion || undefined,
+    coordinator: proyecto.coordinadorId ? `Coordinador #${proyecto.coordinadorId}` : undefined,
+    managementMethod: proyecto.metodoGestion || 'Scrum',
+    subProjects: [],
+    startDate: formatDateToMonthYear(proyecto.fechaInicio),
+    endDate: formatDateToMonthYear(proyecto.fechaFin),
+    // IDs para el modal de edición
+    accionEstrategicaId: proyecto.accionEstrategicaId || undefined,
+    coordinadorId: proyecto.coordinadorId || undefined,
+    scrumMasterId: proyecto.scrumMasterId || undefined,
+    patrocinadorId: proyecto.patrocinadorId || undefined,
+  };
+}
 
 const statusColors: { [key: string]: string } = {
     'Pendiente': 'bg-[#FE9F43]',
@@ -425,17 +293,33 @@ function DeleteConfirmationModal({
 function PmoPoiView() {
     const { sidebarOpen } = useSidebar();
     const { user } = useAuth();
-    const [projects, setProjects] = React.useState<Project[]>(initialProjects);
-    const [selectedType, setSelectedType] = React.useState<string>("Proyecto");
-    const [searchQuery, setSearchQuery] = React.useState<string>("");
-    const [selectedClassification, setSelectedClassification] = React.useState<string>("all");
-    const [selectedMonth, setSelectedMonth] = React.useState<string>(new Date().toISOString().substring(0, 7));
+    const { toast } = useToast();
+
+    // Estado para proyectos cargados desde API (con IDs para edición)
+    const [projects, setProjects] = useState<ProjectWithIds[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Estado de paginación
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const pageSize = 12;
+
+    // Filtros
+    const [selectedType, setSelectedType] = useState<string>("Proyecto");
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [selectedClassification, setSelectedClassification] = useState<string>("all");
+    const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+
+    // Generar lista de años disponibles (desde 2020 hasta 5 años en el futuro)
+    const availableYears = Array.from({ length: 15 }, (_, i) => (2020 + i).toString());
 
     // Estados para modales
-    const [isNewModalOpen, setIsNewModalOpen] = React.useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
-    const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
+    const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [selectedProject, setSelectedProject] = useState<ProjectWithIds | null>(null);
 
     // Verificar permisos del usuario
     const userRole = user?.role;
@@ -451,12 +335,92 @@ function PmoPoiView() {
     // IMPLEMENTADOR solo puede ver "Actividad"
     const effectiveType = isDeveloper ? "Proyecto" : isImplementador ? "Actividad" : selectedType;
 
-    // Filtrar proyectos
-    const filteredProjects = projects.filter(p => {
-        // Filtro por tipo
-        if (p.type !== effectiveType) return false;
+    /**
+     * Función para cargar proyectos desde la API
+     */
+    const fetchProyectos = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
 
-        // Filtro por asignación según el rol del usuario
+        try {
+            // Construir filtros para la API
+            const filters: ProyectoQueryFilters = {
+                tipo: effectiveType as 'Proyecto' | 'Actividad',
+                page: currentPage,
+                pageSize: pageSize,
+            };
+
+            // Agregar búsqueda si existe
+            if (searchQuery.trim()) {
+                filters.search = searchQuery.trim();
+            }
+
+            // Agregar filtro de año si existe
+            if (selectedYear && selectedYear !== "all") {
+                filters.anno = parseInt(selectedYear, 10);
+            }
+
+            // Agregar filtro de estado si es necesario (opcional)
+            // filters.estado = ...
+
+            const response = await getProyectos(filters);
+
+            // La respuesta puede ser PaginatedResponse o un array directo
+            let proyectosData: Proyecto[];
+
+            if (Array.isArray(response)) {
+                // Si es un array directo
+                proyectosData = response as unknown as Proyecto[];
+                setTotalPages(1);
+                setTotalItems(proyectosData.length);
+            } else if (response && typeof response === 'object') {
+                // Si es PaginatedResponse
+                const paginatedResponse = response as PaginatedResponse<Proyecto>;
+                proyectosData = paginatedResponse.data || [];
+                setTotalPages(paginatedResponse.totalPages || 1);
+                setTotalItems(paginatedResponse.total || proyectosData.length);
+            } else {
+                proyectosData = [];
+                setTotalPages(1);
+                setTotalItems(0);
+            }
+
+            // Mapear proyectos del API al formato del frontend
+            const mappedProjects = proyectosData.map(mapProyectoToProject);
+            setProjects(mappedProjects);
+
+        } catch (err) {
+            console.error('Error fetching proyectos:', err);
+            setError('No se pudieron cargar los proyectos');
+            toast({
+                title: 'Error',
+                description: 'No se pudieron cargar los proyectos. Intente nuevamente.',
+                variant: 'destructive',
+            });
+            setProjects([]);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [effectiveType, currentPage, searchQuery, selectedYear, toast]);
+
+    // Cargar proyectos cuando cambien los filtros
+    useEffect(() => {
+        fetchProyectos();
+    }, [fetchProyectos]);
+
+    // Resetear página cuando cambian los filtros
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [effectiveType, searchQuery, selectedClassification, selectedYear]);
+
+    // Filtrar proyectos localmente (filtros adicionales que no están en la API)
+    const filteredProjects = projects.filter(p => {
+        // Filtro por clasificación (cualificación) - filtro local
+        if (selectedClassification !== "all" && p.classification !== selectedClassification) {
+            return false;
+        }
+
+        // Filtro por asignación según el rol del usuario (filtro local)
         // PMO ve todos los proyectos/actividades
         if (!isPmo && userName) {
             // DESARROLLADOR e IMPLEMENTADOR: ven donde están como responsables
@@ -472,35 +436,11 @@ function PmoPoiView() {
             }
         }
 
-        // Filtro por búsqueda (nombre o descripción)
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            const matchesName = p.name?.toLowerCase().includes(query);
-            const matchesDescription = p.description?.toLowerCase().includes(query);
-            const matchesScrumMaster = p.scrumMaster?.toLowerCase().includes(query);
-            if (!matchesName && !matchesDescription && !matchesScrumMaster) return false;
-        }
-
-        // Filtro por clasificación (cualificación)
-        if (selectedClassification !== "all" && p.classification !== selectedClassification) {
-            return false;
-        }
-
-        // Filtro por mes/año (verifica si el proyecto tiene fechas que incluyan el mes seleccionado)
-        if (selectedMonth) {
-            const [filterYear] = selectedMonth.split('-');
-
-            // Si tiene startDate y endDate, verificar si el mes está en el rango
-            if (p.startDate && p.endDate) {
-                const startDate = new Date(p.startDate + '-01');
-                const endDate = new Date(p.endDate + '-01');
-                const filterDate = new Date(selectedMonth + '-01');
-
-                if (filterDate < startDate || filterDate > endDate) return false;
-            }
+        // Filtro por año local (validación adicional)
+        if (selectedYear && selectedYear !== "all") {
             // Si tiene años definidos, verificar si el año coincide
-            else if (p.years && p.years.length > 0) {
-                if (!p.years.includes(filterYear)) return false;
+            if (p.years && p.years.length > 0) {
+                if (!p.years.includes(selectedYear)) return false;
             }
         }
 
@@ -511,6 +451,7 @@ function PmoPoiView() {
     const activeFiltersCount = [
         searchQuery,
         selectedClassification !== "all",
+        selectedYear !== "all",
     ].filter(Boolean).length;
 
     const sectionTitle = effectiveType === "Proyecto" ? "Mis Proyectos" : "Mis Actividades";
@@ -518,29 +459,73 @@ function PmoPoiView() {
 
     // Handlers CRUD
     const handleCreateProject = (newProject: Project) => {
-        setProjects(prev => [...prev, { ...newProject, id: Date.now().toString() }]);
+        // Después de crear, recargar la lista desde la API
         setIsNewModalOpen(false);
+        toast({
+            title: 'Proyecto creado',
+            description: 'El proyecto se ha creado correctamente.',
+        });
+        // Recargar proyectos
+        fetchProyectos();
     };
 
     const handleEditProject = (updatedProject: Project) => {
-        setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+        // Después de editar, recargar la lista desde la API
         setIsEditModalOpen(false);
         setSelectedProject(null);
+        toast({
+            title: 'Proyecto actualizado',
+            description: 'El proyecto se ha actualizado correctamente.',
+        });
+        // Recargar proyectos
+        fetchProyectos();
     };
 
     const handleDeleteProject = () => {
         if (selectedProject) {
-            setProjects(prev => prev.filter(p => p.id !== selectedProject.id));
+            // Después de eliminar, recargar la lista desde la API
+            toast({
+                title: 'Proyecto eliminado',
+                description: 'El proyecto se ha eliminado correctamente.',
+            });
+            // Recargar proyectos
+            fetchProyectos();
         }
         setIsDeleteModalOpen(false);
         setSelectedProject(null);
+    };
+
+    // Handler para cambio de página
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    // Generar array de páginas para paginación
+    const getPageNumbers = () => {
+        const pages: (number | 'ellipsis')[] = [];
+        if (totalPages <= 5) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (currentPage <= 3) {
+                pages.push(1, 2, 3, 'ellipsis', totalPages);
+            } else if (currentPage >= totalPages - 2) {
+                pages.push(1, 'ellipsis', totalPages - 2, totalPages - 1, totalPages);
+            } else {
+                pages.push(1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages);
+            }
+        }
+        return pages;
     };
 
     // Función para limpiar todos los filtros
     const clearAllFilters = () => {
         setSearchQuery("");
         setSelectedClassification("all");
-        setSelectedMonth(new Date().toISOString().substring(0, 7));
+        setSelectedYear("all");
     };
 
     return (
@@ -623,15 +608,20 @@ function PmoPoiView() {
                         </Select>
                     </div>
 
-                    {/* Mes */}
+                    {/* Año */}
                     <div className="flex items-center gap-2">
-                        <label className="text-sm text-black">Mes</label>
-                        <Input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-white border-[#CFD6DD] text-black w-[150px]"
-                        />
+                        <label className="text-sm text-black">Año</label>
+                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                            <SelectTrigger className="w-[120px] bg-white border-[#CFD6DD] text-black">
+                                <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos</SelectItem>
+                                {availableYears.map(year => (
+                                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     {/* Botón limpiar filtros */}
@@ -647,8 +637,33 @@ function PmoPoiView() {
                     )}
                 </div>
 
+                {/* Estado de carga */}
+                {isLoading && (
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <Loader2 className="h-12 w-12 animate-spin text-[#018CD1] mb-4" />
+                        <p className="text-gray-500">Cargando {effectiveType === "Proyecto" ? "proyectos" : "actividades"}...</p>
+                    </div>
+                )}
+
+                {/* Estado de error */}
+                {!isLoading && error && (
+                    <div className="flex flex-col items-center justify-center py-12 text-red-500">
+                        <AlertTriangle className="h-12 w-12 mb-4" />
+                        <p className="text-lg font-medium">Error al cargar los datos</p>
+                        <p className="text-sm mb-4">{error}</p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={fetchProyectos}
+                            className="text-[#018CD1] border-[#018CD1] hover:bg-[#018CD1]/10"
+                        >
+                            Reintentar
+                        </Button>
+                    </div>
+                )}
+
                 {/* Mensaje cuando no hay resultados */}
-                {filteredProjects.length === 0 && (
+                {!isLoading && !error && filteredProjects.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                         <Search className="h-12 w-12 mb-4 opacity-50" />
                         <p className="text-lg font-medium">No se encontraron {effectiveType === "Proyecto" ? "proyectos" : "actividades"}</p>
@@ -666,36 +681,74 @@ function PmoPoiView() {
                     </div>
                 )}
 
-                <div className={`grid gap-6 mb-6 ${
-                    sidebarOpen
-                        ? "grid-cols-1 min-[800px]:grid-cols-2 lg:grid-cols-3 min-[1360px]:grid-cols-4"
-                        : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-                }`}>
-                    {filteredProjects.map(p => (
-                        <ProjectCard
-                            key={p.id}
-                            project={p}
-                            userRole={userRole}
-                        />
-                    ))}
-                </div>
+                {/* Grid de proyectos */}
+                {!isLoading && !error && filteredProjects.length > 0 && (
+                    <div className={`grid gap-6 mb-6 ${
+                        sidebarOpen
+                            ? "grid-cols-1 min-[800px]:grid-cols-2 lg:grid-cols-3 min-[1360px]:grid-cols-4"
+                            : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                    }`}>
+                        {filteredProjects.map(p => (
+                            <ProjectCard
+                                key={p.id}
+                                project={p}
+                                userRole={userRole}
+                            />
+                        ))}
+                    </div>
+                )}
 
-                <div className="flex justify-end mt-auto">
-                    <Pagination>
-                        <PaginationContent>
-                            <PaginationItem>
-                                <PaginationPrevious href="#" />
-                            </PaginationItem>
-                            <PaginationItem><PaginationLink href="#">1</PaginationLink></PaginationItem>
-                            <PaginationItem><PaginationLink href="#" isActive>2</PaginationLink></PaginationItem>
-                            <PaginationItem><PaginationLink href="#">3</PaginationLink></PaginationItem>
-                            <PaginationItem><PaginationEllipsis/></PaginationItem>
-                            <PaginationItem>
-                                <PaginationNext href="#" />
-                            </PaginationItem>
-                        </PaginationContent>
-                    </Pagination>
-                </div>
+                {/* Paginación funcional */}
+                {!isLoading && !error && totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-auto">
+                        <p className="text-sm text-gray-500">
+                            Mostrando {filteredProjects.length} de {totalItems} {effectiveType === "Proyecto" ? "proyectos" : "actividades"}
+                        </p>
+                        <Pagination>
+                            <PaginationContent>
+                                <PaginationItem>
+                                    <PaginationPrevious
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handlePageChange(currentPage - 1);
+                                        }}
+                                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                    />
+                                </PaginationItem>
+                                {getPageNumbers().map((page, index) => (
+                                    <PaginationItem key={index}>
+                                        {page === 'ellipsis' ? (
+                                            <PaginationEllipsis />
+                                        ) : (
+                                            <PaginationLink
+                                                href="#"
+                                                isActive={currentPage === page}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handlePageChange(page);
+                                                }}
+                                                className="cursor-pointer"
+                                            >
+                                                {page}
+                                            </PaginationLink>
+                                        )}
+                                    </PaginationItem>
+                                ))}
+                                <PaginationItem>
+                                    <PaginationNext
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handlePageChange(currentPage + 1);
+                                        }}
+                                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                    />
+                                </PaginationItem>
+                            </PaginationContent>
+                        </Pagination>
+                    </div>
+                )}
             </div>
 
             {/* Modal para crear nuevo POI */}

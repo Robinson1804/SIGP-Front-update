@@ -1,12 +1,17 @@
 export const paths = {
   home: '/',
   login: '/login',
-  dashboard: '/dashboard',
+  dashboard: {
+    base: '/dashboard',
+    proyecto: (id: number | string) => `/dashboard/proyecto/${id}`,
+    actividad: (id: number | string) => `/dashboard/actividad/${id}`,
+  },
   perfil: '/perfil',
   notificaciones: '/notificaciones',
   recursosHumanos: '/recursos-humanos',
   pgd: {
     base: '/pgd',
+    dashboard: '/pgd/dashboard',
     oei: '/pgd/oei',
     ogd: '/pgd/ogd',
     oegd: '/pgd/oegd',
@@ -20,6 +25,12 @@ export const paths = {
       nuevo: '/poi/proyectos/nuevo',
       detalles: (id: number | string) => `/poi/proyectos/${id}`,
       editar: (id: number | string) => `/poi/proyectos/${id}/editar`,
+      cronograma: (id: number | string) => `/poi/proyectos/${id}/cronograma`,
+      daily: (id: number | string) => `/poi/proyectos/${id}/daily`,
+      backlog: (id: number | string) => `/poi/proyectos/${id}/backlog`,
+      tablero: (id: number | string) => `/poi/proyectos/${id}/tablero`,
+      requerimientos: (id: number | string) => `/poi/proyectos/${id}/requerimientos`,
+      documentos: (id: number | string) => `/poi/proyectos/${id}/documentos`,
     },
     // DEPRECATED: Sistema antiguo - usar poi.proyectos en su lugar
     proyecto: {
@@ -38,10 +49,16 @@ export const paths = {
         },
     },
     actividad: {
+        base: '/poi/actividad',
         detalles: '/poi/actividad/detalles',
         lista: '/poi/actividad/lista',
         tablero: '/poi/actividad/tablero',
         dashboard: '/poi/actividad/dashboard',
+        byId: (id: number | string) => `/poi/actividad/${id}`,
     }
+  },
+  aprobaciones: {
+    base: '/aprobaciones',
+    pendientes: '/aprobaciones/pendientes',
   },
 };

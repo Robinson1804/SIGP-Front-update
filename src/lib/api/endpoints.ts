@@ -106,6 +106,8 @@ export const ENDPOINTS = {
     START: (sprintId: number | string) => `/sprints/${sprintId}/start`,
     COMPLETE: (sprintId: number | string) => `/sprints/${sprintId}/complete`,
     DAILY_MEETINGS: (sprintId: number | string) => `/sprints/${sprintId}/daily-meetings`,
+    TABLERO: (sprintId: number | string) => `/sprints/${sprintId}/tablero`,
+    BURNDOWN: (sprintId: number | string) => `/sprints/${sprintId}/burndown`,
   },
 
   // ============================================
@@ -127,6 +129,7 @@ export const ENDPOINTS = {
     BY_ID: (id: number | string) => `/tareas/${id}`,
     ASIGNAR: (tareaId: number | string) => `/tareas/${tareaId}/asignar`,
     CAMBIAR_ESTADO: (tareaId: number | string) => `/tareas/${tareaId}/estado`,
+    MOVER: (tareaId: number | string) => `/tareas/${tareaId}/mover`,
     COMENTARIOS: (tareaId: number | string) => `/tareas/${tareaId}/comentarios`,
   },
 
@@ -137,10 +140,15 @@ export const ENDPOINTS = {
     // PGD
     PGD: '/pgd',
     PGD_BY_ID: (id: number | string) => `/pgd/${id}`,
+    PGD_VIGENTE: '/pgd/vigente',
+    PGD_STATS: (id: number | string) => `/pgd/${id}/stats`,
+    PGD_DASHBOARD: (id: number | string) => `/pgd/${id}/dashboard`,
+    PGD_EXPORT: (id: number | string, format: 'pdf' | 'excel') => `/pgd/${id}/export/${format}`,
 
     // OEI - Objetivos Estratégicos Institucionales
     OEI: '/oei',
     OEI_BY_ID: (id: number | string) => `/oei/${id}`,
+    OEI_AVANCE: (id: number | string) => `/oei/${id}/avance`,
 
     // OGD - Objetivos de Gobierno Digital
     OGD: '/ogd',
@@ -154,6 +162,37 @@ export const ENDPOINTS = {
     ACCIONES_ESTRATEGICAS: '/acciones-estrategicas',
     ACCION_ESTRATEGICA_BY_ID: (id: number | string) => `/acciones-estrategicas/${id}`,
     ACCION_PROYECTOS: (accionId: number | string) => `/acciones-estrategicas/${accionId}/proyectos`,
+    ACCION_ACTIVIDADES: (accionId: number | string) => `/acciones-estrategicas/${accionId}/actividades`,
+  },
+
+  // ============================================
+  // ACTAS - Actas y Documentos de Aprobación
+  // ============================================
+  ACTAS: {
+    BASE: '/actas',
+    BY_ID: (id: number | string) => `/actas/${id}`,
+    APROBAR: (id: number | string) => `/actas/${id}/aprobar`,
+    RECHAZAR: (id: number | string) => `/actas/${id}/rechazar`,
+    PENDIENTES: '/actas/pendientes',
+  },
+
+  // ============================================
+  // DOCUMENTOS
+  // ============================================
+  DOCUMENTOS: {
+    BASE: '/documentos',
+    BY_ID: (id: number | string) => `/documentos/${id}`,
+    DOWNLOAD: (id: number | string) => `/documentos/${id}/download`,
+  },
+
+  // ============================================
+  // UPLOAD - Subida de Archivos
+  // ============================================
+  UPLOAD: {
+    REQUEST_URL: '/upload/request-url',
+    CONFIRM: '/upload/confirm',
+    DIRECT: '/upload/direct',
+    VERSION: (archivoId: string) => `/upload/${archivoId}/version`,
   },
 
   // ============================================
@@ -185,8 +224,12 @@ export const ENDPOINTS = {
   // ============================================
   DASHBOARD: {
     GENERAL: '/dashboard/general',
+    BASE: '/dashboard',
     PROYECTO: (id: number | string) => `/dashboard/proyecto/${id}`,
+    PROYECTO_BURNDOWN: (id: number | string) => `/dashboard/proyecto/${id}/burndown`,
+    PROYECTO_VELOCIDAD: (id: number | string) => `/dashboard/proyecto/${id}/velocidad`,
     ACTIVIDAD: (id: number | string) => `/dashboard/actividad/${id}`,
+    ACTIVIDAD_THROUGHPUT: (id: number | string) => `/dashboard/actividad/${id}/throughput`,
     OEI: (id: number | string) => `/dashboard/oei/${id}`,
     ALERTAS: '/dashboard/alertas',
     KPI: '/dashboard/kpi',
@@ -225,5 +268,76 @@ export const ENDPOINTS = {
     PERFIL: '/usuarios/perfil',
     ACTUALIZAR_PERFIL: '/usuarios/perfil',
     CAMBIAR_PASSWORD: '/usuarios/cambiar-password',
+    ROLES: '/usuarios/roles',
+    BY_ROL: (rol: string) => `/usuarios/by-rol/${rol}`,
+    COORDINADORES: '/usuarios/coordinadores',
+    SCRUM_MASTERS: '/usuarios/scrum-masters',
+    PATROCINADORES: '/usuarios/patrocinadores',
+    DESARROLLADORES: '/usuarios/desarrolladores',
+    IMPLEMENTADORES: '/usuarios/implementadores',
+    RESPONSABLES: '/usuarios/responsables',
+  },
+
+  // ============================================
+  // CRONOGRAMAS - Diagramas de Gantt
+  // ============================================
+  CRONOGRAMAS: {
+    BASE: '/cronogramas',
+    BY_ID: (id: number | string) => `/cronogramas/${id}`,
+    BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/cronograma`,
+    TAREAS: (cronogramaId: number | string) => `/cronogramas/${cronogramaId}/tareas`,
+    TAREA_BY_ID: (cronogramaId: number | string, tareaId: number | string) =>
+      `/cronogramas/${cronogramaId}/tareas/${tareaId}`,
+    DEPENDENCIAS: (cronogramaId: number | string) => `/cronogramas/${cronogramaId}/dependencias`,
+    EXPORTAR: (cronogramaId: number | string, formato: 'pdf' | 'excel') =>
+      `/cronogramas/${cronogramaId}/export/${formato}`,
+  },
+
+  // ============================================
+  // DAILY MEETINGS - Reuniones Diarias
+  // ============================================
+  DAILY_MEETINGS: {
+    BASE: (sprintId: number | string) => `/sprints/${sprintId}/daily-meetings`,
+    BY_ID: (sprintId: number | string, meetingId: number | string) =>
+      `/sprints/${sprintId}/daily-meetings/${meetingId}`,
+    PARTICIPANTES: (sprintId: number | string, meetingId: number | string) =>
+      `/sprints/${sprintId}/daily-meetings/${meetingId}/participantes`,
+    HISTORIAL: (proyectoId: number | string) => `/proyectos/${proyectoId}/daily-meetings`,
+  },
+
+  // ============================================
+  // INFORMES - Informes de Sprint y Actividad
+  // ============================================
+  INFORMES: {
+    // Informes de Sprint
+    SPRINT: {
+      BASE: '/informes-sprint',
+      BY_ID: (id: number | string) => `/informes-sprint/${id}`,
+      BY_SPRINT: (sprintId: number | string) => `/sprints/${sprintId}/informe`,
+      GENERAR: (sprintId: number | string) => `/sprints/${sprintId}/generar-informe`,
+      APROBAR: (id: number | string) => `/informes-sprint/${id}/aprobar`,
+      RECHAZAR: (id: number | string) => `/informes-sprint/${id}/rechazar`,
+      HISTORIAL: (id: number | string) => `/informes-sprint/${id}/historial`,
+    },
+    // Informes de Actividad
+    ACTIVIDAD: {
+      BASE: '/informes-actividad',
+      BY_ID: (id: number | string) => `/informes-actividad/${id}`,
+      BY_ACTIVIDAD: (actividadId: number | string) => `/actividades/${actividadId}/informes`,
+      APROBAR: (id: number | string) => `/informes-actividad/${id}/aprobar`,
+      RECHAZAR: (id: number | string) => `/informes-actividad/${id}/rechazar`,
+      HISTORIAL: (id: number | string) => `/informes-actividad/${id}/historial`,
+    },
+  },
+
+  // ============================================
+  // APROBACIONES - Flujos de Aprobación
+  // ============================================
+  APROBACIONES: {
+    PENDIENTES: '/aprobaciones/pendientes',
+    HISTORIAL: (tipo: string, id: number | string) => `/aprobaciones/${tipo}/${id}/historial`,
+    APROBAR: (tipo: string, id: number | string) => `/aprobaciones/${tipo}/${id}/aprobar`,
+    RECHAZAR: (tipo: string, id: number | string) => `/aprobaciones/${tipo}/${id}/rechazar`,
+    MIS_PENDIENTES: '/aprobaciones/mis-pendientes',
   },
 } as const;
