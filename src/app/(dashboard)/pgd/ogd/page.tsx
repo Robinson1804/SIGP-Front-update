@@ -42,14 +42,18 @@ import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
 import { useToast } from "@/lib/hooks/use-toast";
 
+import { Checkbox } from "@/components/ui/checkbox";
+
 // Import from planning module
 import {
   getPGDs,
+  getOEIsByPGD,
   getOGDsByPGD,
   createOGD,
   updateOGD,
   deleteOGD,
   type PGD,
+  type OEI,
   type OGD,
   type CreateOGDInput,
   type UpdateOGDInput,
@@ -66,21 +70,25 @@ function OGDModal({
   onClose,
   ogd,
   pgdId,
+  availableOeis,
   onSave,
 }: {
   isOpen: boolean;
   onClose: () => void;
   ogd: OGD | null;
   pgdId: number;
+  availableOeis: OEI[];
   onSave: (data: CreateOGDInput | UpdateOGDInput, id?: number) => Promise<void>;
 }) {
   const [codigo, setCodigo] = useState("");
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [indicador, setIndicador] = useState("");
-  const [lineaBase, setLineaBase] = useState<string>("");
+  const [lineaBaseAnio, setLineaBaseAnio] = useState<string>("");
+  const [lineaBaseValor, setLineaBaseValor] = useState<string>("");
   const [unidadMedida, setUnidadMedida] = useState("");
   const [metasAnuales, setMetasAnuales] = useState<MetaAnual[]>([]);
+  const [selectedOeiIds, setSelectedOeiIds] = useState<number[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [saving, setSaving] = useState(false);
 
@@ -89,21 +97,37 @@ function OGDModal({
       setCodigo(ogd.codigo);
       setNombre(ogd.nombre);
       setDescripcion(ogd.descripcion || "");
-      setIndicador(ogd.indicador || "");
-      setLineaBase(ogd.lineaBase !== null ? String(ogd.lineaBase) : "");
+      setIndicador(ogd.indicadorNombre || "");
+      setLineaBaseAnio(ogd.lineaBaseAnio !== null ? String(ogd.lineaBaseAnio) : "");
+      setLineaBaseValor(ogd.lineaBaseValor !== null ? String(ogd.lineaBaseValor) : "");
       setUnidadMedida(ogd.unidadMedida || "");
       setMetasAnuales(ogd.metasAnuales || []);
+      // Cargar los OEIs ya relacionados (desde oeis o desde ogdOeis)
+      const oeiIds = ogd.oeis?.map(oei => oei.id)
+        || ogd.ogdOeis?.map(item => item.oeiId)
+        || [];
+      setSelectedOeiIds(oeiIds);
     } else {
       setCodigo("");
       setNombre("");
       setDescripcion("");
       setIndicador("");
-      setLineaBase("");
+      setLineaBaseAnio("");
+      setLineaBaseValor("");
       setUnidadMedida("");
       setMetasAnuales([]);
+      setSelectedOeiIds([]);
     }
     setErrors({});
   }, [ogd, isOpen]);
+
+  const toggleOeiSelection = (oeiId: number) => {
+    setSelectedOeiIds(prev =>
+      prev.includes(oeiId)
+        ? prev.filter(id => id !== oeiId)
+        : [...prev, oeiId]
+    );
+  };
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -122,10 +146,12 @@ function OGDModal({
         codigo,
         nombre,
         descripcion: descripcion || undefined,
-        indicador: indicador || undefined,
-        lineaBase: lineaBase ? parseFloat(lineaBase) : undefined,
+        indicadorNombre: indicador || undefined,
+        lineaBaseAnio: lineaBaseAnio ? parseInt(lineaBaseAnio) : undefined,
+        lineaBaseValor: lineaBaseValor ? parseFloat(lineaBaseValor) : undefined,
         unidadMedida: unidadMedida || undefined,
         metasAnuales: metasAnuales.length > 0 ? metasAnuales : undefined,
+        oeiIds: selectedOeiIds.length > 0 ? selectedOeiIds : undefined,
       };
 
       if (!ogd) {
@@ -207,6 +233,38 @@ function OGDModal({
             />
             {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
           </div>
+
+          {/* Multi-select OEIs */}
+          {availableOeis.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                OEIs Relacionados
+              </label>
+              <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-gray-50">
+                {availableOeis.map((oei) => (
+                  <div key={oei.id} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`oei-${oei.id}`}
+                      checked={selectedOeiIds.includes(oei.id)}
+                      onCheckedChange={() => toggleOeiSelection(oei.id)}
+                    />
+                    <label
+                      htmlFor={`oei-${oei.id}`}
+                      className="text-sm cursor-pointer leading-tight"
+                    >
+                      <span className="font-medium">{oei.codigo}</span>
+                      {oei.nombre && <span className="text-gray-600"> - {oei.nombre}</span>}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {selectedOeiIds.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {selectedOeiIds.length} OEI(s) seleccionado(s)
+                </p>
+              )}
+            </div>
+          )}
           <div>
             <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
               Descripción
@@ -217,13 +275,44 @@ function OGDModal({
             <label htmlFor="indicador" className="block text-sm font-medium text-gray-700 mb-1">
               Indicador
             </label>
-            <Input id="indicador" value={indicador} onChange={(e) => setIndicador(e.target.value)} />
+            <Input id="indicador" value={indicador} onChange={(e) => setIndicador(e.target.value)} placeholder="Nombre del indicador" />
           </div>
           <div>
-            <label htmlFor="lineaBase" className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Línea Base
             </label>
-            <Input id="lineaBase" value={lineaBase} onChange={(e) => setLineaBase(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="lineaBaseAnio" className="block text-xs text-gray-500 mb-1">
+                  Año
+                </label>
+                <Select onValueChange={(value) => setLineaBaseAnio(value)} value={lineaBaseAnio}>
+                  <SelectTrigger id="lineaBaseAnio">
+                    <SelectValue placeholder="Ej: 2024" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label htmlFor="lineaBaseValor" className="block text-xs text-gray-500 mb-1">
+                  Valor
+                </label>
+                <Input
+                  id="lineaBaseValor"
+                  type="number"
+                  step="0.01"
+                  value={lineaBaseValor}
+                  onChange={(e) => setLineaBaseValor(e.target.value)}
+                  placeholder="Ej: 75.5"
+                />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Metas Anuales</label>
@@ -359,9 +448,9 @@ const OgdCard = ({
       </div>
       <h4 className="font-semibold text-sm mb-2">{ogd.nombre}</h4>
       <p className="text-sm text-gray-700 min-h-[40px] line-clamp-3">{ogd.descripcion}</p>
-      {ogd.indicador && (
+      {ogd.indicadorNombre && (
         <p className="text-xs text-gray-500 mt-2">
-          <span className="font-medium">Indicador:</span> {ogd.indicador}
+          <span className="font-medium">Indicador:</span> {ogd.indicadorNombre}
         </p>
       )}
       {ogd._count?.objetivosEspecificos !== undefined && (
@@ -388,6 +477,7 @@ export default function OgdDashboardPage() {
   const [pgds, setPgds] = useState<PGD[]>([]);
   const [selectedPgdId, setSelectedPgdId] = useState<string | undefined>(undefined);
   const [ogds, setOgds] = useState<OGD[]>([]);
+  const [oeis, setOeis] = useState<OEI[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingOgds, setIsLoadingOgds] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -446,6 +536,21 @@ export default function OgdDashboardPage() {
     }
   }, [selectedPgdId, toast]);
 
+  // Load OEIs when PGD changes (for multi-select)
+  const loadOEIs = useCallback(async () => {
+    if (!selectedPgdId) {
+      setOeis([]);
+      return;
+    }
+
+    try {
+      const data = await getOEIsByPGD(selectedPgdId);
+      setOeis(data);
+    } catch (err: any) {
+      console.error("Error loading OEIs:", err);
+    }
+  }, [selectedPgdId]);
+
   useEffect(() => {
     loadPGDs();
   }, []);
@@ -453,8 +558,9 @@ export default function OgdDashboardPage() {
   useEffect(() => {
     if (selectedPgdId) {
       loadOGDs();
+      loadOEIs();
     }
-  }, [selectedPgdId, loadOGDs]);
+  }, [selectedPgdId, loadOGDs, loadOEIs]);
 
   const handleOpenModal = (ogd: OGD | null = null) => {
     setEditingOgd(ogd);
@@ -606,6 +712,7 @@ export default function OgdDashboardPage() {
           onClose={handleCloseModal}
           ogd={editingOgd}
           pgdId={selectedPgdId ? Number(selectedPgdId) : 0}
+          availableOeis={oeis}
           onSave={handleSaveOgd}
         />
 

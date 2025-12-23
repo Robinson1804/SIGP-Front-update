@@ -46,14 +46,49 @@ async function getAuthToken(): Promise<string | null> {
 // ============================================
 
 /**
+ * Decodificar JWT sin verificar firma (solo para extraer payload)
+ */
+function decodeJwtPayload(token: string): { sub: number; rol: string } | null {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(Buffer.from(payload, 'base64').toString('utf8'));
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Obtiene todos los proyectos
+ * Aplica filtros por rol:
+ * - SCRUM_MASTER: Solo ve proyectos donde es Scrum Master asignado
+ * - COORDINADOR: Solo ve proyectos donde es Coordinador asignado
+ * - Otros roles: Ven todos los proyectos
  * @deprecated Usar el servicio del cliente en features/proyectos/services
  */
 export async function getProyectos(): Promise<Proyecto[]> {
   try {
     const token = await getAuthToken();
 
-    const response = await fetch(`${API_BASE}/api/v1/proyectos`, {
+    // Construir URL con filtros basados en rol
+    let url = `${API_BASE}/api/v1/proyectos`;
+
+    if (token) {
+      const payload = decodeJwtPayload(token);
+      if (payload) {
+        const { sub: userId, rol } = payload;
+
+        // Aplicar filtro por rol
+        if (rol === 'SCRUM_MASTER') {
+          url += `?scrumMasterId=${userId}`;
+        } else if (rol === 'COORDINADOR') {
+          url += `?coordinadorId=${userId}`;
+        }
+        // PMO, ADMIN y otros roles ven todos los proyectos
+      }
+    }
+
+    const response = await fetch(url, {
       headers: {
         ...(token && { 'Authorization': `Bearer ${token}` }),
         'Content-Type': 'application/json',

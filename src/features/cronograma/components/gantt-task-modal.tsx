@@ -52,10 +52,11 @@ import { Slider } from '@/components/ui/slider';
 import type {
   TareaCronograma,
   TipoTarea,
+  FaseCronograma,
   CreateTareaCronogramaInput,
   UpdateTareaCronogramaInput,
 } from '../types';
-import { COLORES_POR_TIPO } from '../types';
+import { COLORES_POR_TIPO, FASES_CRONOGRAMA } from '../types';
 
 // Schema de validacion
 const tareaFormSchema = z.object({
@@ -74,6 +75,8 @@ const tareaFormSchema = z.object({
   tipo: z.enum(['tarea', 'hito', 'proyecto'] as const, {
     required_error: 'Seleccione un tipo',
   }),
+  fase: z.enum(['Analisis', 'Diseno', 'Desarrollo', 'Pruebas', 'Implementacion', 'Mantenimiento'] as const).optional().nullable(),
+  padre: z.string().optional().nullable(),
   responsableId: z.number().optional().nullable(),
   color: z.string().optional(),
   progreso: z.number().min(0).max(100).default(0),
@@ -167,6 +170,8 @@ export function GanttTaskModal({
         inicio: new Date(tarea.inicio),
         fin: new Date(tarea.fin),
         tipo: tarea.tipo,
+        fase: tarea.fase || null,
+        padre: tarea.padre || null,
         responsableId: tarea.responsableId || null,
         color: tarea.color || COLORES_POR_TIPO[tarea.tipo],
         progreso: tarea.progreso || 0,
@@ -179,6 +184,8 @@ export function GanttTaskModal({
       inicio: new Date(),
       fin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 dias
       tipo: 'tarea',
+      fase: null,
+      padre: null,
       responsableId: null,
       color: COLORES_POR_TIPO.tarea,
       progreso: 0,
@@ -218,6 +225,8 @@ export function GanttTaskModal({
       inicio: values.inicio.toISOString(),
       fin: values.fin.toISOString(),
       tipo: values.tipo,
+      fase: values.fase || undefined,
+      padre: values.padre || undefined,
       responsableId: values.responsableId || undefined,
       color: values.color || undefined,
       progreso: values.progreso,
@@ -312,6 +321,83 @@ export function GanttTaskModal({
                 )}
               />
             </div>
+
+            {/* Fase y Padre - Solo mostrar si no es tipo proyecto */}
+            {tipoActual !== 'proyecto' && (
+              <div className="grid grid-cols-2 gap-4">
+                {/* Fase */}
+                <FormField
+                  control={form.control}
+                  name="fase"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fase del Proyecto</FormLabel>
+                      <Select
+                        onValueChange={(value) =>
+                          field.onChange(value === '__none__' ? null : value)
+                        }
+                        value={field.value || '__none__'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar fase" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="__none__">Sin fase</SelectItem>
+                          {FASES_CRONOGRAMA.map((fase) => (
+                            <SelectItem key={fase.value} value={fase.value}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: fase.color }}
+                                />
+                                {fase.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Padre (fase/proyecto padre) */}
+                {tareasPadre.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="padre"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pertenece a Fase</FormLabel>
+                        <Select
+                          onValueChange={(value) =>
+                            field.onChange(value === '__none__' ? null : value)
+                          }
+                          value={field.value || '__none__'}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar fase padre" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="__none__">Ninguna (raiz)</SelectItem>
+                            {tareasPadre.map((padre) => (
+                              <SelectItem key={padre.id} value={padre.id}>
+                                {padre.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Fechas */}
             <div className="grid grid-cols-2 gap-4">
@@ -414,9 +500,9 @@ export function GanttTaskModal({
                     <FormLabel>Responsable</FormLabel>
                     <Select
                       onValueChange={(value) =>
-                        field.onChange(value ? parseInt(value, 10) : null)
+                        field.onChange(value === '__none__' ? null : parseInt(value, 10))
                       }
-                      value={field.value?.toString() || ''}
+                      value={field.value?.toString() || '__none__'}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -424,7 +510,7 @@ export function GanttTaskModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Sin asignar</SelectItem>
+                        <SelectItem value="__none__">Sin asignar</SelectItem>
                         {responsables.map((resp) => (
                           <SelectItem key={resp.id} value={resp.id.toString()}>
                             {resp.nombre}

@@ -113,7 +113,9 @@ export async function updatePGD(
 }
 
 /**
- * Eliminar un PGD (soft delete)
+ * Eliminar un PGD (hard delete con CASCADE)
+ * Elimina también: OEI, AEI, OGD, OEGD, AE y tablas intermedias
+ * Los proyectos/actividades se desvinculan (SET NULL)
  */
 export async function deletePGD(id: number | string): Promise<void> {
   await del(ENDPOINTS.PLANNING.PGD_BY_ID(id));

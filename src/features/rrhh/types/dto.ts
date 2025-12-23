@@ -1,0 +1,304 @@
+/**
+ * RRHH DTOs - Data Transfer Objects para operaciones CRUD
+ *
+ * Sincronizados con los DTOs del backend
+ * Actualizado: Dic 2024
+ */
+
+import {
+  Modalidad,
+  HabilidadCategoria,
+  NivelHabilidad,
+  TipoAsignacion,
+} from './index';
+
+// ============================================================================
+// DTOs DE PERSONAL
+// ============================================================================
+
+/**
+ * DTO para crear un nuevo personal
+ */
+export interface CreatePersonalDto {
+  codigoEmpleado: string;
+  dni?: string;
+  nombres: string;
+  apellidos: string;
+  email: string;
+  telefono?: string;
+  divisionId: number;
+  cargo?: string;
+  fechaIngreso: string;
+  modalidad: Modalidad;
+  horasSemanales?: number;
+  usuarioId?: number;
+}
+
+/**
+ * DTO para actualizar personal
+ */
+export interface UpdatePersonalDto {
+  codigoEmpleado?: string;
+  dni?: string;
+  nombres?: string;
+  apellidos?: string;
+  email?: string;
+  telefono?: string;
+  divisionId?: number;
+  cargo?: string;
+  fechaIngreso?: string;
+  modalidad?: Modalidad;
+  horasSemanales?: number;
+  activo?: boolean;
+  usuarioId?: number;
+}
+
+// ============================================================================
+// DTOs DE DIVISION
+// ============================================================================
+
+/**
+ * DTO para crear una división
+ */
+export interface CreateDivisionDto {
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  divisionPadreId?: number;
+  jefeId?: number;
+}
+
+/**
+ * DTO para actualizar una división
+ */
+export interface UpdateDivisionDto {
+  codigo?: string;
+  nombre?: string;
+  descripcion?: string;
+  divisionPadreId?: number | null;
+  jefeId?: number | null;
+  activo?: boolean;
+}
+
+// ============================================================================
+// DTOs DE HABILIDAD
+// ============================================================================
+
+/**
+ * DTO para crear una habilidad
+ */
+export interface CreateHabilidadDto {
+  nombre: string;
+  categoria: HabilidadCategoria;
+  descripcion?: string;
+}
+
+/**
+ * DTO para actualizar una habilidad
+ */
+export interface UpdateHabilidadDto {
+  nombre?: string;
+  categoria?: HabilidadCategoria;
+  descripcion?: string;
+  activo?: boolean;
+}
+
+// ============================================================================
+// DTOs DE PERSONAL-HABILIDAD
+// ============================================================================
+
+/**
+ * DTO para asignar una habilidad a un personal
+ */
+export interface AsignarHabilidadDto {
+  habilidadId: number;
+  nivel: NivelHabilidad;
+  aniosExperiencia?: number;
+  certificado?: boolean;
+}
+
+/**
+ * DTO para actualizar la habilidad de un personal
+ */
+export interface UpdatePersonalHabilidadDto {
+  nivel?: NivelHabilidad;
+  aniosExperiencia?: number;
+  certificado?: boolean;
+}
+
+// ============================================================================
+// DTOs DE ASIGNACION
+// ============================================================================
+
+/**
+ * DTO para crear una asignación
+ */
+export interface CreateAsignacionDto {
+  personalId: number;
+  tipoAsignacion: TipoAsignacion;
+  proyectoId?: number;
+  actividadId?: number;
+  subproyectoId?: number;
+  rolEquipo?: string;
+  porcentajeDedicacion: number;
+  fechaInicio: string;
+  fechaFin?: string;
+}
+
+/**
+ * DTO para actualizar una asignación
+ */
+export interface UpdateAsignacionDto {
+  rolEquipo?: string;
+  porcentajeDedicacion?: number;
+  fechaInicio?: string;
+  fechaFin?: string | null;
+  activo?: boolean;
+}
+
+/**
+ * DTO para finalizar una asignación
+ */
+export interface FinalizarAsignacionDto {
+  fechaFin: string;
+}
+
+// ============================================================================
+// DTOs DE BÚSQUEDA Y FILTROS
+// ============================================================================
+
+/**
+ * Parámetros de paginación
+ */
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+}
+
+/**
+ * Query params para buscar personal
+ */
+export interface PersonalQueryParams extends PaginationParams {
+  divisionId?: number;
+  modalidad?: Modalidad;
+  disponible?: boolean;
+  activo?: boolean;
+  busqueda?: string;
+  habilidadId?: number;
+}
+
+/**
+ * Query params para buscar divisiones
+ */
+export interface DivisionQueryParams extends PaginationParams {
+  activo?: boolean;
+  busqueda?: string;
+  incluirHijos?: boolean;
+}
+
+/**
+ * Query params para buscar habilidades
+ */
+export interface HabilidadQueryParams extends PaginationParams {
+  categoria?: HabilidadCategoria;
+  activo?: boolean;
+  busqueda?: string;
+}
+
+/**
+ * Query params para buscar asignaciones
+ */
+export interface AsignacionQueryParams extends PaginationParams {
+  personalId?: number;
+  tipoAsignacion?: TipoAsignacion;
+  proyectoId?: number;
+  actividadId?: number;
+  subproyectoId?: number;
+  activo?: boolean;
+}
+
+// ============================================================================
+// RESPUESTAS PAGINADAS
+// ============================================================================
+
+/**
+ * Respuesta paginada genérica
+ */
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ============================================================================
+// VALIDACIONES (para uso con Zod)
+// ============================================================================
+
+/**
+ * Constantes de validación
+ */
+export const VALIDATION_RULES = {
+  codigoEmpleado: {
+    minLength: 3,
+    maxLength: 20,
+    pattern: /^[A-Z0-9-]+$/,
+    message: 'Código debe contener solo letras mayúsculas, números y guiones',
+  },
+  dni: {
+    length: 8,
+    pattern: /^\d{8}$/,
+    message: 'DNI debe tener exactamente 8 dígitos',
+  },
+  nombres: {
+    minLength: 2,
+    maxLength: 100,
+  },
+  apellidos: {
+    minLength: 2,
+    maxLength: 100,
+  },
+  email: {
+    maxLength: 255,
+    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  },
+  telefono: {
+    maxLength: 20,
+    pattern: /^[0-9+\-\s()]+$/,
+  },
+  cargo: {
+    maxLength: 100,
+  },
+  horasSemanales: {
+    min: 1,
+    max: 48,
+    default: 40,
+  },
+  porcentajeDedicacion: {
+    min: 1,
+    max: 100,
+  },
+  descripcion: {
+    maxLength: 500,
+  },
+  codigoDivision: {
+    minLength: 2,
+    maxLength: 10,
+    pattern: /^[A-Z0-9-]+$/,
+  },
+  nombreDivision: {
+    minLength: 3,
+    maxLength: 100,
+  },
+  nombreHabilidad: {
+    minLength: 2,
+    maxLength: 100,
+  },
+  aniosExperiencia: {
+    min: 0,
+    max: 50,
+  },
+} as const;

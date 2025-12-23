@@ -2,6 +2,7 @@
  * RRHH Service
  *
  * Servicios para gestión de recursos humanos
+ * Sincronizado con Backend - Dic 2024
  */
 
 import { apiClient, ENDPOINTS } from '@/lib/api';
@@ -9,22 +10,36 @@ import type {
   Personal,
   Division,
   Habilidad,
+  PersonalHabilidad,
   Asignacion,
-  CargaTrabajo,
-  PersonalFilters,
-  CreatePersonalInput,
-  UpdatePersonalInput,
-  CreateAsignacionInput,
-  UpdateAsignacionInput,
+  DisponibilidadResponse,
+  AlertaSobrecarga,
   RRHHStats,
+  PersonalFilters,
+  DivisionFilters,
+  HabilidadFilters,
+  AsignacionFilters,
 } from '../types';
+import type {
+  CreatePersonalDto,
+  UpdatePersonalDto,
+  CreateDivisionDto,
+  UpdateDivisionDto,
+  CreateHabilidadDto,
+  UpdateHabilidadDto,
+  AsignarHabilidadDto,
+  UpdatePersonalHabilidadDto,
+  CreateAsignacionDto,
+  UpdateAsignacionDto,
+  FinalizarAsignacionDto,
+} from '../types/dto';
 
-// ============================================
+// ============================================================================
 // PERSONAL
-// ============================================
+// ============================================================================
 
 /**
- * Obtener todo el personal
+ * Obtener todo el personal con filtros opcionales
  */
 export async function getPersonal(filters?: PersonalFilters): Promise<Personal[]> {
   const response = await apiClient.get<Personal[]>(ENDPOINTS.RRHH.PERSONAL, {
@@ -42,17 +57,21 @@ export async function getPersonalById(id: number | string): Promise<Personal> {
 }
 
 /**
- * Obtener personal disponible (con capacidad)
+ * Obtener disponibilidad de un personal
  */
-export async function getPersonalDisponible(): Promise<Personal[]> {
-  const response = await apiClient.get<Personal[]>(ENDPOINTS.RRHH.PERSONAL_DISPONIBLE);
+export async function getPersonalDisponibilidad(
+  id: number | string
+): Promise<DisponibilidadResponse> {
+  const response = await apiClient.get<DisponibilidadResponse>(
+    ENDPOINTS.RRHH.PERSONAL_DISPONIBILIDAD(id)
+  );
   return response.data;
 }
 
 /**
  * Crear nuevo personal
  */
-export async function createPersonal(data: CreatePersonalInput): Promise<Personal> {
+export async function createPersonal(data: CreatePersonalDto): Promise<Personal> {
   const response = await apiClient.post<Personal>(ENDPOINTS.RRHH.PERSONAL, data);
   return response.data;
 }
@@ -62,7 +81,7 @@ export async function createPersonal(data: CreatePersonalInput): Promise<Persona
  */
 export async function updatePersonal(
   id: number | string,
-  data: UpdatePersonalInput
+  data: UpdatePersonalDto
 ): Promise<Personal> {
   const response = await apiClient.patch<Personal>(
     ENDPOINTS.RRHH.PERSONAL_BY_ID(id),
@@ -72,21 +91,86 @@ export async function updatePersonal(
 }
 
 /**
- * Eliminar personal
+ * Eliminar personal (soft delete)
  */
 export async function deletePersonal(id: number | string): Promise<void> {
   await apiClient.delete(ENDPOINTS.RRHH.PERSONAL_BY_ID(id));
 }
 
-// ============================================
-// DIVISIONES
-// ============================================
+// ============================================================================
+// PERSONAL - HABILIDADES
+// ============================================================================
 
 /**
- * Obtener todas las divisiones
+ * Obtener habilidades de un personal
  */
-export async function getDivisiones(): Promise<Division[]> {
-  const response = await apiClient.get<Division[]>(ENDPOINTS.RRHH.DIVISIONES);
+export async function getPersonalHabilidades(
+  personalId: number | string
+): Promise<PersonalHabilidad[]> {
+  const response = await apiClient.get<PersonalHabilidad[]>(
+    ENDPOINTS.RRHH.PERSONAL_HABILIDADES(personalId)
+  );
+  return response.data;
+}
+
+/**
+ * Asignar habilidad a un personal
+ */
+export async function asignarHabilidadPersonal(
+  personalId: number | string,
+  data: AsignarHabilidadDto
+): Promise<PersonalHabilidad> {
+  const response = await apiClient.post<PersonalHabilidad>(
+    ENDPOINTS.RRHH.PERSONAL_HABILIDADES(personalId),
+    data
+  );
+  return response.data;
+}
+
+/**
+ * Actualizar habilidad de un personal
+ */
+export async function updatePersonalHabilidad(
+  personalId: number | string,
+  habilidadId: number | string,
+  data: UpdatePersonalHabilidadDto
+): Promise<PersonalHabilidad> {
+  const response = await apiClient.patch<PersonalHabilidad>(
+    ENDPOINTS.RRHH.PERSONAL_HABILIDAD(personalId, habilidadId),
+    data
+  );
+  return response.data;
+}
+
+/**
+ * Quitar habilidad de un personal
+ */
+export async function removePersonalHabilidad(
+  personalId: number | string,
+  habilidadId: number | string
+): Promise<void> {
+  await apiClient.delete(ENDPOINTS.RRHH.PERSONAL_HABILIDAD(personalId, habilidadId));
+}
+
+// ============================================================================
+// DIVISIONES
+// ============================================================================
+
+/**
+ * Obtener todas las divisiones con filtros opcionales
+ */
+export async function getDivisiones(filters?: DivisionFilters): Promise<Division[]> {
+  const response = await apiClient.get<Division[]>(ENDPOINTS.RRHH.DIVISIONES, {
+    params: filters,
+  });
+  return response.data;
+}
+
+/**
+ * Obtener árbol jerárquico de divisiones
+ */
+export async function getDivisionesArbol(): Promise<Division[]> {
+  const response = await apiClient.get<Division[]>(ENDPOINTS.RRHH.DIVISIONES_ARBOL);
   return response.data;
 }
 
@@ -94,16 +178,22 @@ export async function getDivisiones(): Promise<Division[]> {
  * Obtener división por ID
  */
 export async function getDivisionById(id: number | string): Promise<Division> {
-  const response = await apiClient.get<Division>(`${ENDPOINTS.RRHH.DIVISIONES}/${id}`);
+  const response = await apiClient.get<Division>(ENDPOINTS.RRHH.DIVISION_BY_ID(id));
+  return response.data;
+}
+
+/**
+ * Obtener personal de una división
+ */
+export async function getDivisionPersonal(id: number | string): Promise<Personal[]> {
+  const response = await apiClient.get<Personal[]>(ENDPOINTS.RRHH.DIVISION_PERSONAL(id));
   return response.data;
 }
 
 /**
  * Crear división
  */
-export async function createDivision(
-  data: Partial<Division>
-): Promise<Division> {
+export async function createDivision(data: CreateDivisionDto): Promise<Division> {
   const response = await apiClient.post<Division>(ENDPOINTS.RRHH.DIVISIONES, data);
   return response.data;
 }
@@ -113,69 +203,125 @@ export async function createDivision(
  */
 export async function updateDivision(
   id: number | string,
-  data: Partial<Division>
+  data: UpdateDivisionDto
 ): Promise<Division> {
   const response = await apiClient.patch<Division>(
-    `${ENDPOINTS.RRHH.DIVISIONES}/${id}`,
+    ENDPOINTS.RRHH.DIVISION_BY_ID(id),
     data
   );
   return response.data;
 }
 
-// ============================================
+/**
+ * Eliminar división (soft delete)
+ */
+export async function deleteDivision(id: number | string): Promise<void> {
+  await apiClient.delete(ENDPOINTS.RRHH.DIVISION_BY_ID(id));
+}
+
+// ============================================================================
 // HABILIDADES
-// ============================================
+// ============================================================================
 
 /**
- * Obtener todas las habilidades
+ * Obtener todas las habilidades con filtros opcionales
  */
-export async function getHabilidades(): Promise<Habilidad[]> {
-  const response = await apiClient.get<Habilidad[]>(ENDPOINTS.RRHH.HABILIDADES);
+export async function getHabilidades(filters?: HabilidadFilters): Promise<Habilidad[]> {
+  const response = await apiClient.get<Habilidad[]>(ENDPOINTS.RRHH.HABILIDADES, {
+    params: filters,
+  });
+  return response.data;
+}
+
+/**
+ * Obtener habilidad por ID
+ */
+export async function getHabilidadById(id: number | string): Promise<Habilidad> {
+  const response = await apiClient.get<Habilidad>(ENDPOINTS.RRHH.HABILIDAD_BY_ID(id));
   return response.data;
 }
 
 /**
  * Crear habilidad
  */
-export async function createHabilidad(
-  data: Partial<Habilidad>
-): Promise<Habilidad> {
+export async function createHabilidad(data: CreateHabilidadDto): Promise<Habilidad> {
   const response = await apiClient.post<Habilidad>(ENDPOINTS.RRHH.HABILIDADES, data);
   return response.data;
 }
 
 /**
- * Asignar habilidades a personal
+ * Actualizar habilidad
  */
-export async function asignarHabilidades(
-  personalId: number | string,
-  habilidadIds: number[]
-): Promise<void> {
-  await apiClient.post(`${ENDPOINTS.RRHH.PERSONAL_BY_ID(personalId)}/habilidades`, {
-    habilidades: habilidadIds,
-  });
-}
-
-// ============================================
-// ASIGNACIONES
-// ============================================
-
-/**
- * Obtener todas las asignaciones
- */
-export async function getAsignaciones(): Promise<Asignacion[]> {
-  const response = await apiClient.get<Asignacion[]>(ENDPOINTS.RRHH.ASIGNACIONES);
+export async function updateHabilidad(
+  id: number | string,
+  data: UpdateHabilidadDto
+): Promise<Habilidad> {
+  const response = await apiClient.patch<Habilidad>(
+    ENDPOINTS.RRHH.HABILIDAD_BY_ID(id),
+    data
+  );
   return response.data;
 }
 
 /**
- * Obtener asignaciones de una persona
+ * Eliminar habilidad (soft delete)
  */
-export async function getAsignacionesByPersona(
-  personalId: number | string
+export async function deleteHabilidad(id: number | string): Promise<void> {
+  await apiClient.delete(ENDPOINTS.RRHH.HABILIDAD_BY_ID(id));
+}
+
+// ============================================================================
+// ASIGNACIONES
+// ============================================================================
+
+/**
+ * Obtener todas las asignaciones con filtros opcionales
+ */
+export async function getAsignaciones(filters?: AsignacionFilters): Promise<Asignacion[]> {
+  const response = await apiClient.get<Asignacion[]>(ENDPOINTS.RRHH.ASIGNACIONES, {
+    params: filters,
+  });
+  return response.data;
+}
+
+/**
+ * Obtener asignación por ID
+ */
+export async function getAsignacionById(id: number | string): Promise<Asignacion> {
+  const response = await apiClient.get<Asignacion>(ENDPOINTS.RRHH.ASIGNACION_BY_ID(id));
+  return response.data;
+}
+
+/**
+ * Obtener asignaciones de un proyecto
+ */
+export async function getAsignacionesProyecto(
+  proyectoId: number | string
 ): Promise<Asignacion[]> {
   const response = await apiClient.get<Asignacion[]>(
-    ENDPOINTS.RRHH.ASIGNACIONES_PERSONA(personalId)
+    ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId)
+  );
+  return response.data;
+}
+
+/**
+ * Obtener asignaciones de una actividad
+ */
+export async function getAsignacionesActividad(
+  actividadId: number | string
+): Promise<Asignacion[]> {
+  const response = await apiClient.get<Asignacion[]>(
+    ENDPOINTS.RRHH.ASIGNACIONES_ACTIVIDAD(actividadId)
+  );
+  return response.data;
+}
+
+/**
+ * Obtener alertas de sobrecarga
+ */
+export async function getAlertasSobrecarga(): Promise<AlertaSobrecarga[]> {
+  const response = await apiClient.get<AlertaSobrecarga[]>(
+    ENDPOINTS.RRHH.ASIGNACIONES_ALERTAS
   );
   return response.data;
 }
@@ -183,13 +329,8 @@ export async function getAsignacionesByPersona(
 /**
  * Crear asignación
  */
-export async function createAsignacion(
-  data: CreateAsignacionInput
-): Promise<Asignacion> {
-  const response = await apiClient.post<Asignacion>(
-    ENDPOINTS.RRHH.ASIGNACIONES,
-    data
-  );
+export async function createAsignacion(data: CreateAsignacionDto): Promise<Asignacion> {
+  const response = await apiClient.post<Asignacion>(ENDPOINTS.RRHH.ASIGNACIONES, data);
   return response.data;
 }
 
@@ -198,10 +339,10 @@ export async function createAsignacion(
  */
 export async function updateAsignacion(
   id: number | string,
-  data: UpdateAsignacionInput
+  data: UpdateAsignacionDto
 ): Promise<Asignacion> {
   const response = await apiClient.patch<Asignacion>(
-    `${ENDPOINTS.RRHH.ASIGNACIONES}/${id}`,
+    ENDPOINTS.RRHH.ASIGNACION_BY_ID(id),
     data
   );
   return response.data;
@@ -212,66 +353,114 @@ export async function updateAsignacion(
  */
 export async function finalizarAsignacion(
   id: number | string,
-  horasReales?: number
+  data?: FinalizarAsignacionDto
 ): Promise<Asignacion> {
-  const response = await apiClient.post<Asignacion>(
-    `${ENDPOINTS.RRHH.ASIGNACIONES}/${id}/finalizar`,
-    { horasReales }
+  const response = await apiClient.patch<Asignacion>(
+    ENDPOINTS.RRHH.ASIGNACION_BY_ID(id),
+    { ...data, activo: false }
   );
   return response.data;
 }
 
 /**
- * Obtener carga de trabajo de una persona
+ * Eliminar asignación
  */
-export async function getCargaTrabajo(
-  personalId: number | string
-): Promise<CargaTrabajo> {
-  const response = await apiClient.get<CargaTrabajo>(
-    `${ENDPOINTS.RRHH.PERSONAL_BY_ID(personalId)}/carga-trabajo`
-  );
-  return response.data;
+export async function deleteAsignacion(id: number | string): Promise<void> {
+  await apiClient.delete(ENDPOINTS.RRHH.ASIGNACION_BY_ID(id));
 }
 
-// ============================================
+// ============================================================================
 // ESTADÍSTICAS
-// ============================================
+// ============================================================================
 
 /**
  * Obtener estadísticas de RRHH
+ * TODO: Implementar endpoint en backend si no existe
  */
 export async function getRRHHStats(): Promise<RRHHStats> {
-  const response = await apiClient.get<RRHHStats>(`${ENDPOINTS.RRHH.PERSONAL}/stats`);
-  return response.data;
+  // Por ahora calculamos estadísticas básicas del lado del cliente
+  try {
+    const [personal, divisiones, asignaciones, alertas] = await Promise.all([
+      getPersonal(),
+      getDivisiones(),
+      getAsignaciones({ activo: true }),
+      getAlertasSobrecarga(),
+    ]);
+
+    const personalActivo = personal.filter((p) => p.activo);
+    const personalDisponible = personalActivo.filter((p) => p.disponible);
+
+    return {
+      totalPersonal: personal.length,
+      personalActivo: personalActivo.length,
+      personalDisponible: personalDisponible.length,
+      totalDivisiones: divisiones.filter((d) => d.activo).length,
+      totalAsignaciones: asignaciones.length,
+      promedioDisponibilidad: personalActivo.length > 0
+        ? (personalDisponible.length / personalActivo.length) * 100
+        : 0,
+      alertasSobrecarga: alertas.length,
+    };
+  } catch {
+    // Si falla, retornar stats vacías
+    return {
+      totalPersonal: 0,
+      personalActivo: 0,
+      personalDisponible: 0,
+      totalDivisiones: 0,
+      totalAsignaciones: 0,
+      promedioDisponibilidad: 0,
+      alertasSobrecarga: 0,
+    };
+  }
 }
 
-/**
- * Exportar servicio como objeto
- */
+// ============================================================================
+// EXPORTAR SERVICIO COMO OBJETO
+// ============================================================================
+
 export const rrhhService = {
   // Personal
   getPersonal,
   getPersonalById,
-  getPersonalDisponible,
+  getPersonalDisponibilidad,
   createPersonal,
   updatePersonal,
   deletePersonal,
+
+  // Personal - Habilidades
+  getPersonalHabilidades,
+  asignarHabilidadPersonal,
+  updatePersonalHabilidad,
+  removePersonalHabilidad,
+
   // Divisiones
   getDivisiones,
+  getDivisionesArbol,
   getDivisionById,
+  getDivisionPersonal,
   createDivision,
   updateDivision,
+  deleteDivision,
+
   // Habilidades
   getHabilidades,
+  getHabilidadById,
   createHabilidad,
-  asignarHabilidades,
+  updateHabilidad,
+  deleteHabilidad,
+
   // Asignaciones
   getAsignaciones,
-  getAsignacionesByPersona,
+  getAsignacionById,
+  getAsignacionesProyecto,
+  getAsignacionesActividad,
+  getAlertasSobrecarga,
   createAsignacion,
   updateAsignacion,
   finalizarAsignacion,
-  getCargaTrabajo,
+  deleteAsignacion,
+
   // Stats
   getRRHHStats,
 };

@@ -44,9 +44,9 @@ export const ENDPOINTS = {
       `/proyectos/${proyectoId}/epicas/${epicaId}`,
 
     // Historias de Usuario
-    HISTORIAS: (proyectoId: number | string) => `/proyectos/${proyectoId}/historias`,
+    HISTORIAS: (proyectoId: number | string) => `/proyectos/${proyectoId}/historias-usuario`,
     HISTORIA_BY_ID: (proyectoId: number | string, historiaId: number | string) =>
-      `/proyectos/${proyectoId}/historias/${historiaId}`,
+      `/proyectos/${proyectoId}/historias-usuario/${historiaId}`,
 
     // Equipo
     EQUIPO: (proyectoId: number | string) => `/proyectos/${proyectoId}/equipo`,
@@ -101,10 +101,10 @@ export const ENDPOINTS = {
   SPRINTS: {
     BASE: '/sprints',
     BY_ID: (id: number | string) => `/sprints/${id}`,
-    HISTORIAS: (sprintId: number | string) => `/sprints/${sprintId}/historias`,
+    HISTORIAS: (sprintId: number | string) => `/sprints/${sprintId}/historias-usuario`,
     TAREAS: (sprintId: number | string) => `/sprints/${sprintId}/tareas`,
-    START: (sprintId: number | string) => `/sprints/${sprintId}/start`,
-    COMPLETE: (sprintId: number | string) => `/sprints/${sprintId}/complete`,
+    START: (sprintId: number | string) => `/sprints/${sprintId}/iniciar`,
+    COMPLETE: (sprintId: number | string) => `/sprints/${sprintId}/cerrar`,
     DAILY_MEETINGS: (sprintId: number | string) => `/sprints/${sprintId}/daily-meetings`,
     TABLERO: (sprintId: number | string) => `/sprints/${sprintId}/tablero`,
     BURNDOWN: (sprintId: number | string) => `/sprints/${sprintId}/burndown`,
@@ -149,6 +149,11 @@ export const ENDPOINTS = {
     OEI: '/oei',
     OEI_BY_ID: (id: number | string) => `/oei/${id}`,
     OEI_AVANCE: (id: number | string) => `/oei/${id}/avance`,
+
+    // AEI - Acciones Estratégicas Institucionales (NEW)
+    AEI: '/aei',
+    AEI_BY_ID: (id: number | string) => `/aei/${id}`,
+    AEI_BY_OEI: (oeiId: number | string) => `/oei/${oeiId}/aei`,
 
     // OGD - Objetivos de Gobierno Digital
     OGD: '/ogd',
@@ -202,11 +207,16 @@ export const ENDPOINTS = {
     // Personal
     PERSONAL: '/personal',
     PERSONAL_BY_ID: (id: number | string) => `/personal/${id}`,
-    PERSONAL_DISPONIBLE: '/personal/disponible',
+    PERSONAL_DISPONIBILIDAD: (id: number | string) => `/personal/${id}/disponibilidad`,
+    PERSONAL_HABILIDADES: (id: number | string) => `/personal/${id}/habilidades`,
+    PERSONAL_HABILIDAD: (personalId: number | string, habilidadId: number | string) =>
+      `/personal/${personalId}/habilidades/${habilidadId}`,
 
     // Divisiones
     DIVISIONES: '/divisiones',
+    DIVISIONES_ARBOL: '/divisiones/arbol',
     DIVISION_BY_ID: (id: number | string) => `/divisiones/${id}`,
+    DIVISION_PERSONAL: (id: number | string) => `/divisiones/${id}/personal`,
 
     // Habilidades
     HABILIDADES: '/habilidades',
@@ -215,8 +225,9 @@ export const ENDPOINTS = {
     // Asignaciones
     ASIGNACIONES: '/asignaciones',
     ASIGNACION_BY_ID: (id: number | string) => `/asignaciones/${id}`,
-    ASIGNACIONES_PERSONA: (personaId: number | string) => `/personal/${personaId}/asignaciones`,
-    CARGA_TRABAJO: (personaId: number | string) => `/personal/${personaId}/carga-trabajo`,
+    ASIGNACIONES_ALERTAS: '/asignaciones/alertas/sobrecarga',
+    ASIGNACIONES_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/asignaciones`,
+    ASIGNACIONES_ACTIVIDAD: (actividadId: number | string) => `/actividades/${actividadId}/asignaciones`,
   },
 
   // ============================================

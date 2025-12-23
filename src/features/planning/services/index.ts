@@ -30,6 +30,17 @@ export {
   toggleOEIActivo,
 } from './oei.service';
 
+// AEI Service (NEW)
+export {
+  getAEIs,
+  getAEIsByOEI,
+  getAEIById,
+  createAEI,
+  updateAEI,
+  deleteAEI,
+  toggleAEIActivo,
+} from './aei.service';
+
 // OGD Service
 export {
   getOGDs,

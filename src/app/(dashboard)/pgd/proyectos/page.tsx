@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   Users,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
@@ -65,10 +67,21 @@ import {
   updateProyecto,
   deleteProyecto,
   type CreateProyectoData,
+  type CostoAnual,
 } from "@/features/proyectos/services/proyectos.service";
 import type { Proyecto } from "@/lib/definitions";
 
 const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
+
+// Areas disponibles para selección
+const AREAS_DISPONIBLES = [
+  "Oficina de Tecnologías de la Información (OTIN)",
+  "Oficina de Administración y Finanzas",
+  "Oficina de Planificación y Presupuesto",
+  "Oficina de Gestión Documental (OGD)",
+  "Oficina de Formación Ciudadana e Identidad",
+  "Oficina de Recursos Humanos",
+];
 
 const statusColors: { [key: string]: string } = {
   'Pendiente': 'bg-[#FE9F43]',
@@ -97,18 +110,28 @@ function POIModal({
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  // Estados para listas dinámicas
+  const [newAlcance, setNewAlcance] = useState('');
+  const [newBeneficio, setNewBeneficio] = useState('');
+  const [newCostoAnio, setNewCostoAnio] = useState<string>('');
+  const [newCostoMonto, setNewCostoMonto] = useState<string>('');
+
   useEffect(() => {
     if (project) {
+      const proyectoAny = project as any;
       setFormData({
         codigo: project.codigo,
         nombre: project.nombre,
         descripcion: project.descripcion || '',
         clasificacion: project.clasificacion as 'Al ciudadano' | 'Gestion interna',
         accionEstrategicaId: project.accionEstrategicaId || undefined,
-        montoAnual: project.montoAnual || 0,
-        anios: project.anios || [],
-        fechaInicio: project.fechaInicio || undefined,
-        fechaFin: project.fechaFin || undefined,
+        areaResponsable: proyectoAny.areaResponsable || '',
+        areasFinancieras: proyectoAny.areasFinancieras || [],
+        costosAnuales: proyectoAny.costosAnuales || [],
+        alcances: proyectoAny.alcances || [],
+        problematica: proyectoAny.problematica || '',
+        beneficiarios: proyectoAny.beneficiarios || '',
+        beneficios: proyectoAny.beneficios || [],
       });
     } else {
       setFormData({
@@ -117,21 +140,29 @@ function POIModal({
         descripcion: '',
         clasificacion: undefined,
         accionEstrategicaId: undefined,
-        montoAnual: 0,
-        anios: [],
+        areaResponsable: '',
+        areasFinancieras: [],
+        costosAnuales: [],
+        alcances: [],
+        problematica: '',
+        beneficiarios: '',
+        beneficios: [],
       });
     }
     setErrors({});
+    setNewAlcance('');
+    setNewBeneficio('');
+    setNewCostoAnio('');
+    setNewCostoMonto('');
   }, [project, isOpen]);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
     if (!formData.codigo) newErrors.codigo = "El codigo es requerido.";
     if (!formData.nombre) newErrors.nombre = "El nombre es requerido.";
-    if (!formData.descripcion) newErrors.descripcion = "La descripcion es requerida.";
     if (!formData.accionEstrategicaId) newErrors.accionEstrategicaId = "La accion estrategica es requerida.";
-    if (!formData.clasificacion) newErrors.clasificacion = "La clasificacion es requerida.";
-    if (!formData.anios || formData.anios.length === 0) newErrors.anios = "El anio es requerido.";
+    if (!formData.clasificacion) newErrors.clasificacion = "El tipo de proyecto es requerido.";
+    if (!formData.areaResponsable) newErrors.areaResponsable = "El area responsable es requerida.";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -140,14 +171,17 @@ function POIModal({
   const handleSave = async () => {
     if (!validate()) return;
 
+    // Blur ANTES de la operación asíncrona para evitar aria-hidden issues
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setIsSaving(true);
     try {
       await onSave(formData as CreateProyectoData, !!project, project?.id);
-      // Blur active element before closing to prevent aria-hidden focus issues
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-      onClose();
+      setTimeout(() => {
+        onClose();
+      }, 0);
     } catch (error) {
       console.error('Error saving project:', error);
     } finally {
@@ -155,27 +189,110 @@ function POIModal({
     }
   };
 
-  const yearOptions: MultiSelectOption[] = availableYears.map(y => ({
-    label: y.toString(),
-    value: y.toString()
-  }));
+  // Funciones para manejar alcances
+  const addAlcance = () => {
+    if (newAlcance.trim()) {
+      setFormData(p => ({
+        ...p,
+        alcances: [...(p.alcances || []), newAlcance.trim()]
+      }));
+      setNewAlcance('');
+    }
+  };
+
+  const removeAlcance = (index: number) => {
+    setFormData(p => ({
+      ...p,
+      alcances: (p.alcances || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  // Funciones para manejar beneficios
+  const addBeneficio = () => {
+    if (newBeneficio.trim()) {
+      setFormData(p => ({
+        ...p,
+        beneficios: [...(p.beneficios || []), newBeneficio.trim()]
+      }));
+      setNewBeneficio('');
+    }
+  };
+
+  const removeBeneficio = (index: number) => {
+    setFormData(p => ({
+      ...p,
+      beneficios: (p.beneficios || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  // Funciones para manejar costos anuales
+  const addCostoAnual = () => {
+    if (newCostoAnio && newCostoMonto) {
+      const anio = parseInt(newCostoAnio);
+      const monto = parseFloat(newCostoMonto);
+      if (!isNaN(anio) && !isNaN(monto)) {
+        setFormData(p => ({
+          ...p,
+          costosAnuales: [...(p.costosAnuales || []), { anio, monto }]
+        }));
+        setNewCostoAnio('');
+        setNewCostoMonto('');
+      }
+    }
+  };
+
+  const removeCostoAnual = (index: number) => {
+    setFormData(p => ({
+      ...p,
+      costosAnuales: (p.costosAnuales || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  // Calcular total de costos
+  const totalCostos = (formData.costosAnuales || []).reduce((acc, c) => acc + c.monto, 0);
+
+  // Manejar órganos que contribuyen (checkboxes)
+  const toggleAreaFinanciera = (area: string) => {
+    const current = formData.areasFinancieras || [];
+    if (current.includes(area)) {
+      setFormData(p => ({
+        ...p,
+        areasFinancieras: current.filter(a => a !== area)
+      }));
+    } else {
+      setFormData(p => ({
+        ...p,
+        areasFinancieras: [...current, area]
+      }));
+    }
+  };
+
+  // Obtener info del AE seleccionado para mostrar OEI/OGD
+  const selectedAE = accionesEstrategicas.find(ae => ae.id === formData.accionEstrategicaId);
 
   const isEditMode = !!project;
 
-  // Handle dialog close with proper focus management
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      // Blur active element before closing to prevent aria-hidden focus issues
+      // Blur inmediatamente y usar setTimeout para evitar el error de aria-hidden
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
-      onClose();
+      // Pequeño delay para permitir que el blur se procese
+      setTimeout(() => {
+        onClose();
+      }, 0);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
+      <DialogContent
+        className="sm:max-w-2xl p-0"
+        showCloseButton={false}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
           <DialogTitle>{isEditMode ? 'EDITAR' : 'REGISTRAR'} PROYECTO</DialogTitle>
           <DialogClose asChild>
@@ -184,113 +301,259 @@ function POIModal({
             </Button>
           </DialogClose>
         </DialogHeader>
-        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          <div>
-            <label>Codigo *</label>
-            <Input
-              placeholder="Ej: PRY-001"
-              value={formData.codigo || ''}
-              onChange={e => setFormData(p => ({ ...p, codigo: e.target.value }))}
-              className={errors.codigo ? 'border-red-500' : ''}
-            />
-            {errors.codigo && <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>}
-          </div>
-          <div>
-            <label>Nombre *</label>
-            <Input
-              placeholder="Ingresar nombre"
-              value={formData.nombre || ''}
-              onChange={e => setFormData(p => ({ ...p, nombre: e.target.value }))}
-              className={errors.nombre ? 'border-red-500' : ''}
-            />
-            {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
-          </div>
-          <div>
-            <label>Descripcion *</label>
-            <Textarea
-              placeholder="Ingresar descripcion"
-              value={formData.descripcion || ''}
-              onChange={e => setFormData(p => ({ ...p, descripcion: e.target.value }))}
-              className={errors.descripcion ? 'border-red-500' : ''}
-            />
-            {errors.descripcion && <p className="text-red-500 text-xs mt-1">{errors.descripcion}</p>}
-          </div>
-          <div>
-            <label>Accion Estrategica *</label>
-            <Select
-              value={formData.accionEstrategicaId?.toString() || ''}
-              onValueChange={(value) => setFormData(p => ({ ...p, accionEstrategicaId: Number(value) }))}
-            >
-              <SelectTrigger className={errors.accionEstrategicaId ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Seleccionar AE" />
-              </SelectTrigger>
-              <SelectContent>
-                {accionesEstrategicas.map((ae) => (
-                  <SelectItem key={ae.id} value={ae.id.toString()}>
-                    {ae.codigo} - {ae.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.accionEstrategicaId && <p className="text-red-500 text-xs mt-1">{errors.accionEstrategicaId}</p>}
-          </div>
-          <div>
-            <label>Clasificacion *</label>
-            <Select
-              value={formData.clasificacion || ''}
-              onValueChange={(value) => setFormData(p => ({ ...p, clasificacion: value as 'Al ciudadano' | 'Gestion interna' }))}
-            >
-              <SelectTrigger className={errors.clasificacion ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Seleccionar clasificacion" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
-                <SelectItem value="Gestion interna">Gestion interna</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.clasificacion && <p className="text-red-500 text-xs mt-1">{errors.clasificacion}</p>}
-          </div>
-          <div>
-            <label>Monto anual</label>
-            <Input
-              type="number"
-              placeholder="Ingresar monto"
-              value={formData.montoAnual || ''}
-              onChange={e => setFormData(p => ({ ...p, montoAnual: Number(e.target.value) }))}
-            />
-          </div>
-          <div>
-            <label>Anio(s) *</label>
-            <MultiSelect
-              options={yearOptions}
-              selected={(formData.anios || []).map(String)}
-              onChange={(selected) => setFormData(p => ({ ...p, anios: selected.map(Number) }))}
-              className={errors.anios ? 'border-red-500' : ''}
-              placeholder="Seleccionar anio(s)"
-            />
-            {errors.anios && <p className="text-red-500 text-xs mt-1">{errors.anios}</p>}
-          </div>
+        <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+          {/* Código y Nombre */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label>Fecha Inicio</label>
+              <label className="text-sm font-medium">Codigo *</label>
               <Input
-                type="date"
-                value={formData.fechaInicio || ''}
-                onChange={e => setFormData(p => ({ ...p, fechaInicio: e.target.value }))}
+                placeholder="Ej: PRY-001"
+                value={formData.codigo || ''}
+                onChange={e => setFormData(p => ({ ...p, codigo: e.target.value }))}
+                className={errors.codigo ? 'border-red-500' : ''}
               />
+              {errors.codigo && <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>}
             </div>
             <div>
-              <label>Fecha Fin</label>
+              <label className="text-sm font-medium">Nombre *</label>
               <Input
-                type="date"
-                value={formData.fechaFin || ''}
-                onChange={e => setFormData(p => ({ ...p, fechaFin: e.target.value }))}
+                placeholder="Nombre del proyecto"
+                value={formData.nombre || ''}
+                onChange={e => setFormData(p => ({ ...p, nombre: e.target.value }))}
+                className={errors.nombre ? 'border-red-500' : ''}
               />
+              {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
+            </div>
+          </div>
+
+          {/* Sección: Alineamiento Estratégico */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">ALINEAMIENTO ESTRATEGICO</h3>
+            <div>
+              <label className="text-sm font-medium">Accion Estrategica *</label>
+              <Select
+                value={formData.accionEstrategicaId?.toString() || ''}
+                onValueChange={(value) => setFormData(p => ({ ...p, accionEstrategicaId: Number(value) }))}
+              >
+                <SelectTrigger className={errors.accionEstrategicaId ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Seleccionar AE" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accionesEstrategicas.map((ae) => (
+                    <SelectItem key={ae.id} value={ae.id.toString()}>
+                      {ae.codigo} - {ae.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.accionEstrategicaId && <p className="text-red-500 text-xs mt-1">{errors.accionEstrategicaId}</p>}
+            </div>
+            {selectedAE && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
+                <p><strong>OEI:</strong> {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.nombre || 'Vinculado al PGD'}</p>
+                <p><strong>OGD:</strong> {(selectedAE as any).oegd?.ogd?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.nombre || 'Vinculado al PGD'}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Sección: Responsables */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">RESPONSABLES</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium">Area Responsable *</label>
+                <Select
+                  value={formData.areaResponsable || ''}
+                  onValueChange={(value) => setFormData(p => ({ ...p, areaResponsable: value }))}
+                >
+                  <SelectTrigger className={errors.areaResponsable ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Seleccionar area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AREAS_DISPONIBLES.map((area) => (
+                      <SelectItem key={area} value={area}>{area}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.areaResponsable && <p className="text-red-500 text-xs mt-1">{errors.areaResponsable}</p>}
+              </div>
+              <div>
+                <label className="text-sm font-medium">Tipo de Proyecto *</label>
+                <Select
+                  value={formData.clasificacion || ''}
+                  onValueChange={(value) => setFormData(p => ({ ...p, clasificacion: value as 'Al ciudadano' | 'Gestion interna' }))}
+                >
+                  <SelectTrigger className={errors.clasificacion ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Seleccionar tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
+                    <SelectItem value="Gestion interna">Gestion interna (Para Entidad)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.clasificacion && <p className="text-red-500 text-xs mt-1">{errors.clasificacion}</p>}
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="text-sm font-medium">Organos que Contribuyen</label>
+              <div className="mt-2 space-y-2 max-h-32 overflow-y-auto border rounded-md p-3">
+                {AREAS_DISPONIBLES.map((area) => (
+                  <div key={area} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={area}
+                      checked={(formData.areasFinancieras || []).includes(area)}
+                      onCheckedChange={() => toggleAreaFinanciera(area)}
+                    />
+                    <label htmlFor={area} className="text-sm cursor-pointer">{area}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sección: Alcance */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">ALCANCE</h3>
+            <div className="space-y-2">
+              {(formData.alcances || []).map((alcance, index) => (
+                <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
+                  <span className="text-sm flex-1">• {alcance}</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeAlcance(index)}>
+                    <X className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Descripcion del alcance..."
+                  value={newAlcance}
+                  onChange={e => setNewAlcance(e.target.value)}
+                  className="flex-1"
+                  rows={2}
+                />
+                <Button variant="outline" onClick={addAlcance} className="self-end">
+                  <Plus className="h-4 w-4 mr-1" /> Agregar
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección: Problemática */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">PROBLEMATICA IDENTIFICADA</h3>
+            <Textarea
+              placeholder="Descripcion de la problematica que el proyecto busca resolver..."
+              value={formData.problematica || ''}
+              onChange={e => setFormData(p => ({ ...p, problematica: e.target.value }))}
+              rows={3}
+            />
+          </div>
+
+          {/* Sección: Beneficiarios */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">BENEFICIARIOS</h3>
+            <Textarea
+              placeholder="Ej: Todas las personas naturales y juridicas del pais"
+              value={formData.beneficiarios || ''}
+              onChange={e => setFormData(p => ({ ...p, beneficiarios: e.target.value }))}
+              rows={2}
+            />
+          </div>
+
+          {/* Sección: Beneficios */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">BENEFICIOS</h3>
+            <div className="space-y-2">
+              {(formData.beneficios || []).map((beneficio, index) => (
+                <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
+                  <span className="text-sm flex-1">• {beneficio}</span>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeBeneficio(index)}>
+                    <X className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Descripcion del beneficio..."
+                  value={newBeneficio}
+                  onChange={e => setNewBeneficio(e.target.value)}
+                  className="flex-1"
+                  rows={2}
+                />
+                <Button variant="outline" onClick={addBeneficio} className="self-end">
+                  <Plus className="h-4 w-4 mr-1" /> Agregar
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección: Costos por Año */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">COSTO ESTIMADO POR AÑOS</h3>
+            <div className="space-y-2">
+              {(formData.costosAnuales || []).length > 0 && (
+                <div className="border rounded-md overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Año</th>
+                        <th className="px-3 py-2 text-right">Monto (S/)</th>
+                        <th className="px-3 py-2 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(formData.costosAnuales || []).map((costo, index) => (
+                        <tr key={index} className="border-t">
+                          <td className="px-3 py-2">{costo.anio}</td>
+                          <td className="px-3 py-2 text-right">{costo.monto.toLocaleString()}</td>
+                          <td className="px-3 py-2">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeCostoAnual(index)}>
+                              <X className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="border-t bg-gray-50 font-semibold">
+                        <td className="px-3 py-2">TOTAL</td>
+                        <td className="px-3 py-2 text-right">S/ {totalCostos.toLocaleString()}</td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500">Año</label>
+                  <Select value={newCostoAnio} onValueChange={setNewCostoAnio}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar año" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableYears.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-gray-500">Monto (S/)</label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={newCostoMonto}
+                    onChange={e => setNewCostoMonto(e.target.value)}
+                  />
+                </div>
+                <Button variant="outline" onClick={addCostoAnual}>
+                  <Plus className="h-4 w-4 mr-1" /> Agregar
+                </Button>
+              </div>
             </div>
           </div>
         </div>
         <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose} style={{ borderColor: '#CFD6DD', color: 'black' }}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} style={{ borderColor: '#CFD6DD', color: 'black' }}>
             Cancelar
           </Button>
           <Button
@@ -327,13 +590,21 @@ function DeleteConfirmationModal({
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
-      onClose();
+      // Pequeño delay para permitir que el blur se procese
+      setTimeout(() => {
+        onClose();
+      }, 0);
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md p-0" showCloseButton={false}>
+      <DialogContent
+        className="sm:max-w-md p-0"
+        showCloseButton={false}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
           <DialogTitle>AVISO</DialogTitle>
           <DialogClose asChild>
@@ -371,21 +642,226 @@ function DeleteConfirmationModal({
   );
 }
 
+function ViewProjectModal({
+  isOpen,
+  onClose,
+  project,
+  accionEstrategica,
+  onEdit,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  project: Proyecto | null;
+  accionEstrategica?: AccionEstrategica;
+  onEdit: () => void;
+}) {
+  if (!isOpen || !project) return null;
+
+  const proyectoAny = project as any;
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      setTimeout(() => {
+        onClose();
+      }, 0);
+    }
+  };
+
+  const handleEditClick = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    setTimeout(() => {
+      onClose();
+      onEdit();
+    }, 0);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="sm:max-w-2xl p-0 max-h-[90vh] overflow-hidden flex flex-col"
+        showCloseButton={false}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between shrink-0">
+          <DialogTitle>DETALLE DEL PROYECTO</DialogTitle>
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogClose>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Informacion General */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Codigo</label>
+                <p className="text-lg font-semibold">{project.codigo}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Estado</label>
+                <Badge className={`${statusColors[project.estado || 'Pendiente']} text-black ml-2`}>
+                  {project.estado || 'Pendiente'}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Nombre</label>
+              <p className="text-lg">{project.nombre}</p>
+            </div>
+            {project.descripcion && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Descripcion</label>
+                <p className="text-gray-700">{project.descripcion}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Alineamiento Estrategico */}
+          <div className="border-t pt-4">
+            <h3 className="font-bold text-[#004272] mb-3">ALINEAMIENTO ESTRATEGICO</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Accion Estrategica</label>
+                <p>{accionEstrategica ? `${accionEstrategica.codigo} - ${accionEstrategica.nombre}` : '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Clasificacion</label>
+                <p>{project.clasificacion || '-'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Responsables */}
+          <div className="border-t pt-4">
+            <h3 className="font-bold text-[#004272] mb-3">RESPONSABLES</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Area Responsable</label>
+                <p>{proyectoAny.areaResponsable || '-'}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">Coordinacion</label>
+                <p>{proyectoAny.coordinacion || '-'}</p>
+              </div>
+            </div>
+            {proyectoAny.areasFinancieras && proyectoAny.areasFinancieras.length > 0 && (
+              <div className="mt-3">
+                <label className="text-sm font-medium text-gray-500">Organos que Contribuyen</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {proyectoAny.areasFinancieras.map((area: string, i: number) => (
+                    <Badge key={i} variant="secondary">{area}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Alcances */}
+          {proyectoAny.alcances && proyectoAny.alcances.length > 0 && (
+            <div className="border-t pt-4">
+              <h3 className="font-bold text-[#004272] mb-3">ALCANCE</h3>
+              <ul className="list-disc list-inside space-y-1">
+                {proyectoAny.alcances.map((alcance: string, i: number) => (
+                  <li key={i} className="text-gray-700">{alcance}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Problematica */}
+          {proyectoAny.problematica && (
+            <div className="border-t pt-4">
+              <h3 className="font-bold text-[#004272] mb-3">PROBLEMATICA IDENTIFICADA</h3>
+              <p className="text-gray-700">{proyectoAny.problematica}</p>
+            </div>
+          )}
+
+          {/* Beneficiarios */}
+          {proyectoAny.beneficiarios && (
+            <div className="border-t pt-4">
+              <h3 className="font-bold text-[#004272] mb-3">BENEFICIARIOS</h3>
+              <p className="text-gray-700">{proyectoAny.beneficiarios}</p>
+            </div>
+          )}
+
+          {/* Beneficios */}
+          {proyectoAny.beneficios && proyectoAny.beneficios.length > 0 && (
+            <div className="border-t pt-4">
+              <h3 className="font-bold text-[#004272] mb-3">BENEFICIOS</h3>
+              <ul className="list-disc list-inside space-y-1">
+                {proyectoAny.beneficios.map((beneficio: string, i: number) => (
+                  <li key={i} className="text-gray-700">{beneficio}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Costos */}
+          {proyectoAny.costosAnuales && proyectoAny.costosAnuales.length > 0 && (
+            <div className="border-t pt-4">
+              <h3 className="font-bold text-[#004272] mb-3">COSTO ESTIMADO POR AÑOS</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {proyectoAny.costosAnuales.map((costo: { anio: number; monto: number }, i: number) => (
+                  <div key={i} className="bg-gray-50 p-3 rounded">
+                    <p className="text-sm text-gray-500">Año {costo.anio}</p>
+                    <p className="font-semibold">S/ {costo.monto.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="px-6 py-4 border-t shrink-0">
+          <Button variant="outline" onClick={() => handleOpenChange(false)} style={{ borderColor: '#CFD6DD', color: 'black' }}>
+            Cerrar
+          </Button>
+          <Button onClick={handleEditClick} style={{ backgroundColor: '#018CD1', color: 'white' }}>
+            Editar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const ProjectCard = ({
   project,
   onEdit,
   onDelete,
+  onView,
   accionEstrategica,
 }: {
   project: Proyecto;
   onEdit: () => void;
   onDelete: () => void;
+  onView: () => void;
   accionEstrategica?: AccionEstrategica;
 }) => {
   const displayYears = project.anios?.join(', ') || '';
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Evitar que el click se propague si se hizo click en el menu
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-radix-dropdown-menu-trigger]') || target.closest('[role="menu"]')) {
+      return;
+    }
+    onView();
+  };
+
   return (
-    <Card className="w-full h-full flex flex-col shadow-md rounded-lg bg-white hover:shadow-xl transition-shadow duration-300 cursor-pointer">
+    <Card
+      className="w-full h-full flex flex-col shadow-md rounded-lg bg-white hover:shadow-xl transition-shadow duration-300 cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardHeader className="flex flex-row items-start justify-between pb-2">
         <div className="flex items-center gap-2">
           <Folder className="w-6 h-6 text-[#008ED2]" />
@@ -395,14 +871,19 @@ const ProjectCard = ({
           </div>
         </div>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild data-radix-dropdown-menu-trigger>
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
-            <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => {
+              // Delay más largo para permitir que el dropdown se cierre completamente
+              setTimeout(() => onEdit(), 100);
+            }}>Editar</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => {
+              setTimeout(() => onDelete(), 100);
+            }} className="text-red-600">Eliminar</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
@@ -459,6 +940,8 @@ export default function PgdProyectosPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingProject, setDeletingProject] = useState<Proyecto | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [viewingProject, setViewingProject] = useState<Proyecto | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -578,10 +1061,22 @@ export default function PgdProyectosPage() {
     setEditingProject(null);
   };
 
+  const handleOpenViewModal = (project: Proyecto) => {
+    setViewingProject(project);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setViewingProject(null);
+  };
+
   const handleSaveProject = async (data: CreateProyectoData, isEdit: boolean, id?: number) => {
     try {
       if (isEdit && id) {
-        await updateProyecto(id, data);
+        // Excluir 'codigo' del payload para update (el backend no lo acepta)
+        const { codigo, ...updateData } = data;
+        await updateProyecto(id, updateData);
         toast({ title: 'Exito', description: 'Proyecto actualizado correctamente' });
       } else {
         await createProyecto(data);
@@ -740,6 +1235,7 @@ export default function PgdProyectosPage() {
                     project={p}
                     onEdit={() => handleOpenPoiModal(p)}
                     onDelete={() => handleOpenDeleteModal(p)}
+                    onView={() => handleOpenViewModal(p)}
                     accionEstrategica={getAeForProject(p)}
                   />
                 ))}
@@ -801,6 +1297,18 @@ export default function PgdProyectosPage() {
           onClose={handleCloseDeleteModal}
           onConfirm={handleDeleteProject}
           isDeleting={isDeleting}
+        />
+
+        <ViewProjectModal
+          isOpen={isViewModalOpen}
+          onClose={handleCloseViewModal}
+          project={viewingProject}
+          accionEstrategica={viewingProject ? getAeForProject(viewingProject) : undefined}
+          onEdit={() => {
+            if (viewingProject) {
+              handleOpenPoiModal(viewingProject);
+            }
+          }}
         />
       </AppLayout>
     </ProtectedRoute>

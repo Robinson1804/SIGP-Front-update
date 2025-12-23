@@ -20,12 +20,16 @@ import {
   SaludProyectoCard,
   TendenciasChart,
   ExportDashboardButton,
+  ActividadRecienteFeed,
+  CargaEquipoChart,
 } from '@/features/dashboard/components';
 import { dashboardService, metricasService } from '@/features/dashboard/services';
 import type {
   DashboardSummary,
   MetricasProyecto,
   SaludProyecto,
+  EventoActividad,
+  CargaDesarrollador,
 } from '@/features/dashboard/types';
 
 export default function DashboardProyectoPage() {
@@ -35,6 +39,12 @@ export default function DashboardProyectoPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [metricas, setMetricas] = useState<MetricasProyecto | null>(null);
   const [salud, setSalud] = useState<SaludProyecto | null>(null);
+  const [actividadReciente, setActividadReciente] = useState<EventoActividad[]>([]);
+  const [cargaEquipo, setCargaEquipo] = useState<{
+    data: CargaDesarrollador[];
+    promedioTareasCompletadas: number;
+    totalStoryPoints: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,15 +53,19 @@ export default function DashboardProyectoPage() {
     setError(null);
 
     try {
-      const [summaryData, metricasData, saludData] = await Promise.all([
-        dashboardService.getSummary(),
-        metricasService.getMetricasByProyecto(proyectoId),
-        dashboardService.getSaludProyecto(proyectoId),
+      const [summaryData, metricasData, saludData, actividadData, cargaData] = await Promise.all([
+        dashboardService.getSummary().catch(() => null),
+        metricasService.getMetricasByProyecto(proyectoId).catch(() => null),
+        dashboardService.getSaludProyecto(proyectoId).catch(() => null),
+        dashboardService.getActividadReciente(proyectoId, 20).catch(() => ({ data: [], total: 0 })),
+        dashboardService.getCargaEquipo(proyectoId).catch(() => null),
       ]);
 
       setSummary(summaryData);
       setMetricas(metricasData);
       setSalud(saludData);
+      setActividadReciente(actividadData.data);
+      setCargaEquipo(cargaData);
     } catch (err) {
       setError('Error al cargar el dashboard del proyecto');
       console.error('Error loading project dashboard:', err);
@@ -205,6 +219,23 @@ export default function DashboardProyectoPage() {
           <TendenciasChart data={metricas.tendencias} />
         </DashboardSection>
       )}
+
+      {/* Actividad Reciente y Carga del Equipo */}
+      <DashboardSection title="Equipo y Actividad">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ActividadRecienteFeed
+            data={actividadReciente}
+            loading={isLoading}
+            maxItems={15}
+          />
+          <CargaEquipoChart
+            data={cargaEquipo?.data || []}
+            promedioTareasCompletadas={cargaEquipo?.promedioTareasCompletadas}
+            totalStoryPoints={cargaEquipo?.totalStoryPoints}
+            loading={isLoading}
+          />
+        </div>
+      </DashboardSection>
     </DashboardLayout>
   );
 }

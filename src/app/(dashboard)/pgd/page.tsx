@@ -13,6 +13,7 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  Lightbulb,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -366,6 +367,13 @@ function PgdDashboardPageContent() {
       subtitle: "(Objetivo Estratégico Institucional)",
       bgColor: "bg-[#EFF4FF]",
       href: paths.pgd.oei,
+    },
+    {
+      icon: Lightbulb,
+      title: "AEI",
+      subtitle: "(Acción Estratégica Institucional)",
+      bgColor: "bg-[#E8F5E9]",
+      href: paths.pgd.aei,
     },
     {
       icon: Target,

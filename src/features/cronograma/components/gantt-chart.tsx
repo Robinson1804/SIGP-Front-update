@@ -11,13 +11,19 @@ import { useMemo, useCallback } from 'react';
 import { Gantt, Task, ViewMode } from 'gantt-task-react';
 import 'gantt-task-react/dist/index.css';
 import { cn } from '@/lib/utils';
-import type { TareaCronograma, GanttConfig, ViewMode as AppViewMode } from '../types';
-import { COLORES_POR_TIPO } from '../types';
+import type { TareaCronograma, GanttConfig, ViewMode as AppViewMode, FaseCronograma } from '../types';
+import { COLORES_POR_TIPO, FASES_CRONOGRAMA } from '../types';
 
 // Colores institucionales INEI
 const INEI_BLUE = '#004272';
 const INEI_BLUE_LIGHT = '#0066a4';
 const INEI_BLUE_DARK = '#003156';
+
+// Colores para estados especiales
+const RUTA_CRITICA_COLOR = '#dc2626'; // Red-600
+const RUTA_CRITICA_SELECTED = '#ef4444'; // Red-500
+const CONFLICTO_COLOR = '#f59e0b'; // Amber-500
+const CONFLICTO_SELECTED = '#fbbf24'; // Amber-400
 
 interface GanttChartProps {
   /** Tareas del cronograma */
@@ -28,6 +34,10 @@ interface GanttChartProps {
   showTaskList?: boolean;
   /** Mostrar lineas de dependencia */
   showDependencies?: boolean;
+  /** Resaltar tareas en ruta crítica */
+  mostrarRutaCritica?: boolean;
+  /** IDs de tareas en ruta crítica */
+  tareasCriticas?: number[];
   /** Callback cuando cambian las fechas de una tarea */
   onDateChange?: (task: Task, start: Date, end: Date) => void;
   /** Callback cuando cambia el progreso de una tarea */
@@ -53,9 +63,22 @@ interface GanttChartProps {
 }
 
 /**
+ * Obtiene el color basado en la fase de la tarea
+ */
+function getColorPorFase(fase?: FaseCronograma): string {
+  if (!fase) return INEI_BLUE;
+  const faseConfig = FASES_CRONOGRAMA.find((f) => f.value === fase);
+  return faseConfig?.color || INEI_BLUE;
+}
+
+/**
  * Convierte tareas del cronograma al formato de gantt-task-react
  */
-function convertirTareasParaGantt(tareas: TareaCronograma[]): Task[] {
+function convertirTareasParaGantt(
+  tareas: TareaCronograma[],
+  mostrarRutaCritica: boolean = false,
+  tareasCriticas: number[] = []
+): Task[] {
   return tareas.map((tarea) => {
     // Determinar tipo para la libreria
     let type: 'task' | 'milestone' | 'project' = 'task';
@@ -65,8 +88,39 @@ function convertirTareasParaGantt(tareas: TareaCronograma[]): Task[] {
       type = 'project';
     }
 
-    // Determinar color
-    const color = tarea.color || COLORES_POR_TIPO[tarea.tipo] || INEI_BLUE;
+    // Verificar si está en ruta crítica
+    const tareaId = typeof tarea.id === 'string' ? parseInt(tarea.id, 10) : tarea.id;
+    const enRutaCritica = mostrarRutaCritica && (
+      tarea.enRutaCritica || tareasCriticas.includes(tareaId)
+    );
+    const tieneConflicto = tarea.tieneConflicto;
+
+    // Determinar color basado en estado especial, fase o default
+    let backgroundColor: string;
+    let selectedColor: string;
+    let progressColor: string;
+
+    if (tieneConflicto) {
+      backgroundColor = CONFLICTO_COLOR;
+      selectedColor = CONFLICTO_SELECTED;
+      progressColor = '#d97706'; // Amber-600
+    } else if (enRutaCritica) {
+      backgroundColor = RUTA_CRITICA_COLOR;
+      selectedColor = RUTA_CRITICA_SELECTED;
+      progressColor = '#b91c1c'; // Red-700
+    } else if (tarea.color) {
+      backgroundColor = tarea.color;
+      selectedColor = tarea.color;
+      progressColor = INEI_BLUE_DARK;
+    } else if (tarea.fase) {
+      backgroundColor = getColorPorFase(tarea.fase);
+      selectedColor = backgroundColor;
+      progressColor = INEI_BLUE_DARK;
+    } else {
+      backgroundColor = COLORES_POR_TIPO[tarea.tipo] || INEI_BLUE;
+      selectedColor = INEI_BLUE_LIGHT;
+      progressColor = INEI_BLUE_DARK;
+    }
 
     // Obtener dependencias en formato de la libreria
     const dependencies = tarea.dependencias?.map((d) => d.tareaOrigenId) || [];
@@ -81,10 +135,10 @@ function convertirTareasParaGantt(tareas: TareaCronograma[]): Task[] {
       project: tarea.padre,
       dependencies,
       styles: {
-        backgroundColor: color,
-        backgroundSelectedColor: INEI_BLUE_LIGHT,
-        progressColor: INEI_BLUE_DARK,
-        progressSelectedColor: INEI_BLUE,
+        backgroundColor,
+        backgroundSelectedColor: selectedColor,
+        progressColor,
+        progressSelectedColor: progressColor,
       },
       isDisabled: false,
       displayOrder: tarea.orden,
@@ -131,6 +185,8 @@ export function GanttChart({
   viewMode = 'Week',
   showTaskList = true,
   showDependencies = true,
+  mostrarRutaCritica = false,
+  tareasCriticas = [],
   onDateChange,
   onProgressChange,
   onTaskClick,
@@ -148,8 +204,8 @@ export function GanttChart({
     if (!tareas || tareas.length === 0) {
       return [];
     }
-    return convertirTareasParaGantt(tareas);
-  }, [tareas]);
+    return convertirTareasParaGantt(tareas, mostrarRutaCritica, tareasCriticas);
+  }, [tareas, mostrarRutaCritica, tareasCriticas]);
 
   // Calcular ancho de columna basado en el modo de vista
   const calculatedColumnWidth = useMemo(() => {
@@ -285,6 +341,18 @@ export function GanttChart({
           stroke: ${INEI_BLUE};
           stroke-width: 2;
           stroke-dasharray: 5, 5;
+        }
+        /* Estilos especiales para fases/proyectos - texto en negrita */
+        .gantt-container [data-task-type="project"] {
+          font-weight: 700 !important;
+        }
+        .gantt-container .project-row {
+          background-color: #f1f5f9 !important;
+          font-weight: 700;
+        }
+        .gantt-container .project-row .task-list-cell {
+          font-weight: 700;
+          color: #1e293b;
         }
       `}</style>
       <Gantt

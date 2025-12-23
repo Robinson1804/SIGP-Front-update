@@ -4737,7 +4737,7 @@ function BacklogContent() {
             const [sprintsData, epicasData, backlogData, personalData] = await Promise.all([
                 getSprintsByProyecto(proyectoId).catch(() => []),
                 getEpicasByProyecto(proyectoId).catch(() => []),
-                getBacklog(proyectoId).catch(() => ({ historias: [] })),
+                getBacklog(proyectoId).catch(() => ({ backlog: [], metricas: { total: 0, porPrioridad: {}, porEstado: {} } })),
                 getPersonalDisponible().catch(() => []),
             ]);
 
@@ -4766,20 +4766,20 @@ function BacklogContent() {
             ];
 
             // Convertir historias del backend al formato local
-            const convertedStories: UserStory[] = backlogData.historias?.map((h: HistoriaUsuario) => ({
+            const convertedStories: UserStory[] = backlogData.backlog?.map((h: HistoriaUsuario) => ({
                 id: h.codigo || `HU-${h.id}`,
                 title: h.titulo,
-                description: h.descripcion || undefined,
+                description: h.notas || undefined,
                 state: mapHistoriaEstado(h.estado),
                 epic: h.epica?.nombre || 'Sin épica',
                 responsible: '', // Will be loaded separately
                 priority: (h.prioridad === 'Must' ? 'Alta' : h.prioridad === 'Should' ? 'Media' : 'Baja') as Priority,
-                startDate: h.fechaInicio || '',
-                endDate: h.fechaFin || '',
+                startDate: '',
+                endDate: '',
                 type: 'Historia' as const,
                 sprint: h.sprintId ? h.sprintId.toString() : 'backlog',
                 comments: 0,
-                points: h.puntos || undefined,
+                points: h.storyPoints || undefined,
             })) || [];
 
             // Cargar historias de cada sprint
@@ -4789,17 +4789,17 @@ function BacklogContent() {
                     const convertedSprintStories: UserStory[] = sprintHistorias.map((h: HistoriaUsuario) => ({
                         id: h.codigo || `HU-${h.id}`,
                         title: h.titulo,
-                        description: h.descripcion || undefined,
+                        description: h.notas || undefined,
                         state: mapHistoriaEstado(h.estado),
                         epic: h.epica?.nombre || 'Sin épica',
                         responsible: '',
                         priority: (h.prioridad === 'Must' ? 'Alta' : h.prioridad === 'Should' ? 'Media' : 'Baja') as Priority,
-                        startDate: h.fechaInicio || '',
-                        endDate: h.fechaFin || '',
+                        startDate: '',
+                        endDate: '',
                         type: 'Historia' as const,
                         sprint: sprint.id,
                         comments: 0,
-                        points: h.puntos || undefined,
+                        points: h.storyPoints || undefined,
                     }));
                     convertedStories.push(...convertedSprintStories);
                 } catch (err) {

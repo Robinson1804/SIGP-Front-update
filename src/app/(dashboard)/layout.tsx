@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/stores';
+import { useAuthStore, useHasHydrated } from '@/stores';
 import { paths } from '@/lib/paths';
 // AppLayout se maneja en cada página individual para permitir breadcrumbs personalizados
 import { WebSocketProvider } from '@/contexts/websocket-context';
@@ -15,6 +15,7 @@ import { WebSocketProvider } from '@/contexts/websocket-context';
  * Todas las rutas protegidas comparten el AppLayout (sidebar, header, etc.)
  *
  * IMPORTANTE: WebSocketProvider está dentro porque necesita acceso al token de auth
+ * IMPORTANTE: Espera a que Zustand termine de rehidratar antes de verificar auth
  */
 
 export default function DashboardLayout({
@@ -26,11 +27,12 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isLoading = useAuthStore((state) => state.isLoading);
+  const hasHydrated = useHasHydrated(); // Esperar rehidratación de Zustand
 
   useEffect(() => {
-    // Esperar a que termine de cargar el estado de autenticación
-    if (isLoading) return;
+    // CRÍTICO: Esperar a que Zustand termine de rehidratar desde localStorage
+    // Sin esto, isAuthenticated será false incluso si hay sesión guardada
+    if (!hasHydrated) return;
 
     // Si no está autenticado, redirigir a login
     if (!isAuthenticated || !user) {
@@ -44,15 +46,15 @@ export default function DashboardLayout({
     //   router.push('/unauthorized');
     //   return;
     // }
-  }, [isLoading, isAuthenticated, user, pathname, router]);
+  }, [hasHydrated, isAuthenticated, user, pathname, router]);
 
-  // Mostrar loading mientras se verifica autenticación
-  if (isLoading) {
+  // Mostrar loading mientras Zustand rehidrata
+  if (!hasHydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Verificando acceso...</p>
+          <p className="text-sm text-muted-foreground">Cargando sesión...</p>
         </div>
       </div>
     );

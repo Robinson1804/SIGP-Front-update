@@ -11,61 +11,61 @@ import { toast } from '@/lib/hooks/use-toast';
 import {
   getActasByProyecto,
   getActaById,
-  createActa,
-  updateActa,
+  createActaReunion,
+  createActaConstitucion,
+  updateActaReunion,
+  updateActaConstitucion,
   deleteActa,
   aprobarActa,
-  rechazarActa,
-  getActasPendientesAprobacion,
-  getActaHistorial,
+  saveActaPdf,
+  subirDocumentoFirmado,
 } from '../services/actas.service';
 import type {
   Acta,
-  CreateActaInput,
-  UpdateActaInput,
-  ActaQueryFilters,
-  ActaHistorialAprobacion,
+  ActasByProyectoResponse,
+  CreateActaReunionInput,
+  CreateActaConstitucionInput,
+  UpdateActaReunionInput,
+  UpdateActaConstitucionInput,
 } from '../types';
 
 interface UseActasOptions {
   proyectoId?: number | string;
   autoFetch?: boolean;
-  filters?: ActaQueryFilters;
 }
 
 interface UseActasReturn {
-  actas: Acta[];
-  actasPendientes: Acta[];
+  // State
+  data: ActasByProyectoResponse | null;
   isLoading: boolean;
   error: string | null;
   selectedActa: Acta | null;
-  historialAprobacion: ActaHistorialAprobacion[];
-  // Acciones
+
+  // Actions
   fetchActas: () => Promise<void>;
-  fetchActasPendientes: () => Promise<void>;
-  fetchHistorial: (actaId: number | string) => Promise<void>;
   selectActa: (acta: Acta | null) => void;
-  createNewActa: (data: CreateActaInput) => Promise<Acta | null>;
-  updateExistingActa: (id: number | string, data: Partial<UpdateActaInput>) => Promise<Acta | null>;
+
+  // CRUD
+  createReunion: (data: CreateActaReunionInput) => Promise<Acta | null>;
+  createConstitucion: (data: CreateActaConstitucionInput) => Promise<Acta | null>;
+  updateReunion: (id: number | string, data: UpdateActaReunionInput) => Promise<Acta | null>;
+  updateConstitucion: (id: number | string, data: UpdateActaConstitucionInput) => Promise<Acta | null>;
   deleteExistingActa: (id: number | string) => Promise<boolean>;
-  aprobar: (id: number | string, motivo?: string) => Promise<boolean>;
-  rechazar: (id: number | string, motivo: string) => Promise<boolean>;
-  // Filtros
-  setFilters: (filters: ActaQueryFilters) => void;
+
+  // Workflow
+  aprobar: (id: number | string, aprobado: boolean, comentario?: string) => Promise<Acta | null>;
+  subirDocumento: (id: number | string, url: string) => Promise<Acta | null>;
+  descargarPdf: (id: number | string, filename?: string) => Promise<boolean>;
 }
 
 export function useActas({
   proyectoId,
   autoFetch = true,
-  filters: initialFilters = {},
 }: UseActasOptions = {}): UseActasReturn {
-  const [actas, setActas] = useState<Acta[]>([]);
-  const [actasPendientes, setActasPendientes] = useState<Acta[]>([]);
+  const [data, setData] = useState<ActasByProyectoResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedActa, setSelectedActa] = useState<Acta | null>(null);
-  const [historialAprobacion, setHistorialAprobacion] = useState<ActaHistorialAprobacion[]>([]);
-  const [filters, setFiltersState] = useState<ActaQueryFilters>(initialFilters);
 
   /**
    * Obtiene las actas del proyecto
@@ -77,8 +77,8 @@ export function useActas({
     setError(null);
 
     try {
-      const data = await getActasByProyecto(proyectoId, filters);
-      setActas(data);
+      const result = await getActasByProyecto(proyectoId);
+      setData(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error al cargar actas';
       setError(errorMessage);
@@ -90,69 +90,34 @@ export function useActas({
     } finally {
       setIsLoading(false);
     }
-  }, [proyectoId, filters]);
-
-  /**
-   * Obtiene las actas pendientes de aprobacion del usuario
-   */
-  const fetchActasPendientes = useCallback(async () => {
-    setIsLoading(true);
-
-    try {
-      const data = await getActasPendientesAprobacion();
-      setActasPendientes(data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al cargar actas pendientes';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  /**
-   * Obtiene el historial de aprobaciones de un acta
-   */
-  const fetchHistorial = useCallback(async (actaId: number | string) => {
-    try {
-      const data = await getActaHistorial(actaId);
-      setHistorialAprobacion(data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al cargar historial';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    }
-  }, []);
+  }, [proyectoId]);
 
   /**
    * Selecciona un acta
    */
-  const selectActa = useCallback((acta: Acta | null) => {
-    setSelectedActa(acta);
-    if (acta) {
-      // Cargar historial automaticamente
-      fetchHistorial(acta.id);
+  const selectActa = useCallback(async (acta: Acta | null) => {
+    if (acta && acta.id) {
+      try {
+        const fullActa = await getActaById(acta.id);
+        setSelectedActa(fullActa);
+      } catch (err) {
+        setSelectedActa(acta);
+      }
     } else {
-      setHistorialAprobacion([]);
+      setSelectedActa(null);
     }
-  }, [fetchHistorial]);
+  }, []);
 
   /**
-   * Crea un nuevo acta
+   * Crea un nuevo acta de reunión
    */
-  const createNewActa = useCallback(async (data: CreateActaInput): Promise<Acta | null> => {
+  const createReunion = useCallback(async (input: CreateActaReunionInput): Promise<Acta | null> => {
     try {
-      const newActa = await createActa(data);
-      setActas(prev => [...prev, newActa]);
+      const newActa = await createActaReunion(input);
+      await fetchActas();
       toast({
         title: 'Acta creada',
-        description: 'El acta se ha creado correctamente.',
+        description: 'El acta de reunión se ha creado correctamente.',
       });
       return newActa;
     } catch (err) {
@@ -164,18 +129,41 @@ export function useActas({
       });
       return null;
     }
-  }, []);
+  }, [fetchActas]);
 
   /**
-   * Actualiza un acta existente
+   * Crea un nuevo acta de constitución
    */
-  const updateExistingActa = useCallback(async (
+  const createConstitucion = useCallback(async (input: CreateActaConstitucionInput): Promise<Acta | null> => {
+    try {
+      const newActa = await createActaConstitucion(input);
+      await fetchActas();
+      toast({
+        title: 'Acta creada',
+        description: 'El acta de constitución se ha creado correctamente.',
+      });
+      return newActa;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al crear acta';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [fetchActas]);
+
+  /**
+   * Actualiza un acta de reunión
+   */
+  const updateReunion = useCallback(async (
     id: number | string,
-    data: Partial<UpdateActaInput>
+    input: UpdateActaReunionInput
   ): Promise<Acta | null> => {
     try {
-      const updatedActa = await updateActa(id, data);
-      setActas(prev => prev.map(a => a.id === updatedActa.id ? updatedActa : a));
+      const updatedActa = await updateActaReunion(id, input);
+      await fetchActas();
       if (selectedActa?.id === updatedActa.id) {
         setSelectedActa(updatedActa);
       }
@@ -193,7 +181,36 @@ export function useActas({
       });
       return null;
     }
-  }, [selectedActa]);
+  }, [fetchActas, selectedActa]);
+
+  /**
+   * Actualiza un acta de constitución
+   */
+  const updateConstitucion = useCallback(async (
+    id: number | string,
+    input: UpdateActaConstitucionInput
+  ): Promise<Acta | null> => {
+    try {
+      const updatedActa = await updateActaConstitucion(id, input);
+      await fetchActas();
+      if (selectedActa?.id === updatedActa.id) {
+        setSelectedActa(updatedActa);
+      }
+      toast({
+        title: 'Acta actualizada',
+        description: 'El acta se ha actualizado correctamente.',
+      });
+      return updatedActa;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al actualizar acta';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [fetchActas, selectedActa]);
 
   /**
    * Elimina un acta
@@ -201,8 +218,8 @@ export function useActas({
   const deleteExistingActa = useCallback(async (id: number | string): Promise<boolean> => {
     try {
       await deleteActa(id);
-      setActas(prev => prev.filter(a => a.id !== id));
-      if (selectedActa?.id === id) {
+      await fetchActas();
+      if (selectedActa?.id === Number(id)) {
         setSelectedActa(null);
       }
       toast({
@@ -219,31 +236,85 @@ export function useActas({
       });
       return false;
     }
-  }, [selectedActa]);
+  }, [fetchActas, selectedActa]);
 
   /**
-   * Aprueba un acta
+   * Aprueba o rechaza un acta
    */
-  const aprobar = useCallback(async (id: number | string, motivo?: string): Promise<boolean> => {
+  const aprobar = useCallback(async (
+    id: number | string,
+    aprobado: boolean,
+    comentario?: string
+  ): Promise<Acta | null> => {
     try {
-      const result = await aprobarActa(id, motivo ? { motivo } : undefined);
-      // Actualizar el acta en el estado
-      setActas(prev => prev.map(a => a.id === result.acta.id ? result.acta : a));
-      if (selectedActa?.id === result.acta.id) {
-        setSelectedActa(result.acta);
-        // Recargar historial
-        fetchHistorial(result.acta.id);
+      const updatedActa = await aprobarActa(id, { aprobado, comentario });
+      await fetchActas();
+      if (selectedActa?.id === updatedActa.id) {
+        setSelectedActa(updatedActa);
       }
-      // Actualizar pendientes si aplica
-      setActasPendientes(prev => prev.filter(a => a.id !== id));
-
       toast({
-        title: 'Acta aprobada',
-        description: result.mensaje,
+        title: aprobado ? 'Acta aprobada' : 'Acta rechazada',
+        description: aprobado
+          ? 'El acta ha sido aprobada correctamente.'
+          : 'El acta ha sido rechazada.',
+      });
+      return updatedActa;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al procesar aprobación';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [fetchActas, selectedActa]);
+
+  /**
+   * Sube un documento firmado
+   */
+  const subirDocumento = useCallback(async (
+    id: number | string,
+    url: string
+  ): Promise<Acta | null> => {
+    try {
+      const updatedActa = await subirDocumentoFirmado(id, url);
+      await fetchActas();
+      if (selectedActa?.id === updatedActa.id) {
+        setSelectedActa(updatedActa);
+      }
+      toast({
+        title: 'Documento subido',
+        description: 'El documento firmado se ha cargado correctamente.',
+      });
+      return updatedActa;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al subir documento';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [fetchActas, selectedActa]);
+
+  /**
+   * Descarga el PDF del acta
+   */
+  const descargarPdf = useCallback(async (
+    id: number | string,
+    filename?: string
+  ): Promise<boolean> => {
+    try {
+      await saveActaPdf(id, filename);
+      toast({
+        title: 'PDF descargado',
+        description: 'El archivo se ha descargado correctamente.',
       });
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al aprobar acta';
+      const errorMessage = err instanceof Error ? err.message : 'Error al descargar PDF';
       toast({
         title: 'Error',
         description: errorMessage,
@@ -251,48 +322,9 @@ export function useActas({
       });
       return false;
     }
-  }, [selectedActa, fetchHistorial]);
-
-  /**
-   * Rechaza un acta
-   */
-  const rechazar = useCallback(async (id: number | string, motivo: string): Promise<boolean> => {
-    try {
-      const result = await rechazarActa(id, motivo);
-      // Actualizar el acta en el estado
-      setActas(prev => prev.map(a => a.id === result.acta.id ? result.acta : a));
-      if (selectedActa?.id === result.acta.id) {
-        setSelectedActa(result.acta);
-        // Recargar historial
-        fetchHistorial(result.acta.id);
-      }
-      // Actualizar pendientes si aplica
-      setActasPendientes(prev => prev.filter(a => a.id !== id));
-
-      toast({
-        title: 'Acta rechazada',
-        description: result.mensaje,
-      });
-      return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al rechazar acta';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-      return false;
-    }
-  }, [selectedActa, fetchHistorial]);
-
-  /**
-   * Actualiza los filtros
-   */
-  const setFilters = useCallback((newFilters: ActaQueryFilters) => {
-    setFiltersState(newFilters);
   }, []);
 
-  // Auto-fetch al montar o cambiar proyectoId/filters
+  // Auto-fetch al montar o cambiar proyectoId
   useEffect(() => {
     if (autoFetch && proyectoId) {
       fetchActas();
@@ -300,21 +332,19 @@ export function useActas({
   }, [autoFetch, proyectoId, fetchActas]);
 
   return {
-    actas,
-    actasPendientes,
+    data,
     isLoading,
     error,
     selectedActa,
-    historialAprobacion,
     fetchActas,
-    fetchActasPendientes,
-    fetchHistorial,
     selectActa,
-    createNewActa,
-    updateExistingActa,
+    createReunion,
+    createConstitucion,
+    updateReunion,
+    updateConstitucion,
     deleteExistingActa,
     aprobar,
-    rechazar,
-    setFilters,
+    subirDocumento,
+    descargarPdf,
   };
 }

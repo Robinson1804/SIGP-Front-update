@@ -1,14 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Plus } from 'lucide-react';
 import type { DropResult } from '@hello-pangea/dnd';
 import type { DndTask, TareaEstado, TareaPrioridad } from '@/components/dnd';
 import { getTablero, getActividadById } from '@/features/actividades/services/actividades.service';
-import { moverTarea, getTareasByActividad } from '@/features/actividades/services/tareas-kanban.service';
+import { moverTarea, getTareasByActividad, getTareaById } from '@/features/actividades/services/tareas-kanban.service';
 import type { TareaKanban, Actividad } from '@/features/actividades/types';
+import {
+  TaskFilters,
+  type TaskFiltersState,
+  KanbanMetricsBar,
+  TaskDetailPanel,
+} from '@/features/actividades/components';
 import { useToast } from '@/lib/hooks/use-toast';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -67,7 +73,7 @@ function mapPriority(prioridad?: 'Alta' | 'Media' | 'Baja'): TareaPrioridad {
 function mapToKanbanDndTask(tarea: TareaKanban): DndTask {
   return {
     id: tarea.id,
-    titulo: tarea.nombre,
+    nombre: tarea.nombre,
     descripcion: tarea.descripcion,
     estado: tarea.estado,
     prioridad: mapPriority(tarea.prioridad),
@@ -84,6 +90,22 @@ function mapToKanbanDndTask(tarea: TareaKanban): DndTask {
   };
 }
 
+// Initial filters state
+const initialFilters: TaskFiltersState = {
+  search: '',
+  prioridad: 'todas',
+  asignadoA: 'todos',
+  conSubtareas: null,
+};
+
+// WIP limits configuration
+const WIP_LIMITS: Record<string, number | null> = {
+  'Por hacer': null,
+  'En progreso': 5,
+  'En revision': 3,
+  'Finalizado': null,
+};
+
 function TableroContent() {
   const { user } = useAuth();
   const router = useRouter();
@@ -93,8 +115,14 @@ function TableroContent() {
   // State
   const [actividad, setActividad] = useState<Actividad | null>(null);
   const [tasks, setTasks] = useState<DndTask[]>([]);
+  const [allTareas, setAllTareas] = useState<TareaKanban[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Tablero');
+
+  // New states for enhanced features
+  const [filters, setFilters] = useState<TaskFiltersState>(initialFilters);
+  const [selectedTarea, setSelectedTarea] = useState<TareaKanban | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // Get activity ID from URL or localStorage
   const actividadId = searchParams.get('actividadId') || searchParams.get('id');
@@ -142,6 +170,7 @@ function TableroContent() {
 
         // Fetch tasks for the activity
         const tareasData = await getTareasByActividad(id);
+        setAllTareas(tareasData);
         const mappedTasks = tareasData.map(mapToKanbanDndTask);
         setTasks(mappedTasks);
 
@@ -159,6 +188,77 @@ function TableroContent() {
 
     loadData();
   }, [actividadId, router, toast]);
+
+  // Filter tasks based on current filters
+  useEffect(() => {
+    let filtered = allTareas;
+
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (t) =>
+          t.nombre.toLowerCase().includes(searchLower) ||
+          t.codigo.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Priority filter
+    if (filters.prioridad !== 'todas') {
+      filtered = filtered.filter((t) => t.prioridad === filters.prioridad);
+    }
+
+    // Assignee filter
+    if (filters.asignadoA !== 'todos') {
+      filtered = filtered.filter((t) => t.asignadoA === filters.asignadoA);
+    }
+
+    const mappedTasks = filtered.map(mapToKanbanDndTask);
+    setTasks(mappedTasks);
+  }, [filters, allTareas]);
+
+  // Handle task click to open detail panel
+  const handleTaskClick = useCallback(async (taskId: number) => {
+    try {
+      const tarea = await getTareaById(taskId);
+      setSelectedTarea(tarea);
+      setIsPanelOpen(true);
+    } catch (error) {
+      console.error('Error loading task details:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo cargar los detalles de la tarea',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+  // Handle task update from panel
+  const handleTaskUpdate = useCallback((updatedTarea: TareaKanban) => {
+    setAllTareas((prev) =>
+      prev.map((t) => (t.id === updatedTarea.id ? updatedTarea : t))
+    );
+    setSelectedTarea(updatedTarea);
+  }, []);
+
+  // Handle task delete from panel
+  const handleTaskDelete = useCallback((tareaId: number) => {
+    setAllTareas((prev) => prev.filter((t) => t.id !== tareaId));
+    setIsPanelOpen(false);
+    setSelectedTarea(null);
+  }, []);
+
+  // Calculate metrics
+  const metrics = React.useMemo(() => {
+    const total = allTareas.length;
+    const porEstado = {
+      porHacer: allTareas.filter((t) => t.estado === 'Por hacer').length,
+      enProgreso: allTareas.filter((t) => t.estado === 'En progreso').length,
+      enRevision: allTareas.filter((t) => t.estado === 'En revision').length,
+      completadas: allTareas.filter((t) => t.estado === 'Finalizado').length,
+    };
+    return { total, ...porEstado };
+  }, [allTareas]);
 
   // Handle drag and drop
   const handleDragEnd = async (result: DropResult, updatedTasks: DndTask[]) => {
@@ -214,6 +314,7 @@ function TableroContent() {
     if (tabName === 'Detalles') route = paths.poi.actividad.detalles;
     else if (tabName === 'Lista') route = paths.poi.actividad.lista;
     else if (tabName === 'Dashboard') route = paths.poi.actividad.dashboard;
+    else if (tabName === 'Informes') route = paths.poi.actividad.informes;
 
     if (route) {
       // Pass activity ID in query params
@@ -245,7 +346,8 @@ function TableroContent() {
     { name: 'Detalles' },
     { name: 'Lista' },
     { name: 'Tablero' },
-    { name: 'Dashboard' }
+    { name: 'Dashboard' },
+    { name: 'Informes' }
   ];
   const activityTabs = isImplementador
     ? allActivityTabs.filter(tab => tab.name !== 'Detalles')
@@ -290,16 +392,48 @@ function TableroContent() {
         </Button>
       </div>
 
+      {/* Task Filters */}
+      <div className="px-4">
+        <TaskFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+      </div>
+
+      {/* Metrics Bar */}
+      <div className="px-4 mt-3">
+        <KanbanMetricsBar
+          leadTime={null}
+          cycleTime={null}
+          throughput={0}
+          totalTareas={metrics.total}
+          tareasCompletadas={metrics.completadas}
+          tareasEnProgreso={metrics.enProgreso}
+          tareasPorHacer={metrics.porHacer}
+          tareasEnRevision={metrics.enRevision}
+        />
+      </div>
+
       {/* Kanban Board */}
-      <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4 overflow-hidden">
+      <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4 overflow-hidden mt-3">
         <KanbanBoard
           tasks={tasks}
           columns={KANBAN_COLUMNS}
           onDragEnd={handleDragEnd}
+          onTaskClick={(task) => handleTaskClick(task.id)}
           isLoading={isLoading}
           className="flex-1"
         />
       </div>
+
+      {/* Task Detail Panel */}
+      <TaskDetailPanel
+        tarea={selectedTarea}
+        isOpen={isPanelOpen}
+        onClose={() => setIsPanelOpen(false)}
+        onUpdate={handleTaskUpdate}
+        onDelete={handleTaskDelete}
+      />
     </AppLayout>
   );
 }

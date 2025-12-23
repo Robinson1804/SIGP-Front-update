@@ -35,7 +35,7 @@ export type TareaTipo = 'SCRUM' | 'KANBAN';
 export interface Tarea {
   id: number;
   codigo: string;
-  titulo: string;
+  nombre: string;
   descripcion: string | null;
   tipo: TareaTipo;
 
@@ -76,7 +76,7 @@ export interface Tarea {
   historiaUsuario?: {
     id: number;
     codigo: string;
-    titulo: string;
+    nombre: string;
   } | null;
   comentarios?: TareaComentario[];
 }
@@ -86,9 +86,30 @@ export interface Tarea {
  */
 export interface TareaComentario {
   id: number;
-  contenido: string;
+  texto: string;
   usuarioId: number;
   usuario: {
+    id: number;
+    nombre: string;
+    apellido?: string;
+  };
+  createdAt: string;
+  respuestas?: TareaComentario[];
+}
+
+/**
+ * Evidencia de tarea
+ */
+export interface TareaEvidencia {
+  id: number;
+  tareaId: number;
+  nombre: string;
+  descripcion: string | null;
+  url: string;
+  tipo: string | null; // 'documento', 'imagen', 'video', 'enlace'
+  tamanoBytes: number | null;
+  subidoPor: number;
+  usuario?: {
     id: number;
     nombre: string;
   };
@@ -96,11 +117,22 @@ export interface TareaComentario {
 }
 
 /**
+ * Datos para crear evidencia
+ */
+export interface CreateEvidenciaData {
+  nombre: string;
+  descripcion?: string;
+  url: string;
+  tipo?: string;
+  tamanoBytes?: number;
+}
+
+/**
  * Datos para crear una tarea Scrum
  */
 export interface CreateTareaData {
   codigo?: string;
-  titulo: string;
+  nombre: string;
   descripcion?: string;
   historiaUsuarioId: number;
   prioridad?: TareaPrioridad;
@@ -264,11 +296,11 @@ export async function getTareaComentarios(tareaId: number | string): Promise<Tar
  */
 export async function agregarComentario(
   tareaId: number | string,
-  contenido: string
+  texto: string
 ): Promise<TareaComentario> {
   const response = await apiClient.post<TareaComentario>(
     ENDPOINTS.TAREAS.COMENTARIOS(tareaId),
-    { contenido }
+    { texto }
   );
   return response.data;
 }
@@ -316,4 +348,42 @@ export async function getTareasResumenProyecto(proyectoId: number | string) {
     `${ENDPOINTS.PROYECTOS.BY_ID(proyectoId)}/tareas/resumen`
   );
   return response.data;
+}
+
+// ============================================
+// EVIDENCIAS
+// ============================================
+
+/**
+ * Obtener evidencias de una tarea
+ */
+export async function getTareaEvidencias(tareaId: number | string): Promise<TareaEvidencia[]> {
+  const response = await apiClient.get<TareaEvidencia[]>(
+    `${ENDPOINTS.TAREAS.BY_ID(tareaId)}/evidencias`
+  );
+  return response.data;
+}
+
+/**
+ * Agregar evidencia a una tarea
+ */
+export async function agregarEvidencia(
+  tareaId: number | string,
+  data: CreateEvidenciaData
+): Promise<TareaEvidencia> {
+  const response = await apiClient.post<TareaEvidencia>(
+    `${ENDPOINTS.TAREAS.BY_ID(tareaId)}/evidencias`,
+    data
+  );
+  return response.data;
+}
+
+/**
+ * Eliminar evidencia de una tarea
+ */
+export async function eliminarEvidencia(
+  tareaId: number | string,
+  evidenciaId: number | string
+): Promise<void> {
+  await del(`${ENDPOINTS.TAREAS.BY_ID(tareaId)}/evidencias/${evidenciaId}`);
 }

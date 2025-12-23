@@ -4,6 +4,7 @@
  * PersonalForm Component
  *
  * Formulario para crear/editar personal
+ * Sincronizado con Backend - Dic 2024
  */
 
 import { useForm } from 'react-hook-form';
@@ -12,13 +13,22 @@ import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -26,38 +36,73 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Loader2, User } from 'lucide-react';
-import type { Personal, Division, CreatePersonalInput } from '../types';
+import type { Personal, Division } from '../types';
+import { Modalidad, getModalidadLabel } from '../types';
+import type { CreatePersonalDto, UpdatePersonalDto } from '../types/dto';
+import { VALIDATION_RULES } from '../types/dto';
 
+// Schema de validación
 const personalSchema = z.object({
-  codigo: z.string().min(1, 'El código es requerido'),
-  nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  apellido: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
+  codigoEmpleado: z
+    .string()
+    .min(VALIDATION_RULES.codigoEmpleado.minLength, 'El código debe tener al menos 3 caracteres')
+    .max(VALIDATION_RULES.codigoEmpleado.maxLength, 'El código no puede exceder 20 caracteres')
+    .regex(VALIDATION_RULES.codigoEmpleado.pattern, VALIDATION_RULES.codigoEmpleado.message),
+  dni: z
+    .string()
+    .regex(VALIDATION_RULES.dni.pattern, VALIDATION_RULES.dni.message)
+    .optional()
+    .or(z.literal('')),
+  nombres: z
+    .string()
+    .min(VALIDATION_RULES.nombres.minLength, 'Los nombres deben tener al menos 2 caracteres')
+    .max(VALIDATION_RULES.nombres.maxLength, 'Los nombres no pueden exceder 100 caracteres'),
+  apellidos: z
+    .string()
+    .min(VALIDATION_RULES.apellidos.minLength, 'Los apellidos deben tener al menos 2 caracteres')
+    .max(VALIDATION_RULES.apellidos.maxLength, 'Los apellidos no pueden exceder 100 caracteres'),
   email: z.string().email('Email inválido'),
-  telefono: z.string().optional(),
+  telefono: z
+    .string()
+    .max(VALIDATION_RULES.telefono.maxLength)
+    .optional()
+    .or(z.literal('')),
   divisionId: z.number({ required_error: 'Seleccione una división' }),
-  cargo: z.string().min(1, 'El cargo es requerido'),
-  rol: z.string().min(1, 'Seleccione un rol'),
+  cargo: z
+    .string()
+    .max(VALIDATION_RULES.cargo.maxLength)
+    .optional()
+    .or(z.literal('')),
+  modalidad: z.nativeEnum(Modalidad, {
+    errorMap: () => ({ message: 'Seleccione una modalidad' }),
+  }),
+  horasSemanales: z
+    .number()
+    .min(VALIDATION_RULES.horasSemanales.min, 'Mínimo 1 hora')
+    .max(VALIDATION_RULES.horasSemanales.max, 'Máximo 48 horas'),
   fechaIngreso: z.string().min(1, 'La fecha de ingreso es requerida'),
+  activo: z.boolean().optional(),
 });
 
 type PersonalFormData = z.infer<typeof personalSchema>;
 
 interface PersonalFormProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
+  onSubmit: (data: CreatePersonalDto | UpdatePersonalDto) => Promise<void>;
   personal?: Personal | null;
   divisiones: Division[];
-  onSubmit: (data: CreatePersonalInput) => Promise<void>;
   isLoading?: boolean;
 }
 
 export function PersonalForm({
   open,
-  onOpenChange,
+  onClose,
+  onSubmit,
   personal,
   divisiones,
-  onSubmit,
   isLoading = false,
 }: PersonalFormProps) {
   const isEditing = !!personal;
@@ -65,224 +110,309 @@ export function PersonalForm({
   const form = useForm<PersonalFormData>({
     resolver: zodResolver(personalSchema),
     defaultValues: {
-      codigo: personal?.codigo ?? '',
-      nombre: personal?.nombre ?? '',
-      apellido: personal?.apellido ?? '',
-      email: personal?.email ?? '',
-      telefono: personal?.telefono ?? '',
-      divisionId: personal?.divisionId ?? undefined,
-      cargo: personal?.cargo ?? '',
-      rol: personal?.rol ?? '',
-      fechaIngreso: personal?.fechaIngreso?.split('T')[0] ?? '',
+      codigoEmpleado: personal?.codigoEmpleado || '',
+      dni: personal?.dni || '',
+      nombres: personal?.nombres || '',
+      apellidos: personal?.apellidos || '',
+      email: personal?.email || '',
+      telefono: personal?.telefono || '',
+      divisionId: personal?.divisionId || undefined,
+      cargo: personal?.cargo || '',
+      modalidad: personal?.modalidad || Modalidad.PLANILLA,
+      horasSemanales: personal?.horasSemanales || VALIDATION_RULES.horasSemanales.default,
+      fechaIngreso: personal?.fechaIngreso?.split('T')[0] || new Date().toISOString().split('T')[0],
+      activo: personal?.activo ?? true,
     },
   });
 
   const handleSubmit = async (data: PersonalFormData) => {
-    await onSubmit(data as CreatePersonalInput);
-    onOpenChange(false);
-    form.reset();
+    try {
+      const submitData = {
+        ...data,
+        dni: data.dni || undefined,
+        telefono: data.telefono || undefined,
+        cargo: data.cargo || undefined,
+      };
+      await onSubmit(submitData as CreatePersonalDto | UpdatePersonalDto);
+      form.reset();
+      onClose();
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
   };
 
-  const roles = [
-    { value: 'ADMIN', label: 'Administrador' },
-    { value: 'PMO', label: 'PMO' },
-    { value: 'COORDINADOR', label: 'Coordinador' },
-    { value: 'SCRUM_MASTER', label: 'Scrum Master' },
-    { value: 'DESARROLLADOR', label: 'Desarrollador' },
-    { value: 'IMPLEMENTADOR', label: 'Implementador' },
-  ];
+  const handleClose = () => {
+    form.reset();
+    onClose();
+  };
+
+  const modalidades = Object.values(Modalidad);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-[#004272]" />
             {isEditing ? 'Editar Personal' : 'Nuevo Personal'}
           </DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? 'Modifica los datos del personal'
+              : 'Completa los datos para registrar nuevo personal'}
+          </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-          {/* Código y División */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="codigo">Código</Label>
-              <Input
-                id="codigo"
-                placeholder="P-001"
-                {...form.register('codigo')}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {/* Código y DNI */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="codigoEmpleado"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Código Empleado *</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="EMP-001"
+                        {...field}
+                        className="uppercase"
+                        disabled={isEditing}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {form.formState.errors.codigo && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.codigo.message}
-                </p>
-              )}
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="divisionId">División</Label>
-              <Select
-                value={form.watch('divisionId')?.toString()}
-                onValueChange={(value) =>
-                  form.setValue('divisionId', Number(value))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {divisiones.map((div) => (
-                    <SelectItem key={div.id} value={String(div.id)}>
-                      {div.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.divisionId && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.divisionId.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Nombre y Apellido */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="nombre">Nombre</Label>
-              <Input
-                id="nombre"
-                placeholder="Juan"
-                {...form.register('nombre')}
-              />
-              {form.formState.errors.nombre && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.nombre.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="apellido">Apellido</Label>
-              <Input
-                id="apellido"
-                placeholder="Pérez"
-                {...form.register('apellido')}
-              />
-              {form.formState.errors.apellido && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.apellido.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Email y Teléfono */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="juan.perez@example.com"
-                {...form.register('email')}
-              />
-              {form.formState.errors.email && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.email.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="telefono">Teléfono (opcional)</Label>
-              <Input
-                id="telefono"
-                placeholder="+51 999 999 999"
-                {...form.register('telefono')}
+              <FormField
+                control={form.control}
+                name="dni"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>DNI</FormLabel>
+                    <FormControl>
+                      <Input placeholder="12345678" maxLength={8} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
 
-          {/* Cargo y Rol */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cargo">Cargo</Label>
-              <Input
-                id="cargo"
-                placeholder="Analista de Sistemas"
-                {...form.register('cargo')}
+            {/* Nombres y Apellidos */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="nombres"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombres *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Juan Carlos" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {form.formState.errors.cargo && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.cargo.message}
-                </p>
-              )}
+
+              <FormField
+                control={form.control}
+                name="apellidos"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Apellidos *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Pérez García" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="rol">Rol en Sistema</Label>
-              <Select
-                value={form.watch('rol')}
-                onValueChange={(value) => form.setValue('rol', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((rol) => (
-                    <SelectItem key={rol.value} value={rol.value}>
-                      {rol.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.rol && (
-                <p className="text-sm text-destructive">
-                  {form.formState.errors.rol.message}
-                </p>
-              )}
-            </div>
-          </div>
+            {/* Email y Teléfono */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="juan.perez@inei.gob.pe"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          {/* Fecha de Ingreso */}
-          <div className="space-y-2">
-            <Label htmlFor="fechaIngreso">Fecha de Ingreso</Label>
-            <Input
-              id="fechaIngreso"
-              type="date"
-              {...form.register('fechaIngreso')}
+              <FormField
+                control={form.control}
+                name="telefono"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Teléfono</FormLabel>
+                    <FormControl>
+                      <Input placeholder="+51 999 999 999" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* División y Cargo */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="divisionId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>División *</FormLabel>
+                    <Select
+                      value={field.value?.toString() || ''}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar división" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {divisiones
+                          .filter((d) => d.activo)
+                          .map((div) => (
+                            <SelectItem key={div.id} value={String(div.id)}>
+                              {div.codigo} - {div.nombre}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="cargo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cargo</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Analista de Sistemas" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Modalidad y Horas */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="modalidad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modalidad *</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar modalidad" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {modalidades.map((mod) => (
+                          <SelectItem key={mod} value={mod}>
+                            {getModalidadLabel(mod)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="horasSemanales"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Horas Semanales *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={48}
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormDescription>Horas de trabajo por semana</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Fecha de Ingreso */}
+            <FormField
+              control={form.control}
+              name="fechaIngreso"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha de Ingreso *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {form.formState.errors.fechaIngreso && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.fechaIngreso.message}
-              </p>
-            )}
-          </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : isEditing ? (
-                'Actualizar'
-              ) : (
-                'Crear'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+            {/* Estado (solo para edición) */}
+            {isEditing && (
+              <FormField
+                control={form.control}
+                name="activo"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Estado</FormLabel>
+                      <FormDescription>
+                        Personal activo en el sistema
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isEditing ? 'Guardar cambios' : 'Crear personal'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

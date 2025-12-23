@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
@@ -39,12 +40,14 @@ import {
   getPGDs,
   getOGDsByPGD,
   getOEGDsByOGD,
+  getAEIsByOEI,
   createOEGD,
   updateOEGD,
   deleteOEGD,
   type PGD,
   type OGD,
   type OEGD,
+  type AEI,
   type CreateOEGDInput,
   type UpdateOEGDInput,
 } from "@/features/planning";
@@ -57,17 +60,20 @@ function OEGDModal({
   onClose,
   oegd,
   ogdId,
+  availableAeis,
   onSave,
 }: {
   isOpen: boolean;
   onClose: () => void;
   oegd: OEGD | null;
   ogdId: number;
+  availableAeis: AEI[];
   onSave: (data: CreateOEGDInput | UpdateOEGDInput, id?: number) => Promise<void>;
 }) {
   const [codigo, setCodigo] = useState("");
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
+  const [selectedAeiIds, setSelectedAeiIds] = useState<number[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [saving, setSaving] = useState(false);
 
@@ -76,13 +82,27 @@ function OEGDModal({
       setCodigo(oegd.codigo);
       setNombre(oegd.nombre);
       setDescripcion(oegd.descripcion || "");
+      // Cargar los AEIs ya relacionados (desde aeis o desde oegdAeis)
+      const aeiIds = oegd.aeis?.map(aei => aei.id)
+        || oegd.oegdAeis?.map(item => item.aeiId)
+        || [];
+      setSelectedAeiIds(aeiIds);
     } else {
       setCodigo("");
       setNombre("");
       setDescripcion("");
+      setSelectedAeiIds([]);
     }
     setErrors({});
   }, [oegd, isOpen]);
+
+  const toggleAeiSelection = (aeiId: number) => {
+    setSelectedAeiIds(prev =>
+      prev.includes(aeiId)
+        ? prev.filter(id => id !== aeiId)
+        : [...prev, aeiId]
+    );
+  };
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -101,6 +121,7 @@ function OEGDModal({
         codigo,
         nombre,
         descripcion: descripcion || undefined,
+        aeiIds: selectedAeiIds.length > 0 ? selectedAeiIds : undefined,
       };
 
       if (!oegd) {
@@ -155,6 +176,39 @@ function OEGDModal({
             />
             {errors.nombre && <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>}
           </div>
+
+          {/* Multi-select AEIs */}
+          {availableAeis.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                AEIs Relacionadas
+              </label>
+              <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-gray-50">
+                {availableAeis.map((aei) => (
+                  <div key={aei.id} className="flex items-start gap-2">
+                    <Checkbox
+                      id={`aei-${aei.id}`}
+                      checked={selectedAeiIds.includes(aei.id)}
+                      onCheckedChange={() => toggleAeiSelection(aei.id)}
+                    />
+                    <label
+                      htmlFor={`aei-${aei.id}`}
+                      className="text-sm cursor-pointer leading-tight"
+                    >
+                      <span className="font-medium">{aei.codigo}</span>
+                      {aei.nombre && <span className="text-gray-600"> - {aei.nombre}</span>}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {selectedAeiIds.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {selectedAeiIds.length} AEI(s) seleccionada(s)
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
               Descripción
@@ -267,6 +321,7 @@ export default function OegdDashboardPage() {
   const [pgds, setPgds] = useState<PGD[]>([]);
   const [ogds, setOgds] = useState<OGD[]>([]);
   const [oegds, setOegds] = useState<OEGD[]>([]);
+  const [availableAeis, setAvailableAeis] = useState<AEI[]>([]);
 
   const [selectedPgdId, setSelectedPgdId] = useState<string | undefined>(undefined);
   const [selectedOgdId, setSelectedOgdId] = useState<string | undefined>(undefined);
@@ -347,6 +402,48 @@ export default function OegdDashboardPage() {
     }
   }, [selectedOgdId, toast]);
 
+  // Load available AEIs based on the selected OGD's related OEIs
+  const loadAvailableAeis = useCallback(async () => {
+    if (!selectedOgdId) {
+      setAvailableAeis([]);
+      return;
+    }
+
+    try {
+      // Find the selected OGD to get its related OEIs
+      const selectedOgd = ogds.find(ogd => ogd.id.toString() === selectedOgdId);
+      if (!selectedOgd) {
+        setAvailableAeis([]);
+        return;
+      }
+
+      // Get OEI IDs from the OGD's relations
+      const oeiIds = selectedOgd.oeis?.map(oei => oei.id)
+        || selectedOgd.ogdOeis?.map(item => item.oeiId)
+        || [];
+
+      if (oeiIds.length === 0) {
+        setAvailableAeis([]);
+        return;
+      }
+
+      // Load AEIs for each OEI in parallel
+      const aeiPromises = oeiIds.map(oeiId => getAEIsByOEI(oeiId));
+      const aeiArrays = await Promise.all(aeiPromises);
+
+      // Flatten and deduplicate AEIs
+      const allAeis = aeiArrays.flat();
+      const uniqueAeis = allAeis.filter((aei, index, self) =>
+        index === self.findIndex(a => a.id === aei.id)
+      );
+
+      setAvailableAeis(uniqueAeis);
+    } catch (err: any) {
+      console.error("Error loading AEIs:", err);
+      setAvailableAeis([]);
+    }
+  }, [selectedOgdId, ogds]);
+
   useEffect(() => {
     loadPGDs();
   }, []);
@@ -360,8 +457,9 @@ export default function OegdDashboardPage() {
   useEffect(() => {
     if (selectedOgdId) {
       loadOEGDs();
+      loadAvailableAeis();
     }
-  }, [selectedOgdId, loadOEGDs]);
+  }, [selectedOgdId, loadOEGDs, loadAvailableAeis]);
 
   const handleOpenModal = (oegd: OEGD | null = null) => {
     setEditingOegd(oegd);
@@ -523,6 +621,7 @@ export default function OegdDashboardPage() {
           onClose={handleCloseModal}
           oegd={editingOegd}
           ogdId={selectedOgdId ? Number(selectedOgdId) : 0}
+          availableAeis={availableAeis}
           onSave={handleSaveOegd}
         />
 

@@ -58,6 +58,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { getProyectos, type ProyectoQueryFilters } from '@/features/proyectos/services';
+import { getAllActividades } from '@/features/actividades/services/actividades.service';
 import { useToast } from '@/lib/hooks/use-toast';
 import type { PaginatedResponse } from '@/types';
 
@@ -73,6 +74,91 @@ type ProjectWithIds = Project & {
  * Mapea un proyecto del API (Proyecto) al formato del frontend (Project)
  * Incluye los IDs para que el modal de edición pueda usarlos
  */
+/**
+ * Mapea una actividad del API al formato del frontend (Project)
+ */
+function mapActividadToProject(actividad: {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string | null;
+  tipo?: string;
+  clasificacion?: string | null;
+  estado: string;
+  coordinadorId?: number | null;
+  coordinacion?: string | null;
+  areasFinancieras?: string[] | null;
+  montoAnual?: number | null;
+  anios?: number[] | null;
+  fechaInicio?: string | null;
+  fechaFin?: string | null;
+  metodoGestion?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}): ProjectWithIds {
+  // Formatear fecha de ISO a YYYY-MM
+  const formatDateToMonthYear = (dateStr: string | null | undefined): string | undefined => {
+    if (!dateStr) return undefined;
+    try {
+      const date = new Date(dateStr);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Convertir años de number[] a string[]
+  const aniosToYears = (anios: number[] | null | undefined): string[] => {
+    if (!anios || anios.length === 0) return [new Date().getFullYear().toString()];
+    return anios.map(a => a.toString());
+  };
+
+  // Mapear clasificación
+  const mapClasificacion = (clasificacion: string | null | undefined): Project['classification'] => {
+    if (!clasificacion) return 'Gestión interna';
+    if (clasificacion.toLowerCase().includes('ciudadano')) return 'Al ciudadano';
+    return 'Gestión interna';
+  };
+
+  // Mapear estado
+  const mapEstado = (estado: string): Project['status'] => {
+    const estadoMap: Record<string, Project['status']> = {
+      'Pendiente': 'Pendiente',
+      'En planificacion': 'En planificación',
+      'En ejecucion': 'En desarrollo',
+      'En desarrollo': 'En desarrollo',
+      'Finalizado': 'Finalizado',
+      'Suspendido': 'Pendiente',
+      'Cancelado': 'Finalizado',
+    };
+    return estadoMap[estado] || 'Pendiente';
+  };
+
+  return {
+    id: actividad.id.toString(),
+    code: actividad.codigo,
+    name: actividad.nombre,
+    description: actividad.descripcion || '',
+    type: 'Actividad',
+    classification: mapClasificacion(actividad.clasificacion),
+    status: mapEstado(actividad.estado),
+    scrumMaster: 'N/A (Kanban)',
+    annualAmount: actividad.montoAnual || 0,
+    strategicAction: 'Sin AE',
+    missingData: !actividad.descripcion,
+    years: aniosToYears(actividad.anios),
+    responsibles: [],
+    financialArea: actividad.areasFinancieras || [],
+    coordination: actividad.coordinacion || undefined,
+    coordinator: actividad.coordinadorId ? `Coordinador #${actividad.coordinadorId}` : undefined,
+    managementMethod: actividad.metodoGestion || 'Kanban',
+    subProjects: [],
+    startDate: formatDateToMonthYear(actividad.fechaInicio),
+    endDate: formatDateToMonthYear(actividad.fechaFin),
+    coordinadorId: actividad.coordinadorId || undefined,
+  };
+}
+
 function mapProyectoToProject(proyecto: Proyecto): ProjectWithIds {
   // Mapear estado: API usa "En planificacion" (sin tilde), frontend usa "En planificación"
   const mapEstado = (estado: string): Project['status'] => {
@@ -336,57 +422,95 @@ function PmoPoiView() {
     const effectiveType = isDeveloper ? "Proyecto" : isImplementador ? "Actividad" : selectedType;
 
     /**
-     * Función para cargar proyectos desde la API
+     * Función para cargar proyectos o actividades desde la API
      */
     const fetchProyectos = useCallback(async () => {
         setIsLoading(true);
         setError(null);
 
         try {
-            // Construir filtros para la API
-            const filters: ProyectoQueryFilters = {
-                tipo: effectiveType as 'Proyecto' | 'Actividad',
-                page: currentPage,
-                pageSize: pageSize,
-            };
+            let mappedProjects: ProjectWithIds[] = [];
 
-            // Agregar búsqueda si existe
-            if (searchQuery.trim()) {
-                filters.search = searchQuery.trim();
-            }
+            if (effectiveType === 'Actividad') {
+                // Cargar Actividades desde el endpoint /actividades
+                const actividadesData = await getAllActividades({
+                    search: searchQuery.trim() || undefined,
+                });
 
-            // Agregar filtro de año si existe
-            if (selectedYear && selectedYear !== "all") {
-                filters.anno = parseInt(selectedYear, 10);
-            }
+                // Filtrar por año si es necesario
+                let filteredActividades = actividadesData;
+                if (selectedYear && selectedYear !== "all") {
+                    filteredActividades = actividadesData.filter(a =>
+                        a.anios?.includes(parseInt(selectedYear, 10)) ||
+                        !a.anios ||
+                        a.anios.length === 0
+                    );
+                }
 
-            // Agregar filtro de estado si es necesario (opcional)
-            // filters.estado = ...
+                // Filtrar por coordinador si es necesario
+                if (userRole === ROLES.COORDINADOR && user?.id) {
+                    const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+                    filteredActividades = filteredActividades.filter(a => a.coordinadorId === userId);
+                }
 
-            const response = await getProyectos(filters);
-
-            // La respuesta puede ser PaginatedResponse o un array directo
-            let proyectosData: Proyecto[];
-
-            if (Array.isArray(response)) {
-                // Si es un array directo
-                proyectosData = response as unknown as Proyecto[];
+                mappedProjects = filteredActividades.map(mapActividadToProject);
                 setTotalPages(1);
-                setTotalItems(proyectosData.length);
-            } else if (response && typeof response === 'object') {
-                // Si es PaginatedResponse
-                const paginatedResponse = response as PaginatedResponse<Proyecto>;
-                proyectosData = paginatedResponse.data || [];
-                setTotalPages(paginatedResponse.totalPages || 1);
-                setTotalItems(paginatedResponse.total || proyectosData.length);
+                setTotalItems(filteredActividades.length);
             } else {
-                proyectosData = [];
-                setTotalPages(1);
-                setTotalItems(0);
+                // Cargar Proyectos desde el endpoint /proyectos
+                const filters: ProyectoQueryFilters = {
+                    tipo: 'Proyecto',
+                    page: currentPage,
+                    pageSize: pageSize,
+                };
+
+                // Agregar búsqueda si existe
+                if (searchQuery.trim()) {
+                    filters.search = searchQuery.trim();
+                }
+
+                // Agregar filtro de año si existe
+                if (selectedYear && selectedYear !== "all") {
+                    filters.anno = parseInt(selectedYear, 10);
+                }
+
+                // Filtrar por rol del usuario
+                // SCRUM_MASTER: solo ve proyectos donde está asignado como Scrum Master
+                if (isScrumMaster && user?.id) {
+                    filters.scrumMasterId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+                }
+                // COORDINADOR: solo ve proyectos donde está asignado como Coordinador
+                else if (userRole === ROLES.COORDINADOR && user?.id) {
+                    filters.coordinadorId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+                }
+                // PMO y ADMIN ven todos los proyectos (sin filtro adicional)
+
+                const response = await getProyectos(filters);
+
+                // La respuesta puede ser PaginatedResponse o un array directo
+                let proyectosData: Proyecto[];
+
+                if (Array.isArray(response)) {
+                    // Si es un array directo
+                    proyectosData = response as unknown as Proyecto[];
+                    setTotalPages(1);
+                    setTotalItems(proyectosData.length);
+                } else if (response && typeof response === 'object') {
+                    // Si es PaginatedResponse
+                    const paginatedResponse = response as PaginatedResponse<Proyecto>;
+                    proyectosData = paginatedResponse.data || [];
+                    setTotalPages(paginatedResponse.totalPages || 1);
+                    setTotalItems(paginatedResponse.total || proyectosData.length);
+                } else {
+                    proyectosData = [];
+                    setTotalPages(1);
+                    setTotalItems(0);
+                }
+
+                // Mapear proyectos del API al formato del frontend
+                mappedProjects = proyectosData.map(mapProyectoToProject);
             }
 
-            // Mapear proyectos del API al formato del frontend
-            const mappedProjects = proyectosData.map(mapProyectoToProject);
             setProjects(mappedProjects);
 
         } catch (err) {
@@ -401,7 +525,7 @@ function PmoPoiView() {
         } finally {
             setIsLoading(false);
         }
-    }, [effectiveType, currentPage, searchQuery, selectedYear, toast]);
+    }, [effectiveType, currentPage, searchQuery, selectedYear, toast, isScrumMaster, userRole, user]);
 
     // Cargar proyectos cuando cambien los filtros
     useEffect(() => {
@@ -422,17 +546,22 @@ function PmoPoiView() {
 
         // Filtro por asignación según el rol del usuario (filtro local)
         // PMO ve todos los proyectos/actividades
-        if (!isPmo && userName) {
+        // NOTA: La API ya debería filtrar por scrumMasterId para SCRUM_MASTER,
+        // así que este filtro local es solo una validación adicional
+        if (!isPmo && user) {
             // DESARROLLADOR e IMPLEMENTADOR: ven donde están como responsables
             if (isDeveloper || isImplementador) {
                 const isResponsible = p.responsibles?.some(r => r === userName);
                 if (!isResponsible) return false;
             }
-            // SCRUM_MASTER: ve donde está como scrumMaster o gestor
+            // SCRUM_MASTER: ve donde está como scrumMaster (comparar por ID, no por nombre)
             else if (isScrumMaster) {
-                const isScrumMasterAssigned = p.scrumMaster === userName;
-                const isGestorAssigned = p.gestor === userName;
-                if (!isScrumMasterAssigned && !isGestorAssigned) return false;
+                // Comparar por scrumMasterId (que guardamos al mapear el proyecto)
+                const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+                const isScrumMasterAssigned = p.scrumMasterId === userId;
+                // No aplicamos filtro local estricto ya que la API ya filtra
+                // Solo dejamos pasar si no hay scrumMasterId o coincide
+                // if (!isScrumMasterAssigned) return false;
             }
         }
 

@@ -35,6 +35,7 @@ class SocketClient {
   private listeners: Map<string, Set<EventCallback>> = new Map();
   private isConnected: boolean = false;
   private isDevelopment: boolean = process.env.NODE_ENV === 'development';
+  private connectionErrorLogged: boolean = false;
 
   /**
    * Conectar al servidor WebSocket
@@ -42,9 +43,6 @@ class SocketClient {
    */
   connect(token: string): void {
     if (this.socket?.connected) {
-      if (this.isDevelopment) {
-        console.log('[WS] Ya está conectado');
-      }
       return;
     }
 
@@ -54,9 +52,10 @@ class SocketClient {
       auth: { token },
       transports: ['websocket'],
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
+      reconnectionAttempts: 2, // Reduced to minimize noise
+      reconnectionDelay: 2000,
       reconnectionDelayMax: 5000,
+      timeout: 5000,
     });
 
     this.setupBaseListeners();
@@ -69,27 +68,24 @@ class SocketClient {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      if (this.isDevelopment) {
-        console.log('[WS] Conectado al servidor');
-      }
       this.isConnected = true;
+      this.connectionErrorLogged = false; // Reset on successful connection
     });
 
-    this.socket.on('disconnect', (reason) => {
-      if (this.isDevelopment) {
-        console.log('[WS] Desconectado:', reason);
-      }
+    this.socket.on('disconnect', () => {
       this.isConnected = false;
     });
 
-    this.socket.on('connect_error', (error) => {
-      if (this.isDevelopment) {
-        console.error('[WS] Error de conexión:', error.message);
+    this.socket.on('connect_error', () => {
+      // Only log once to avoid console spam
+      if (!this.connectionErrorLogged) {
+        this.connectionErrorLogged = true;
+        console.warn('[WS] WebSocket no disponible - funcionalidad en tiempo real deshabilitada');
       }
     });
 
-    this.socket.on('error', (error) => {
-      console.error('[WS] Error del servidor:', error);
+    this.socket.on('error', () => {
+      // Silently ignore errors - WebSocket is optional
     });
 
     // Re-emitir todos los eventos a los listeners registrados
@@ -119,10 +115,6 @@ class SocketClient {
     }
     this.listeners.get(event)!.add(callback);
 
-    if (this.isDevelopment) {
-      console.log(`[WS] Listener registrado para: ${event}`);
-    }
-
     // Retornar función de cleanup
     return () => {
       const callbacks = this.listeners.get(event);
@@ -131,9 +123,6 @@ class SocketClient {
         if (callbacks.size === 0) {
           this.listeners.delete(event);
         }
-      }
-      if (this.isDevelopment) {
-        console.log(`[WS] Listener removido de: ${event}`);
       }
     };
   }
@@ -145,12 +134,8 @@ class SocketClient {
    */
   emit(event: string, data?: any): void {
     if (!this.socket?.connected) {
-      console.warn('[WS] No conectado, no se puede emitir:', event);
+      // Silently ignore - WebSocket is optional
       return;
-    }
-
-    if (this.isDevelopment) {
-      console.log('[WS] Emitiendo:', event, data);
     }
 
     this.socket.emit(event, data);
@@ -160,13 +145,10 @@ class SocketClient {
    * Desconectar del servidor y limpiar todos los listeners
    */
   disconnect(): void {
-    if (this.isDevelopment) {
-      console.log('[WS] Desconectando...');
-    }
-
     this.socket?.disconnect();
     this.socket = null;
     this.isConnected = false;
+    this.connectionErrorLogged = false; // Reset for next connection attempt
     this.listeners.clear();
   }
 

@@ -2188,9 +2188,12 @@ function ListaContent() {
         if (tabName === 'Detalles') route = paths.poi.actividad.detalles;
         else if (tabName === 'Tablero') route = paths.poi.actividad.tablero;
         else if (tabName === 'Dashboard') route = paths.poi.actividad.dashboard;
+        else if (tabName === 'Informes') route = paths.poi.actividad.informes;
 
         if (route) {
-            router.push(route);
+            // State-driven Navigation: pass actividadId in query params
+            const queryParams = project ? `?actividadId=${project.id}` : '';
+            router.push(`${route}${queryParams}`);
         } else {
             setActiveTab(tabName);
         }
@@ -2311,7 +2314,7 @@ function ListaContent() {
     );
 
     // IMPLEMENTADOR no tiene acceso a Detalles
-    const allActivityTabs = [{ name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }];
+    const allActivityTabs = [{ name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }, { name: 'Informes' }];
     const activityTabs = isImplementador
         ? allActivityTabs.filter(tab => tab.name !== 'Detalles')
         : allActivityTabs;

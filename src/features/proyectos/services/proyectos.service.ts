@@ -19,9 +19,17 @@ export interface ProyectoQueryFilters {
   tipo?: 'Proyecto' | 'Actividad';
   anno?: number;
   accionEstrategicaId?: number;
+  scrumMasterId?: number;
+  coordinadorId?: number;
   activo?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+// Interface para costos anuales
+export interface CostoAnual {
+  anio: number;
+  monto: number;
 }
 
 export interface CreateProyectoData {
@@ -34,9 +42,15 @@ export interface CreateProyectoData {
   scrumMasterId?: number;
   patrocinadorId?: number;
   coordinacion?: string;
+  areaResponsable?: string;
   areasFinancieras?: string[];
   montoAnual?: number;
   anios?: number[];
+  costosAnuales?: CostoAnual[];
+  alcances?: string[];
+  problematica?: string;
+  beneficiarios?: string;
+  beneficios?: string[];
   fechaInicio?: string;
   fechaFin?: string;
 }

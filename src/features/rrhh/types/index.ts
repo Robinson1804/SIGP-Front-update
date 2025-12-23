@@ -1,31 +1,86 @@
 /**
- * RRHH Types
+ * RRHH Types - Sincronizados con Backend
  *
  * Tipos para gestión de recursos humanos
+ * Actualizado: Dic 2024
  */
+
+// ============================================================================
+// ENUMS (sincronizados con backend)
+// ============================================================================
+
+/**
+ * Modalidad de contratación del personal
+ */
+export enum Modalidad {
+  PLANILLA = 'Planilla',
+  CAS = 'CAS',
+  LOCADOR = 'Locador',
+  PRACTICANTE = 'Practicante',
+}
+
+/**
+ * Categoría de habilidad técnica
+ */
+export enum HabilidadCategoria {
+  LENGUAJE = 'Lenguaje',
+  FRAMEWORK = 'Framework',
+  BASE_DATOS = 'Base de datos',
+  CLOUD = 'Cloud',
+  DEVOPS = 'DevOps',
+  METODOLOGIA = 'Metodologia',
+  SOFT_SKILL = 'Soft skill',
+  OTRO = 'Otro',
+}
+
+/**
+ * Nivel de dominio de una habilidad
+ */
+export enum NivelHabilidad {
+  BASICO = 'Basico',
+  INTERMEDIO = 'Intermedio',
+  AVANZADO = 'Avanzado',
+  EXPERTO = 'Experto',
+}
+
+/**
+ * Tipo de entidad a la que se asigna el personal
+ */
+export enum TipoAsignacion {
+  PROYECTO = 'Proyecto',
+  ACTIVIDAD = 'Actividad',
+  SUBPROYECTO = 'Subproyecto',
+}
+
+// ============================================================================
+// INTERFACES PRINCIPALES
+// ============================================================================
 
 /**
  * Personal / Empleado
  */
 export interface Personal {
   id: number;
-  codigo: string;
-  nombre: string;
-  apellido: string;
-  nombreCompleto: string;
+  usuarioId?: number;
+  divisionId: number;
+  codigoEmpleado: string;
+  dni?: string;
+  nombres: string;
+  apellidos: string;
   email: string;
   telefono?: string;
-  divisionId: number;
-  division?: Division;
-  cargo: string;
-  rol: 'ADMIN' | 'PMO' | 'COORDINADOR' | 'SCRUM_MASTER' | 'DESARROLLADOR' | 'IMPLEMENTADOR';
-  estado: 'Activo' | 'Inactivo' | 'Licencia';
+  cargo?: string;
   fechaIngreso: string;
-  avatar?: string;
-  habilidades?: Habilidad[];
-  disponibilidad?: number; // Porcentaje de disponibilidad actual
+  modalidad: Modalidad;
+  horasSemanales: number;
+  disponible: boolean;
+  activo: boolean;
   createdAt: string;
   updatedAt: string;
+  // Relaciones
+  division?: Division;
+  usuario?: { id: number; username: string; email: string };
+  habilidades?: PersonalHabilidad[];
 }
 
 /**
@@ -36,12 +91,16 @@ export interface Division {
   codigo: string;
   nombre: string;
   descripcion?: string;
-  jefe?: Personal;
+  divisionPadreId?: number;
   jefeId?: number;
-  totalPersonal: number;
-  estado: 'Activo' | 'Inactivo';
+  activo: boolean;
   createdAt: string;
   updatedAt: string;
+  // Relaciones
+  jefe?: Personal;
+  divisionPadre?: Division;
+  hijos?: Division[];
+  totalPersonal?: number;
 }
 
 /**
@@ -50,127 +109,260 @@ export interface Division {
 export interface Habilidad {
   id: number;
   nombre: string;
-  categoria: 'Tecnica' | 'Metodologia' | 'Herramienta' | 'Soft';
+  categoria: HabilidadCategoria;
   descripcion?: string;
-  nivel?: 'Basico' | 'Intermedio' | 'Avanzado' | 'Experto';
-}
-
-/**
- * Asignación a proyecto/actividad
- */
-export interface Asignacion {
-  id: number;
-  personalId: number;
-  personal?: Personal;
-  entidadTipo: 'Proyecto' | 'Actividad';
-  entidadId: number;
-  entidadNombre?: string;
-  rol: string;
-  porcentajeDedicacion: number;
-  fechaInicio: string;
-  fechaFin?: string;
-  estado: 'Activa' | 'Finalizada' | 'Suspendida';
-  horasEstimadas?: number;
-  horasReales?: number;
+  activo: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 /**
- * Resumen de carga de trabajo
+ * Relación Personal-Habilidad con nivel
  */
-export interface CargaTrabajo {
+export interface PersonalHabilidad {
+  id: number;
   personalId: number;
-  personal: Personal;
-  totalAsignaciones: number;
-  asignacionesActivas: number;
-  porcentajeOcupacion: number;
-  proyectos: {
-    id: number;
-    nombre: string;
-    rol: string;
-    dedicacion: number;
-  }[];
-  actividades: {
-    id: number;
-    nombre: string;
-    rol: string;
-    dedicacion: number;
-  }[];
-  disponibilidadRestante: number;
+  habilidadId: number;
+  nivel: NivelHabilidad;
+  aniosExperiencia?: number;
+  certificado: boolean;
+  createdAt: string;
+  // Relaciones
+  habilidad?: Habilidad;
+  personal?: Personal;
 }
+
+/**
+ * Asignación a proyecto/actividad/subproyecto
+ */
+export interface Asignacion {
+  id: number;
+  personalId: number;
+  tipoAsignacion: TipoAsignacion;
+  proyectoId?: number;
+  actividadId?: number;
+  subproyectoId?: number;
+  rolEquipo?: string;
+  porcentajeDedicacion: number;
+  fechaInicio: string;
+  fechaFin?: string;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Relaciones
+  personal?: Personal;
+  proyecto?: { id: number; codigo: string; nombre: string };
+  actividad?: { id: number; codigo: string; nombre: string };
+  subproyecto?: { id: number; codigo: string; nombre: string };
+}
+
+// ============================================================================
+// DTOs DE RESPUESTA
+// ============================================================================
+
+/**
+ * Respuesta de disponibilidad de un personal
+ */
+export interface DisponibilidadResponse {
+  personalId: number;
+  nombre: string;
+  horasSemanales: number;
+  porcentajeAsignado: number;
+  horasAsignadas: number;
+  horasDisponibles: number;
+  disponible: boolean;
+  asignacionesActuales: Asignacion[];
+}
+
+/**
+ * Alerta de sobrecarga de trabajo
+ */
+export interface AlertaSobrecarga {
+  personalId: number;
+  nombres: string;
+  apellidos: string;
+  codigoEmpleado: string;
+  porcentajeTotal: number;
+  horasSemanales: number;
+  exceso: number;
+  asignaciones: Asignacion[];
+}
+
+/**
+ * Estadísticas generales de RRHH
+ */
+export interface RRHHStats {
+  totalPersonal: number;
+  personalActivo: number;
+  personalDisponible: number;
+  totalDivisiones: number;
+  totalAsignaciones: number;
+  promedioDisponibilidad: number;
+  alertasSobrecarga: number;
+  distribucionPorModalidad?: {
+    modalidad: Modalidad;
+    cantidad: number;
+  }[];
+  distribucionPorDivision?: {
+    divisionId: number;
+    divisionNombre: string;
+    cantidad: number;
+  }[];
+}
+
+// ============================================================================
+// FILTROS
+// ============================================================================
 
 /**
  * Filtros para buscar personal
  */
 export interface PersonalFilters {
   divisionId?: number;
-  rol?: string;
-  estado?: string;
-  search?: string;
-  habilidadId?: number;
+  modalidad?: Modalidad;
   disponible?: boolean;
+  activo?: boolean;
+  busqueda?: string;
+  habilidadId?: number;
 }
 
 /**
- * Input para crear personal
+ * Filtros para buscar divisiones
  */
-export interface CreatePersonalInput {
-  codigo: string;
-  nombre: string;
-  apellido: string;
-  email: string;
-  telefono?: string;
-  divisionId: number;
-  cargo: string;
-  rol: string;
-  fechaIngreso: string;
-  habilidades?: number[];
+export interface DivisionFilters {
+  activo?: boolean;
+  busqueda?: string;
 }
 
 /**
- * Input para actualizar personal
+ * Filtros para buscar habilidades
  */
-export interface UpdatePersonalInput extends Partial<CreatePersonalInput> {
-  id: number;
-  estado?: 'Activo' | 'Inactivo' | 'Licencia';
+export interface HabilidadFilters {
+  categoria?: HabilidadCategoria;
+  activo?: boolean;
+  busqueda?: string;
 }
 
 /**
- * Input para crear asignación
+ * Filtros para buscar asignaciones
  */
-export interface CreateAsignacionInput {
-  personalId: number;
-  entidadTipo: 'Proyecto' | 'Actividad';
-  entidadId: number;
-  rol: string;
-  porcentajeDedicacion: number;
-  fechaInicio: string;
-  fechaFin?: string;
-  horasEstimadas?: number;
+export interface AsignacionFilters {
+  personalId?: number;
+  tipoAsignacion?: TipoAsignacion;
+  proyectoId?: number;
+  actividadId?: number;
+  subproyectoId?: number;
+  activo?: boolean;
+}
+
+// ============================================================================
+// UTILIDADES
+// ============================================================================
+
+/**
+ * Helper para obtener nombre completo del personal
+ */
+export function getNombreCompleto(personal: Personal): string {
+  return `${personal.nombres} ${personal.apellidos}`;
 }
 
 /**
- * Input para actualizar asignación
+ * Helper para obtener el label de una modalidad
  */
-export interface UpdateAsignacionInput extends Partial<CreateAsignacionInput> {
-  id: number;
-  estado?: 'Activa' | 'Finalizada' | 'Suspendida';
-  horasReales?: number;
+export function getModalidadLabel(modalidad: Modalidad): string {
+  const labels: Record<Modalidad, string> = {
+    [Modalidad.PLANILLA]: 'Planilla',
+    [Modalidad.CAS]: 'CAS',
+    [Modalidad.LOCADOR]: 'Locador',
+    [Modalidad.PRACTICANTE]: 'Practicante',
+  };
+  return labels[modalidad] || modalidad;
 }
 
 /**
- * Estadísticas de RRHH
+ * Helper para obtener el label de una categoría de habilidad
  */
-export interface RRHHStats {
-  totalPersonal: number;
-  personalActivo: number;
-  personalEnLicencia: number;
-  totalDivisiones: number;
-  promedioOcupacion: number;
-  personalDisponible: number;
-  asignacionesPorRol: {
-    rol: string;
-    cantidad: number;
-  }[];
+export function getCategoriaLabel(categoria: HabilidadCategoria): string {
+  const labels: Record<HabilidadCategoria, string> = {
+    [HabilidadCategoria.LENGUAJE]: 'Lenguaje',
+    [HabilidadCategoria.FRAMEWORK]: 'Framework',
+    [HabilidadCategoria.BASE_DATOS]: 'Base de Datos',
+    [HabilidadCategoria.CLOUD]: 'Cloud',
+    [HabilidadCategoria.DEVOPS]: 'DevOps',
+    [HabilidadCategoria.METODOLOGIA]: 'Metodología',
+    [HabilidadCategoria.SOFT_SKILL]: 'Soft Skill',
+    [HabilidadCategoria.OTRO]: 'Otro',
+  };
+  return labels[categoria] || categoria;
+}
+
+/**
+ * Helper para obtener el label de un nivel de habilidad
+ */
+export function getNivelLabel(nivel: NivelHabilidad): string {
+  const labels: Record<NivelHabilidad, string> = {
+    [NivelHabilidad.BASICO]: 'Básico',
+    [NivelHabilidad.INTERMEDIO]: 'Intermedio',
+    [NivelHabilidad.AVANZADO]: 'Avanzado',
+    [NivelHabilidad.EXPERTO]: 'Experto',
+  };
+  return labels[nivel] || nivel;
+}
+
+/**
+ * Helper para obtener el label de un tipo de asignación
+ */
+export function getTipoAsignacionLabel(tipo: TipoAsignacion): string {
+  const labels: Record<TipoAsignacion, string> = {
+    [TipoAsignacion.PROYECTO]: 'Proyecto',
+    [TipoAsignacion.ACTIVIDAD]: 'Actividad',
+    [TipoAsignacion.SUBPROYECTO]: 'Subproyecto',
+  };
+  return labels[tipo] || tipo;
+}
+
+/**
+ * Helper para obtener color de categoría de habilidad
+ */
+export function getCategoriaColor(categoria: HabilidadCategoria): string {
+  const colors: Record<HabilidadCategoria, string> = {
+    [HabilidadCategoria.LENGUAJE]: 'blue',
+    [HabilidadCategoria.FRAMEWORK]: 'purple',
+    [HabilidadCategoria.BASE_DATOS]: 'green',
+    [HabilidadCategoria.CLOUD]: 'cyan',
+    [HabilidadCategoria.DEVOPS]: 'orange',
+    [HabilidadCategoria.METODOLOGIA]: 'pink',
+    [HabilidadCategoria.SOFT_SKILL]: 'yellow',
+    [HabilidadCategoria.OTRO]: 'gray',
+  };
+  return colors[categoria] || 'gray';
+}
+
+/**
+ * Helper para obtener color de nivel de habilidad
+ */
+export function getNivelColor(nivel: NivelHabilidad): string {
+  const colors: Record<NivelHabilidad, string> = {
+    [NivelHabilidad.BASICO]: 'gray',
+    [NivelHabilidad.INTERMEDIO]: 'blue',
+    [NivelHabilidad.AVANZADO]: 'green',
+    [NivelHabilidad.EXPERTO]: 'purple',
+  };
+  return colors[nivel] || 'gray';
+}
+
+/**
+ * Helper para verificar si un personal está sobrecargado
+ */
+export function isPersonalSobrecargado(porcentajeAsignado: number): boolean {
+  return porcentajeAsignado > 100;
+}
+
+/**
+ * Helper para obtener el color según porcentaje de carga
+ */
+export function getCargaColor(porcentaje: number): 'green' | 'yellow' | 'red' {
+  if (porcentaje <= 80) return 'green';
+  if (porcentaje <= 100) return 'yellow';
+  return 'red';
 }

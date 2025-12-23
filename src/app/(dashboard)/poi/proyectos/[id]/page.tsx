@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Users, DollarSign, Target, FileText, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, DollarSign, Target, FileText, FolderOpen, ClipboardList, BarChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -251,10 +251,25 @@ export default async function ProyectoDetallesPage({
           <CardTitle>Secciones del Proyecto</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8">
             <Button variant="outline" asChild>
-              <Link href={paths.poi.proyecto.backlog.base}>
-                Product Backlog
+              <Link href={paths.poi.proyectos.sprints(proyecto.id)}>
+                Sprints
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={paths.poi.proyectos.backlog(proyecto.id)}>
+                Backlog
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={paths.poi.proyectos.tablero(proyecto.id)}>
+                Tablero
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={paths.poi.proyectos.epicas(proyecto.id)}>
+                Épicas
               </Link>
             </Button>
             <Button variant="outline" asChild className="gap-2">
@@ -269,9 +284,16 @@ export default async function ProyectoDetallesPage({
                 Documentos
               </Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link href={paths.poi.proyecto.backlog.tablero}>
-                Tablero Kanban
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.proyectos.actas(proyecto.id)}>
+                <ClipboardList className="h-4 w-4" />
+                Actas
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.proyectos.informes(proyecto.id)}>
+                <BarChart className="h-4 w-4" />
+                Informes
               </Link>
             </Button>
           </div>

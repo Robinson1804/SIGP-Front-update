@@ -441,3 +441,29 @@ export async function createMultipleSubtareas(
   const promises = subtareas.map((data) => createSubtarea(data));
   return Promise.all(promises);
 }
+
+// ============================================
+// Reordering Operations (Drag & Drop)
+// ============================================
+
+/**
+ * Reordenar subtareas de una tarea
+ *
+ * @param tareaId - ID de la tarea padre
+ * @param orden - Array de IDs de subtareas en el nuevo orden
+ * @returns Lista de subtareas reordenadas
+ *
+ * @example
+ * // Mover subtarea con ID 3 al inicio
+ * const subtareas = await reordenarSubtareas(1, [3, 1, 2, 4]);
+ */
+export async function reordenarSubtareas(
+  tareaId: number | string,
+  orden: number[]
+): Promise<Subtarea[]> {
+  const response = await apiClient.patch<Subtarea[]>(
+    `${ENDPOINTS.TAREAS.BY_ID(tareaId)}/subtareas/reordenar`,
+    { orden }
+  );
+  return response.data;
+}

@@ -156,9 +156,12 @@ function DashboardContent() {
     if (tabName === 'Detalles') route = paths.poi.actividad.detalles;
     else if (tabName === 'Lista') route = paths.poi.actividad.lista;
     else if (tabName === 'Tablero') route = paths.poi.actividad.tablero;
+    else if (tabName === 'Informes') route = paths.poi.actividad.informes;
 
     if (route) {
-      router.push(route);
+      // State-driven Navigation: pass actividadId in query params
+      const queryParams = project ? `?actividadId=${project.id}` : '';
+      router.push(`${route}${queryParams}`);
     } else {
       setActiveTab(tabName);
     }
@@ -260,7 +263,7 @@ function DashboardContent() {
   );
 
   // IMPLEMENTADOR no tiene acceso a Detalles
-  const allActivityTabs = [{ name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }];
+  const allActivityTabs = [{ name: 'Detalles' }, { name: 'Lista' }, { name: 'Tablero' }, { name: 'Dashboard' }, { name: 'Informes' }];
   const activityTabs = isImplementador
     ? allActivityTabs.filter(tab => tab.name !== 'Detalles')
     : allActivityTabs;

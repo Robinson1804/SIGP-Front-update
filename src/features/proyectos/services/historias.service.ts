@@ -28,30 +28,35 @@ export type HistoriaEstado =
   | 'Terminada';
 
 /**
- * Interfaz de Historia de Usuario basada en el backend schema
+ * Interfaz de Historia de Usuario basada en el backend schema REAL
+ * Campos del backend: rol, storyPoints, notas, ordenBacklog, estimacion
  */
 export interface HistoriaUsuario {
   id: number;
   codigo: string;
   titulo: string;
-  descripcion: string | null;
-  comoUsuario: string | null;
+  // Backend usa 'rol' para "como usuario"
+  rol: string | null;
   quiero: string | null;
   para: string | null;
+  // Backend usa 'notas' en lugar de descripcion
+  notas: string | null;
   proyectoId: number;
   epicaId: number | null;
   sprintId: number | null;
   estado: HistoriaEstado;
   prioridad: PrioridadMoSCoW | null;
-  puntos: number | null;
-  valorNegocio: number | null;
-  orden: number;
-  fechaInicio: string | null;
-  fechaFin: string | null;
+  // Backend usa 'storyPoints' en lugar de puntos
+  storyPoints: number | null;
+  estimacion: string | null;
+  asignadoA: number | null;
+  // Backend usa 'ordenBacklog' en lugar de orden
+  ordenBacklog: number | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy: number;
+  updatedBy: number;
   // Relaciones opcionales
   epica?: {
     id: number;
@@ -61,10 +66,25 @@ export interface HistoriaUsuario {
   sprint?: {
     id: number;
     nombre: string;
-    numero: number;
+    numero?: number;
+  } | null;
+  asignado?: {
+    id: number;
+    nombre: string;
+    apellido: string;
   } | null;
   tareas?: TareaResumen[];
   criteriosAceptacion?: CriterioAceptacion[];
+  dependencias?: { id: number; codigo: string; titulo: string }[];
+
+  // Campos de compatibilidad (aliases)
+  // Estos se mapean desde los campos reales del backend
+  descripcion?: string | null;
+  comoUsuario?: string | null;
+  puntos?: number | null;
+  orden?: number | null;
+  fechaInicio?: string | null;
+  fechaFin?: string | null;
 }
 
 /**
@@ -72,7 +92,7 @@ export interface HistoriaUsuario {
  */
 export interface TareaResumen {
   id: number;
-  titulo: string;
+  nombre: string;
   estado: string;
   responsableId: number | null;
 }
@@ -112,8 +132,9 @@ export interface CreateHistoriaData {
 /**
  * Datos para actualizar una historia de usuario
  */
-export interface UpdateHistoriaData extends Partial<Omit<CreateHistoriaData, 'proyectoId'>> {
+export interface UpdateHistoriaData extends Partial<Omit<CreateHistoriaData, 'proyectoId' | 'sprintId'>> {
   estado?: HistoriaEstado;
+  sprintId?: number | null; // null para remover del sprint
 }
 
 /**
@@ -130,18 +151,20 @@ export interface HistoriaQueryFilters {
 }
 
 /**
- * Estructura del backlog
+ * Metricas del backlog
+ */
+export interface BacklogMetricas {
+  total: number;
+  porPrioridad: Record<string, number>;
+  porEstado: Record<string, number>;
+}
+
+/**
+ * Estructura del backlog (respuesta del API)
  */
 export interface BacklogData {
-  historias: HistoriaUsuario[];
-  totalPuntos: number;
-  historiasConPuntos: number;
-  historiasSinPuntos: number;
-  distribucionPrioridad: {
-    prioridad: PrioridadMoSCoW;
-    cantidad: number;
-    puntos: number;
-  }[];
+  backlog: HistoriaUsuario[];
+  metricas: BacklogMetricas;
 }
 
 // ============================================

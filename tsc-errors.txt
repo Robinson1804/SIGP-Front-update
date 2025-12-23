@@ -1,0 +1,29 @@
+src/app/(dashboard)/poi/proyecto/backlog/page.tsx(108,10): error TS2724: '"@/features/rrhh/services/rrhh.service"' has no exported member named 'getPersonalDisponible'. Did you mean 'getPersonalDisponibilidad'?
+src/app/(dashboard)/recursos-humanos/personal/[id]/page.tsx(503,77): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+src/features/actas/components/ActaReunionForm.tsx(361,37): error TS2322: Type 'string' is not assignable to type 'number'.
+src/features/actas/components/ActaReunionForm.tsx(371,37): error TS2322: Type 'string' is not assignable to type 'number'.
+src/features/actas/components/ActaReunionWizard.tsx(374,37): error TS2322: Type 'string' is not assignable to type 'number'.
+src/features/actas/components/ActaReunionWizard.tsx(384,37): error TS2322: Type 'string' is not assignable to type 'number'.
+src/features/documentos/types/documentos.types.ts(754,25): error TS2304: Cannot find name 'ActaReunionProgramada'.
+src/features/informes/components/InformeActividadView.tsx(80,28): error TS2322: Type 'EstadoAprobacion | undefined' is not assignable to type 'EstadoAprobacion'.
+  Type 'undefined' is not assignable to type 'EstadoAprobacion'.
+src/features/informes/components/InformeActividadView.tsx(165,18): error TS18048: 'informe.actividadesRealizadas' is possibly 'undefined'.
+src/features/informes/components/InformeActividadView.tsx(185,18): error TS18048: 'informe.dificultades' is possibly 'undefined'.
+src/features/informes/components/InformeActividadView.tsx(205,18): error TS18048: 'informe.recomendaciones' is possibly 'undefined'.
+src/features/proyectos/components/backlog-tab/components/tablero-column.tsx(70,24): error TS2339: Property 'historias' does not exist on type 'TableroColumna'.
+src/features/proyectos/components/backlog-tab/components/tablero-column.tsx(73,20): error TS2339: Property 'totalPuntos' does not exist on type 'TableroColumna'.
+src/features/proyectos/components/backlog-tab/components/tablero-column.tsx(75,24): error TS2339: Property 'totalPuntos' does not exist on type 'TableroColumna'.
+src/features/proyectos/components/backlog-tab/components/tablero-column.tsx(92,22): error TS2339: Property 'historias' does not exist on type 'TableroColumna'.
+src/features/proyectos/components/backlog-tab/components/tablero-column.tsx(97,23): error TS2339: Property 'historias' does not exist on type 'TableroColumna'.
+src/features/proyectos/components/backlog-tab/components/tablero-column.tsx(97,38): error TS7006: Parameter 'historia' implicitly has an 'any' type.
+src/features/proyectos/components/backlog-tab/components/tablero-column.tsx(97,48): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/lib/pdf/templates/acta-reunion.template.ts(112,9): error TS2339: Property 'asistio' does not exist on type 'ActaParticipante'.
+src/lib/pdf/templates/acta-reunion.template.ts(117,7): error TS2345: Argument of type '(string | undefined)[][]' is not assignable to parameter of type 'string[][]'.
+  Type '(string | undefined)[]' is not assignable to type 'string[]'.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/lib/pdf/templates/acta-reunion.template.ts(218,9): error TS2339: Property 'responsable' does not exist on type 'ActaEntregable'.
+src/lib/pdf/templates/acta-reunion.template.ts(219,26): error TS2339: Property 'fechaCompromiso' does not exist on type 'ActaEntregable'.
+src/lib/pdf/templates/acta-reunion.template.ts(323,14): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string | string[]'.
+  Type 'undefined' is not assignable to type 'string | string[]'.

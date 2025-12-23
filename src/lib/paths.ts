@@ -13,6 +13,7 @@ export const paths = {
     base: '/pgd',
     dashboard: '/pgd/dashboard',
     oei: '/pgd/oei',
+    aei: '/pgd/aei',
     ogd: '/pgd/ogd',
     oegd: '/pgd/oegd',
     ae: '/pgd/ae',
@@ -20,6 +21,7 @@ export const paths = {
   },
   poi: {
     base: '/poi',
+    actividades: '/poi', // Lista de actividades en POI
     proyectos: {
       base: '/poi/proyectos',
       nuevo: '/poi/proyectos/nuevo',
@@ -29,8 +31,19 @@ export const paths = {
       daily: (id: number | string) => `/poi/proyectos/${id}/daily`,
       backlog: (id: number | string) => `/poi/proyectos/${id}/backlog`,
       tablero: (id: number | string) => `/poi/proyectos/${id}/tablero`,
+      sprints: (id: number | string) => `/poi/proyectos/${id}/sprints`,
+      epicas: (id: number | string) => `/poi/proyectos/${id}/epicas`,
       requerimientos: (id: number | string) => `/poi/proyectos/${id}/requerimientos`,
       documentos: (id: number | string) => `/poi/proyectos/${id}/documentos`,
+      actas: (id: number | string) => `/poi/proyectos/${id}/actas`,
+      actaConstitucion: (id: number | string) => `/poi/proyectos/${id}/actas/constitucion`,
+      actaConstitucionNueva: (id: number | string) => `/poi/proyectos/${id}/actas/constitucion/nueva`,
+      actaReunionNueva: (id: number | string) => `/poi/proyectos/${id}/actas/reunion/nueva`,
+      actaReunion: (id: number | string, actaId: number | string) => `/poi/proyectos/${id}/actas/reunion/${actaId}`,
+      // Informes de Sprint
+      informes: (id: number | string) => `/poi/proyectos/${id}/informes`,
+      informeDetalle: (id: number | string, informeId: number | string) => `/poi/proyectos/${id}/informes/${informeId}`,
+      informeNuevo: (id: number | string) => `/poi/proyectos/${id}/informes/nuevo`,
     },
     // DEPRECATED: Sistema antiguo - usar poi.proyectos en su lugar
     proyecto: {
@@ -55,6 +68,10 @@ export const paths = {
         tablero: '/poi/actividad/tablero',
         dashboard: '/poi/actividad/dashboard',
         byId: (id: number | string) => `/poi/actividad/${id}`,
+        // Informes de Actividad
+        informes: '/poi/actividad/informes',
+        informeDetalle: (informeId: number | string) => `/poi/actividad/informes/${informeId}`,
+        informeNuevo: '/poi/actividad/informes/nuevo',
     }
   },
   aprobaciones: {

@@ -16,12 +16,14 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  _hasHydrated: boolean; // Flag para saber si Zustand terminó de rehidratar
 
   // Acciones
   setAuth: (user: User, token: string) => void;
   setUser: (user: User) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
 }
 
 /**
@@ -38,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       isLoading: false,
+      _hasHydrated: false, // Inicia como false, se pone true cuando termina rehidratación
 
       // Establecer autenticación completa (login)
       setAuth: (user: User, token: string) => {
@@ -90,6 +93,11 @@ export const useAuthStore = create<AuthState>()(
       setLoading: (loading: boolean) => {
         set({ isLoading: loading });
       },
+
+      // Marcar que la rehidratación terminó
+      setHasHydrated: (hasHydrated: boolean) => {
+        set({ _hasHydrated: hasHydrated });
+      },
     }),
     {
       name: 'auth-storage', // Key en localStorage
@@ -99,9 +107,29 @@ export const useAuthStore = create<AuthState>()(
         token: state.token,
         isAuthenticated: state.isAuthenticated,
       }),
+      // Callback cuando la rehidratación termina
+      onRehydrateStorage: () => (state) => {
+        // Cuando termina la rehidratación, marcar _hasHydrated como true
+        if (state) {
+          state.setHasHydrated(true);
+
+          // Si hay token en el estado rehidratado, sincronizar con localStorage y cookie
+          if (state.token && state.user && typeof window !== 'undefined') {
+            localStorage.setItem('auth-token', state.token);
+            localStorage.setItem('auth-user', JSON.stringify(state.user));
+            document.cookie = `auth-token=${state.token}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
+          }
+        }
+      },
     }
   )
 );
+
+/**
+ * Hook para verificar si Zustand ha terminado de rehidratar
+ * IMPORTANTE: Usar esto para esperar antes de verificar autenticación
+ */
+export const useHasHydrated = () => useAuthStore((state) => state._hasHydrated);
 
 /**
  * Hook para obtener el usuario actual

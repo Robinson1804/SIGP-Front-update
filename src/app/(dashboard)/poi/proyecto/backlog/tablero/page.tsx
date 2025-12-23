@@ -70,7 +70,7 @@ function BoardSkeleton() {
 function mapTareaToDndTask(tarea: SprintTarea): DndTask {
   return {
     id: tarea.id,
-    titulo: tarea.titulo,
+    nombre: tarea.nombre,
     descripcion: null,
     estado: tarea.estado as TareaEstado,
     prioridad: tarea.prioridad as any,

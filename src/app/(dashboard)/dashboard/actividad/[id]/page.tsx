@@ -19,14 +19,29 @@ import {
   TendenciasChart,
   ExportDashboardButton,
 } from '@/features/dashboard/components';
-import { metricasService } from '@/features/dashboard/services';
-import type { MetricasActividad } from '@/features/dashboard/types';
+import { CfdChart, MetricTrendChart } from '@/components/charts';
+import { metricasService, dashboardService } from '@/features/dashboard/services';
+import type {
+  MetricasActividad,
+  CfdDataPoint,
+  TendenciaMetrica,
+} from '@/features/dashboard/types';
 
 export default function DashboardActividadPage() {
   const params = useParams();
   const actividadId = params.id as string;
 
   const [metricas, setMetricas] = useState<MetricasActividad | null>(null);
+  const [cfdData, setCfdData] = useState<CfdDataPoint[]>([]);
+  const [tendenciasData, setTendenciasData] = useState<{
+    data: TendenciaMetrica[];
+    promedios: { leadTime: number; cycleTime: number; throughput: number };
+    tendencias: {
+      leadTime: 'mejorando' | 'empeorando' | 'estable';
+      cycleTime: 'mejorando' | 'empeorando' | 'estable';
+      throughput: 'mejorando' | 'empeorando' | 'estable';
+    };
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,8 +50,15 @@ export default function DashboardActividadPage() {
     setError(null);
 
     try {
-      const metricasData = await metricasService.getMetricasByActividad(actividadId);
+      const [metricasData, cfdResponse, tendenciasResponse] = await Promise.all([
+        metricasService.getMetricasByActividad(actividadId).catch(() => null),
+        dashboardService.getCfdData(actividadId, 30).catch(() => ({ data: [] })),
+        dashboardService.getTendenciasMetricasActividad(actividadId, 8).catch(() => null),
+      ]);
+
       setMetricas(metricasData);
+      setCfdData(cfdResponse.data);
+      setTendenciasData(tendenciasResponse);
     } catch (err) {
       setError('Error al cargar el dashboard de la actividad');
       console.error('Error loading activity dashboard:', err);
@@ -261,8 +283,25 @@ export default function DashboardActividadPage() {
               <TendenciasChart data={metricas.tendenciasFlujo} />
             </DashboardSection>
           )}
+
         </>
       )}
+
+      {/* CFD y Tendencias de Metricas - siempre visible */}
+      <DashboardSection title="Analisis de Flujo">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CfdChart
+            data={cfdData}
+            loading={isLoading}
+          />
+          <MetricTrendChart
+            data={tendenciasData?.data || []}
+            promedios={tendenciasData?.promedios}
+            tendencias={tendenciasData?.tendencias}
+            loading={isLoading}
+          />
+        </div>
+      </DashboardSection>
     </DashboardLayout>
   );
 }

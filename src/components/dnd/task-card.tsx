@@ -16,7 +16,7 @@ export type TareaPrioridad = 'Must' | 'Should' | 'Could' | 'Wont';
 // Base task interface
 export interface DndTask {
   id: number;
-  titulo: string;
+  nombre: string;
   descripcion?: string | null;
   estado: TareaEstado;
   prioridad?: TareaPrioridad | null;
@@ -91,7 +91,7 @@ export function TaskCard({ task, index, onClick }: TaskCardProps) {
           <CardHeader className="p-3 pb-2">
             <div className="flex items-start justify-between gap-2">
               <h4 className="text-sm font-medium leading-tight line-clamp-2">
-                {task.titulo}
+                {task.nombre}
               </h4>
               {task.prioridad && (
                 <Badge

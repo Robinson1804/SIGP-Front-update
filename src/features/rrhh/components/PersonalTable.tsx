@@ -4,6 +4,7 @@
  * PersonalTable Component
  *
  * Tabla de personal con búsqueda y filtros
+ * Sincronizado con Backend - Dic 2024
  */
 
 import { useState } from 'react';
@@ -18,7 +19,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -40,9 +42,15 @@ import {
   Edit,
   Trash2,
   UserPlus,
-  Filter,
+  Users,
 } from 'lucide-react';
 import type { Personal, Division } from '../types';
+import {
+  Modalidad,
+  getModalidadLabel,
+  getNombreCompleto,
+  getCargaColor,
+} from '../types';
 
 interface PersonalTableProps {
   personal: Personal[];
@@ -65,55 +73,71 @@ export function PersonalTable({
 }: PersonalTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [divisionFilter, setDivisionFilter] = useState<string>('all');
-  const [rolFilter, setRolFilter] = useState<string>('all');
+  const [modalidadFilter, setModalidadFilter] = useState<string>('all');
   const [estadoFilter, setEstadoFilter] = useState<string>('all');
 
   const filteredPersonal = personal.filter((p) => {
+    const nombreCompleto = getNombreCompleto(p);
     const matchesSearch =
       searchTerm === '' ||
-      p.nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.codigo.toLowerCase().includes(searchTerm.toLowerCase());
+      p.codigoEmpleado.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.dni && p.dni.includes(searchTerm));
 
     const matchesDivision =
       divisionFilter === 'all' || p.divisionId === Number(divisionFilter);
 
-    const matchesRol = rolFilter === 'all' || p.rol === rolFilter;
+    const matchesModalidad = modalidadFilter === 'all' || p.modalidad === modalidadFilter;
 
-    const matchesEstado = estadoFilter === 'all' || p.estado === estadoFilter;
+    const matchesEstado =
+      estadoFilter === 'all' ||
+      (estadoFilter === 'activo' && p.activo) ||
+      (estadoFilter === 'inactivo' && !p.activo) ||
+      (estadoFilter === 'disponible' && p.disponible);
 
-    return matchesSearch && matchesDivision && matchesRol && matchesEstado;
+    return matchesSearch && matchesDivision && matchesModalidad && matchesEstado;
   });
 
-  const getInitials = (nombre: string) => {
-    return nombre
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const getInitials = (personal: Personal) => {
+    return `${personal.nombres[0]}${personal.apellidos[0]}`.toUpperCase();
   };
 
-  const getEstadoBadge = (estado: string) => {
-    switch (estado) {
-      case 'Activo':
-        return <Badge className="bg-green-500">Activo</Badge>;
-      case 'Inactivo':
-        return <Badge variant="secondary">Inactivo</Badge>;
-      case 'Licencia':
-        return <Badge className="bg-amber-500">Licencia</Badge>;
-      default:
-        return <Badge variant="outline">{estado}</Badge>;
+  const getEstadoBadge = (persona: Personal) => {
+    if (!persona.activo) {
+      return <Badge variant="secondary">Inactivo</Badge>;
     }
+    if (persona.disponible) {
+      return <Badge className="bg-green-500">Disponible</Badge>;
+    }
+    return <Badge className="bg-amber-500">Ocupado</Badge>;
   };
 
-  const roles = ['ADMIN', 'PMO', 'COORDINADOR', 'SCRUM_MASTER', 'DESARROLLADOR', 'IMPLEMENTADOR'];
+  const getModalidadBadge = (modalidad: Modalidad) => {
+    const colorClasses: Record<Modalidad, string> = {
+      [Modalidad.PLANILLA]: 'bg-blue-100 text-blue-800 border-blue-200',
+      [Modalidad.CAS]: 'bg-purple-100 text-purple-800 border-purple-200',
+      [Modalidad.LOCADOR]: 'bg-orange-100 text-orange-800 border-orange-200',
+      [Modalidad.PRACTICANTE]: 'bg-green-100 text-green-800 border-green-200',
+    };
+
+    return (
+      <Badge variant="outline" className={colorClasses[modalidad]}>
+        {getModalidadLabel(modalidad)}
+      </Badge>
+    );
+  };
+
+  const modalidades = Object.values(Modalidad);
 
   return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Personal</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Personal
+          </CardTitle>
           <Button onClick={onCreate}>
             <UserPlus className="h-4 w-4 mr-2" />
             Nuevo Personal
@@ -126,7 +150,7 @@ export function PersonalTable({
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nombre, email o código..."
+              placeholder="Buscar por nombre, email, código o DNI..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -147,29 +171,29 @@ export function PersonalTable({
             </SelectContent>
           </Select>
 
-          <Select value={rolFilter} onValueChange={setRolFilter}>
+          <Select value={modalidadFilter} onValueChange={setModalidadFilter}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Rol" />
+              <SelectValue placeholder="Modalidad" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos los roles</SelectItem>
-              {roles.map((rol) => (
-                <SelectItem key={rol} value={rol}>
-                  {rol}
+              <SelectItem value="all">Todas</SelectItem>
+              {modalidades.map((mod) => (
+                <SelectItem key={mod} value={mod}>
+                  {getModalidadLabel(mod)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
 
           <Select value={estadoFilter} onValueChange={setEstadoFilter}>
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="Activo">Activo</SelectItem>
-              <SelectItem value="Inactivo">Inactivo</SelectItem>
-              <SelectItem value="Licencia">Licencia</SelectItem>
+              <SelectItem value="activo">Activo</SelectItem>
+              <SelectItem value="inactivo">Inactivo</SelectItem>
+              <SelectItem value="disponible">Disponible</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -182,8 +206,8 @@ export function PersonalTable({
                 <TableHead>Personal</TableHead>
                 <TableHead>División</TableHead>
                 <TableHead>Cargo</TableHead>
-                <TableHead>Rol</TableHead>
-                <TableHead>Disponibilidad</TableHead>
+                <TableHead>Modalidad</TableHead>
+                <TableHead>Horas/Sem</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -211,40 +235,28 @@ export function PersonalTable({
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={persona.avatar} />
                           <AvatarFallback className="bg-[#004272] text-white">
-                            {getInitials(persona.nombreCompleto)}
+                            {getInitials(persona)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-medium">{persona.nombreCompleto}</p>
+                          <p className="font-medium">{getNombreCompleto(persona)}</p>
                           <p className="text-sm text-muted-foreground">
                             {persona.email}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {persona.codigoEmpleado}
                           </p>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>{persona.division?.nombre || '-'}</TableCell>
-                    <TableCell>{persona.cargo}</TableCell>
+                    <TableCell>{persona.cargo || '-'}</TableCell>
+                    <TableCell>{getModalidadBadge(persona.modalidad)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{persona.rol}</Badge>
+                      <span className="font-medium">{persona.horasSemanales}h</span>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-16 rounded-full bg-gray-200">
-                          <div
-                            className="h-full rounded-full bg-green-500"
-                            style={{
-                              width: `${persona.disponibilidad || 100}%`,
-                            }}
-                          />
-                        </div>
-                        <span className="text-sm">
-                          {persona.disponibilidad || 100}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{getEstadoBadge(persona.estado)}</TableCell>
+                    <TableCell>{getEstadoBadge(persona)}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

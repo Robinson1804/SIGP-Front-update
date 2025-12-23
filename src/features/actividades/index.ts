@@ -26,11 +26,11 @@ export * from './services';
 export * from './types';
 
 // ============================================
-// Components - UI components (cuando se implementen)
+// Components - UI components
 // ============================================
-// export * from './components';
+export * from './components';
 
 // ============================================
-// Hooks - Custom hooks (cuando se implementen)
+// Hooks - Custom hooks
 // ============================================
-// export * from './hooks';
+export * from './hooks';

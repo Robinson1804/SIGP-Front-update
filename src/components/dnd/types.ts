@@ -38,7 +38,7 @@ export interface TaskResponsible {
  */
 export interface DndTask {
   id: number;
-  titulo: string;
+  nombre: string;
   descripcion?: string | null;
   estado: TareaEstado;
   prioridad?: TareaPrioridad | null;

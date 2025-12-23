@@ -5,6 +5,29 @@
  */
 
 /**
+ * Fases del ciclo de vida del proyecto
+ */
+export type FaseCronograma =
+  | 'Analisis'
+  | 'Diseno'
+  | 'Desarrollo'
+  | 'Pruebas'
+  | 'Implementacion'
+  | 'Mantenimiento';
+
+/**
+ * Opciones de fases para selectores
+ */
+export const FASES_CRONOGRAMA: { value: FaseCronograma; label: string; color: string }[] = [
+  { value: 'Analisis', label: 'Análisis', color: '#3b82f6' }, // Blue
+  { value: 'Diseno', label: 'Diseño', color: '#8b5cf6' }, // Violet
+  { value: 'Desarrollo', label: 'Desarrollo', color: '#10b981' }, // Emerald
+  { value: 'Pruebas', label: 'Pruebas', color: '#f59e0b' }, // Amber
+  { value: 'Implementacion', label: 'Implementación', color: '#ef4444' }, // Red
+  { value: 'Mantenimiento', label: 'Mantenimiento', color: '#6b7280' }, // Gray
+];
+
+/**
  * Tipos de dependencia entre tareas (relaciones PDM)
  * - FS: Finish-to-Start (la mas comun)
  * - FF: Finish-to-Finish
@@ -60,6 +83,10 @@ export interface TareaCronograma {
   padre?: string; // ID de tarea padre para anidamiento
   descripcion?: string;
   esHito?: boolean;
+  fase?: FaseCronograma;
+  enRutaCritica?: boolean;
+  tieneConflicto?: boolean;
+  conflictoDescripcion?: string;
 }
 
 /**
@@ -87,6 +114,7 @@ export interface CreateTareaCronogramaInput {
   inicio: string; // ISO date string
   fin: string;
   tipo: TipoTarea;
+  fase?: FaseCronograma;
   responsableId?: number;
   color?: string;
   orden?: number;
@@ -104,6 +132,7 @@ export interface UpdateTareaCronogramaInput {
   inicio?: string;
   fin?: string;
   tipo?: TipoTarea;
+  fase?: FaseCronograma | null;
   responsableId?: number | null;
   color?: string;
   orden?: number;
@@ -225,3 +254,84 @@ export const VIEW_MODE_OPTIONS: { value: ViewMode; label: string }[] = [
   { value: 'Month', label: 'Mes' },
   { value: 'Year', label: 'Ano' },
 ];
+
+/**
+ * Resultado del calculo de ruta critica
+ */
+export interface ResultadoRutaCritica {
+  tareasCriticas: number[];
+  tareasConConflicto: number[];
+  duracionTotal: number;
+  fechaFinProyecto: string;
+  detalle: TareaConCPM[];
+}
+
+/**
+ * Tarea con informacion de CPM (Critical Path Method)
+ */
+export interface TareaConCPM {
+  id: number;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  duracion: number;
+  earlyStart: number;
+  earlyFinish: number;
+  lateStart: number;
+  lateFinish: number;
+  holgura: number;
+  enRutaCritica: boolean;
+  tieneConflicto: boolean;
+  conflictoDescripcion?: string;
+}
+
+/**
+ * Datos de exportacion del cronograma
+ */
+export interface DatosExportacion {
+  cronograma: {
+    nombre: string;
+    codigo: string;
+    fechaInicio: string;
+    fechaFin: string;
+    estado: string;
+    version: number;
+  };
+  tareas: TareaExportacion[];
+  resumen: {
+    totalTareas: number;
+    tareasCompletadas: number;
+    porcentajeGeneral: number;
+    porFase: Record<string, { total: number; completadas: number }>;
+  };
+}
+
+/**
+ * Tarea formateada para exportacion
+ */
+export interface TareaExportacion {
+  codigo: string;
+  nombre: string;
+  fase: string;
+  fechaInicio: string;
+  fechaFin: string;
+  duracion: number;
+  porcentajeAvance: number;
+  estado: string;
+  prioridad: string;
+  responsable: string;
+  dependencias: string;
+  esHito: boolean;
+}
+
+/**
+ * Filtros del cronograma
+ */
+export interface FiltrosCronograma {
+  fases: FaseCronograma[];
+  responsableIds: number[];
+  mostrarRutaCritica: boolean;
+  mostrarConflictos: boolean;
+  fechaDesde?: Date;
+  fechaHasta?: Date;
+}

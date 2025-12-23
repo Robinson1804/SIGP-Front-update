@@ -101,4 +101,5 @@ export {
   subtareaExists,
   todasSubtareasCompletadas,
   createMultipleSubtareas,
+  reordenarSubtareas,
 } from './subtareas.service';

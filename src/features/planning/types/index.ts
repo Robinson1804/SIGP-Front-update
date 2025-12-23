@@ -2,7 +2,9 @@
  * Planning Module Types
  *
  * Types for PGD (Plan de Gobierno Digital) and related entities
- * Updated to match backend API responses
+ * Updated to match backend API responses with new hierarchy:
+ * PGD → OEI → AEI (new)
+ * PGD → OGD ↔ OEI (M:N) → OEGD ↔ AEI (M:N) → AE
  */
 
 // ============================================
@@ -38,6 +40,7 @@ export interface PGD {
 }
 
 export interface CreatePGDInput {
+  // nombre y descripcion se auto-generan desde anioInicio y anioFin
   nombre?: string;
   descripcion?: string;
   anioInicio: number;
@@ -50,7 +53,7 @@ export interface UpdatePGDInput extends Partial<CreatePGDInput> {
 }
 
 // ============================================
-// OEI - Objetivo Estrategico Institucional
+// MetaAnual - Shared type for all entities
 // ============================================
 
 export interface MetaAnual {
@@ -60,15 +63,21 @@ export interface MetaAnual {
   descripcion?: string;
 }
 
+// ============================================
+// OEI - Objetivo Estrategico Institucional
+// ============================================
+
 export interface OEI {
   id: number;
   pgdId: number;
   codigo: string;
   nombre: string;
   descripcion: string | null;
-  indicador: string | null;
-  lineaBase: number | null;
+  indicadorCodigo: string | null;
+  indicadorNombre: string | null;
   unidadMedida: string | null;
+  lineaBaseAnio: number | null;
+  lineaBaseValor: number | null;
   metasAnuales: MetaAnual[] | null;
   activo: boolean;
   createdAt: string;
@@ -78,20 +87,67 @@ export interface OEI {
 
   // Relations
   pgd?: PGD;
+  aeis?: AEI[];
 }
 
 export interface CreateOEIInput {
   pgdId: number;
-  codigo: string;
+  codigo?: string; // Se auto-genera si no se proporciona: "OEI N°X"
   nombre: string;
   descripcion?: string;
-  indicador?: string;
-  lineaBase?: number;
+  indicadorCodigo?: string;
+  indicadorNombre?: string;
   unidadMedida?: string;
+  lineaBaseAnio?: number;
+  lineaBaseValor?: number;
   metasAnuales?: MetaAnual[];
 }
 
 export interface UpdateOEIInput extends Partial<Omit<CreateOEIInput, 'pgdId'>> {
+  activo?: boolean;
+}
+
+// ============================================
+// AEI - Accion Estrategica Institucional (NEW)
+// ============================================
+
+export interface AEI {
+  id: number;
+  oeiId: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  indicadorCodigo: string | null;
+  indicadorNombre: string | null;
+  unidadMedida: string | null;
+  lineaBaseAnio: number | null;
+  lineaBaseValor: number | null;
+  metasAnuales: MetaAnual[] | null;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: number;
+  updatedBy?: number;
+
+  // Relations
+  oei?: OEI;
+  oegdAeis?: OegdAei[];
+}
+
+export interface CreateAEIInput {
+  oeiId: number;
+  codigo?: string; // Se auto-genera si no se proporciona: "AEI.XX.YY"
+  nombre: string;
+  descripcion?: string;
+  indicadorCodigo?: string;
+  indicadorNombre?: string;
+  unidadMedida?: string;
+  lineaBaseAnio?: number;
+  lineaBaseValor?: number;
+  metasAnuales?: MetaAnual[];
+}
+
+export interface UpdateAEIInput extends Partial<Omit<CreateAEIInput, 'oeiId'>> {
   activo?: boolean;
 }
 
@@ -105,9 +161,11 @@ export interface OGD {
   codigo: string;
   nombre: string;
   descripcion: string | null;
-  indicador: string | null;
-  lineaBase: number | null;
+  indicadorCodigo: string | null;
+  indicadorNombre: string | null;
   unidadMedida: string | null;
+  lineaBaseAnio: number | null;
+  lineaBaseValor: number | null;
   metasAnuales: MetaAnual[] | null;
   activo: boolean;
   createdAt: string;
@@ -118,6 +176,8 @@ export interface OGD {
   // Relations
   pgd?: PGD;
   objetivosEspecificos?: OEGD[];
+  ogdOeis?: OgdOei[];
+  oeis?: OEI[]; // Populated when backend joins the relation
   _count?: {
     objetivosEspecificos?: number;
   };
@@ -125,17 +185,42 @@ export interface OGD {
 
 export interface CreateOGDInput {
   pgdId: number;
-  codigo: string;
+  codigo?: string; // Se auto-genera si no se proporciona: "OGD N°X"
   nombre: string;
   descripcion?: string;
-  indicador?: string;
-  lineaBase?: number;
+  indicadorCodigo?: string;
+  indicadorNombre?: string;
   unidadMedida?: string;
+  lineaBaseAnio?: number;
+  lineaBaseValor?: number;
   metasAnuales?: MetaAnual[];
+  oeiIds?: number[]; // Relación M:N con OEIs
 }
 
 export interface UpdateOGDInput extends Partial<Omit<CreateOGDInput, 'pgdId'>> {
   activo?: boolean;
+}
+
+// ============================================
+// Junction Tables (M:N relationships)
+// ============================================
+
+export interface OgdOei {
+  id: number;
+  ogdId: number;
+  oeiId: number;
+  createdAt: string;
+  ogd?: OGD;
+  oei?: OEI;
+}
+
+export interface OegdAei {
+  id: number;
+  oegdId: number;
+  aeiId: number;
+  createdAt: string;
+  oegd?: OEGD;
+  aei?: AEI;
 }
 
 // ============================================
@@ -149,6 +234,12 @@ export interface OEGD {
   codigo: string;
   nombre: string;
   descripcion: string | null;
+  indicadorCodigo: string | null;
+  indicadorNombre: string | null;
+  unidadMedida: string | null;
+  lineaBaseAnio: number | null;
+  lineaBaseValor: number | null;
+  metasAnuales: MetaAnual[] | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -159,6 +250,8 @@ export interface OEGD {
   pgd?: PGD;
   ogd?: OGD;
   accionesEstrategicas?: AccionEstrategica[];
+  oegdAeis?: OegdAei[];
+  aeis?: AEI[]; // Populated when backend joins the relation
   _count?: {
     accionesEstrategicas?: number;
   };
@@ -166,10 +259,16 @@ export interface OEGD {
 
 export interface CreateOEGDInput {
   ogdId: number;
-  codigo: string;
+  codigo?: string; // Se auto-genera si no se proporciona: "OEGD N°X"
   nombre: string;
   descripcion?: string;
-  indicador?: string;
+  indicadorCodigo?: string;
+  indicadorNombre?: string;
+  unidadMedida?: string;
+  lineaBaseAnio?: number;
+  lineaBaseValor?: number;
+  metasAnuales?: MetaAnual[];
+  aeiIds?: number[]; // Relación M:N con AEIs
 }
 
 export interface UpdateOEGDInput extends Partial<Omit<CreateOEGDInput, 'ogdId'>> {
@@ -178,7 +277,7 @@ export interface UpdateOEGDInput extends Partial<Omit<CreateOEGDInput, 'ogdId'>>
 }
 
 // ============================================
-// AE - Accion Estrategica
+// AE - Accion Estrategica (Gobierno Digital)
 // ============================================
 
 export interface AccionEstrategica {
@@ -188,6 +287,15 @@ export interface AccionEstrategica {
   codigo: string;
   nombre: string;
   descripcion: string | null;
+  indicadorCodigo: string | null;
+  indicadorNombre: string | null;
+  unidadMedida: string | null;
+  lineaBaseAnio: number | null;
+  lineaBaseValor: number | null;
+  metasAnuales: MetaAnual[] | null;
+  responsableArea: string | null;
+  fechaInicio: string | null;
+  fechaFin: string | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -207,10 +315,15 @@ export interface AccionEstrategica {
 
 export interface CreateAccionEstrategicaInput {
   oegdId: number;
-  codigo: string;
+  codigo?: string; // Se auto-genera si no se proporciona: "AE N°X"
   nombre: string;
   descripcion?: string;
-  indicador?: string;
+  indicadorCodigo?: string;
+  indicadorNombre?: string;
+  unidadMedida?: string;
+  lineaBaseAnio?: number;
+  lineaBaseValor?: number;
+  metasAnuales?: MetaAnual[];
   responsableArea?: string;
   fechaInicio?: string;
   fechaFin?: string;
@@ -259,6 +372,12 @@ export interface OEIQueryFilters {
   search?: string;
 }
 
+export interface AEIQueryFilters {
+  oeiId?: number;
+  activo?: boolean;
+  search?: string;
+}
+
 export interface OGDQueryFilters {
   pgdId?: number;
   activo?: boolean;
@@ -285,6 +404,7 @@ export interface AccionEstrategicaQueryFilters {
 
 export interface PGDStats {
   totalOEI: number;
+  totalAEI: number;
   totalOGD: number;
   totalOEGD: number;
   totalAE: number;

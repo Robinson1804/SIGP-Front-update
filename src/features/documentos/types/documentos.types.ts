@@ -165,12 +165,28 @@ export interface DocumentoQueryFilters {
 /**
  * Tipos de acta
  */
-export type ActaTipo = 'Acta de Reunion' | 'Acta de Constitucion';
+export type ActaTipo = 'Reunion' | 'Constitucion' | 'DailyMeeting';
 
 /**
  * Estados de aprobacion de acta
  */
-export type ActaEstado = 'Pendiente' | 'Aprobado' | 'Rechazado';
+export type ActaEstado = 'Borrador' | 'Pendiente' | 'Aprobado' | 'Rechazado';
+
+/**
+ * Tipos de reunion
+ */
+export type TipoReunion =
+  | 'Planificacion'
+  | 'Seguimiento'
+  | 'Revision'
+  | 'Retrospectiva'
+  | 'Tecnica'
+  | 'Otro';
+
+/**
+ * Modalidad de reunion
+ */
+export type Modalidad = 'Presencial' | 'Virtual' | 'Hibrida';
 
 /**
  * Niveles de aprobacion
@@ -182,43 +198,127 @@ export type ActaNivelAprobacion =
   | 'Patrocinador';
 
 /**
- * Participante de reunion
+ * Participante de reunion (asistente/ausente)
  */
 export interface ActaParticipante {
-  id: number;
+  id?: number;
+  personalId?: number;
   nombre: string;
-  cargo: string;
-  direccion: string;
-  asistio: boolean;
+  cargo?: string;
+  direccion?: string;
+  organizacion?: string;
+  esExterno?: boolean;
+  motivo?: string; // Para ausentes
+}
+
+/**
+ * Participante de Daily Meeting con las 3 preguntas Scrum
+ */
+export interface ActaDailyParticipante {
+  id?: string;
+  personalId?: number;
+  nombre: string;
+  cargo?: string;
+  // Las 3 preguntas clásicas de Scrum
+  ayer: string; // ¿Qué hiciste ayer?
+  hoy: string; // ¿Qué harás hoy?
+  impedimentos: string; // ¿Tienes algún impedimento?
 }
 
 /**
  * Item de agenda
  */
 export interface ActaAgendaItem {
-  id: string;
+  id?: string;
+  orden?: number;
   tema: string;
   descripcion?: string;
 }
 
 /**
- * Entregable comprometido
+ * Tema desarrollado en reunion
  */
-export interface ActaEntregable {
-  id: string;
-  descripcion: string;
-  responsable: string;
-  fechaCompromiso: string;
+export interface ActaTemaDesarrollado {
+  id?: string;
+  agendaItemId?: string;
+  tema: string;
+  notas?: string;
+  conclusiones?: string;
 }
 
 /**
- * Reunion programada
+ * Acuerdo/Compromiso de reunion
  */
-export interface ActaReunionProgramada {
-  id: string;
-  tema: string;
-  fecha: string;
-  horaInicio: string;
+export interface ActaAcuerdo {
+  id?: string;
+  descripcion: string;
+  responsables?: number[];
+  responsablesNombres?: string[];
+  fechaCompromiso?: string;
+  prioridad?: 'Alta' | 'Media' | 'Baja';
+}
+
+/**
+ * Proximo paso de reunion
+ */
+export interface ActaProximoPaso {
+  id?: string;
+  descripcion: string;
+  responsableId?: number;
+  responsableNombre?: string;
+  fechaLimite?: string;
+}
+
+/**
+ * Entregable del proyecto (Acta Constitucion)
+ */
+export interface ActaEntregable {
+  id?: string;
+  nombre: string;
+  descripcion?: string;
+  fechaEstimada?: string;
+}
+
+/**
+ * Riesgo identificado (Acta Constitucion)
+ */
+export interface ActaRiesgo {
+  id?: string;
+  descripcion: string;
+  probabilidad?: 'Alta' | 'Media' | 'Baja';
+  impacto?: 'Alto' | 'Medio' | 'Bajo';
+  mitigacion?: string;
+}
+
+/**
+ * Hito del cronograma (Acta Constitucion)
+ */
+export interface ActaHito {
+  id?: string;
+  nombre: string;
+  fechaEstimada?: string;
+  descripcion?: string;
+}
+
+/**
+ * Miembro del equipo (Acta Constitucion)
+ */
+export interface ActaMiembroEquipo {
+  id?: string;
+  personalId?: number;
+  nombre: string;
+  rol: string;
+  responsabilidad?: string;
+}
+
+/**
+ * Anexo referenciado
+ */
+export interface ActaAnexo {
+  id?: string;
+  nombre: string;
+  url?: string;
+  descripcion?: string;
 }
 
 /**
@@ -227,43 +327,80 @@ export interface ActaReunionProgramada {
 export interface Acta {
   id: number;
   proyectoId: number;
-  tipo: ActaTipo;
+  codigo: string;
   nombre: string;
+  tipo: ActaTipo;
+  fecha: string;
   estado: ActaEstado;
+  archivoUrl?: string | null;
 
-  // Datos de reunion
-  tipoReunion?: string;
-  fasePerteneciente?: string;
-  fechaReunion?: string;
-  horaInicio?: string;
-  horaFin?: string;
+  // Campos comunes
+  observaciones?: string | null;
 
-  // Participantes
-  asistentes: ActaParticipante[];
-  ausentes: ActaParticipante[];
+  // Campos de Acta de Reunion
+  tipoReunion?: TipoReunion | null;
+  fasePerteneciente?: string | null;
+  horaInicio?: string | null;
+  horaFin?: string | null;
+  modalidad?: Modalidad | null;
+  lugarLink?: string | null;
+  moderadorId?: number | null;
+  moderador?: { id: number; nombres: string; apellidoPaterno: string } | null;
+  asistentes?: ActaParticipante[] | null;
+  ausentes?: ActaParticipante[] | null;
+  agenda?: ActaAgendaItem[] | null;
+  temasDesarrollados?: ActaTemaDesarrollado[] | null;
+  acuerdos?: ActaAcuerdo[] | null;
+  proximosPasos?: ActaProximoPaso[] | null;
+  proximaReunionFecha?: string | null;
+  anexosReferenciados?: ActaAnexo[] | null;
 
-  // Contenido
-  agenda: ActaAgendaItem[];
-  requerimientosFuncionales?: { id: string; descripcion: string }[];
-  requerimientosNoFuncionales?: { id: string; descripcion: string }[];
-  temasPendientes?: { id: string; tema: string }[];
-  entregables: ActaEntregable[];
-  observaciones?: string;
-  reunionesProgramadas: ActaReunionProgramada[];
+  // Campos de Acta de Daily Meeting
+  sprintId?: number | null;
+  sprintNombre?: string | null;
+  duracionMinutos?: number | null;
+  participantesDaily?: ActaDailyParticipante[] | null;
+  impedimentosGenerales?: string[] | null;
+  notasAdicionales?: string | null;
 
-  // Archivo
-  archivoId?: string | null;
-  nombreArchivo?: string | null;
+  // Campos de Acta de Constitucion
+  objetivoSmart?: string | null;
+  justificacion?: string | null;
+  alcance?: string[] | null;
+  fueraDeAlcance?: string[] | null;
+  entregables?: ActaEntregable[] | null;
+  supuestos?: string[] | null;
+  restricciones?: string[] | null;
+  riesgos?: ActaRiesgo[] | null;
+  presupuestoEstimado?: number | null;
+  cronogramaHitos?: ActaHito[] | null;
+  equipoProyecto?: ActaMiembroEquipo[] | null;
 
-  // Workflow de aprobacion
-  nivelActual: ActaNivelAprobacion;
-  historialAprobaciones: ActaHistorialAprobacion[];
+  // Documento firmado
+  documentoFirmadoUrl?: string | null;
+  documentoFirmadoFecha?: string | null;
+  comentarioRechazo?: string | null;
+
+  // Aprobacion
+  aprobadoPor?: number | null;
+  aprobador?: { id: number; nombres: string; apellidoPaterno: string } | null;
+  fechaAprobacion?: string | null;
 
   // Auditoria
-  createdBy: number;
-  updatedBy?: number;
+  activo: boolean;
+  createdBy?: number | null;
+  updatedBy?: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Respuesta de actas por proyecto (separadas por tipo)
+ */
+export interface ActasByProyectoResponse {
+  constitucion: Acta | null;
+  reuniones: Acta[];
+  dailies: Acta[];
 }
 
 /**
@@ -281,40 +418,106 @@ export interface ActaHistorialAprobacion {
 }
 
 /**
- * Input para crear acta
+ * Input para crear Acta de Reunion
  */
-export interface CreateActaInput {
+export interface CreateActaReunionInput {
   proyectoId: number;
-  tipo: ActaTipo;
   nombre: string;
-  tipoReunion?: string;
+  fecha: string;
+  tipoReunion: TipoReunion;
   fasePerteneciente?: string;
-  fechaReunion?: string;
   horaInicio?: string;
   horaFin?: string;
+  modalidad?: Modalidad;
+  lugarLink?: string;
+  moderadorId?: number;
   asistentes?: ActaParticipante[];
   ausentes?: ActaParticipante[];
   agenda?: ActaAgendaItem[];
-  requerimientosFuncionales?: { id: string; descripcion: string }[];
-  requerimientosNoFuncionales?: { id: string; descripcion: string }[];
-  temasPendientes?: { id: string; tema: string }[];
-  entregables?: ActaEntregable[];
+  temasDesarrollados?: ActaTemaDesarrollado[];
+  acuerdos?: ActaAcuerdo[];
+  proximosPasos?: ActaProximoPaso[];
   observaciones?: string;
-  reunionesProgramadas?: ActaReunionProgramada[];
+  proximaReunionFecha?: string;
+  anexosReferenciados?: ActaAnexo[];
 }
+
+/**
+ * Input para crear Acta de Constitucion
+ */
+export interface CreateActaConstitucionInput {
+  proyectoId: number;
+  nombre: string;
+  fecha: string;
+  objetivoSmart?: string;
+  justificacion?: string;
+  alcance?: string[];
+  fueraDeAlcance?: string[];
+  entregables?: ActaEntregable[];
+  supuestos?: string[];
+  restricciones?: string[];
+  riesgos?: ActaRiesgo[];
+  presupuestoEstimado?: number;
+  cronogramaHitos?: ActaHito[];
+  equipoProyecto?: ActaMiembroEquipo[];
+  observaciones?: string;
+}
+
+/**
+ * Input para crear Acta de Daily Meeting
+ */
+export interface CreateActaDailyInput {
+  proyectoId: number;
+  nombre: string;
+  fecha: string;
+  horaInicio?: string;
+  horaFin?: string;
+  sprintId?: number;
+  duracionMinutos?: number;
+  participantesDaily: ActaDailyParticipante[];
+  impedimentosGenerales?: string[];
+  notasAdicionales?: string;
+  observaciones?: string;
+}
+
+/**
+ * Input generico para crear acta (union de todos los tipos)
+ */
+export type CreateActaInput = CreateActaReunionInput | CreateActaConstitucionInput | CreateActaDailyInput;
+
+/**
+ * Input para actualizar acta de reunion
+ */
+export type UpdateActaReunionInput = Partial<Omit<CreateActaReunionInput, 'proyectoId'>>;
+
+/**
+ * Input para actualizar acta de constitucion
+ */
+export type UpdateActaConstitucionInput = Partial<Omit<CreateActaConstitucionInput, 'proyectoId'>>;
+
+/**
+ * Input para actualizar acta de daily meeting
+ */
+export type UpdateActaDailyInput = Partial<Omit<CreateActaDailyInput, 'proyectoId'>>;
 
 /**
  * Input para actualizar acta
  */
-export interface UpdateActaInput extends Partial<CreateActaInput> {
-  id: number;
-}
+export type UpdateActaInput = UpdateActaReunionInput | UpdateActaConstitucionInput | UpdateActaDailyInput;
 
 /**
  * Input para aprobar/rechazar acta
  */
 export interface ActaApprovalInput {
-  motivo?: string;
+  aprobado: boolean;
+  comentario?: string;
+}
+
+/**
+ * Input para subir documento firmado
+ */
+export interface SubirDocumentoFirmadoInput {
+  documentoFirmadoUrl: string;
 }
 
 /**

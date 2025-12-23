@@ -1,11 +1,5 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Claude Code - archivos de configuracion local
-/.claude/
-CLAUDE.md
-
-# documentation (generated)
-/docs/
 
 # dependencies
 /node_modules

@@ -101,7 +101,7 @@ export interface SprintTableroData {
 
 export interface SprintTarea {
   id: number;
-  titulo: string;
+  nombre: string;
   estado: string;
   responsableId: number | null;
   responsable: {

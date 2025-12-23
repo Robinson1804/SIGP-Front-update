@@ -604,3 +604,248 @@ export interface MetricasActividad {
   }[];
   tendenciasFlujo?: TendenciaData[];
 }
+
+// ============================================
+// DASHBOARD GERENCIAL TYPES (Vision Ejecutiva)
+// ============================================
+
+/**
+ * KPI con variacion vs periodo anterior
+ */
+export interface KpiConVariacion {
+  valor: number;
+  variacion: number; // porcentaje vs periodo anterior
+  tendencia: 'up' | 'down' | 'stable';
+  detalles: {
+    enCurso?: number;
+    finalizados?: number;
+    atrasados?: number;
+    pendientes?: number;
+  };
+}
+
+/**
+ * KPIs gerenciales completos
+ */
+export interface KpisGerenciales {
+  proyectos: KpiConVariacion;
+  actividades: KpiConVariacion;
+  sprintsActivos: KpiConVariacion;
+  tareasDelDia: KpiConVariacion;
+}
+
+/**
+ * Proyecto activo para tabla gerencial
+ */
+export interface ProyectoActivo {
+  id: number;
+  codigo: string;
+  nombre: string;
+  sprintActual: {
+    id: number;
+    nombre: string;
+  } | null;
+  storyPointsCompletados: number;
+  storyPointsTotal: number;
+  porcentajeAvance: number;
+  estado: string;
+  salud: 'verde' | 'amarillo' | 'rojo';
+  proximaFecha: string | null;
+  coordinadorNombre: string | null;
+}
+
+/**
+ * Respuesta paginada de proyectos activos
+ */
+export interface ProyectosActivosResponse {
+  data: ProyectoActivo[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+/**
+ * Actividad activa para tabla gerencial
+ */
+export interface ActividadActiva {
+  id: number;
+  codigo: string;
+  nombre: string;
+  tareasTotal: number;
+  tareasCompletadasMes: number;
+  leadTimePromedio: number;
+  throughputSemanal: number;
+  coordinadorNombre: string | null;
+  estado: string;
+  progreso: number;
+}
+
+/**
+ * Respuesta paginada de actividades activas
+ */
+export interface ActividadesActivasResponse {
+  data: ActividadActiva[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+/**
+ * Sprint para timeline/Gantt
+ */
+export interface SprintTimeline {
+  id: number;
+  nombre: string;
+  proyectoId: number;
+  proyectoNombre: string;
+  proyectoCodigo: string;
+  fechaInicio: string;
+  fechaFin: string;
+  estado: 'Planificado' | 'Activo' | 'Completado';
+  progreso: number;
+  storyPointsCompletados: number;
+  storyPointsTotal: number;
+}
+
+/**
+ * Respuesta del timeline de sprints
+ */
+export interface SprintsTimelineResponse {
+  data: SprintTimeline[];
+  rangoInicio: string;
+  rangoFin: string;
+}
+
+/**
+ * Detalle de salud de proyecto
+ */
+export interface ProyectoSaludDetalle {
+  id: number;
+  codigo: string;
+  nombre: string;
+  salud: 'verde' | 'amarillo' | 'rojo';
+  razon: string;
+}
+
+/**
+ * Salud de proyectos detallada
+ */
+export interface SaludProyectosDetallada {
+  verde: ProyectoSaludDetalle[];
+  amarillo: ProyectoSaludDetalle[];
+  rojo: ProyectoSaludDetalle[];
+  resumen: {
+    verde: number;
+    amarillo: number;
+    rojo: number;
+  };
+}
+
+// ============================================
+// CFD (Cumulative Flow Diagram) TYPES
+// ============================================
+
+/**
+ * Punto de datos para CFD
+ */
+export interface CfdDataPoint {
+  fecha: string;
+  porHacer: number;
+  enProgreso: number;
+  enRevision: number;
+  finalizado: number;
+  total: number;
+}
+
+/**
+ * Respuesta del CFD
+ */
+export interface CfdResponse {
+  data: CfdDataPoint[];
+  actividadId: number;
+  periodoInicio: string;
+  periodoFin: string;
+}
+
+// ============================================
+// TENDENCIAS DE METRICAS TYPES
+// ============================================
+
+/**
+ * Tendencia de metrica por periodo
+ */
+export interface TendenciaMetrica {
+  periodo: string;
+  periodoLabel: string;
+  leadTime: number;
+  cycleTime: number;
+  throughput: number;
+  wipPromedio: number;
+}
+
+/**
+ * Respuesta de tendencias de metricas
+ */
+export interface TendenciasMetricasResponse {
+  data: TendenciaMetrica[];
+  actividadId: number;
+  promedios: {
+    leadTime: number;
+    cycleTime: number;
+    throughput: number;
+  };
+  tendencias: {
+    leadTime: 'mejorando' | 'empeorando' | 'estable';
+    cycleTime: 'mejorando' | 'empeorando' | 'estable';
+    throughput: 'mejorando' | 'empeorando' | 'estable';
+  };
+}
+
+// ============================================
+// EVENTO ACTIVIDAD RECIENTE TYPES
+// ============================================
+
+/**
+ * Tipo de evento de actividad
+ */
+export type TipoEventoActividad =
+  | 'tarea_completada'
+  | 'tarea_creada'
+  | 'hu_movida'
+  | 'hu_completada'
+  | 'sprint_iniciado'
+  | 'sprint_completado'
+  | 'documento_aprobado'
+  | 'comentario';
+
+/**
+ * Evento de actividad reciente
+ */
+export interface EventoActividad {
+  id: number;
+  tipo: TipoEventoActividad;
+  titulo: string;
+  descripcion: string;
+  usuarioId: number | null;
+  usuarioNombre: string | null;
+  timestamp: string;
+  entidadTipo: 'Tarea' | 'HistoriaUsuario' | 'Sprint' | 'Documento';
+  entidadId: number;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Carga de desarrollador
+ */
+export interface CargaDesarrollador {
+  personalId: number;
+  nombre: string;
+  rol: string;
+  avatar?: string;
+  tareasAsignadas: number;
+  tareasEnProgreso: number;
+  tareasCompletadas: number;
+  storyPointsAsignados: number;
+  storyPointsCompletados: number;
+  porcentajeCarga: number;
+}

@@ -52,17 +52,73 @@ export async function getDashboardProyecto(
 }
 
 /**
+ * Transforma la respuesta del backend al formato esperado por el frontend
+ */
+function mapBackendToFrontend(backendData: any): DashboardActividad {
+  const tareasPorEstado = backendData.tareasPorEstado || {};
+  const porHacer = tareasPorEstado['Por hacer'] || 0;
+  const enProgreso = tareasPorEstado['En progreso'] || 0;
+  const enRevision = tareasPorEstado['En revision'] || 0;
+  const finalizadas = tareasPorEstado['Finalizado'] || 0;
+  const total = porHacer + enProgreso + enRevision + finalizadas;
+
+  const metricasKanban = backendData.metricasKanban || {};
+
+  return {
+    actividadId: backendData.actividad?.id || 0,
+    nombre: backendData.actividad?.nombre || '',
+    codigo: backendData.actividad?.codigo || '',
+    estado: backendData.actividad?.estado || '',
+    fechaInicio: null,
+    fechaFin: null,
+    progresoPorcentaje: backendData.actividad?.progreso || 0,
+    tareas: {
+      total,
+      porHacer,
+      enProgreso,
+      enRevision,
+      finalizadas,
+    },
+    subtareas: {
+      total: 0,
+      completadas: 0,
+    },
+    metricas: {
+      leadTimePromedio: metricasKanban.leadTime || 0,
+      cycleTimePromedio: metricasKanban.cycleTime || 0,
+      throughputSemanal: metricasKanban.throughput || 0,
+      wipActual: enProgreso + enRevision,
+      wipLimite: 5, // Default WIP limit
+    },
+    tareasPorPrioridad: [],
+    responsables: (backendData.equipo || []).map((m: any) => ({
+      id: m.id,
+      nombre: m.nombre,
+      tareasAsignadas: m.tareasAsignadas || 0,
+      tareasCompletadas: m.tareasCompletadas || 0,
+    })),
+    throughputHistorico: (backendData.throughputSemanal || []).map((t: any) => ({
+      periodo: t.semana,
+      periodoLabel: t.semana,
+      tareasCompletadas: t.completadas || 0,
+      subtareasCompletadas: 0,
+    })),
+  };
+}
+
+/**
  * Obtener dashboard de una actividad especifica (Kanban)
  */
 export async function getDashboardActividad(
   actividadId: number | string,
   filters?: DashboardActividadFilters
 ): Promise<DashboardActividad> {
-  const response = await apiClient.get<DashboardActividad>(
+  const response = await apiClient.get<any>(
     ENDPOINTS.DASHBOARD.ACTIVIDAD(actividadId),
     { params: filters }
   );
-  return response.data;
+  // Mapear la respuesta del backend al formato esperado
+  return mapBackendToFrontend(response.data);
 }
 
 /**
@@ -207,9 +263,130 @@ export async function getSummary(): Promise<import('../types').DashboardSummary>
   return response.data;
 }
 
+// ============================================
+// DASHBOARD GERENCIAL SERVICES
+// ============================================
+
+/**
+ * Obtener KPIs gerenciales con variacion
+ */
+export async function getKpisGerenciales(): Promise<import('../types').KpisGerenciales> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/kpis`
+  );
+  return response.data;
+}
+
+/**
+ * Obtener lista de proyectos activos con metricas
+ */
+export async function getProyectosActivos(
+  params?: { page?: number; limit?: number }
+): Promise<import('../types').ProyectosActivosResponse> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/proyectos-activos`,
+    { params }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener lista de actividades activas con metricas Kanban
+ */
+export async function getActividadesActivas(
+  params?: { page?: number; limit?: number }
+): Promise<import('../types').ActividadesActivasResponse> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/actividades-activas`,
+    { params }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener timeline de sprints para visualizacion Gantt
+ */
+export async function getSprintsTimeline(
+  meses: number = 3
+): Promise<import('../types').SprintsTimelineResponse> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/timeline-sprints`,
+    { params: { meses } }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener salud detallada de proyectos
+ */
+export async function getSaludProyectosDetallada(): Promise<import('../types').SaludProyectosDetallada> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/salud-proyectos`
+  );
+  return response.data;
+}
+
+/**
+ * Obtener actividad reciente de un proyecto (feed de eventos)
+ */
+export async function getActividadReciente(
+  proyectoId: number | string,
+  limit: number = 20
+): Promise<{ data: import('../types').EventoActividad[]; total: number }> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/proyecto/${proyectoId}/actividad-reciente`,
+    { params: { limit } }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener carga de trabajo del equipo de un proyecto
+ */
+export async function getCargaEquipo(
+  proyectoId: number | string
+): Promise<{
+  data: import('../types').CargaDesarrollador[];
+  promedioTareasCompletadas: number;
+  totalStoryPoints: number;
+}> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/proyecto/${proyectoId}/carga-equipo`
+  );
+  return response.data;
+}
+
 /**
  * Exportar servicio como objeto para uso consistente
  */
+/**
+ * Obtener datos para CFD (Cumulative Flow Diagram) de una actividad
+ */
+export async function getCfdData(
+  actividadId: number | string,
+  dias: number = 30
+): Promise<import('../types').CfdResponse> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/actividad/${actividadId}/cfd`,
+    { params: { dias } }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener tendencias de metricas Kanban de una actividad
+ */
+export async function getTendenciasMetricasActividad(
+  actividadId: number | string,
+  semanas: number = 8
+): Promise<import('../types').TendenciasMetricasResponse> {
+  const response = await apiClient.get(
+    `${ENDPOINTS.DASHBOARD.BASE}/actividad/${actividadId}/tendencias-metricas`,
+    { params: { semanas } }
+  );
+  return response.data;
+}
+
 export const dashboardService = {
   getDashboardGeneral,
   getDashboardBase,
@@ -226,4 +403,16 @@ export const dashboardService = {
   exportDashboardPDF,
   exportDashboardExcel,
   getSummary,
+  // Gerencial
+  getKpisGerenciales,
+  getProyectosActivos,
+  getActividadesActivas,
+  getSprintsTimeline,
+  getSaludProyectosDetallada,
+  // Dashboard Proyecto
+  getActividadReciente,
+  getCargaEquipo,
+  // Dashboard Actividad (Kanban)
+  getCfdData,
+  getTendenciasMetricasActividad,
 };

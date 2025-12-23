@@ -47,7 +47,11 @@
       "Bash(__NEW_LINE__ echo \"\")",
       "Bash(__NEW_LINE__ echo \"=== 6. Proyectos ===\")",
       "Bash(git remote add:*)",
-      "Bash(git remote set-url:*)"
+      "Bash(git remote set-url:*)",
+      "Bash(git push:*)",
+      "Bash(ngrok:*)",
+      "Bash(timeout 3:*)",
+      "Bash(ping:*)"
     ],
     "deny": [],
     "ask": []

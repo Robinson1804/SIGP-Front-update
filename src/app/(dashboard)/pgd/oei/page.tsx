@@ -78,7 +78,8 @@ function OEIModal({
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [indicador, setIndicador] = useState("");
-  const [lineaBase, setLineaBase] = useState<string>("");
+  const [lineaBaseAnio, setLineaBaseAnio] = useState<string>("");
+  const [lineaBaseValor, setLineaBaseValor] = useState<string>("");
   const [unidadMedida, setUnidadMedida] = useState("");
   const [metasAnuales, setMetasAnuales] = useState<MetaAnual[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -89,8 +90,9 @@ function OEIModal({
       setCodigo(oei.codigo);
       setNombre(oei.nombre);
       setDescripcion(oei.descripcion || "");
-      setIndicador(oei.indicador || "");
-      setLineaBase(oei.lineaBase !== null ? String(oei.lineaBase) : "");
+      setIndicador(oei.indicadorNombre || "");
+      setLineaBaseAnio(oei.lineaBaseAnio !== null ? String(oei.lineaBaseAnio) : "");
+      setLineaBaseValor(oei.lineaBaseValor !== null ? String(oei.lineaBaseValor) : "");
       setUnidadMedida(oei.unidadMedida || "");
       setMetasAnuales(oei.metasAnuales || []);
     } else {
@@ -98,7 +100,8 @@ function OEIModal({
       setNombre("");
       setDescripcion("");
       setIndicador("");
-      setLineaBase("");
+      setLineaBaseAnio("");
+      setLineaBaseValor("");
       setUnidadMedida("");
       setMetasAnuales([]);
     }
@@ -122,8 +125,9 @@ function OEIModal({
         codigo,
         nombre,
         descripcion: descripcion || undefined,
-        indicador: indicador || undefined,
-        lineaBase: lineaBase ? parseFloat(lineaBase) : undefined,
+        indicadorNombre: indicador || undefined,
+        lineaBaseAnio: lineaBaseAnio ? parseInt(lineaBaseAnio) : undefined,
+        lineaBaseValor: lineaBaseValor ? parseFloat(lineaBaseValor) : undefined,
         unidadMedida: unidadMedida || undefined,
         metasAnuales: metasAnuales.length > 0 ? metasAnuales : undefined,
       };
@@ -217,13 +221,44 @@ function OEIModal({
             <label htmlFor="indicador" className="block text-sm font-medium text-gray-700 mb-1">
               Indicador
             </label>
-            <Input id="indicador" value={indicador} onChange={(e) => setIndicador(e.target.value)} />
+            <Input id="indicador" value={indicador} onChange={(e) => setIndicador(e.target.value)} placeholder="Nombre del indicador" />
           </div>
           <div>
-            <label htmlFor="lineaBase" className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Línea Base
             </label>
-            <Input id="lineaBase" value={lineaBase} onChange={(e) => setLineaBase(e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="lineaBaseAnio" className="block text-xs text-gray-500 mb-1">
+                  Año
+                </label>
+                <Select onValueChange={(value) => setLineaBaseAnio(value)} value={lineaBaseAnio}>
+                  <SelectTrigger id="lineaBaseAnio">
+                    <SelectValue placeholder="Ej: 2024" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label htmlFor="lineaBaseValor" className="block text-xs text-gray-500 mb-1">
+                  Valor
+                </label>
+                <Input
+                  id="lineaBaseValor"
+                  type="number"
+                  step="0.01"
+                  value={lineaBaseValor}
+                  onChange={(e) => setLineaBaseValor(e.target.value)}
+                  placeholder="Ej: 75.5"
+                />
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Metas Anuales</label>
@@ -359,9 +394,9 @@ const OeiCard = ({
       </div>
       <h4 className="font-semibold text-sm mb-2">{oei.nombre}</h4>
       <p className="text-sm text-gray-700 min-h-[40px] line-clamp-3">{oei.descripcion}</p>
-      {oei.indicador && (
+      {oei.indicadorNombre && (
         <p className="text-xs text-gray-500 mt-2">
-          <span className="font-medium">Indicador:</span> {oei.indicador}
+          <span className="font-medium">Indicador:</span> {oei.indicadorNombre}
         </p>
       )}
     </div>

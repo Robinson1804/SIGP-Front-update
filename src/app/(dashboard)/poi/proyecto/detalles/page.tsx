@@ -67,6 +67,9 @@ import {
     useDocumentos,
 } from '@/features/documentos';
 import { RequerimientoList } from '@/features/requerimientos';
+import { BacklogTabContent } from '@/features/proyectos/components/backlog-tab';
+import { CronogramaView } from '@/features/cronograma';
+import { ActasTabContent } from '@/features/actas';
 import { FolderOpen, FileText, Calendar, LayoutList } from 'lucide-react';
 
 // Interfaz para miembro de equipo
@@ -406,69 +409,24 @@ function RequerimientosTabContent({ proyectoId }: { proyectoId: number }) {
     );
 }
 
-/**
- * Contenido del Tab Backlog
- * Muestra el Product Backlog con épicas e historias de usuario
- */
-function BacklogTabContent({ proyectoId }: { proyectoId: number }) {
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                    <LayoutList className="h-6 w-6 text-gray-700" />
-                    Product Backlog
-                </h3>
-            </div>
-
-            <Card>
-                <CardContent className="p-6">
-                    <div className="text-center py-8 text-gray-500">
-                        <LayoutList className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                        <p className="text-lg font-medium">Product Backlog</p>
-                        <p className="text-sm mt-2">Gestiona épicas, historias de usuario y sprints</p>
-                        <Button className="mt-4 bg-[#018CD1] text-white">
-                            Ir al Backlog Completo
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-}
-
-/**
- * Contenido del Tab Actas del proyecto
- */
-function ActasTabContent({ proyectoId }: { proyectoId: number }) {
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                    <FileText className="h-6 w-6 text-gray-700" />
-                    Actas del Proyecto
-                </h3>
-            </div>
-
-            <Card>
-                <CardContent className="p-6">
-                    <div className="text-center py-8 text-gray-500">
-                        <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                        <p className="text-lg font-medium">Actas de Reunión</p>
-                        <p className="text-sm mt-2">Registro de actas de constitución, kickoff, y reuniones</p>
-                        <Button className="mt-4 bg-[#018CD1] text-white">
-                            Nueva Acta
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    );
-}
+// BacklogTabContent importado desde @/features/proyectos/components/backlog-tab
+// ActasTabContent importado desde @/features/actas
 
 /**
  * Contenido del Tab Cronograma
+ * Usa el componente CronogramaView con Gantt interactivo
  */
-function CronogramaTabContent({ proyectoId }: { proyectoId: number }) {
+function CronogramaTabContent({ proyectoId, proyectoNombre, equipo }: {
+    proyectoId: number;
+    proyectoNombre?: string;
+    equipo?: { id: number; nombre: string }[];
+}) {
+    // Preparar responsables del equipo para el selector
+    const responsables = equipo?.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+    })) || [];
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -478,18 +436,11 @@ function CronogramaTabContent({ proyectoId }: { proyectoId: number }) {
                 </h3>
             </div>
 
-            <Card>
-                <CardContent className="p-6">
-                    <div className="text-center py-8 text-gray-500">
-                        <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                        <p className="text-lg font-medium">Cronograma</p>
-                        <p className="text-sm mt-2">Timeline y planificación temporal del proyecto</p>
-                        <Button className="mt-4 bg-[#018CD1] text-white">
-                            Ver Cronograma
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            <CronogramaView
+                proyectoId={proyectoId}
+                proyectoNombre={proyectoNombre}
+                responsables={responsables}
+            />
         </div>
     );
 }
@@ -796,32 +747,15 @@ function ProjectDetailsContent() {
         { label: 'Detalles' }
     ];
 
-    // Pestañas según el rol del usuario
+    // Pestañas según el rol del usuario - Actas disponible para todos
     const getProjectTabs = () => {
-        if (userRole === ROLES.PMO) {
-            // PMO: Detalles, Documentos, Requerimientos, Backlog
-            return [
-                { name: 'Detalles' },
-                { name: 'Documentos' },
-                { name: 'Requerimientos' },
-                { name: 'Backlog' },
-            ];
-        } else if (userRole === ROLES.SCRUM_MASTER) {
-            // Scrum Master: Detalles, Documentos, Actas del proyecto, Requerimientos, Cronograma, Backlog
-            return [
-                { name: 'Detalles' },
-                { name: 'Documentos' },
-                { name: 'Actas del proyecto' },
-                { name: 'Requerimientos' },
-                { name: 'Cronograma' },
-                { name: 'Backlog' },
-            ];
-        }
-        // Por defecto (otros roles): Detalles, Documentos, Requerimientos, Backlog
+        // Todos los roles ven: Detalles, Documentos, Actas, Requerimientos, Cronograma, Backlog
         return [
             { name: 'Detalles' },
             { name: 'Documentos' },
+            { name: 'Actas' },
             { name: 'Requerimientos' },
+            { name: 'Cronograma' },
             { name: 'Backlog' },
         ];
     };
@@ -1086,14 +1020,18 @@ function ProjectDetailsContent() {
                         <BacklogTabContent proyectoId={parseInt(proyectoId)} />
                     )}
 
-                    {/* Tab Actas del proyecto */}
-                    {activeTab === 'Actas del proyecto' && proyectoId && (
+                    {/* Tab Actas */}
+                    {activeTab === 'Actas' && proyectoId && (
                         <ActasTabContent proyectoId={parseInt(proyectoId)} />
                     )}
 
                     {/* Tab Cronograma */}
                     {activeTab === 'Cronograma' && proyectoId && (
-                        <CronogramaTabContent proyectoId={parseInt(proyectoId)} />
+                        <CronogramaTabContent
+                            proyectoId={parseInt(proyectoId)}
+                            proyectoNombre={project?.name}
+                            equipo={equipo}
+                        />
                     )}
                 </div>
 
