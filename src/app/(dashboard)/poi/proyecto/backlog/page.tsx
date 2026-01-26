@@ -105,7 +105,7 @@ import {
     getHistoriasBySprint,
     type HistoriaUsuario,
 } from '@/features/proyectos/services/historias.service';
-import { getPersonalDisponible } from '@/features/rrhh/services/rrhh.service';
+import { getPersonal } from '@/features/rrhh/services/rrhh.service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 
@@ -718,7 +718,7 @@ function EpicModal({
     }, [epic, isOpen, currentUser]);
 
     const filteredResponsibles = availableResponsibles.filter(
-        r => r.toLowerCase().includes(responsibleSearch.toLowerCase()) &&
+        r => r && r.toLowerCase().includes(responsibleSearch.toLowerCase()) &&
             !formData.responsibles.includes(r)
     );
 
@@ -3395,7 +3395,7 @@ function UserStoryModal({
     }, [story, currentUser, isOpen, allStories, targetSprint]);
 
     const filteredResponsibles = availableResponsibles.filter(
-        r => r.toLowerCase().includes(responsibleSearch.toLowerCase()) && !formData.responsibles.includes(r)
+        r => r && r.toLowerCase().includes(responsibleSearch.toLowerCase()) && !formData.responsibles.includes(r)
     );
 
     const addResponsible = (name: string) => {
@@ -4738,7 +4738,7 @@ function BacklogContent() {
                 getSprintsByProyecto(proyectoId).catch(() => []),
                 getEpicasByProyecto(proyectoId).catch(() => []),
                 getBacklog(proyectoId).catch(() => ({ backlog: [], metricas: { total: 0, porPrioridad: {}, porEstado: {} } })),
-                getPersonalDisponible().catch(() => []),
+                getPersonal().catch(() => []),
             ]);
 
             // Convertir sprints del backend al formato local
@@ -4748,7 +4748,7 @@ function BacklogContent() {
                 number: s.numero,
                 startDate: s.fechaInicio || '',
                 endDate: s.fechaFin || '',
-                status: (s.estado === 'Activo' ? 'En progreso' : s.estado === 'Completado' ? 'Finalizado' : 'Por hacer') as SprintStatus,
+                status: ((s.estado === 'En progreso' || s.estado === 'Activo') ? 'En progreso' : (s.estado === 'Finalizado' || s.estado === 'Completado') ? 'Finalizado' : 'Por hacer') as SprintStatus,
             }));
 
             // Convertir épicas del backend al formato local
@@ -4808,9 +4808,12 @@ function BacklogContent() {
             }
 
             // Convertir personal disponible a lista de nombres
-            const responsibles = personalData.map((p: { nombreCompleto?: string; nombre: string; apellido?: string }) =>
-                p.nombreCompleto || (p.apellido ? `${p.nombre} ${p.apellido}` : p.nombre)
-            );
+            const responsibles = personalData
+                .filter((p: { nombres?: string; apellidos?: string }) => p.nombres) // Filtrar registros sin nombre
+                .map((p: { nombreCompleto?: string; nombres?: string; apellidos?: string }) =>
+                    p.nombreCompleto || (p.apellidos ? `${p.nombres} ${p.apellidos}` : p.nombres)
+                )
+                .filter((name: string | undefined): name is string => !!name); // Filtrar valores undefined
 
             setSprintList(convertedSprints);
             setEpicList(convertedEpics);
@@ -5241,11 +5244,9 @@ function BacklogContent() {
         return <div className="flex h-screen w-full items-center justify-center">Cargando...</div>;
     }
 
-    const projectCode = `PROY N°${project.id}`;
-    // DESARROLLADOR no puede ir a Detalles, así que los breadcrumbs son diferentes
-    const breadcrumbs = isDeveloper
-        ? [{ label: 'POI', href: paths.poi.base }, { label: 'Backlog' }]
-        : [{ label: 'POI', href: paths.poi.base }, { label: 'Proyecto', href: paths.poi.proyecto.detalles }, { label: 'Backlog' }];
+    const projectCode = project.code || `PROY N°${project.id}`;
+    // Breadcrumb simplificado: POI > Backlog
+    const breadcrumbs = [{ label: 'POI', href: paths.poi.base }, { label: 'Backlog' }];
     const filteredBacklog = filterStories(backlogStories);
     const selectedStoriesForAssign = backlogStories.filter(s => selectedBacklogIds.includes(s.id));
 

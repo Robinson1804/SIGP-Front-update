@@ -57,7 +57,7 @@ interface TaskDetailPanelProps {
   onDelete?: (tareaId: number) => void;
 }
 
-const ESTADOS: TareaEstado[] = ['Por hacer', 'En progreso', 'En revision', 'Finalizado'];
+const ESTADOS: TareaEstado[] = ['Por hacer', 'En progreso', 'Finalizado'];
 const PRIORIDADES: TareaPrioridad[] = ['Alta', 'Media', 'Baja'];
 
 const prioridadColors: Record<TareaPrioridad, string> = {
@@ -69,7 +69,6 @@ const prioridadColors: Record<TareaPrioridad, string> = {
 const estadoColors: Record<TareaEstado, string> = {
   'Por hacer': 'bg-slate-100 text-slate-800',
   'En progreso': 'bg-blue-100 text-blue-800',
-  'En revision': 'bg-purple-100 text-purple-800',
   'Finalizado': 'bg-green-100 text-green-800',
 };
 

@@ -27,14 +27,14 @@ export async function getOEGDs(filters?: OEGDQueryFilters): Promise<OEGD[]> {
  * Obtener OEGDs por PGD
  */
 export async function getOEGDsByPGD(pgdId: number | string): Promise<OEGD[]> {
-  return getOEGDs({ pgdId: Number(pgdId) });
+  return getOEGDs({ pgdId: Number(pgdId), activo: true });
 }
 
 /**
  * Obtener OEGDs por OGD
  */
 export async function getOEGDsByOGD(ogdId: number | string): Promise<OEGD[]> {
-  return getOEGDs({ ogdId: Number(ogdId) });
+  return getOEGDs({ ogdId: Number(ogdId), activo: true });
 }
 
 /**
@@ -82,4 +82,14 @@ export async function toggleOEGDActivo(
   activo: boolean
 ): Promise<OEGD> {
   return updateOEGD(id, { activo });
+}
+
+/**
+ * Obtener el siguiente código OEGD disponible para un OGD
+ */
+export async function getNextOEGDCodigo(ogdId: number | string): Promise<string> {
+  const response = await apiClient.get<string>(`${ENDPOINTS.PLANNING.OEGD}/next-codigo`, {
+    params: { ogdId },
+  });
+  return response.data;
 }

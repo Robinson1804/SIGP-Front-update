@@ -20,6 +20,7 @@ import type {
   ResultadoRutaCritica,
   DatosExportacion,
   TipoTarea,
+  TareaEstadoCronograma,
 } from '../types';
 
 // ============================================
@@ -36,7 +37,7 @@ interface BackendTarea {
   estado?: string;
   prioridad?: string;
   porcentajeAvance?: number;
-  responsableId?: number;
+  asignadoA?: string; // 'Scrum Master' | 'Desarrolladores' | 'Todo el equipo'
   tareaPadreId?: number;
   orden?: number;
   dependencias?: number[];
@@ -57,6 +58,12 @@ interface BackendCronograma {
   fechaFin: string;
   estado: string;
   activo: boolean;
+  // Campos de aprobación dual
+  aprobadoPorPmo?: boolean;
+  aprobadoPorPatrocinador?: boolean;
+  fechaAprobacionPmo?: string | null;
+  fechaAprobacionPatrocinador?: string | null;
+  comentarioRechazo?: string | null;
   createdAt: string;
   updatedAt: string;
   tareas?: BackendTarea[];
@@ -64,11 +71,35 @@ interface BackendCronograma {
 
 /**
  * Safely parse a date string, returning a valid Date or a default
+ *
+ * IMPORTANTE: Parsea solo la parte de fecha (YYYY-MM-DD) y crea el Date
+ * en hora local al mediodía para evitar problemas de timezone.
+ * Esto evita que fechas como "2023-07-05T00:00:00.000Z" se conviertan
+ * al día anterior en zonas horarias negativas (ej: UTC-5 Lima).
  */
 function safeParseDate(dateStr: string | undefined | null, defaultDate?: Date): Date {
   if (!dateStr) {
     return defaultDate || new Date();
   }
+
+  // Extraer solo la parte de fecha YYYY-MM-DD
+  // Puede venir como "2023-07-05" o "2023-07-05T00:00:00.000Z"
+  const dateOnly = dateStr.split('T')[0];
+  const parts = dateOnly.split('-');
+
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Meses van de 0-11
+    const day = parseInt(parts[2], 10);
+
+    // Validar valores
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+      // Crear fecha en hora LOCAL al mediodía para evitar desfases por timezone
+      return new Date(year, month, day, 12, 0, 0);
+    }
+  }
+
+  // Fallback: intentar parsear normalmente
   const parsed = new Date(dateStr);
   if (isNaN(parsed.getTime())) {
     console.warn(`Invalid date string: ${dateStr}`);
@@ -91,8 +122,9 @@ function transformTarea(backendTarea: BackendTarea): TareaCronograma {
     inicio,
     fin,
     progreso: backendTarea.porcentajeAvance || 0,
+    estado: (backendTarea.estado as TareaCronograma['estado']) || 'Por hacer',
     tipo: backendTarea.esHito ? 'hito' : (backendTarea.tareaPadreId ? 'tarea' : 'proyecto') as TipoTarea,
-    responsableId: backendTarea.responsableId,
+    asignadoA: backendTarea.asignadoA as TareaCronograma['asignadoA'],
     color: backendTarea.color,
     dependencias: (backendTarea.dependencias || []).map((depId, index) => ({
       id: `dep-${backendTarea.id}-${depId}-${index}`,
@@ -118,14 +150,22 @@ function transformCronograma(backendCronograma: BackendCronograma): Cronograma {
   const dependencias: DependenciaCronograma[] = tareas.flatMap(t => t.dependencias);
 
   return {
-    id: backendCronograma.id,
-    proyectoId: backendCronograma.proyectoId,
+    // Asegurar que los IDs sean números
+    id: Number(backendCronograma.id),
+    proyectoId: Number(backendCronograma.proyectoId),
     nombre: backendCronograma.nombre,
     descripcion: backendCronograma.descripcion,
+    estado: (backendCronograma.estado || 'Borrador') as Cronograma['estado'],
     tareas,
     dependencias,
     fechaBase: undefined,
     activo: backendCronograma.activo,
+    // Campos de aprobación dual (PMO + PATROCINADOR)
+    aprobadoPorPmo: backendCronograma.aprobadoPorPmo ?? false,
+    aprobadoPorPatrocinador: backendCronograma.aprobadoPorPatrocinador ?? false,
+    fechaAprobacionPmo: backendCronograma.fechaAprobacionPmo,
+    fechaAprobacionPatrocinador: backendCronograma.fechaAprobacionPatrocinador,
+    comentarioRechazo: backendCronograma.comentarioRechazo,
     createdAt: backendCronograma.createdAt,
     updatedAt: backendCronograma.updatedAt,
   };
@@ -231,20 +271,28 @@ export async function createTarea(
   cronogramaId: number | string,
   data: CreateTareaCronogramaInput
 ): Promise<TareaCronograma> {
+  // Asegurar que cronogramaId sea un número entero
+  const cronogramaIdNum = Number(cronogramaId);
+  if (isNaN(cronogramaIdNum) || !Number.isInteger(cronogramaIdNum)) {
+    throw new Error(`cronogramaId inválido: ${cronogramaId}`);
+  }
+
   // Transform frontend format to backend format
+  // El backend genera el código automáticamente en formato T-XXX si no se proporciona
   const backendData = {
-    cronogramaId: typeof cronogramaId === 'string' ? parseInt(cronogramaId, 10) : cronogramaId,
-    codigo: data.codigo || `T-${Date.now().toString().slice(-6)}`,
+    cronogramaId: cronogramaIdNum,
+    codigo: data.codigo, // Backend generará T-XXX automáticamente si es undefined
     nombre: data.nombre,
     fechaInicio: data.inicio,
     fechaFin: data.fin,
-    responsableId: data.responsableId,
-    tareaPadreId: data.padre ? parseInt(data.padre, 10) : undefined,
-    orden: data.orden,
+    responsableId: data.responsableId ? Number(data.responsableId) : undefined,
+    tareaPadreId: data.padre ? Number(data.padre) : undefined,
+    orden: data.orden ? Number(data.orden) : undefined,
     descripcion: data.descripcion,
     fase: data.fase,
     esHito: data.tipo === 'hito',
     color: data.color,
+    asignadoA: data.asignadoA, // 'Scrum Master' | 'Desarrolladores' | 'Todo el equipo'
   };
 
   const response = await apiClient.post<BackendTarea>(
@@ -277,6 +325,7 @@ export async function updateTarea(
   if (data.progreso !== undefined) backendData.porcentajeAvance = data.progreso;
   if (data.color !== undefined) backendData.color = data.color;
   if (data.tipo !== undefined) backendData.esHito = data.tipo === 'hito';
+  if (data.asignadoA !== undefined) backendData.asignadoA = data.asignadoA;
 
   const response = await apiClient.patch<BackendTarea>(
     ENDPOINTS.CRONOGRAMAS.TAREA_BY_ID(cronogramaId, tareaId),
@@ -316,6 +365,22 @@ export async function updateTareaFechas(
   fin: string
 ): Promise<TareaCronograma> {
   return updateTarea(cronogramaId, tareaId, { inicio, fin });
+}
+
+/**
+ * Actualizar SOLO el estado de una tarea del cronograma.
+ * Este endpoint funciona incluso cuando el cronograma está aprobado.
+ * Solo para roles: ADMIN, SCRUM_MASTER, COORDINADOR
+ */
+export async function updateTareaEstado(
+  tareaId: string | number,
+  estado: TareaEstadoCronograma
+): Promise<TareaCronograma> {
+  const response = await apiClient.patch<BackendTarea>(
+    `/tareas-cronograma/${tareaId}/estado`,
+    { estado }
+  );
+  return transformTarea(response.data);
 }
 
 // ============================================
@@ -649,14 +714,16 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
     'Mantenimiento': 'Mantenimiento'
   };
 
-  // Calcular estadísticas
-  const tareasNormales = tareas.filter(t => t.tipo !== 'proyecto');
-  const totalTareas = tareasNormales.length;
-  const tareasCompletadas = tareasNormales.filter(t => t.progreso >= 100).length;
-  const tareasEnProgreso = tareasNormales.filter(t => t.progreso > 0 && t.progreso < 100).length;
-  const tareasPendientes = tareasNormales.filter(t => t.progreso === 0).length;
+  // Debug: mostrar tareas recibidas
+  console.log(`[Excel Export] Cronograma ${cronograma.id} - Tareas recibidas:`, tareas.map(t => ({ codigo: t.codigo, nombre: t.nombre, fase: t.fase })));
+
+  // Calcular estadísticas - usar TODAS las tareas, no filtrar por tipo
+  const totalTareas = tareas.length;
+  const tareasCompletadas = tareas.filter(t => (t.progreso || 0) >= 100).length;
+  const tareasEnProgreso = tareas.filter(t => (t.progreso || 0) > 0 && (t.progreso || 0) < 100).length;
+  const tareasPendientes = tareas.filter(t => (t.progreso || 0) === 0).length;
   const progresoGeneral = totalTareas > 0
-    ? Math.round(tareasNormales.reduce((sum, t) => sum + (t.progreso || 0), 0) / totalTareas)
+    ? Math.round(tareas.reduce((sum, t) => sum + (t.progreso || 0), 0) / totalTareas)
     : 0;
 
   // =============== HOJA RESUMEN ===============
@@ -707,11 +774,15 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
 
   resumenData.forEach((row, idx) => {
     const rowNum = 8 + idx;
-    wsResumen.getCell(`A${rowNum}`).value = row[0];
-    wsResumen.getCell(`A${rowNum}`).font = { bold: true };
-    wsResumen.getCell(`B${rowNum}`).value = row[1];
+    const cellA = wsResumen.getCell(`A${rowNum}`);
+    const cellB = wsResumen.getCell(`B${rowNum}`);
+    cellA.value = row[0];
+    cellA.font = { bold: true };
+    cellB.value = row[1];
+    // Aplicar fill a cada celda individualmente
     if (idx % 2 === 0) {
-      wsResumen.getRow(rowNum).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
+      cellA.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
+      cellB.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
     }
   });
 
@@ -724,14 +795,17 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
 
   let faseRow = 15;
   fases.forEach((fase, idx) => {
-    const tareasFase = tareasNormales.filter(t => t.fase === fase);
+    const tareasFase = tareas.filter(t => t.fase === fase);
     if (tareasFase.length > 0) {
       const progresoFase = Math.round(tareasFase.reduce((sum, t) => sum + (t.progreso || 0), 0) / tareasFase.length);
-      wsResumen.getCell(`A${faseRow}`).value = `${fasesLabels[fase]}:`;
-      wsResumen.getCell(`A${faseRow}`).font = { bold: true };
-      wsResumen.getCell(`B${faseRow}`).value = `${tareasFase.length} tareas - ${progresoFase}% completado`;
+      const cellA = wsResumen.getCell(`A${faseRow}`);
+      const cellB = wsResumen.getCell(`B${faseRow}`);
+      cellA.value = `${fasesLabels[fase]}:`;
+      cellA.font = { bold: true };
+      cellB.value = `${tareasFase.length} tareas - ${progresoFase}% completado`;
       if (idx % 2 === 0) {
-        wsResumen.getRow(faseRow).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
+        cellA.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
+        cellB.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
       }
       faseRow++;
     }
@@ -764,37 +838,46 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
     };
   });
 
-  // Separar y ordenar tareas por fase
-  const faseHeaders = tareas.filter(t => t.tipo === 'proyecto');
-  const tareasOrdenadas: typeof tareas = [];
+  // Ordenar tareas por fase y luego por orden
+  // IMPORTANTE: Usar todas las tareas, ordenadas por fase si tienen, o al final si no
+  const tareasConFase: typeof tareas = [];
+  const tareasSinFase: typeof tareas = [];
 
-  fases.forEach(fase => {
-    const faseHeader = faseHeaders.find(f => f.fase === fase);
-    if (faseHeader) {
-      tareasOrdenadas.push(faseHeader);
+  // Separar tareas con fase y sin fase
+  tareas.forEach(tarea => {
+    if (tarea.fase && fases.includes(tarea.fase)) {
+      tareasConFase.push(tarea);
+    } else {
+      tareasSinFase.push(tarea);
     }
-    const tareasDeEstaFase = tareasNormales
-      .filter(t => t.fase === fase)
-      .sort((a, b) => (a.orden || 0) - (b.orden || 0));
-    tareasOrdenadas.push(...tareasDeEstaFase);
   });
 
-  // Tareas sin fase al final
-  const tareasSinFase = tareasNormales.filter(t => !t.fase || !fases.includes(t.fase));
-  tareasOrdenadas.push(...tareasSinFase);
+  // Ordenar tareas con fase por el orden de fases definido, luego por orden interno
+  const tareasOrdenadas = [
+    ...tareasConFase.sort((a, b) => {
+      const faseIndexA = fases.indexOf(a.fase || '');
+      const faseIndexB = fases.indexOf(b.fase || '');
+      if (faseIndexA !== faseIndexB) return faseIndexA - faseIndexB;
+      return (a.orden || 0) - (b.orden || 0);
+    }),
+    ...tareasSinFase.sort((a, b) => (a.orden || 0) - (b.orden || 0))
+  ];
+
+  // Debug: verificar que no se pierdan tareas
+  console.log(`[Excel Export] Total tareas: ${tareas.length}, Con fase: ${tareasConFase.length}, Sin fase: ${tareasSinFase.length}, Ordenadas: ${tareasOrdenadas.length}`);
 
   // Agregar filas de datos
+  let rowCounter = 0;
   tareasOrdenadas.forEach((tarea) => {
     const inicio = new Date(tarea.inicio);
     const fin = new Date(tarea.fin);
     const duracion = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
-    const esFase = tarea.tipo === 'proyecto';
     const esHito = tarea.tipo === 'hito' || tarea.esHito;
 
     const row = wsTareas.addRow([
       tarea.codigo || '',
-      esFase ? tarea.nombre : `   ${tarea.nombre}`,
-      esFase ? 'FASE' : esHito ? 'HITO' : 'TAREA',
+      tarea.nombre,
+      esHito ? 'HITO' : 'TAREA',
       fasesLabels[tarea.fase || ''] || tarea.fase || '',
       inicio.toLocaleDateString('es-PE'),
       fin.toLocaleDateString('es-PE'),
@@ -804,30 +887,35 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
       tarea.descripcion || ''
     ]);
 
-    // Estilo para filas de fase
-    if (esFase) {
-      row.font = { bold: true, color: { argb: 'FFFFFF' } };
-      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: faseBg } };
-    } else if (esHito) {
-      row.font = { bold: true, color: { argb: '8B4513' } };
-      row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8DC' } };
-    } else {
-      // Alternar colores para tareas normales
-      const rowIdx = wsTareas.rowCount;
-      if (rowIdx % 2 === 0) {
-        row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FAFAFA' } };
-      }
-    }
+    // Determinar color de fondo para la fila (alternar colores)
+    const bgColor = rowCounter % 2 === 0 ? 'FFFFFF' : 'F5F5F5';
 
-    // Bordes
-    row.eachCell((cell) => {
+    // Aplicar estilo a cada celda individualmente
+    row.eachCell((cell, colNumber) => {
+      // Color de fondo alternado
+      if (esHito) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8DC' } };
+        cell.font = { bold: true, color: { argb: '8B4513' } };
+      } else {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+      }
+
+      // Bordes
       cell.border = {
         top: { style: 'thin', color: { argb: 'DDDDDD' } },
         left: { style: 'thin', color: { argb: 'DDDDDD' } },
         bottom: { style: 'thin', color: { argb: 'DDDDDD' } },
         right: { style: 'thin', color: { argb: 'DDDDDD' } }
       };
+
+      // Alineación según columna
+      if (colNumber === 7 || colNumber === 8) {
+        // Duración y Avance centrados
+        cell.alignment = { horizontal: 'center' };
+      }
     });
+
+    rowCounter++;
   });
 
   // Anchos de columna
@@ -844,6 +932,247 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
 
   // Congelar fila de encabezado
   wsTareas.views = [{ state: 'frozen', ySplit: 1 }];
+
+  // =============== HOJA DIAGRAMA GANTT ===============
+  const wsGantt = wb.addWorksheet('Diagrama Gantt');
+
+  // Calcular rango de fechas del cronograma
+  const allDates = tareasOrdenadas.flatMap(t => [new Date(t.inicio), new Date(t.fin)]);
+  const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+  const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+
+  // Ajustar a inicio de semana (lunes)
+  const startDate = new Date(minDate);
+  startDate.setDate(startDate.getDate() - startDate.getDay() + 1);
+  if (startDate > minDate) startDate.setDate(startDate.getDate() - 7);
+
+  // Ajustar a fin de semana (domingo)
+  const endDate = new Date(maxDate);
+  endDate.setDate(endDate.getDate() + (7 - endDate.getDay()));
+
+  // Calcular número de días
+  const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const numWeeks = Math.ceil(totalDays / 7);
+
+  // Agregar encabezados de mes/semana
+  let currentDate = new Date(startDate);
+  const monthStartCols: { month: string; startCol: number; endCol: number }[] = [];
+  let lastMonth = '';
+
+  for (let day = 0; day < totalDays; day++) {
+    const monthName = currentDate.toLocaleDateString('es-PE', { month: 'short', year: '2-digit' });
+    if (monthName !== lastMonth) {
+      if (monthStartCols.length > 0) {
+        monthStartCols[monthStartCols.length - 1].endCol = 5 + day - 1;
+      }
+      monthStartCols.push({ month: monthName, startCol: 5 + day, endCol: 5 + day });
+      lastMonth = monthName;
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  if (monthStartCols.length > 0) {
+    monthStartCols[monthStartCols.length - 1].endCol = 5 + totalDays - 1;
+  }
+
+  // Fila 1: Encabezados de columnas + Meses
+  const ganttHeaderRow = wsGantt.addRow(['Código', 'Tarea', 'Inicio', 'Fin', '%']);
+  ganttHeaderRow.height = 20;
+
+  // Fila 2: Celdas vacías para columnas 1-5 + Días del mes
+  const daysRow: (string | number)[] = ['', '', '', '', ''];
+  currentDate = new Date(startDate);
+  for (let day = 0; day < totalDays; day++) {
+    daysRow.push(currentDate.getDate());
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  const dayHeaderRow = wsGantt.addRow(daysRow);
+  dayHeaderRow.height = 18;
+
+  // Combinar celdas verticalmente para los encabezados (columnas 1-5, filas 1-2)
+  for (let col = 1; col <= 5; col++) {
+    wsGantt.mergeCells(1, col, 2, col);
+    const cell = wsGantt.getCell(1, col);
+    cell.font = { bold: true, size: 9, color: { argb: 'FFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FFFFFF' } },
+      left: { style: 'thin', color: { argb: 'FFFFFF' } },
+      bottom: { style: 'thin', color: { argb: 'FFFFFF' } },
+      right: { style: 'thin', color: { argb: 'FFFFFF' } }
+    };
+  }
+
+  // Agregar meses en fila 1 (columnas de fechas)
+  monthStartCols.forEach(m => {
+    wsGantt.mergeCells(1, m.startCol + 1, 1, m.endCol + 1);
+    const cell = wsGantt.getCell(1, m.startCol + 1);
+    cell.value = m.month.toUpperCase();
+    cell.font = { bold: true, size: 9, color: { argb: 'FFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  });
+
+  // Estilo para los días (fila 2, columnas de fechas)
+  for (let day = 0; day < totalDays; day++) {
+    const cell = wsGantt.getCell(2, 6 + day);
+    cell.font = { bold: true, size: 8 };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  }
+
+  // Colorear fines de semana en header
+  currentDate = new Date(startDate);
+  for (let day = 0; day < totalDays; day++) {
+    const dayOfWeek = currentDate.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      const cell = wsGantt.getCell(2, 6 + day);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E0E0E0' } };
+    }
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  // Colores para fases
+  const faseColors: Record<string, string> = {
+    'Analisis': '4A90D9',
+    'Diseno': '7B68EE',
+    'Desarrollo': '32CD32',
+    'Pruebas': 'FFA500',
+    'Implementacion': '20B2AA',
+    'Mantenimiento': '778899'
+  };
+
+  // Agregar filas de tareas con barras de Gantt
+  tareasOrdenadas.forEach((tarea) => {
+    const inicio = new Date(tarea.inicio);
+    const fin = new Date(tarea.fin);
+    const esFase = tarea.tipo === 'proyecto';
+    const esHito = tarea.tipo === 'hito' || tarea.esHito;
+
+    const rowData: (string | number)[] = [
+      tarea.codigo || '',
+      esFase ? `★ ${tarea.nombre}` : (esHito ? `◆ ${tarea.nombre}` : `   ${tarea.nombre}`),
+      inicio.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }),
+      fin.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }),
+      tarea.progreso || 0
+    ];
+
+    // Agregar celdas vacías para el Gantt
+    for (let day = 0; day < totalDays; day++) {
+      rowData.push('');
+    }
+
+    const row = wsGantt.addRow(rowData);
+    row.height = 20;
+
+    // Estilo de la fila según tipo
+    if (esFase) {
+      row.font = { bold: true, size: 9, color: { argb: 'FFFFFF' } };
+      row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+      row.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+      row.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+      row.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+      row.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+    } else if (esHito) {
+      row.font = { bold: true, size: 9, color: { argb: 'B8860B' } };
+    } else {
+      row.font = { size: 9 };
+    }
+
+    // Dibujar barra de Gantt
+    const tareaColor = faseColors[tarea.fase || ''] || '4A90D9';
+    currentDate = new Date(startDate);
+
+    for (let day = 0; day < totalDays; day++) {
+      const cellDate = new Date(currentDate);
+      const cell = row.getCell(6 + day);
+
+      // Verificar si la fecha está en el rango de la tarea
+      if (cellDate >= inicio && cellDate <= fin) {
+        if (esHito && cellDate.getTime() === inicio.getTime()) {
+          // Hito: solo un día con diamante
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD700' } };
+          cell.font = { bold: true };
+        } else if (!esHito) {
+          // Tarea normal: barra completa
+          if (esFase) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
+          } else {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: tareaColor } };
+          }
+
+          // Mostrar progreso con degradado (parte completada más oscura)
+          const dayIndex = Math.floor((cellDate.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+          const totalTaskDays = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          const progressDays = Math.floor(totalTaskDays * (tarea.progreso || 0) / 100);
+
+          if (dayIndex < progressDays) {
+            // Parte completada - color más intenso
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: esFase ? '002244' : tareaColor } };
+          } else if (!esFase) {
+            // Parte pendiente - color más claro
+            const lightColor = tareaColor.split('').map((c, i) => {
+              if (i % 2 === 0) return 'D';
+              return c;
+            }).join('');
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `${lightColor.substring(0, 6)}` } };
+          }
+        }
+      } else {
+        // Colorear fines de semana
+        const dayOfWeek = cellDate.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5F5F5' } };
+        }
+      }
+
+      // Borde sutil
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'E0E0E0' } },
+        bottom: { style: 'thin', color: { argb: 'E0E0E0' } },
+        left: { style: 'hair', color: { argb: 'E8E8E8' } },
+        right: { style: 'hair', color: { argb: 'E8E8E8' } }
+      };
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  });
+
+  // Configurar anchos de columna para Gantt
+  wsGantt.getColumn(1).width = 10;  // Código
+  wsGantt.getColumn(2).width = 35;  // Tarea
+  wsGantt.getColumn(3).width = 10;  // Inicio
+  wsGantt.getColumn(4).width = 10;  // Fin
+  wsGantt.getColumn(5).width = 5;   // %
+
+  // Columnas de días (ancho pequeño para simular barras)
+  for (let i = 6; i <= 5 + totalDays; i++) {
+    wsGantt.getColumn(i).width = 2.5;
+  }
+
+  // Agregar leyenda al final
+  const legendaRow = wsGantt.rowCount + 2;
+  wsGantt.getCell(`A${legendaRow}`).value = 'LEYENDA:';
+  wsGantt.getCell(`A${legendaRow}`).font = { bold: true };
+
+  const legendItems = [
+    { label: 'Análisis', color: faseColors['Analisis'] },
+    { label: 'Diseño', color: faseColors['Diseno'] },
+    { label: 'Desarrollo', color: faseColors['Desarrollo'] },
+    { label: 'Pruebas', color: faseColors['Pruebas'] },
+    { label: 'Implementación', color: faseColors['Implementacion'] },
+    { label: 'Mantenimiento', color: faseColors['Mantenimiento'] },
+    { label: 'Hito', color: 'FFD700' },
+  ];
+
+  legendItems.forEach((item, idx) => {
+    const row = legendaRow + 1 + idx;
+    wsGantt.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: item.color } };
+    wsGantt.getCell(`B${row}`).value = item.label;
+  });
+
+  // Congelar primeras columnas y filas
+  wsGantt.views = [{ state: 'frozen', xSplit: 5, ySplit: 2 }];
 
   // =============== HOJAS POR FASE ===============
   fases.forEach(fase => {
@@ -870,13 +1199,12 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
         const inicio = new Date(tarea.inicio);
         const fin = new Date(tarea.fin);
         const duracion = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
-        const esFase = tarea.tipo === 'proyecto';
         const esHito = tarea.tipo === 'hito' || tarea.esHito;
 
         const row = wsFase.addRow([
           tarea.codigo || '',
           tarea.nombre,
-          esFase ? 'FASE' : esHito ? 'HITO' : 'TAREA',
+          esHito ? 'HITO' : 'TAREA',
           inicio.toLocaleDateString('es-PE'),
           fin.toLocaleDateString('es-PE'),
           duracion,
@@ -884,23 +1212,29 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
           tarea.responsable?.nombre || 'Sin asignar',
         ]);
 
-        if (esFase) {
-          row.font = { bold: true, color: { argb: 'FFFFFF' } };
-          row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: faseBg } };
-        } else if (esHito) {
-          row.font = { bold: true, color: { argb: '8B4513' } };
-          row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8DC' } };
-        } else if (idx % 2 === 0) {
-          row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FAFAFA' } };
-        }
+        // Determinar color de fondo
+        const bgColor = idx % 2 === 0 ? 'FFFFFF' : 'F5F5F5';
 
-        row.eachCell((cell) => {
+        // Aplicar estilo a cada celda
+        row.eachCell((cell, colNumber) => {
+          if (esHito) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8DC' } };
+            cell.font = { bold: true, color: { argb: '8B4513' } };
+          } else {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+          }
+
           cell.border = {
             top: { style: 'thin', color: { argb: 'DDDDDD' } },
             left: { style: 'thin', color: { argb: 'DDDDDD' } },
             bottom: { style: 'thin', color: { argb: 'DDDDDD' } },
             right: { style: 'thin', color: { argb: 'DDDDDD' } }
           };
+
+          // Centrar duración y avance
+          if (colNumber === 6 || colNumber === 7) {
+            cell.alignment = { horizontal: 'center' };
+          }
         });
       });
 
@@ -1019,4 +1353,41 @@ export async function getPlantillaImportacion(
     `${ENDPOINTS.CRONOGRAMAS.BY_ID(cronogramaId)}/plantilla-importacion`
   );
   return response.data;
+}
+
+// ============================================
+// VALIDACION / APROBACION
+// ============================================
+
+export interface AprobarCronogramaInput {
+  aprobado: boolean;
+  comentario?: string;
+}
+
+/**
+ * Aprobar o rechazar un cronograma
+ * Solo para roles PMO y PATROCINADOR
+ */
+export async function aprobarCronograma(
+  cronogramaId: number | string,
+  data: AprobarCronogramaInput
+): Promise<Cronograma> {
+  const response = await apiClient.post<BackendCronograma>(
+    `${ENDPOINTS.CRONOGRAMAS.BY_ID(cronogramaId)}/aprobar`,
+    data
+  );
+  return transformCronograma(response.data);
+}
+
+/**
+ * Enviar cronograma a revisión (cambiar de Borrador a Pendiente)
+ * Para que PMO/PATROCINADOR puedan validarlo
+ */
+export async function enviarARevision(
+  cronogramaId: number | string
+): Promise<Cronograma> {
+  const response = await apiClient.post<BackendCronograma>(
+    `${ENDPOINTS.CRONOGRAMAS.BY_ID(cronogramaId)}/enviar-revision`
+  );
+  return transformCronograma(response.data);
 }

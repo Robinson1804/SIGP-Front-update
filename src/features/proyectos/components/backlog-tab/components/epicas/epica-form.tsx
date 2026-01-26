@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,16 +23,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import type { Epica, PrioridadMoSCoW } from '@/features/proyectos/types';
+import { Badge } from '@/components/ui/badge';
+import type { Epica } from '@/features/proyectos/types';
 import { createEpica, updateEpica } from '@/features/proyectos/services/epicas.service';
+import { useCurrentUser } from '@/stores/auth.store';
 
+type Prioridad = 'Baja' | 'Media' | 'Alta';
+
+// Schema simplificado sin fechas (las épicas no tienen fechas propias)
 const epicaSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido').max(200),
   descripcion: z.string().max(1000).optional(),
-  prioridad: z.enum(['Must', 'Should', 'Could', 'Wont']).optional(),
+  prioridad: z.enum(['Baja', 'Media', 'Alta']).optional(),
   color: z.string().optional(),
-  fechaInicio: z.string().optional(),
-  fechaFin: z.string().optional(),
 });
 
 type EpicaFormData = z.infer<typeof epicaSchema>;
@@ -57,7 +60,19 @@ const COLORS = [
   { value: '#3b82f6', label: 'Azul' },
 ];
 
-export function EpicaForm({ proyectoId, epica, onSuccess, onCancel }: EpicaFormProps) {
+const ESTADO_BADGE_COLORS: Record<string, string> = {
+  'Por hacer': 'bg-gray-100 text-gray-800',
+  'En progreso': 'bg-blue-100 text-blue-800',
+  'Finalizado': 'bg-green-100 text-green-800',
+};
+
+export function EpicaForm({
+  proyectoId,
+  epica,
+  onSuccess,
+  onCancel,
+}: EpicaFormProps) {
+  const currentUser = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEditing = !!epica;
@@ -73,10 +88,8 @@ export function EpicaForm({ proyectoId, epica, onSuccess, onCancel }: EpicaFormP
     defaultValues: {
       nombre: epica?.nombre || '',
       descripcion: epica?.descripcion || '',
-      prioridad: epica?.prioridad || undefined,
+      prioridad: (epica?.prioridad as Prioridad) || undefined,
       color: epica?.color || '#6366f1',
-      fechaInicio: epica?.fechaInicio?.split('T')[0] || '',
-      fechaFin: epica?.fechaFin?.split('T')[0] || '',
     },
   });
 
@@ -88,17 +101,12 @@ export function EpicaForm({ proyectoId, epica, onSuccess, onCancel }: EpicaFormP
       setIsSubmitting(true);
       setError(null);
 
-      const payload = {
-        ...data,
-        proyectoId,
-        fechaInicio: data.fechaInicio || undefined,
-        fechaFin: data.fechaFin || undefined,
-      };
-
       if (isEditing) {
-        await updateEpica(epica.id, payload);
+        // Al actualizar, no enviar proyectoId (no se puede cambiar de proyecto)
+        await updateEpica(epica.id, data);
       } else {
-        await createEpica(payload);
+        // Al crear, incluir proyectoId
+        await createEpica({ ...data, proyectoId });
       }
 
       onSuccess();
@@ -157,24 +165,52 @@ export function EpicaForm({ proyectoId, epica, onSuccess, onCancel }: EpicaFormP
             )}
           </div>
 
+          {/* Informador (solo lectura) */}
+          <div className="space-y-2">
+            <Label>Informador</Label>
+            <Input
+              value={currentUser?.name || 'Usuario actual'}
+              disabled
+              className="bg-gray-50"
+            />
+            <p className="text-xs text-gray-500">
+              El informador se asigna automaticamente al creador de la epica
+            </p>
+          </div>
+
+          {/* Estado (solo lectura - calculado automaticamente) */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              Estado
+              <Info className="h-4 w-4 text-gray-400" />
+            </Label>
+            <div className="flex items-center gap-2">
+              <Badge className={ESTADO_BADGE_COLORS[epica?.estado || 'Por hacer'] || 'bg-gray-100'}>
+                {epica?.estado || 'Por hacer'}
+              </Badge>
+            </div>
+            <p className="text-xs text-gray-500">
+              El estado se calcula automaticamente segun el estado de las historias de usuario asociadas
+            </p>
+          </div>
+
           {/* Prioridad y Color */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Prioridad (MoSCoW)</Label>
+              <Label>Prioridad</Label>
               <Select
                 value={selectedPrioridad || ''}
                 onValueChange={(value) =>
-                  setValue('prioridad', value as PrioridadMoSCoW)
+                  setValue('prioridad', value as Prioridad)
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar prioridad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Must">Must Have</SelectItem>
-                  <SelectItem value="Should">Should Have</SelectItem>
-                  <SelectItem value="Could">Could Have</SelectItem>
-                  <SelectItem value="Wont">Won&apos;t Have</SelectItem>
+                  <SelectItem value="Baja">Baja</SelectItem>
+                  <SelectItem value="Media">Media</SelectItem>
+                  <SelectItem value="Alta">Alta</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -197,26 +233,6 @@ export function EpicaForm({ proyectoId, epica, onSuccess, onCancel }: EpicaFormP
                   />
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Fechas */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="fechaInicio">Fecha Inicio</Label>
-              <Input
-                id="fechaInicio"
-                type="date"
-                {...register('fechaInicio')}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="fechaFin">Fecha Fin</Label>
-              <Input
-                id="fechaFin"
-                type="date"
-                {...register('fechaFin')}
-              />
             </div>
           </div>
 

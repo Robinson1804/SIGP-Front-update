@@ -2,6 +2,8 @@
  * Requerimientos Service
  *
  * Servicios para gestión de requerimientos del proyecto
+ * Nota: Los requerimientos no tienen flujo de validación/aprobación.
+ * Solo son creados, editados y eliminados por ADMIN y SCRUM_MASTER.
  */
 
 import { apiClient } from '@/lib/api';
@@ -9,7 +11,6 @@ import type {
   Requerimiento,
   CreateRequerimientoInput,
   UpdateRequerimientoInput,
-  AprobarRequerimientoInput,
   RequerimientoFilters,
 } from '../types';
 
@@ -18,7 +19,6 @@ const ENDPOINTS = {
   BASE: '/requerimientos',
   BY_ID: (id: number | string) => `/requerimientos/${id}`,
   BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/requerimientos`,
-  APROBAR: (id: number | string) => `/requerimientos/${id}/aprobar`,
 };
 
 /**
@@ -32,7 +32,6 @@ export async function getRequerimientosByProyecto(
 
   if (filters?.tipo) params.tipo = filters.tipo;
   if (filters?.prioridad) params.prioridad = filters.prioridad;
-  if (filters?.estado) params.estado = filters.estado;
   if (filters?.activo !== undefined) params.activo = String(filters.activo);
 
   const response = await apiClient.get<Requerimiento[]>(
@@ -66,7 +65,6 @@ export async function getAllRequerimientos(
 
   if (filters?.tipo) params.tipo = filters.tipo;
   if (filters?.prioridad) params.prioridad = filters.prioridad;
-  if (filters?.estado) params.estado = filters.estado;
   if (filters?.activo !== undefined) params.activo = String(filters.activo);
 
   const response = await apiClient.get<Requerimiento[]>(ENDPOINTS.BASE, { params });
@@ -103,17 +101,6 @@ export async function updateRequerimiento(
 }
 
 /**
- * Aprobar o rechazar un requerimiento
- */
-export async function aprobarRequerimiento(
-  id: number | string,
-  data: AprobarRequerimientoInput
-): Promise<Requerimiento> {
-  const response = await apiClient.post<Requerimiento>(ENDPOINTS.APROBAR(id), data);
-  return response.data;
-}
-
-/**
  * Eliminar un requerimiento (soft delete)
  */
 export async function deleteRequerimiento(id: number | string): Promise<void> {
@@ -121,15 +108,12 @@ export async function deleteRequerimiento(id: number | string): Promise<void> {
 }
 
 /**
- * Contar requerimientos por tipo en un proyecto
- * Útil para generar códigos automáticos
+ * Contar total de requerimientos en un proyecto
+ * Útil para generar códigos automáticos secuenciales (REQ-001, REQ-002, etc.)
  */
-export async function countRequerimientosByTipo(
-  proyectoId: number | string,
-  tipo: string
+export async function countRequerimientosByProyecto(
+  proyectoId: number | string
 ): Promise<number> {
-  const requerimientos = await getRequerimientosByProyecto(proyectoId, {
-    tipo: tipo as any,
-  });
+  const requerimientos = await getRequerimientosByProyecto(proyectoId);
   return requerimientos.length;
 }

@@ -30,19 +30,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
 import { useToast } from "@/lib/hooks/use-toast";
+import { usePGD } from "@/stores";
 
 // Import from planning module
 import {
@@ -52,6 +45,7 @@ import {
   createAccionEstrategica,
   updateAccionEstrategica,
   deleteAccionEstrategica,
+  getNextAECodigo,
   type PGD,
   type OEGD,
   type AccionEstrategica,
@@ -63,24 +57,25 @@ function AEModal({
   isOpen,
   onClose,
   ae,
-  availableOegds,
+  oegdId,
+  oegdInfo,
+  existingAesCount,
   onSave,
-  isLoading,
 }: {
   isOpen: boolean;
   onClose: () => void;
   ae: AccionEstrategica | null;
-  availableOegds: OEGD[];
+  oegdId: number;
+  oegdInfo?: { codigo: string; nombre: string };
+  existingAesCount: number;
   onSave: (
     data: CreateAccionEstrategicaInput | UpdateAccionEstrategicaInput,
     isEdit: boolean
   ) => Promise<void>;
-  isLoading?: boolean;
 }) {
   const [codigo, setCodigo] = useState("");
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [selectedOegdId, setSelectedOegdId] = useState<number | undefined>(undefined);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [saving, setSaving] = useState(false);
 
@@ -89,24 +84,29 @@ function AEModal({
       setCodigo(ae.codigo);
       setNombre(ae.nombre);
       setDescripcion(ae.descripcion || "");
-      setSelectedOegdId(ae.oegdId);
     } else {
-      setCodigo("");
+      // Obtener el próximo código desde el backend (secuencia por OEGD)
+      setCodigo("Cargando...");
+      if (isOpen && oegdId) {
+        getNextAECodigo(oegdId)
+          .then((nextCodigo) => setCodigo(nextCodigo))
+          .catch(() => setCodigo("Error al obtener código"));
+      }
       setNombre("");
       setDescripcion("");
-      setSelectedOegdId(undefined);
     }
     setErrors({});
-  }, [ae, isOpen]);
+  }, [ae, isOpen, oegdId]);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!codigo.trim()) newErrors.codigo = "El código es requerido.";
+    // Código ya no es requerido - se auto-genera en el backend
     if (!nombre.trim()) newErrors.nombre = "El nombre es requerido.";
-    if (!selectedOegdId) newErrors.oegdId = "Debe seleccionar un OEGD.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const isEditMode = !!ae;
 
   const handleSave = async () => {
     if (!validate()) return;
@@ -114,22 +114,22 @@ function AEModal({
     setSaving(true);
     try {
       if (ae) {
-        // Update
+        // Update - incluir código en modo edición
         await onSave(
           {
             codigo,
             nombre,
             descripcion: descripcion || undefined,
-            oegdId: selectedOegdId,
+            oegdId: ae.oegdId, // Mantener el OEGD original en edición
           } as UpdateAccionEstrategicaInput,
           true
         );
       } else {
-        // Create
+        // Create - NO enviar código, el backend lo genera
         await onSave(
           {
-            oegdId: selectedOegdId!,
-            codigo,
+            // El backend generará el código automáticamente
+            oegdId,
             nombre,
             descripcion: descripcion || undefined,
           } as CreateAccionEstrategicaInput,
@@ -141,8 +141,6 @@ function AEModal({
       setSaving(false);
     }
   };
-
-  const selectedOegd = availableOegds.find((o) => o.id === selectedOegdId);
 
   if (!isOpen) return null;
 
@@ -166,43 +164,42 @@ function AEModal({
           </DialogClose>
         </DialogHeader>
         <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="codigo"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Código *
-              </label>
-              <Input
-                id="codigo"
-                value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Ej: AE-001"
-                className={errors.codigo ? "border-red-500" : ""}
-              />
-              {errors.codigo && (
-                <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>
-              )}
-            </div>
-            <div>
-              <label
-                htmlFor="nombre"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Nombre *
-              </label>
-              <Input
-                id="nombre"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                placeholder="Nombre de la acción estratégica"
-                className={errors.nombre ? "border-red-500" : ""}
-              />
-              {errors.nombre && (
-                <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
-              )}
-            </div>
+          {/* Código siempre visible pero no editable */}
+          <div>
+            <label
+              htmlFor="codigo"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Código
+            </label>
+            <Input
+              id="codigo"
+              value={codigo}
+              readOnly
+              disabled
+              className="bg-gray-100 cursor-not-allowed"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {isEditMode ? 'El código no es editable' : 'Código auto-generado'}
+            </p>
+          </div>
+          <div>
+            <label
+              htmlFor="nombre"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Nombre *
+            </label>
+            <Input
+              id="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Nombre de la acción estratégica"
+              className={errors.nombre ? "border-red-500" : ""}
+            />
+            {errors.nombre && (
+              <p className="text-red-500 text-xs mt-1">{errors.nombre}</p>
+            )}
           </div>
           <div>
             <label
@@ -219,63 +216,17 @@ function AEModal({
               rows={3}
             />
           </div>
-          <div>
-            <label
-              htmlFor="oegd-select"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              OBJETIVO ESPECÍFICO DE GOBIERNO DIGITAL (OEGD) *
-            </label>
-            <Select
-              onValueChange={(value) => setSelectedOegdId(Number(value))}
-              value={selectedOegdId?.toString()}
-            >
-              <SelectTrigger
-                id="oegd-select"
-                className={errors.oegdId ? "border-red-500" : ""}
-              >
-                <SelectValue placeholder="Seleccionar OEGD" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableOegds.map((oegd) => (
-                  <SelectItem key={oegd.id} value={oegd.id.toString()}>
-                    {oegd.codigo} - {oegd.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.oegdId && (
-              <p className="text-red-500 text-xs mt-1">{errors.oegdId}</p>
-            )}
-
-            {selectedOegd && (
-              <Table className="mt-4">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>{selectedOegd.codigo}</TableCell>
-                    <TableCell>{selectedOegd.nombre}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => setSelectedOegdId(undefined)}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            )}
-          </div>
+          {/* OEGD se muestra como info de solo lectura */}
+          {oegdInfo && (
+            <div className="bg-gray-50 p-3 rounded-md border">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                OBJETIVO ESPECÍFICO DE GOBIERNO DIGITAL (OEGD)
+              </label>
+              <p className="text-sm">
+                <span className="font-medium">{oegdInfo.codigo}</span> - {oegdInfo.nombre}
+              </p>
+            </div>
+          )}
         </div>
         <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
           <Button
@@ -402,10 +353,18 @@ const AeCard = ({
 );
 
 function AeDashboardPageContent() {
-  // State for PGDs
-  const [pgds, setPgds] = useState<PGD[]>([]);
-  const [selectedPgdId, setSelectedPgdId] = useState<string | undefined>(undefined);
-  const [isLoadingPgds, setIsLoadingPgds] = useState(true);
+  // Global PGD state from store
+  const {
+    selectedPGD,
+    pgds,
+    isLoading: isLoadingPgds,
+    setSelectedPGD,
+    initializePGD,
+    setLoading: setLoadingPgds,
+  } = usePGD();
+
+  // Derived state
+  const selectedPgdId = selectedPGD?.id?.toString();
 
   // State for OEGDs
   const [oegds, setOegds] = useState<OEGD[]>([]);
@@ -430,14 +389,11 @@ function AeDashboardPageContent() {
 
   // Load PGDs
   const loadPGDs = useCallback(async () => {
-    setIsLoadingPgds(true);
+    setLoadingPgds(true);
     setError(null);
     try {
       const data = await getPGDs();
-      setPgds(data);
-      if (data.length > 0 && !selectedPgdId) {
-        setSelectedPgdId(data[0].id.toString());
-      }
+      initializePGD(data);
     } catch (err: any) {
       console.error("Error loading PGDs:", err);
       setError(err.message || "Error al cargar los planes de gobierno digital");
@@ -446,10 +402,17 @@ function AeDashboardPageContent() {
         description: "No se pudieron cargar los planes de gobierno digital",
         variant: "destructive",
       });
-    } finally {
-      setIsLoadingPgds(false);
+      setLoadingPgds(false);
     }
-  }, [selectedPgdId, toast]);
+  }, [initializePGD, setLoadingPgds, toast]);
+
+  // Handle PGD selection change
+  const handleSelectPgd = (pgdId: string) => {
+    const pgd = pgds.find(p => p.id.toString() === pgdId);
+    if (pgd) {
+      setSelectedPGD(pgd);
+    }
+  };
 
   // Load OEGDs when PGD changes
   const loadOEGDs = useCallback(async (pgdId: number) => {
@@ -496,7 +459,9 @@ function AeDashboardPageContent() {
 
   // Initial load
   useEffect(() => {
-    loadPGDs();
+    if (pgds.length === 0) {
+      loadPGDs();
+    }
   }, []);
 
   // Load OEGDs when PGD changes
@@ -620,7 +585,7 @@ function AeDashboardPageContent() {
               ) : (
                 <>
                   {/* PGD Selector */}
-                  <Select value={selectedPgdId} onValueChange={setSelectedPgdId}>
+                  <Select value={selectedPgdId || ''} onValueChange={handleSelectPgd}>
                     <SelectTrigger className="w-[180px] bg-white border-[#484848]">
                       <SelectValue placeholder="Seleccionar PGD" />
                     </SelectTrigger>
@@ -712,7 +677,11 @@ function AeDashboardPageContent() {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           ae={editingAe}
-          availableOegds={oegds}
+          oegdId={selectedOegdId ? Number(selectedOegdId) : 0}
+          oegdInfo={oegds.find(o => o.id.toString() === selectedOegdId)
+            ? { codigo: oegds.find(o => o.id.toString() === selectedOegdId)!.codigo, nombre: oegds.find(o => o.id.toString() === selectedOegdId)!.nombre }
+            : undefined}
+          existingAesCount={aes.length}
           onSave={handleSaveAe}
         />
 

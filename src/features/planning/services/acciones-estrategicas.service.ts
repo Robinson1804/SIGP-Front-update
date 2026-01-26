@@ -34,7 +34,7 @@ export async function getAccionesEstrategicas(
 export async function getAccionesEstrategicasByPGD(
   pgdId: number | string
 ): Promise<AccionEstrategica[]> {
-  return getAccionesEstrategicas({ pgdId: Number(pgdId) });
+  return getAccionesEstrategicas({ pgdId: Number(pgdId), activo: true });
 }
 
 /**
@@ -43,7 +43,7 @@ export async function getAccionesEstrategicasByPGD(
 export async function getAccionesEstrategicasByOEGD(
   oegdId: number | string
 ): Promise<AccionEstrategica[]> {
-  return getAccionesEstrategicas({ oegdId: Number(oegdId) });
+  return getAccionesEstrategicas({ oegdId: Number(oegdId), activo: true });
 }
 
 /**
@@ -126,6 +126,18 @@ export async function toggleAccionEstrategicaActivo(
   activo: boolean
 ): Promise<AccionEstrategica> {
   return updateAccionEstrategica(id, { activo });
+}
+
+/**
+ * Obtener el siguiente código AE disponible para un OEGD
+ * @param oegdId ID del OEGD para el cual se genera el código
+ */
+export async function getNextAECodigo(oegdId: number | string): Promise<string> {
+  const response = await apiClient.get<string>(
+    `${ENDPOINTS.PLANNING.ACCIONES_ESTRATEGICAS}/next-codigo`,
+    { params: { oegdId: Number(oegdId) } }
+  );
+  return response.data;
 }
 
 /**

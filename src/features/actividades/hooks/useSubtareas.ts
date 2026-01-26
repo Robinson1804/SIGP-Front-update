@@ -124,8 +124,7 @@ export function useSubtareas({
       const subtarea = subtareas.find((s) => s.id === id);
       if (!subtarea) return null;
 
-      const isCompleted =
-        subtarea.estado === 'Finalizado' || subtarea.estado === 'Validado';
+      const isCompleted = subtarea.estado === 'Finalizado';
       const nuevoEstado = isCompleted ? 'Por hacer' : 'Finalizado';
 
       return update(id, { estado: nuevoEstado });

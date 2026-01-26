@@ -21,15 +21,14 @@ const MOCK_CAPTCHA_CODE = "A4B2C";
 
 // Mapeo de roles del backend al frontend
 const BACKEND_ROLE_MAP: Record<string, Role> = {
-  "ADMIN": ROLES.ADMINISTRADOR,
-  "ADMINISTRADOR": ROLES.ADMINISTRADOR,
+  "ADMIN": ROLES.ADMIN,
   "PMO": ROLES.PMO,
   "SCRUM_MASTER": ROLES.SCRUM_MASTER,
   "COORDINADOR": ROLES.COORDINADOR,
   "DESARROLLADOR": ROLES.DESARROLLADOR,
   "IMPLEMENTADOR": ROLES.IMPLEMENTADOR,
   "USUARIO": ROLES.USUARIO,
-  "PATROCINADOR": ROLES.COORDINADOR, // Mapear PATROCINADOR a COORDINADOR
+  "PATROCINADOR": ROLES.PATROCINADOR,
 };
 
 export function LoginForm() {
@@ -48,10 +47,10 @@ export function LoginForm() {
     setError(null);
 
     // Validar captcha
-    if (captcha.toUpperCase() !== MOCK_CAPTCHA_CODE) {
-      setError("Código captcha incorrecto.");
-      return;
-    }
+    // if (captcha.toUpperCase() !== MOCK_CAPTCHA_CODE) {
+    //   setError("Código captcha incorrecto.");
+    //   return;
+    // }
 
     // Validar campos
     if (!email.trim()) {
@@ -121,7 +120,7 @@ export function LoginForm() {
             priority
           />
           <CardTitle className="text-3xl font-bold text-accent">
-            Metodología ABC
+            Sistema Integral de Gestión de Proyectos
           </CardTitle>
           <CardDescription className="pt-1">
             Acceso al sistema del INEI
@@ -174,7 +173,7 @@ export function LoginForm() {
               </button>
             </div>
           </div>
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="captcha">Código captcha</Label>
             <div className="flex items-center justify-center gap-4 rounded-md border border-input bg-muted/50 p-2">
               <div className="font-bold tracking-[0.5em] text-lg text-foreground select-none">
@@ -197,7 +196,7 @@ export function LoginForm() {
                 disabled={isLoading}
               />
             </div>
-          </div>
+          </div> */}
           {error && (
             <Alert variant="destructive" className="mt-4">
               <AlertDescription>{error}</AlertDescription>

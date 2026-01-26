@@ -140,6 +140,13 @@ export function ActaConstitucionForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Leyenda de campos requeridos */}
+        <div className="bg-muted/50 border rounded-lg p-3 text-sm">
+          <p className="text-muted-foreground">
+            <span className="text-red-500 font-medium">*</span> Los campos marcados con asterisco son obligatorios
+          </p>
+        </div>
+
         {/* Datos básicos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -147,7 +154,9 @@ export function ActaConstitucionForm({
             name="nombre"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre del Acta</FormLabel>
+                <FormLabel>
+                  Nombre del Acta <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input {...field} placeholder="Nombre del acta" />
                 </FormControl>
@@ -160,7 +169,9 @@ export function ActaConstitucionForm({
             name="fecha"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Fecha</FormLabel>
+                <FormLabel>
+                  Fecha <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>

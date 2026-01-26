@@ -20,7 +20,7 @@ export type {
 export type {
   Epica,
   EpicaEstado,
-  PrioridadMoSCoW,
+  EpicaPrioridad,
   CreateEpicaData,
   UpdateEpicaData,
   EpicaQueryFilters,

@@ -6,6 +6,7 @@
  * Formulario para crear y editar habilidades
  */
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -81,19 +82,43 @@ export function HabilidadForm({
   const form = useForm<HabilidadFormData>({
     resolver: zodResolver(habilidadSchema),
     defaultValues: {
-      nombre: habilidad?.nombre || '',
-      categoria: habilidad?.categoria || HabilidadCategoria.OTRO,
-      descripcion: habilidad?.descripcion || '',
-      activo: habilidad?.activo ?? true,
+      nombre: '',
+      categoria: HabilidadCategoria.OTRO,
+      descripcion: '',
+      activo: true,
     },
   });
 
+  // Reset form when dialog opens or habilidad changes
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        nombre: habilidad?.nombre || '',
+        categoria: habilidad?.categoria || HabilidadCategoria.OTRO,
+        descripcion: habilidad?.descripcion || '',
+        activo: habilidad?.activo ?? true,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, habilidad]);
+
   const handleSubmit = async (data: HabilidadFormData) => {
     try {
-      const submitData = {
-        ...data,
-        descripcion: data.descripcion || undefined,
-      };
+      // For updates, include all fields
+      // For creates, exclude activo as backend CreateHabilidadDto doesn't accept it
+      const { activo, ...baseFields } = data;
+
+      const submitData = isEditing
+        ? {
+            ...baseFields,
+            activo, // Include activo only for updates
+            descripcion: data.descripcion || undefined,
+          }
+        : {
+            ...baseFields,
+            // Note: activo is excluded for creates - backend sets default
+            descripcion: data.descripcion || undefined,
+          };
       await onSubmit(submitData as CreateHabilidadDto | UpdateHabilidadDto);
       form.reset();
       onClose();
@@ -151,7 +176,7 @@ export function HabilidadForm({
                         <SelectValue placeholder="Seleccionar categoría" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="item-aligned">
                       {categorias.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {getCategoriaLabel(cat)}

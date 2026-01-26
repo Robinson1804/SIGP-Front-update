@@ -234,12 +234,6 @@ export interface OEGD {
   codigo: string;
   nombre: string;
   descripcion: string | null;
-  indicadorCodigo: string | null;
-  indicadorNombre: string | null;
-  unidadMedida: string | null;
-  lineaBaseAnio: number | null;
-  lineaBaseValor: number | null;
-  metasAnuales: MetaAnual[] | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -259,15 +253,9 @@ export interface OEGD {
 
 export interface CreateOEGDInput {
   ogdId: number;
-  codigo?: string; // Se auto-genera si no se proporciona: "OEGD N°X"
+  codigo?: string; // Se auto-genera si no se proporciona: "OEGD-001"
   nombre: string;
   descripcion?: string;
-  indicadorCodigo?: string;
-  indicadorNombre?: string;
-  unidadMedida?: string;
-  lineaBaseAnio?: number;
-  lineaBaseValor?: number;
-  metasAnuales?: MetaAnual[];
   aeiIds?: number[]; // Relación M:N con AEIs
 }
 
@@ -325,8 +313,6 @@ export interface CreateAccionEstrategicaInput {
   lineaBaseValor?: number;
   metasAnuales?: MetaAnual[];
   responsableArea?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
 }
 
 export interface UpdateAccionEstrategicaInput extends Partial<Omit<CreateAccionEstrategicaInput, 'oegdId'>> {

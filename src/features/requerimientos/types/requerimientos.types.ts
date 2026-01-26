@@ -2,18 +2,13 @@
  * Tipos para el módulo de Requerimientos
  *
  * Tipos que coinciden con el backend NestJS
+ * Nota: Los requerimientos no tienen flujo de validación/aprobación.
+ * Solo son creados, editados y eliminados por ADMIN y SCRUM_MASTER.
  */
 
 // Enums que coinciden con el backend
 export type RequerimientoTipo = 'Funcional' | 'No Funcional' | 'Tecnico' | 'Negocio';
 export type RequerimientoPrioridad = 'Baja' | 'Media' | 'Alta' | 'Critica';
-export type RequerimientoEstado =
-  | 'Pendiente'
-  | 'En Analisis'
-  | 'Aprobado'
-  | 'Rechazado'
-  | 'En Desarrollo'
-  | 'Completado';
 
 // Criterio de aceptación (almacenado como JSONB en backend)
 export interface CriterioAceptacion {
@@ -30,13 +25,8 @@ export interface Requerimiento {
   descripcion?: string;
   tipo: RequerimientoTipo;
   prioridad: RequerimientoPrioridad;
-  estado: RequerimientoEstado;
   criteriosAceptacion?: CriterioAceptacion[];
   dependencias?: number[];
-  solicitanteId?: number;
-  fechaSolicitud?: string;
-  fechaAprobacion?: string;
-  aprobadoPor?: number;
   observaciones?: string;
   activo: boolean;
   createdAt: string;
@@ -48,16 +38,6 @@ export interface Requerimiento {
     id: number;
     codigo: string;
     nombre: string;
-  };
-  solicitante?: {
-    id: number;
-    nombres: string;
-    apellidoPaterno: string;
-  };
-  aprobador?: {
-    id: number;
-    nombres: string;
-    apellidoPaterno: string;
   };
 }
 
@@ -71,8 +51,6 @@ export interface CreateRequerimientoInput {
   prioridad?: RequerimientoPrioridad;
   criteriosAceptacion?: CriterioAceptacion[];
   dependencias?: number[];
-  solicitanteId?: number;
-  fechaSolicitud?: string;
   observaciones?: string;
 }
 
@@ -87,17 +65,10 @@ export interface UpdateRequerimientoInput {
   observaciones?: string;
 }
 
-// DTO para aprobar/rechazar requerimiento
-export interface AprobarRequerimientoInput {
-  estado: RequerimientoEstado;
-  observacion?: string;
-}
-
 // Filtros para consultas
 export interface RequerimientoFilters {
   tipo?: RequerimientoTipo;
   prioridad?: RequerimientoPrioridad;
-  estado?: RequerimientoEstado;
   activo?: boolean;
   search?: string;
 }
@@ -117,34 +88,9 @@ export const REQUERIMIENTO_PRIORIDADES: { value: RequerimientoPrioridad; label: 
   { value: 'Critica', label: 'Crítica', color: 'destructive' },
 ];
 
-export const REQUERIMIENTO_ESTADOS: { value: RequerimientoEstado; label: string; color: string }[] = [
-  { value: 'Pendiente', label: 'Pendiente', color: 'secondary' },
-  { value: 'En Analisis', label: 'En Análisis', color: 'outline' },
-  { value: 'Aprobado', label: 'Aprobado', color: 'success' },
-  { value: 'Rechazado', label: 'Rechazado', color: 'destructive' },
-  { value: 'En Desarrollo', label: 'En Desarrollo', color: 'default' },
-  { value: 'Completado', label: 'Completado', color: 'success' },
-];
-
-// Helper para obtener el prefijo del código según el tipo
-export function getCodigoPrefix(tipo: RequerimientoTipo): string {
-  switch (tipo) {
-    case 'Funcional':
-      return 'RF';
-    case 'No Funcional':
-      return 'RNF';
-    case 'Tecnico':
-      return 'RT';
-    case 'Negocio':
-      return 'RN';
-    default:
-      return 'REQ';
-  }
-}
-
-// Helper para generar código automático
-export function generateCodigo(tipo: RequerimientoTipo, count: number): string {
-  const prefix = getCodigoPrefix(tipo);
+// Helper para generar código automático secuencial
+// El código es único para todos los tipos: REQ-001, REQ-002, etc.
+export function generateCodigo(count: number): string {
   const numero = String(count + 1).padStart(3, '0');
-  return `${prefix}-${numero}`;
+  return `REQ-${numero}`;
 }

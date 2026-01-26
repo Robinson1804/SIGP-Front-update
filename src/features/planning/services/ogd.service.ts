@@ -27,7 +27,7 @@ export async function getOGDs(filters?: OGDQueryFilters): Promise<OGD[]> {
  * Obtener OGDs por PGD
  */
 export async function getOGDsByPGD(pgdId: number | string): Promise<OGD[]> {
-  return getOGDs({ pgdId: Number(pgdId) });
+  return getOGDs({ pgdId: Number(pgdId), activo: true });
 }
 
 /**
@@ -75,4 +75,14 @@ export async function toggleOGDActivo(
   activo: boolean
 ): Promise<OGD> {
   return updateOGD(id, { activo });
+}
+
+/**
+ * Obtener el siguiente código OGD disponible para un PGD
+ */
+export async function getNextOGDCodigo(pgdId: number | string): Promise<string> {
+  const response = await apiClient.get<string>(`${ENDPOINTS.PLANNING.OGD}/next-codigo`, {
+    params: { pgdId },
+  });
+  return response.data;
 }

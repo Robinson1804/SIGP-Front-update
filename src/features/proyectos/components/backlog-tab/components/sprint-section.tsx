@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, Play } from 'lucide-react';
+import { useState, memo } from 'react';
+import { ChevronDown, ChevronRight, Plus, Play, Pencil, Trash2 } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -11,44 +11,79 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { type Sprint } from '@/features/proyectos/services/sprints.service';
 import { type HistoriaUsuario } from '@/features/proyectos/services/historias.service';
+import { type Tarea } from '@/features/proyectos/services/tareas.service';
 import { HistoriaTable } from './historia-table';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
+
+interface MiembroEquipo {
+  id: number;
+  nombre: string;
+}
 
 interface SprintSectionProps {
   sprint: Sprint;
   historias: HistoriaUsuario[];
+  equipo?: MiembroEquipo[];
   onAddHistoria?: () => void;
   onIniciarSprint?: () => void;
+  onEditSprint?: () => void;
+  onDeleteSprint?: () => void;
   onViewHistoria?: (historia: HistoriaUsuario) => void;
   onEditHistoria?: (historia: HistoriaUsuario) => void;
   onDeleteHistoria?: (historia: HistoriaUsuario) => void;
+  onCreateTarea?: (historiaId: number) => void;
+  onEditTarea?: (tarea: Tarea) => void;
+  onDeleteTarea?: (tarea: Tarea) => void;
   defaultOpen?: boolean;
+  tareasRefreshKey?: number;
+  // Acciones de validacion (solo para SCRUM_MASTER)
+  onVerDocumento?: (historia: HistoriaUsuario) => void;
+  onValidarHu?: (historia: HistoriaUsuario) => void;
+  /** Modo solo lectura */
+  isReadOnly?: boolean;
 }
 
 const estadoConfig: Record<string, { bg: string; text: string; label: string }> = {
-  'Planificado': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Planificado' },
-  'Activo': { bg: 'bg-green-100', text: 'text-green-700', label: 'Activo' },
-  'Completado': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Completado' },
+  'Por hacer': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Por hacer' },
+  'En progreso': { bg: 'bg-green-100', text: 'text-green-700', label: 'En progreso' },
+  'Finalizado': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Finalizado' },
+  // Fallback para valores antiguos (compatibilidad)
+  'Planificado': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Por hacer' },
+  'Activo': { bg: 'bg-green-100', text: 'text-green-700', label: 'En progreso' },
+  'Completado': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Finalizado' },
 };
 
-export function SprintSection({
+export const SprintSection = memo(function SprintSection({
   sprint,
   historias,
+  equipo = [],
   onAddHistoria,
   onIniciarSprint,
+  onEditSprint,
+  onDeleteSprint,
   onViewHistoria,
   onEditHistoria,
   onDeleteHistoria,
+  onCreateTarea,
+  onEditTarea,
+  onDeleteTarea,
   defaultOpen = true,
+  tareasRefreshKey,
+  onVerDocumento,
+  onValidarHu,
+  isReadOnly = false,
 }: SprintSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const estadoStyle = estadoConfig[sprint.estado] || estadoConfig['Planificado'];
-  const canIniciar = sprint.estado === 'Planificado';
+  const estadoStyle = estadoConfig[sprint.estado] || estadoConfig['Por hacer'];
+  const canIniciar = sprint.estado === 'Por hacer' || sprint.estado === 'Planificado';
+  const isFinalizado = sprint.estado === 'Finalizado' || sprint.estado === 'Completado';
 
-  const formatDate = (date: string | null) => {
+  const formatSprintDate = (date: string | null) => {
     if (!date) return '-';
-    return new Date(date).toLocaleDateString('es-PE', {
+    const parsedDate = parseLocalDate(date);
+    if (!parsedDate) return '-';
+    return parsedDate.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -81,7 +116,7 @@ export function SprintSection({
                 </span>
 
                 <span className="text-sm text-gray-500">
-                  | {formatDate(sprint.fechaInicio)} - {formatDate(sprint.fechaFin)}
+                  | {formatSprintDate(sprint.fechaInicio)} - {formatSprintDate(sprint.fechaFin)}
                 </span>
 
                 <Badge
@@ -104,6 +139,28 @@ export function SprintSection({
             </div>
 
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              {/* Editar y Eliminar solo visibles si el sprint NO está finalizado */}
+              {!isFinalizado && onEditSprint && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onEditSprint}
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+              )}
+              {!isFinalizado && onDeleteSprint && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={onDeleteSprint}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Eliminar
+                </Button>
+              )}
               {canIniciar && onIniciarSprint && (
                 <Button
                   size="sm"
@@ -123,10 +180,17 @@ export function SprintSection({
           <div className="p-4 pt-0">
             <HistoriaTable
               historias={historias}
+              equipo={equipo}
               onView={onViewHistoria}
               onEdit={onEditHistoria}
               onDelete={onDeleteHistoria}
+              onCreateTarea={onCreateTarea}
+              onEditTarea={onEditTarea}
+              onDeleteTarea={onDeleteTarea}
               showSprintAction={false}
+              tareasRefreshKey={tareasRefreshKey}
+              onVerDocumento={onVerDocumento}
+              onValidarHu={onValidarHu}
             />
 
             {/* Add historia button */}
@@ -148,4 +212,6 @@ export function SprintSection({
       </div>
     </Collapsible>
   );
-}
+});
+
+SprintSection.displayName = 'SprintSection';

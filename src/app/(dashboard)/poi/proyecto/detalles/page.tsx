@@ -46,7 +46,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { paths } from '@/lib/paths';
 import { ProtectedRoute } from "@/features/auth";
-import { useAuth } from '@/stores';
+import { useAuth, usePGD } from '@/stores';
 import { hasPermission } from "@/lib/permissions";
 import {
   getProyectoById,
@@ -61,6 +61,24 @@ import {
   getEpicasByProyecto,
   type Epica,
 } from '@/features/proyectos/services';
+import {
+  getSubproyectosByProyecto,
+  deleteSubproyecto,
+  createSubproyecto,
+  updateSubproyecto,
+  type Subproyecto,
+} from '@/features/proyectos/services/subproyectos.service';
+import {
+  getScrumMasters,
+  type Usuario,
+} from '@/lib/services/usuarios.service';
+import {
+  getAsignacionesBySubproyecto,
+  syncAsignacionesSubproyecto,
+  getPersonalDisponible,
+  formatPersonalNombre,
+  type Personal,
+} from '@/lib/services/asignaciones.service';
 import { useToast } from '@/lib/hooks/use-toast';
 import {
     DocumentoPhaseAccordion,
@@ -93,20 +111,29 @@ interface SprintWithProgress {
  */
 function mapSprintStatus(estado: string): string {
   const statusMap: Record<string, string> = {
+    // Nuevos valores
+    'Por hacer': 'Por hacer',
+    'En progreso': 'En progreso',
+    'Finalizado': 'Finalizado',
+    // Valores antiguos (compatibilidad)
     'Planificado': 'Por hacer',
     'Activo': 'En progreso',
-    'Completado': 'Completado',
+    'Completado': 'Finalizado',
   };
   return statusMap[estado] || 'Por hacer';
 }
 
 /**
- * Calcula el progreso de un sprint basado en puntos completados
+ * Calcula el progreso de un sprint basado en su estado
+ * - Por hacer: 0%
+ * - En progreso: 50%
+ * - Finalizado/Completado: 100%
  */
 function calculateSprintProgress(sprint: Sprint): number {
-  if (!sprint.totalPuntos || sprint.totalPuntos === 0) return 0;
-  const completed = sprint.puntosCompletados || 0;
-  return Math.round((completed / sprint.totalPuntos) * 100);
+  const estado = sprint.estado;
+  if (estado === 'Finalizado' || estado === 'Completado') return 100;
+  if (estado === 'En progreso') return 50;
+  return 0; // Por hacer o cualquier otro estado
 }
 
 // Tipo extendido de Project con IDs para el modal
@@ -118,10 +145,79 @@ type ProjectWithIds = Project & {
 };
 
 /**
+ * Obtiene el nombre completo de un usuario relacionado
+ */
+function getUsuarioNombre(usuario: any): string {
+  if (!usuario) return 'Sin asignar';
+
+  // Si tiene personal con nombre completo
+  if (usuario.personal) {
+    const { nombre, apellidoPaterno, apellidoMaterno } = usuario.personal;
+    const partes = [nombre, apellidoPaterno, apellidoMaterno].filter(Boolean);
+    if (partes.length > 0) return partes.join(' ');
+  }
+
+  // Fallback a campos directos del usuario
+  if (usuario.nombre && usuario.apellido) {
+    return `${usuario.nombre} ${usuario.apellido}`;
+  }
+
+  if (usuario.nombre) return usuario.nombre;
+  if (usuario.username) return usuario.username;
+  if (usuario.email) return usuario.email.split('@')[0];
+
+  return `Usuario #${usuario.id}`;
+}
+
+/**
+ * Obtiene el texto de la acción estratégica (código + nombre)
+ */
+function getAccionEstrategicaTexto(ae: any): string {
+  if (!ae) return 'Sin AE';
+  if (ae.codigo && ae.nombre) return `${ae.codigo} - ${ae.nombre}`;
+  if (ae.codigo) return ae.codigo;
+  if (ae.nombre) return ae.nombre;
+  return `AE #${ae.id}`;
+}
+
+/**
+ * Mapea un subproyecto del API al formato del frontend (SubProject)
+ * Nota: Los responsables se cargan dinámicamente via asignaciones cuando se edita el subproyecto
+ */
+function mapSubproyectoToSubProject(subproyecto: Subproyecto): SubProject {
+  // El monto puede venir como string desde la BD (tipo decimal)
+  const monto = typeof subproyecto.monto === 'string'
+    ? parseFloat(subproyecto.monto)
+    : (subproyecto.monto || 0);
+
+  // Convertir años de número a string
+  const years = subproyecto.anios
+    ? subproyecto.anios.map(a => a.toString())
+    : [];
+
+  // Responsables se cargan dinámicamente via getAsignacionesBySubproyecto cuando se edita
+  return {
+    id: subproyecto.id.toString(),
+    name: subproyecto.nombre,
+    description: subproyecto.descripcion || '',
+    responsible: [], // Se carga via asignaciones al editar
+    scrumMaster: subproyecto.scrumMaster
+      ? getUsuarioNombre(subproyecto.scrumMaster)
+      : 'Sin asignar',
+    years: years,
+    amount: monto,
+    managementMethod: 'Scrum',
+    financialArea: subproyecto.areasFinancieras || [],
+    progress: 0, // TODO: Calcular progreso basado en sprints del subproyecto
+    status: subproyecto.estado || 'Pendiente',
+  };
+}
+
+/**
  * Mapea un proyecto del API (Proyecto) al formato del frontend (Project)
  * Incluye los IDs para que el modal de edición pueda usarlos
  */
-function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = []): ProjectWithIds {
+function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = [], subproyectos: SubProject[] = []): ProjectWithIds {
   // Mapear estado
   const mapEstado = (estado: string): Project['status'] => {
     const estadoMap: Record<string, Project['status']> = {
@@ -134,11 +230,11 @@ function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = []): Pr
     return estadoMap[estado] || 'Pendiente';
   };
 
-  // Mapear clasificación
+  // Mapear clasificación: usar "Gestion interna" sin tilde (coincide con backend y SelectItem)
   const mapClasificacion = (clasificacion: string | null): Project['classification'] => {
-    if (!clasificacion) return 'Gestión interna';
+    if (!clasificacion) return 'Gestion interna';
     if (clasificacion.toLowerCase().includes('ciudadano')) return 'Al ciudadano';
-    return 'Gestión interna';
+    return 'Gestion interna';
   };
 
   // Convertir años
@@ -147,12 +243,17 @@ function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = []): Pr
     return anios.map(a => a.toString());
   };
 
-  // Formatear fecha
-  const formatDateToMonthYear = (dateStr: string | null): string | undefined => {
+  // Formatear fecha - mantener formato original YYYY-MM-DD para compatibilidad con inputs
+  const formatDateForInput = (dateStr: string | null): string | undefined => {
     if (!dateStr) return undefined;
     try {
+      // Si ya está en formato YYYY-MM-DD, devolverlo tal cual
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        return dateStr.substring(0, 10); // Tomar solo YYYY-MM-DD
+      }
+      // Si es otro formato, convertir
       const date = new Date(dateStr);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     } catch {
       return undefined;
     }
@@ -160,6 +261,26 @@ function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = []): Pr
 
   // Obtener nombres de equipo como responsables
   const responsables = equipo.map(m => m.nombre);
+
+  // Obtener nombres reales de usuarios relacionados
+  const scrumMasterNombre = proyecto.scrumMaster
+    ? getUsuarioNombre(proyecto.scrumMaster)
+    : proyecto.scrumMasterId
+      ? `Scrum Master #${proyecto.scrumMasterId}`
+      : 'Sin asignar';
+
+  const coordinadorNombre = proyecto.coordinador
+    ? getUsuarioNombre(proyecto.coordinador)
+    : proyecto.coordinadorId
+      ? `Coordinador #${proyecto.coordinadorId}`
+      : undefined;
+
+  // Obtener acción estratégica con código + nombre
+  const accionEstrategicaTexto = proyecto.accionEstrategica
+    ? getAccionEstrategicaTexto(proyecto.accionEstrategica)
+    : proyecto.accionEstrategicaId
+      ? `AE #${proyecto.accionEstrategicaId}`
+      : 'Sin AE';
 
   return {
     id: proyecto.id.toString(),
@@ -169,19 +290,19 @@ function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = []): Pr
     type: proyecto.tipo === 'Proyecto' ? 'Proyecto' : 'Actividad',
     classification: mapClasificacion(proyecto.clasificacion),
     status: mapEstado(proyecto.estado),
-    scrumMaster: proyecto.scrumMasterId ? `Scrum Master #${proyecto.scrumMasterId}` : 'Sin asignar',
+    scrumMaster: scrumMasterNombre,
     annualAmount: proyecto.montoAnual || 0,
-    strategicAction: proyecto.accionEstrategicaId ? `AE N${proyecto.accionEstrategicaId}` : 'Sin AE',
+    strategicAction: accionEstrategicaTexto,
     missingData: !proyecto.descripcion || !proyecto.scrumMasterId,
     years: aniosToYears(proyecto.anios),
     responsibles: responsables.length > 0 ? responsables : [],
     financialArea: proyecto.areasFinancieras || [],
     coordination: proyecto.coordinacion || undefined,
-    coordinator: proyecto.coordinadorId ? `Coordinador #${proyecto.coordinadorId}` : undefined,
+    coordinator: coordinadorNombre,
     managementMethod: proyecto.metodoGestion || 'Scrum',
-    subProjects: [],
-    startDate: formatDateToMonthYear(proyecto.fechaInicio),
-    endDate: formatDateToMonthYear(proyecto.fechaFin),
+    subProjects: subproyectos,
+    startDate: formatDateForInput(proyecto.fechaInicio),
+    endDate: formatDateForInput(proyecto.fechaFin),
     // IDs para el modal de edición
     accionEstrategicaId: proyecto.accionEstrategicaId || undefined,
     coordinadorId: proyecto.coordinadorId || undefined,
@@ -208,7 +329,9 @@ const subProjectStatusColors: { [key: string]: string } = {
 const sprintStatusConfig: { [key: string]: { badge: string; progress: string; label: string } } = {
     'Por hacer': { badge: 'bg-[#ADADAD] text-white', progress: 'bg-[#ADADAD]', label: 'Por hacer' },
     'En progreso': { badge: 'bg-[#559FFE] text-white', progress: 'bg-[#559FFE]', label: 'En progreso' },
-    'Completado': { badge: 'bg-[#2FD573] text-white', progress: 'bg-[#2FD573]', label: 'Completado' },
+    'Finalizado': { badge: 'bg-[#2FD573] text-white', progress: 'bg-[#2FD573]', label: 'Finalizado' },
+    // Fallback para valores antiguos
+    'Completado': { badge: 'bg-[#2FD573] text-white', progress: 'bg-[#2FD573]', label: 'Finalizado' },
 };
 
 
@@ -223,23 +346,30 @@ const InfoField = ({ label, children }: { label: string, children: React.ReactNo
 
 const SubProjectCard = ({ subProject, onEdit, onDelete, canEdit }: { subProject: SubProject, onEdit: () => void, onDelete: () => void, canEdit: boolean }) => {
     const formatAmount = (amount: number) => {
-        if (amount >= 1000) {
-            return `S/ ${amount / 1000}k`;
+        if (amount >= 1000000) {
+            return `S/ ${(amount / 1000000).toFixed(1)}M`;
         }
-        return `S/ ${amount}`;
+        if (amount >= 1000) {
+            return `S/ ${(amount / 1000).toFixed(0)}k`;
+        }
+        return `S/ ${amount.toLocaleString('es-PE')}`;
     }
+
+    // Obtener el estado del subproyecto (con fallback)
+    const status = subProject.status || 'Pendiente';
+    const statusColor = subProjectStatusColors[status] || subProjectStatusColors['Pendiente'];
 
     return (
     <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-gray-500" />
-                <CardTitle className="text-base font-bold">{subProject.name}</CardTitle>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Briefcase className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                <CardTitle className="text-base font-bold truncate">{subProject.name}</CardTitle>
             </div>
             {canEdit && (
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -251,25 +381,25 @@ const SubProjectCard = ({ subProject, onEdit, onDelete, canEdit }: { subProject:
             )}
         </CardHeader>
         <CardContent>
-            <Progress value={subProject.progress} indicatorClassName="bg-[#559FFE]" />
+            <Progress value={subProject.progress || 0} indicatorClassName="bg-[#559FFE]" />
             <div className="flex justify-between items-center mt-2 text-sm text-gray-600">
-                <span>{subProject.progress}%</span>
+                <span>{subProject.progress || 0}%</span>
             </div>
             <div className="mt-4 space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-gray-500" />
                     <span>Estado:</span>
-                    <Badge className={`${subProjectStatusColors['En desarrollo']}`}>En desarrollo</Badge>
+                    <Badge className={statusColor}>{status}</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-gray-500" />
                     <span>Monto:</span>
-                    <span>{formatAmount(subProject.amount)}</span>
+                    <span className="font-medium">{formatAmount(subProject.amount)}</span>
                 </div>
-                 <div className="flex items-center gap-2">
-                    <UsersIcon className="w-4 h-4 text-gray-500" />
-                    <span>Responsable:</span>
-                    <span>{subProject.responsible.length}</span>
+                <div className="flex items-center gap-2">
+                    <UsersIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                    <span className="flex-shrink-0">Scrum Master:</span>
+                    <span className="font-medium">{subProject.scrumMaster || 'Sin asignar'}</span>
                 </div>
             </div>
         </CardContent>
@@ -416,10 +546,13 @@ function RequerimientosTabContent({ proyectoId }: { proyectoId: number }) {
  * Contenido del Tab Cronograma
  * Usa el componente CronogramaView con Gantt interactivo
  */
-function CronogramaTabContent({ proyectoId, proyectoNombre, equipo }: {
+function CronogramaTabContent({ proyectoId, proyectoNombre, equipo, proyectoFechaInicio, proyectoFechaFin, isReadOnly = false }: {
     proyectoId: number;
     proyectoNombre?: string;
     equipo?: { id: number; nombre: string }[];
+    proyectoFechaInicio?: string | null;
+    proyectoFechaFin?: string | null;
+    isReadOnly?: boolean;
 }) {
     // Preparar responsables del equipo para el selector
     const responsables = equipo?.map(m => ({
@@ -440,6 +573,9 @@ function CronogramaTabContent({ proyectoId, proyectoNombre, equipo }: {
                 proyectoId={proyectoId}
                 proyectoNombre={proyectoNombre}
                 responsables={responsables}
+                proyectoFechaInicio={proyectoFechaInicio}
+                proyectoFechaFin={proyectoFechaFin}
+                isReadOnly={isReadOnly}
             />
         </div>
     );
@@ -451,6 +587,7 @@ function CronogramaTabContent({ proyectoId, proyectoNombre, equipo }: {
 
 function ProjectDetailsContent() {
     const { user } = useAuth();
+    const { selectedPGD } = usePGD();
     const { toast } = useToast();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -480,15 +617,20 @@ function ProjectDetailsContent() {
     const [isSubProjectDeleteModalOpen, setIsSubProjectDeleteModalOpen] = useState(false);
     const [deletingSubProject, setDeletingSubProject] = useState<SubProject | null>(null);
 
+    // Datos para modal de subproyectos
+    const [scrumMasters, setScrumMasters] = useState<Usuario[]>([]);
+    const [personalDisponible, setPersonalDisponible] = useState<Personal[]>([]);
+
     const [progressAnimated, setProgressAnimated] = useState(false);
 
-    // Permisos basados en el rol del usuario
+    // Permisos basados en el rol del usuario - ADMIN tiene acceso total
     const userRole = user?.role;
+    const isAdmin = userRole === ROLES.ADMIN;
     const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
-    // Scrum Master ve los botones pero deshabilitados
+    // Scrum Master ve los botones pero deshabilitados (ADMIN puede todo)
     const showEditDeleteButtons = userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.EDIT) || isScrumMaster : false;
-    const canEdit = userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.EDIT) && !isScrumMaster : false;
-    const canDelete = userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.DELETE) && !isScrumMaster : false;
+    const canEdit = isAdmin || (userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.EDIT) && !isScrumMaster : false);
+    const canDelete = isAdmin || (userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.DELETE) && !isScrumMaster : false);
 
     // Obtener el ID del proyecto de los query params o localStorage
     useEffect(() => {
@@ -520,21 +662,44 @@ function ProjectDetailsContent() {
         }
     }, [searchParams, router]);
 
+    // Cargar scrum masters y personal disponible al montar
+    useEffect(() => {
+        const loadUsersData = async () => {
+            try {
+                const [scrumMastersData, personalData] = await Promise.all([
+                    getScrumMasters().catch(() => []),
+                    getPersonalDisponible().catch(() => []),
+                ]);
+                setScrumMasters(scrumMastersData);
+                setPersonalDisponible(personalData);
+            } catch (error) {
+                console.error('Error loading users data:', error);
+            }
+        };
+        loadUsersData();
+    }, []);
+
     /**
      * Función para cargar datos del proyecto desde la API
+     * @param forceRefresh - Si es true, agrega un timestamp para evitar cache
      */
-    const fetchProjectData = useCallback(async () => {
+    const fetchProjectData = useCallback(async (forceRefresh: boolean = false) => {
         if (!proyectoId) return;
 
         setIsLoading(true);
         setError(null);
 
         try {
-            // Cargar proyecto, sprints y equipo en paralelo
-            const [proyectoData, sprintsData, equipoData] = await Promise.all([
+            // Log para debug
+            console.log('=== fetchProjectData iniciado ===');
+            console.log('proyectoId:', proyectoId, 'forceRefresh:', forceRefresh);
+
+            // Cargar proyecto, sprints, equipo y subproyectos en paralelo
+            const [proyectoData, sprintsData, equipoData, subproyectosData] = await Promise.all([
                 getProyectoById(proyectoId),
                 getSprintsByProyecto(proyectoId).catch(() => []),
                 getProyectoEquipo(proyectoId).catch(() => []),
+                getSubproyectosByProyecto(proyectoId).catch(() => []),
             ]);
 
             // Verificar que es un proyecto (no actividad)
@@ -567,9 +732,56 @@ function ProjectDetailsContent() {
 
             setSprints(sprintsMapped);
 
+            // Mapear subproyectos y cargar sus asignaciones
+            let subproyectosMapped: SubProject[] = [];
+            if (Array.isArray(subproyectosData) && subproyectosData.length > 0) {
+                // Cargar asignaciones de todos los subproyectos en paralelo
+                const asignacionesPromises = subproyectosData.map(sp =>
+                    getAsignacionesBySubproyecto(sp.id).catch(() => [])
+                );
+                const asignacionesPorSubproyecto = await Promise.all(asignacionesPromises);
+
+                // Mapear subproyectos con sus responsables desde asignaciones
+                subproyectosMapped = subproyectosData.map((sp, index) => {
+                    const asignaciones = asignacionesPorSubproyecto[index];
+                    const responsablesIds = asignaciones.map(a => a.personalId.toString());
+                    // Obtener nombres de responsables desde el equipo del proyecto
+                    const responsablesNombres = asignaciones.map(a => {
+                        if (a.personal) {
+                            return `${a.personal.nombres} ${a.personal.apellidos}`.trim();
+                        }
+                        return `Personal #${a.personalId}`;
+                    });
+                    const mapped = mapSubproyectoToSubProject(sp);
+                    return {
+                        ...mapped,
+                        responsible: responsablesIds,
+                        responsibleNames: responsablesNombres, // Agregar nombres para mostrar
+                    };
+                });
+            }
+
+            console.log('=== Subproyectos cargados con asignaciones ===');
+            console.log('subproyectosData:', subproyectosData);
+            console.log('subproyectosMapped:', subproyectosMapped);
+
             // Mapear proyecto al formato del frontend
-            const mappedProject = mapProyectoToProject(proyectoData, equipoMapped);
+            const mappedProject = mapProyectoToProject(proyectoData, equipoMapped, subproyectosMapped);
+
+            // DEBUG: Mostrar datos del API y mapeados en consola
+            console.log('=== DETALLES - Datos del proyecto ===');
+            console.log('Datos API (proyectoData):', JSON.stringify(proyectoData, null, 2));
+            console.log('Datos mapeados (mappedProject):', JSON.stringify(mappedProject, null, 2));
+            console.log('Campos clave del API:', {
+                nombre: proyectoData.nombre,
+                descripcion: proyectoData.descripcion,
+                clasificacion: proyectoData.clasificacion,
+                montoAnual: proyectoData.montoAnual,
+                anios: proyectoData.anios,
+            });
+
             setProject(mappedProject);
+            console.log('setProject llamado con nuevos datos');
 
             // Guardar en localStorage para navegación entre pestañas
             localStorage.setItem('selectedProject', JSON.stringify(mappedProject));
@@ -599,21 +811,135 @@ function ProjectDetailsContent() {
 
     const formatMonthYear = (dateString: string) => {
         if (!dateString) return '';
-        const [year, month] = dateString.split('-');
-        const date = new Date(Number(year), Number(month) - 1);
-        return date.toLocaleString('es-ES', { month: 'short', year: 'numeric' });
+        // Manejar formato YYYY-MM-DD o YYYY-MM
+        const parts = dateString.split('-');
+        const year = Number(parts[0]);
+        const month = Number(parts[1]) - 1;
+        const day = parts[2] ? Number(parts[2]) : 1;
+        const date = new Date(year, month, day);
+        return date.toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    const handleSaveProject = (updatedProject: Project) => {
-        // Después de editar, recargar datos desde la API
+    const handleSaveProject = useCallback(async (updatedProject: Project) => {
+        // DEBUG: Log para verificar que se llama después de guardar
+        console.log('=== DETALLES - handleSaveProject llamado ===');
+        console.log('updatedProject recibido:', JSON.stringify(updatedProject, null, 2));
+
+        // Cerrar modal
         setIsEditModalOpen(false);
-        toast({
-            title: 'Proyecto actualizado',
-            description: 'El proyecto se ha actualizado correctamente.',
-        });
-        // Recargar datos del proyecto
-        fetchProjectData();
-    };
+
+        // Mostrar estado de carga mientras recargamos
+        setIsLoading(true);
+
+        // Pequeña espera para asegurar que el backend procesó los cambios
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        try {
+            // Recargar datos del proyecto desde la API con force refresh
+            console.log('Recargando datos desde API...');
+
+            // Cargar directamente sin limpiar el estado primero
+            const [proyectoData, sprintsData, equipoData, subproyectosData] = await Promise.all([
+                getProyectoById(proyectoId!),
+                getSprintsByProyecto(proyectoId!).catch(() => []),
+                getProyectoEquipo(proyectoId!).catch(() => []),
+                getSubproyectosByProyecto(proyectoId!).catch(() => []),
+            ]);
+
+            console.log('=== Datos frescos del API ===');
+            console.log('proyectoData:', JSON.stringify(proyectoData, null, 2));
+
+            // Mapear equipo
+            const equipoMapped: TeamMember[] = Array.isArray(equipoData)
+                ? equipoData.map((m: any) => ({
+                    id: m.id || m.personalId,
+                    nombre: m.nombre || m.personal?.nombre || `Usuario #${m.id}`,
+                    cargo: m.cargo,
+                    rol: m.rol,
+                }))
+                : [];
+
+            setEquipo(equipoMapped);
+
+            // Mapear sprints con progreso
+            const sprintsMapped: SprintWithProgress[] = Array.isArray(sprintsData)
+                ? sprintsData.map((s: Sprint) => ({
+                    id: s.id,
+                    name: s.nombre,
+                    status: mapSprintStatus(s.estado),
+                    progress: calculateSprintProgress(s),
+                }))
+                : [];
+
+            setSprints(sprintsMapped);
+
+            // Mapear subproyectos y cargar sus asignaciones
+            let subproyectosMapped: SubProject[] = [];
+            if (Array.isArray(subproyectosData) && subproyectosData.length > 0) {
+                // Cargar asignaciones de todos los subproyectos en paralelo
+                const asignacionesPromises = subproyectosData.map(sp =>
+                    getAsignacionesBySubproyecto(sp.id).catch(() => [])
+                );
+                const asignacionesPorSubproyecto = await Promise.all(asignacionesPromises);
+
+                // Mapear subproyectos con sus responsables desde asignaciones
+                subproyectosMapped = subproyectosData.map((sp, index) => {
+                    const asignaciones = asignacionesPorSubproyecto[index];
+                    const responsablesIds = asignaciones.map(a => a.personalId.toString());
+                    const responsablesNombres = asignaciones.map(a => {
+                        if (a.personal) {
+                            return `${a.personal.nombres} ${a.personal.apellidos}`.trim();
+                        }
+                        return `Personal #${a.personalId}`;
+                    });
+                    const mapped = mapSubproyectoToSubProject(sp);
+                    return {
+                        ...mapped,
+                        responsible: responsablesIds,
+                        responsibleNames: responsablesNombres,
+                    };
+                });
+            }
+
+            // Mapear proyecto al formato del frontend
+            const mappedProject = mapProyectoToProject(proyectoData, equipoMapped, subproyectosMapped);
+
+            console.log('=== Proyecto mapeado ===');
+            console.log('Subproyectos cargados:', subproyectosMapped.length);
+            console.log('mappedProject:', JSON.stringify(mappedProject, null, 2));
+            console.log('=== Fechas específicas ===');
+            console.log('Backend fechaInicio:', proyectoData.fechaInicio);
+            console.log('Backend fechaFin:', proyectoData.fechaFin);
+            console.log('Mapeado startDate:', mappedProject.startDate);
+            console.log('Mapeado endDate:', mappedProject.endDate);
+
+            // Actualizar estado con los nuevos datos
+            setProject(mappedProject);
+
+            // Actualizar localStorage
+            localStorage.setItem('selectedProject', JSON.stringify(mappedProject));
+
+            // Animar las barras de progreso
+            setProgressAnimated(false);
+            setTimeout(() => setProgressAnimated(true), 100);
+
+            console.log('Datos recargados correctamente');
+
+            toast({
+                title: 'Proyecto actualizado',
+                description: 'El proyecto se ha actualizado correctamente.',
+            });
+        } catch (error) {
+            console.error('Error recargando datos:', error);
+            toast({
+                title: 'Error',
+                description: 'Error al recargar los datos del proyecto.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [proyectoId, toast]);
 
     const handleDeleteProject = async () => {
         if (!proyectoId) return;
@@ -640,28 +966,143 @@ function ProjectDetailsContent() {
         }
     };
 
-    const openSubProjectModal = (sub?: SubProject) => {
-        setEditingSubProject(sub || null);
+    const openSubProjectModal = async (sub?: SubProject) => {
+        if (sub) {
+            // Si es un subproyecto existente (ID numérico), cargar asignaciones
+            const isExistingSubproject = sub.id && !sub.id.startsWith('sp-');
+            let responsiblesFromAsignaciones: string[] = sub.responsible || [];
+
+            if (isExistingSubproject) {
+                try {
+                    const asignaciones = await getAsignacionesBySubproyecto(sub.id);
+                    responsiblesFromAsignaciones = asignaciones.map(a => a.personalId.toString());
+                    console.log('Asignaciones de subproyecto cargadas:', asignaciones);
+                } catch (error) {
+                    console.warn('Error al cargar asignaciones del subproyecto:', error);
+                }
+            }
+
+            setEditingSubProject({ ...sub, responsible: responsiblesFromAsignaciones });
+        } else {
+            setEditingSubProject(null);
+        }
         setIsSubProjectModalOpen(true);
     };
 
-    const handleSaveSubProject = (subProject: SubProject) => {
-        if (!project) return;
-        const updatedSubProjects = project.subProjects ? [...project.subProjects] : [];
-        const index = updatedSubProjects.findIndex(s => s.id === subProject.id);
+    const handleSaveSubProject = async (subProject: SubProject) => {
+        if (!project || !proyectoId) return;
 
-        if (index > -1) {
-            updatedSubProjects[index] = subProject;
-        } else {
-            updatedSubProjects.push({ ...subProject, id: Date.now().toString() });
+        try {
+            const isEditing = editingSubProject && editingSubProject.id && !editingSubProject.id.startsWith('sp-');
+
+            // Buscar el ID del scrum master por nombre
+            const scrumMaster = scrumMasters.find(sm => {
+                const nombre = sm.personal
+                    ? [sm.personal.nombre, sm.personal.apellidoPaterno, sm.personal.apellidoMaterno].filter(Boolean).join(' ')
+                    : `${sm.nombre || ''} ${sm.apellido || ''}`.trim();
+                return nombre === subProject.scrumMaster;
+            });
+
+            // Convertir años de string a number
+            const aniosNumeros = subProject.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+            // Convertir responsables de string a number para asignaciones
+            const responsablesIds = subProject.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
+
+            if (isEditing) {
+                // Actualizar subproyecto existente
+                const subproyectoId = parseInt(editingSubProject.id, 10);
+                await updateSubproyecto(editingSubProject.id, {
+                    nombre: subProject.name,
+                    descripcion: subProject.description,
+                    monto: subProject.amount,
+                    anios: aniosNumeros,
+                    areasFinancieras: subProject.financialArea || [],
+                    scrumMasterId: scrumMaster?.id,
+                });
+
+                // Sincronizar asignaciones para subproyecto existente
+                try {
+                    await syncAsignacionesSubproyecto(subproyectoId, responsablesIds);
+                    console.log('Asignaciones de subproyecto actualizadas:', subproyectoId);
+                } catch (error) {
+                    console.warn('Error al sincronizar asignaciones del subproyecto:', error);
+                }
+            } else {
+                // Crear nuevo subproyecto
+                const projectCode = project.code || `PROY-${proyectoId}`;
+                const existingCount = project.subProjects?.length || 0;
+
+                const newSubproyecto = await createSubproyecto({
+                    proyectoPadreId: parseInt(proyectoId, 10),
+                    codigo: `${projectCode}-SP${String(existingCount + 1).padStart(2, '0')}`,
+                    nombre: subProject.name,
+                    descripcion: subProject.description,
+                    monto: subProject.amount,
+                    anios: aniosNumeros,
+                    areasFinancieras: subProject.financialArea || [],
+                    scrumMasterId: scrumMaster?.id,
+                });
+
+                // Sincronizar asignaciones para el nuevo subproyecto
+                if (newSubproyecto?.id && responsablesIds.length > 0) {
+                    try {
+                        await syncAsignacionesSubproyecto(newSubproyecto.id, responsablesIds);
+                        console.log('Asignaciones de subproyecto sincronizadas:', newSubproyecto.id);
+                    } catch (error) {
+                        console.warn('Error al sincronizar asignaciones del subproyecto:', error);
+                    }
+                }
+            }
+
+            // Recargar subproyectos desde el backend con sus asignaciones
+            const subproyectosData = await getSubproyectosByProyecto(proyectoId);
+            let subproyectosMapped: SubProject[] = [];
+            if (Array.isArray(subproyectosData) && subproyectosData.length > 0) {
+                // Cargar asignaciones de todos los subproyectos en paralelo
+                const asignacionesPromises = subproyectosData.map(sp =>
+                    getAsignacionesBySubproyecto(sp.id).catch(() => [])
+                );
+                const asignacionesPorSubproyecto = await Promise.all(asignacionesPromises);
+
+                // Mapear subproyectos con sus responsables desde asignaciones
+                subproyectosMapped = subproyectosData.map((sp, index) => {
+                    const asignaciones = asignacionesPorSubproyecto[index];
+                    const responsablesIds = asignaciones.map(a => a.personalId.toString());
+                    const responsablesNombres = asignaciones.map(a => {
+                        if (a.personal) {
+                            return `${a.personal.nombres} ${a.personal.apellidos}`.trim();
+                        }
+                        return `Personal #${a.personalId}`;
+                    });
+                    const mapped = mapSubproyectoToSubProject(sp);
+                    return {
+                        ...mapped,
+                        responsible: responsablesIds,
+                        responsibleNames: responsablesNombres,
+                    };
+                });
+            }
+
+            // Actualizar estado local
+            const updatedProject = { ...project, subProjects: subproyectosMapped };
+            setProject(updatedProject);
+            localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+
+            toast({
+                title: isEditing ? 'Subproyecto actualizado' : 'Subproyecto creado',
+                description: `El subproyecto "${subProject.name}" se ha ${isEditing ? 'actualizado' : 'creado'} correctamente.`,
+            });
+        } catch (error) {
+            console.error('Error saving subproject:', error);
+            toast({
+                title: 'Error',
+                description: 'No se pudo guardar el subproyecto. Intente nuevamente.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSubProjectModalOpen(false);
+            setEditingSubProject(null);
         }
-
-        const updatedProject = { ...project, subProjects: updatedSubProjects };
-        setProject(updatedProject);
-        localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
-
-        setIsSubProjectModalOpen(false);
-        setEditingSubProject(null);
     };
 
     const openDeleteSubProjectModal = (sub: SubProject) => {
@@ -669,17 +1110,40 @@ function ProjectDetailsContent() {
         setIsSubProjectDeleteModalOpen(true);
     };
 
-    const handleDeleteSubProject = () => {
-        if (deletingSubProject && project && project.subProjects) {
+    const handleDeleteSubProject = async () => {
+        if (!deletingSubProject || !project) {
+            setIsSubProjectDeleteModalOpen(false);
+            setDeletingSubProject(null);
+            return;
+        }
+
+        try {
+            // Eliminar del backend
+            await deleteSubproyecto(deletingSubProject.id);
+
+            // Actualizar estado local
             const updatedProject = {
                 ...project,
-                subProjects: project.subProjects?.filter(s => s.id !== deletingSubProject.id)
+                subProjects: project.subProjects?.filter(s => s.id !== deletingSubProject.id) || []
             };
             setProject(updatedProject);
             localStorage.setItem('selectedProject', JSON.stringify(updatedProject));
+
+            toast({
+                title: 'Subproyecto eliminado',
+                description: 'El subproyecto se ha eliminado correctamente.',
+            });
+        } catch (error) {
+            console.error('Error eliminando subproyecto:', error);
+            toast({
+                title: 'Error',
+                description: 'No se pudo eliminar el subproyecto. Intente nuevamente.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSubProjectDeleteModalOpen(false);
+            setDeletingSubProject(null);
         }
-        setIsSubProjectDeleteModalOpen(false);
-        setDeletingSubProject(null);
     };
 
     const handleTabClick = (tabName: string) => {
@@ -722,7 +1186,7 @@ function ProjectDetailsContent() {
                             Volver al listado
                         </Button>
                         <Button
-                            onClick={fetchProjectData}
+                            onClick={() => fetchProjectData()}
                             className="bg-[#018CD1] text-white"
                         >
                             Reintentar
@@ -740,11 +1204,12 @@ function ProjectDetailsContent() {
     }
 
     const isProject = project.type === 'Proyecto';
-    const projectCode = `${isProject ? 'PROY' : 'ACT'} N°${project.id}`;
+    const projectCode = project.code || `${isProject ? 'PROY' : 'ACT'} N°${project.id}`;
 
+    // Breadcrumb dinámico según el tab activo
     const breadcrumbs = [
         { label: "POI", href: paths.poi.base },
-        { label: 'Detalles' }
+        { label: activeTab }
     ];
 
     // Pestañas según el rol del usuario - Actas disponible para todos
@@ -1017,7 +1482,12 @@ function ProjectDetailsContent() {
 
                     {/* Tab Backlog */}
                     {activeTab === 'Backlog' && proyectoId && (
-                        <BacklogTabContent proyectoId={parseInt(proyectoId)} />
+                        <BacklogTabContent
+                            proyectoId={parseInt(proyectoId)}
+                            proyectoFechaInicio={project?.startDate}
+                            proyectoFechaFin={project?.endDate}
+                            proyectoEstado={project?.status}
+                        />
                     )}
 
                     {/* Tab Actas */}
@@ -1031,6 +1501,9 @@ function ProjectDetailsContent() {
                             proyectoId={parseInt(proyectoId)}
                             proyectoNombre={project?.name}
                             equipo={equipo}
+                            proyectoFechaInicio={project?.startDate}
+                            proyectoFechaFin={project?.endDate}
+                            isReadOnly={project?.status === 'Finalizado'}
                         />
                     )}
                 </div>
@@ -1043,6 +1516,9 @@ function ProjectDetailsContent() {
                     onClose={() => setIsEditModalOpen(false)}
                     project={project}
                     onSave={handleSaveProject}
+                    pgdId={selectedPGD?.id}
+                    pgdAnioInicio={selectedPGD?.anioInicio}
+                    pgdAnioFin={selectedPGD?.anioFin}
                 />
              )}
 
@@ -1054,12 +1530,20 @@ function ProjectDetailsContent() {
                 message="El Plan Operativo Informático será eliminado"
             />
 
-            {isSubProjectModalOpen && (
+            {isSubProjectModalOpen && project && (
                  <SubProjectModal
                     isOpen={isSubProjectModalOpen}
                     onClose={() => setIsSubProjectModalOpen(false)}
                     onSave={handleSaveSubProject}
                     subProject={editingSubProject}
+                    scrumMasters={scrumMasters}
+                    responsibleOptions={personalDisponible.map(p => ({
+                        label: formatPersonalNombre(p),
+                        value: p.id.toString(),
+                    }))}
+                    yearOptions={project.years?.map(y => ({ label: y, value: y })) || []}
+                    projectAmount={project.annualAmount || 0}
+                    existingSubProjects={project.subProjects || []}
                 />
             )}
 

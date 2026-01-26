@@ -13,6 +13,8 @@ import 'gantt-task-react/dist/index.css';
 import { cn } from '@/lib/utils';
 import type { TareaCronograma, GanttConfig, ViewMode as AppViewMode, FaseCronograma } from '../types';
 import { COLORES_POR_TIPO, FASES_CRONOGRAMA } from '../types';
+import { TaskListTable, TaskListHeader } from './task-list-table';
+import type { TareaEstadoCronograma } from '../types';
 
 // Colores institucionales INEI
 const INEI_BLUE = '#004272';
@@ -24,6 +26,24 @@ const RUTA_CRITICA_COLOR = '#dc2626'; // Red-600
 const RUTA_CRITICA_SELECTED = '#ef4444'; // Red-500
 const CONFLICTO_COLOR = '#f59e0b'; // Amber-500
 const CONFLICTO_SELECTED = '#fbbf24'; // Amber-400
+
+/**
+ * Helper para parsear fecha YYYY-MM-DD sin problemas de timezone
+ * Crea la fecha en hora local al mediodía para evitar desfases
+ */
+function parseDateString(dateStr: string | Date): Date {
+  if (dateStr instanceof Date) return dateStr;
+  // Parsear componentes directamente para evitar interpretación UTC
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Meses van de 0-11
+    const day = parseInt(parts[2], 10);
+    return new Date(year, month, day, 12, 0, 0); // Mediodía local
+  }
+  // Fallback
+  return new Date(dateStr);
+}
 
 interface GanttChartProps {
   /** Tareas del cronograma */
@@ -48,6 +68,14 @@ interface GanttChartProps {
   onTaskDoubleClick?: (task: Task) => void;
   /** Callback cuando se elimina una tarea */
   onTaskDelete?: (task: Task) => void;
+  /** Callback para editar tarea desde la tabla */
+  onEditTask?: (task: Task) => void;
+  /** Si el usuario puede gestionar (editar/eliminar) */
+  canManage?: boolean;
+  /** Si el usuario puede editar el estado (incluso con cronograma aprobado) */
+  canEditEstado?: boolean;
+  /** Callback para actualizar estado de tarea */
+  onUpdateEstado?: (tareaId: string, estado: TareaEstadoCronograma) => Promise<void>;
   /** Ancho de la columna de lista */
   listCellWidth?: string;
   /** Ancho de columnas del grafico */
@@ -128,8 +156,8 @@ function convertirTareasParaGantt(
     return {
       id: tarea.id,
       name: tarea.nombre,
-      start: new Date(tarea.inicio),
-      end: new Date(tarea.fin),
+      start: parseDateString(tarea.inicio),
+      end: parseDateString(tarea.fin),
       progress: tarea.progreso || 0,
       type,
       project: tarea.padre,
@@ -142,7 +170,12 @@ function convertirTareasParaGantt(
       },
       isDisabled: false,
       displayOrder: tarea.orden,
-    };
+      // Propiedades adicionales para la tabla
+      codigo: tarea.codigo,
+      fase: tarea.fase,
+      estado: tarea.estado,
+      asignadoA: tarea.asignadoA,
+    } as Task & { codigo: string; fase?: FaseCronograma; estado?: TareaEstadoCronograma; asignadoA?: string };
   });
 }
 
@@ -192,6 +225,10 @@ export function GanttChart({
   onTaskClick,
   onTaskDoubleClick,
   onTaskDelete,
+  onEditTask,
+  canManage = false,
+  canEditEstado = false,
+  onUpdateEstado,
   listCellWidth = '200px',
   columnWidth,
   rowHeight = 50,
@@ -293,6 +330,52 @@ export function GanttChart({
     [onTaskDelete]
   );
 
+  // Handler para editar desde la tabla
+  const handleEditFromTable = useCallback(
+    (task: Task) => {
+      if (onEditTask) {
+        onEditTask(task);
+      } else if (onTaskDoubleClick) {
+        // Fallback a doble click si no hay handler específico
+        onTaskDoubleClick(task);
+      }
+    },
+    [onEditTask, onTaskDoubleClick]
+  );
+
+  // Handler para eliminar desde la tabla
+  const handleDeleteFromTable = useCallback(
+    (task: Task) => {
+      if (onTaskDelete) {
+        onTaskDelete(task);
+      }
+    },
+    [onTaskDelete]
+  );
+
+  // Componente de tabla personalizado con acciones
+  const CustomTaskListTable = useCallback(
+    (props: { tasks: Task[]; rowHeight: number; rowWidth: string; locale: string; onExpanderClick: (task: Task) => void }) => (
+      <TaskListTable
+        {...props}
+        onEditTask={handleEditFromTable}
+        onDeleteTask={handleDeleteFromTable}
+        canManage={canManage}
+        canEditEstado={canEditEstado}
+        onUpdateEstado={onUpdateEstado}
+      />
+    ),
+    [handleEditFromTable, handleDeleteFromTable, canManage, canEditEstado, onUpdateEstado]
+  );
+
+  // Componente de header personalizado
+  const CustomTaskListHeader = useCallback(
+    (props: { headerHeight: number; rowWidth: string }) => (
+      <TaskListHeader {...props} canManage={canManage} />
+    ),
+    [canManage]
+  );
+
   // Si no hay tareas, mostrar estado vacio
   if (tasks.length === 0) {
     return (
@@ -363,7 +446,9 @@ export function GanttChart({
         onClick={handleTaskClick}
         onDoubleClick={handleDoubleClick}
         onDelete={handleDelete}
-        listCellWidth={showTaskList ? listCellWidth : ''}
+        TaskListTable={showTaskList ? CustomTaskListTable : undefined}
+        TaskListHeader={showTaskList ? CustomTaskListHeader : undefined}
+        listCellWidth={showTaskList ? (canManage ? '550px' : '480px') : ''}
         columnWidth={calculatedColumnWidth}
         rowHeight={rowHeight}
         headerHeight={headerHeight}

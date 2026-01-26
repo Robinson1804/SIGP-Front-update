@@ -37,7 +37,18 @@ export interface TareaConHistoria extends Tarea {
 }
 
 /**
- * Columna del tablero Kanban (basado en tareas)
+ * Columna del tablero Kanban (basado en estado de HU)
+ */
+export interface TableroColumnaHU {
+  id: HistoriaEstado;
+  nombre: string;
+  historias: HistoriaConTareas[];
+  totalHistorias: number;
+  totalPuntos: number;
+}
+
+/**
+ * Columna del tablero Kanban (basado en tareas) - legacy
  */
 export interface TableroColumna {
   id: TareaEstado;
@@ -63,6 +74,7 @@ export interface TableroMetricas {
 export interface TableroData {
   sprint: Sprint | null;
   columnas: TableroColumna[];
+  columnasHU: TableroColumnaHU[];
   metricas: TableroMetricas;
   historias: HistoriaConTareas[];
 }
@@ -86,12 +98,21 @@ export interface UseTableroDataReturn {
   // Actions
   setSelectedSprintId: (id: number | null) => void;
   moverTareaEnTablero: (tareaId: number, nuevoEstado: TareaEstado, orden?: number) => Promise<void>;
+  moverHistoriaEnTablero: (historiaId: number, nuevoEstado: HistoriaEstado) => Promise<void>;
   cambiarEstadoHU: (historiaId: number, nuevoEstado: HistoriaEstado) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
-// Estados de las tareas para las columnas del tablero
+// Estados de las tareas para las columnas del tablero (legacy)
 const COLUMNAS_TABLERO: { id: TareaEstado; nombre: string }[] = [
+  { id: 'Por hacer', nombre: 'Por hacer' },
+  { id: 'En progreso', nombre: 'En progreso' },
+  { id: 'En revision', nombre: 'En revisión' },
+  { id: 'Finalizado', nombre: 'Finalizado' },
+];
+
+// Estados de las HU para las columnas del tablero
+const COLUMNAS_HU: { id: HistoriaEstado; nombre: string }[] = [
   { id: 'Por hacer', nombre: 'Por hacer' },
   { id: 'En progreso', nombre: 'En progreso' },
   { id: 'En revision', nombre: 'En revisión' },
@@ -119,23 +140,26 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
       setIsLoadingSprints(true);
       const sprintsData = await getSprintsByProyecto(proyectoId);
 
-      // Filtrar sprints activos y planificados
+      // Filtrar sprints activos y planificados (soporta ambos formatos de estado)
+      const isEnProgreso = (estado: string) => estado === 'En progreso' || estado === 'Activo';
+      const isPorHacer = (estado: string) => estado === 'Por hacer' || estado === 'Planificado';
+
       const activeSprints = sprintsData.filter(
-        (s) => s.estado === 'Activo' || s.estado === 'Planificado'
+        (s) => isEnProgreso(s.estado) || isPorHacer(s.estado)
       );
 
-      // Ordenar: Activo primero, luego Planificado por numero
+      // Ordenar: En progreso primero, luego Por hacer por numero
       activeSprints.sort((a, b) => {
-        if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
-        if (a.estado !== 'Activo' && b.estado === 'Activo') return 1;
+        if (isEnProgreso(a.estado) && !isEnProgreso(b.estado)) return -1;
+        if (!isEnProgreso(a.estado) && isEnProgreso(b.estado)) return 1;
         return a.numero - b.numero;
       });
 
       setSprints(activeSprints);
 
-      // Auto-seleccionar el primer sprint activo
+      // Auto-seleccionar el primer sprint en progreso
       if (activeSprints.length > 0 && !selectedSprintId) {
-        const sprintActivo = activeSprints.find((s) => s.estado === 'Activo');
+        const sprintActivo = activeSprints.find((s) => isEnProgreso(s.estado));
         setSelectedSprintId(sprintActivo?.id || activeSprints[0].id);
       }
     } catch (err) {
@@ -186,7 +210,7 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
         }))
       );
 
-      // Agrupar tareas por estado en columnas
+      // Agrupar tareas por estado en columnas (legacy)
       const columnas: TableroColumna[] = COLUMNAS_TABLERO.map((col) => {
         const tareasEnColumna = todasLasTareas.filter((t) => t.estado === col.id);
 
@@ -197,6 +221,18 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
         };
       });
 
+      // Agrupar HUs por estado en columnas
+      const columnasHU: TableroColumnaHU[] = COLUMNAS_HU.map((col) => {
+        const historiasEnColumna = historiasConTareas.filter((h) => h.estado === col.id);
+
+        return {
+          ...col,
+          historias: historiasEnColumna,
+          totalHistorias: historiasEnColumna.length,
+          totalPuntos: historiasEnColumna.reduce((acc, h) => acc + (h.storyPoints || 0), 0),
+        };
+      });
+
       // Calcular metricas
       const metricas: TableroMetricas = {
         totalHistorias: historiasConTareas.length,
@@ -204,13 +240,14 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
         tareasCompletadas: todasLasTareas.filter((t) => t.estado === 'Finalizado').length,
         totalPuntos: historiasConTareas.reduce((acc, h) => acc + (h.storyPoints || 0), 0),
         puntosCompletados: historiasConTareas
-          .filter((h) => h.tareas.every((t) => t.estado === 'Finalizado') && h.tareas.length > 0)
+          .filter((h) => h.estado === 'Finalizado')
           .reduce((acc, h) => acc + (h.storyPoints || 0), 0),
       };
 
       setTableroData({
         sprint,
         columnas,
+        columnasHU,
         metricas,
         historias: historiasConTareas,
       });
@@ -273,6 +310,57 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
   );
 
   /**
+   * Mover una historia de usuario a un nuevo estado (drag & drop en tablero HU)
+   */
+  const moverHistoriaEnTablero = useCallback(
+    async (historiaId: number, nuevoEstado: HistoriaEstado) => {
+      try {
+        await cambiarEstadoHistoria(historiaId, nuevoEstado);
+
+        // Actualizar estado local optimisticamente
+        if (tableroData) {
+          setTableroData((prev) => {
+            if (!prev) return prev;
+
+            // Mover la historia de una columna a otra
+            const nuevasColumnasHU = prev.columnasHU.map((col) => {
+              // Quitar la historia de la columna actual
+              const historiasActualizadas = col.historias.filter((h) => h.id !== historiaId);
+
+              // Si es la columna destino, agregar la historia
+              if (col.id === nuevoEstado) {
+                const historiaMovida = prev.columnasHU
+                  .flatMap((c) => c.historias)
+                  .find((h) => h.id === historiaId);
+
+                if (historiaMovida) {
+                  historiasActualizadas.push({ ...historiaMovida, estado: nuevoEstado });
+                }
+              }
+
+              return {
+                ...col,
+                historias: historiasActualizadas,
+                totalHistorias: historiasActualizadas.length,
+                totalPuntos: historiasActualizadas.reduce((acc, h) => acc + (h.storyPoints || 0), 0),
+              };
+            });
+
+            return { ...prev, columnasHU: nuevasColumnasHU };
+          });
+        }
+
+        // Refrescar datos completos
+        await fetchTableroData();
+      } catch (err) {
+        console.error('Error moving historia:', err);
+        throw err;
+      }
+    },
+    [tableroData, fetchTableroData]
+  );
+
+  /**
    * Cambiar estado de una historia de usuario
    */
   const cambiarEstadoHU = useCallback(
@@ -328,6 +416,7 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
     error,
     setSelectedSprintId,
     moverTareaEnTablero,
+    moverHistoriaEnTablero,
     cambiarEstadoHU,
     refresh,
   };

@@ -209,7 +209,7 @@ export default async function ProyectoDetallesPage({
           <CardContent className="space-y-4">
             {proyecto.montoAnual ? (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Monto Anual</p>
+                <p className="text-sm font-medium text-muted-foreground">Monto Total</p>
                 <p className="text-2xl font-bold">
                   S/ {proyecto.montoAnual.toLocaleString('es-PE')}
                 </p>

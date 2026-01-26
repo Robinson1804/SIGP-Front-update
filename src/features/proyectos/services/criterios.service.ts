@@ -11,20 +11,13 @@ import { apiClient, del } from '@/lib/api';
 // ============================================
 
 /**
- * Estados posibles de un criterio de aceptacion
- */
-export type CriterioEstado = 'Pendiente' | 'Cumplido' | 'Fallido';
-
-/**
  * Interfaz de Criterio de Aceptacion basada en el backend schema
  */
 export interface CriterioAceptacion {
   id: number;
   historiaUsuarioId: number;
-  given: string;
-  when: string;
-  then: string;
-  estado: CriterioEstado;
+  descripcion: string;
+  completado: boolean;
   orden: number | null;
   activo: boolean;
   createdAt: string;
@@ -36,10 +29,8 @@ export interface CriterioAceptacion {
  */
 export interface CreateCriterioData {
   historiaUsuarioId: number;
-  given: string;
-  when: string;
-  then: string;
-  estado?: CriterioEstado;
+  descripcion: string;
+  completado?: boolean;
   orden?: number;
 }
 
@@ -47,10 +38,8 @@ export interface CreateCriterioData {
  * Datos para actualizar un criterio de aceptacion
  */
 export interface UpdateCriterioData {
-  given?: string;
-  when?: string;
-  then?: string;
-  estado?: CriterioEstado;
+  descripcion?: string;
+  completado?: boolean;
   orden?: number;
 }
 
@@ -120,13 +109,13 @@ export async function updateCriterio(
 }
 
 /**
- * Verificar/Cambiar estado de un criterio
+ * Marcar un criterio como completado o no completado
  */
-export async function verificarCriterio(
+export async function toggleCriterioCompletado(
   id: number | string,
-  estado: CriterioEstado
+  completado: boolean
 ): Promise<CriterioAceptacion> {
-  return updateCriterio(id, { estado });
+  return updateCriterio(id, { completado });
 }
 
 /**

@@ -32,7 +32,7 @@ export function SubtareaItem({
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const isCompleted = subtarea.estado === 'Finalizado' || subtarea.estado === 'Validado';
+  const isCompleted = subtarea.estado === 'Finalizado';
 
   const handleToggleComplete = async () => {
     setIsUpdating(true);

@@ -16,13 +16,14 @@ const userAvatar = PlaceHolderImages.find((img) => img.id === "user-avatar");
 
 // Mapeo de roles a nombres legibles
 const ROLE_DISPLAY_NAMES: Record<Role, string> = {
-  [ROLES.ADMINISTRADOR]: 'Administrador',
+  [ROLES.ADMIN]: 'Administrador',
   [ROLES.PMO]: 'Project Manager',
   [ROLES.SCRUM_MASTER]: 'Scrum Master',
   [ROLES.DESARROLLADOR]: 'Desarrollador',
   [ROLES.IMPLEMENTADOR]: 'Implementador',
   [ROLES.COORDINADOR]: 'Coordinador',
   [ROLES.USUARIO]: 'Usuario',
+  [ROLES.PATROCINADOR]: 'Patrocinador',
 };
 
 const InfoField = ({ label, value }: { label: string; value: string }) => (

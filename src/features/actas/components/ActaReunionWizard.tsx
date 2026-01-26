@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -140,6 +140,33 @@ export function ActaReunionWizard({
     },
   });
 
+  // Sincronizar estado con el acta cuando cambie (importante para edición)
+  useEffect(() => {
+    if (acta) {
+      // Sincronizar arrays
+      setAsistentes(acta.asistentes || []);
+      setAusentes(acta.ausentes || []);
+      setAgenda(acta.agenda || []);
+      setTemasDesarrollados(acta.temasDesarrollados || []);
+      setAcuerdos(acta.acuerdos || []);
+      setProximosPasos(acta.proximosPasos || []);
+      setAnexosReferenciados(acta.anexosReferenciados || []);
+      // Sincronizar campos del formulario
+      form.reset({
+        nombre: acta.nombre || '',
+        fecha: acta.fecha || new Date().toISOString().split('T')[0],
+        tipoReunion: acta.tipoReunion || '',
+        fasePerteneciente: acta.fasePerteneciente || '',
+        horaInicio: acta.horaInicio || '',
+        horaFin: acta.horaFin || '',
+        modalidad: acta.modalidad || '',
+        lugarLink: acta.lugarLink || '',
+        observaciones: acta.observaciones || '',
+        proximaReunionFecha: acta.proximaReunionFecha || '',
+      });
+    }
+  }, [acta, form]);
+
   const onSubmit = async (values: FormValues) => {
     await onSave({
       ...values,
@@ -222,13 +249,22 @@ export function ActaReunionWizard({
       case 1:
         return (
           <div className="space-y-4">
+            {/* Leyenda de campos requeridos */}
+            <div className="bg-muted/50 border rounded-lg p-3 text-sm">
+              <p className="text-muted-foreground">
+                <span className="text-red-500 font-medium">*</span> Los campos marcados con asterisco son obligatorios
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="nombre"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nombre de la Reunión</FormLabel>
+                    <FormLabel>
+                      Nombre de la Reunión <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Ej: Reunión de planificación Sprint 1" />
                     </FormControl>
@@ -241,7 +277,9 @@ export function ActaReunionWizard({
                 name="fecha"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fecha</FormLabel>
+                    <FormLabel>
+                      Fecha <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
@@ -257,7 +295,9 @@ export function ActaReunionWizard({
                 name="tipoReunion"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tipo de Reunión</FormLabel>
+                    <FormLabel>
+                      Tipo de Reunión <span className="text-red-500">*</span>
+                    </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>

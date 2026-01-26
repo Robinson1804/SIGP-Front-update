@@ -24,10 +24,10 @@ export async function getOEIs(filters?: OEIQueryFilters): Promise<OEI[]> {
 }
 
 /**
- * Obtener OEIs por PGD
+ * Obtener OEIs por PGD (solo activos)
  */
 export async function getOEIsByPGD(pgdId: number | string): Promise<OEI[]> {
-  return getOEIs({ pgdId: Number(pgdId) });
+  return getOEIs({ pgdId: Number(pgdId), activo: true });
 }
 
 /**
@@ -75,4 +75,14 @@ export async function toggleOEIActivo(
   activo: boolean
 ): Promise<OEI> {
   return updateOEI(id, { activo });
+}
+
+/**
+ * Obtener el siguiente código OEI disponible para un PGD
+ */
+export async function getNextOEICodigo(pgdId: number | string): Promise<string> {
+  const response = await apiClient.get<string>(`${ENDPOINTS.PLANNING.OEI}/next-codigo`, {
+    params: { pgdId },
+  });
+  return response.data;
 }

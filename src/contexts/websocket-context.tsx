@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
 import { socketClient, WS_EVENTS } from '@/lib/websocket';
 import { useAuthStore } from '@/stores';
 
@@ -57,33 +57,47 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [isConnected, setIsConnected] = useState(false);
   const [socketId, setSocketId] = useState<string | undefined>(undefined);
+  const isMountedRef = useRef(true);
 
   // Conectar/desconectar basado en autenticación
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (isAuthenticated && token) {
       // Conectar al servidor WebSocket
       socketClient.connect(token);
 
       // Suscribirse a eventos de conexión
       const unsubConnect = socketClient.on('connect', () => {
-        setIsConnected(true);
-        setSocketId(socketClient.getSocketId());
+        if (isMountedRef.current) {
+          setIsConnected(true);
+          setSocketId(socketClient.getSocketId());
+        }
       });
 
       const unsubDisconnect = socketClient.on('disconnect', () => {
-        setIsConnected(false);
-        setSocketId(undefined);
+        if (isMountedRef.current) {
+          setIsConnected(false);
+          setSocketId(undefined);
+        }
       });
 
       // Cleanup: desconectar al desmontar o cuando cambie el token
       return () => {
+        isMountedRef.current = false;
         unsubConnect();
         unsubDisconnect();
-        socketClient.disconnect();
+        // Use a small delay to avoid React Strict Mode double-mount issues
+        // This allows the socket to complete handshake before cleanup
+        setTimeout(() => {
+          if (!isMountedRef.current) {
+            socketClient.disconnect(true);
+          }
+        }, 100);
       };
     } else {
       // Si no está autenticado, asegurarse de desconectar
-      socketClient.disconnect();
+      socketClient.disconnect(true);
       setIsConnected(false);
       setSocketId(undefined);
     }

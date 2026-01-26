@@ -41,6 +41,7 @@ import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
 import { useToast } from "@/lib/hooks/use-toast";
+import { usePGD } from "@/stores";
 
 // Import from planning module
 import {
@@ -49,14 +50,13 @@ import {
   createOEI,
   updateOEI,
   deleteOEI,
+  getNextOEICodigo,
   type PGD,
   type OEI,
   type CreateOEIInput,
   type UpdateOEIInput,
   type MetaAnual,
 } from "@/features/planning";
-
-const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
 // ============================================
 // OEI Modal Component
@@ -66,18 +66,29 @@ function OEIModal({
   onClose,
   oei,
   pgdId,
+  pgd,
+  existingOeisCount,
   onSave,
 }: {
   isOpen: boolean;
   onClose: () => void;
   oei: OEI | null;
   pgdId: number;
+  pgd: PGD | null;
+  existingOeisCount: number;
   onSave: (data: CreateOEIInput | UpdateOEIInput, id?: number) => Promise<void>;
 }) {
+  // Calculate available years based on PGD range (anioInicio to anioFin)
+  const availableYears = pgd
+    ? Array.from(
+        { length: pgd.anioFin - pgd.anioInicio + 1 },
+        (_, i) => pgd.anioInicio + i
+      )
+    : [];
   const [codigo, setCodigo] = useState("");
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [indicador, setIndicador] = useState("");
+  const [indicadorNombre, setIndicadorNombre] = useState("");
   const [lineaBaseAnio, setLineaBaseAnio] = useState<string>("");
   const [lineaBaseValor, setLineaBaseValor] = useState<string>("");
   const [unidadMedida, setUnidadMedida] = useState("");
@@ -90,31 +101,42 @@ function OEIModal({
       setCodigo(oei.codigo);
       setNombre(oei.nombre);
       setDescripcion(oei.descripcion || "");
-      setIndicador(oei.indicadorNombre || "");
+      setIndicadorNombre(oei.indicadorNombre || "");
       setLineaBaseAnio(oei.lineaBaseAnio !== null ? String(oei.lineaBaseAnio) : "");
       setLineaBaseValor(oei.lineaBaseValor !== null ? String(oei.lineaBaseValor) : "");
       setUnidadMedida(oei.unidadMedida || "");
       setMetasAnuales(oei.metasAnuales || []);
     } else {
-      setCodigo("");
+      // Obtener el siguiente código disponible del backend
+      setCodigo("Cargando...");
+      if (pgdId && isOpen) {
+        getNextOEICodigo(pgdId)
+          .then((nextCodigo) => setCodigo(nextCodigo))
+          .catch(() => setCodigo("Error al obtener código"));
+      }
       setNombre("");
       setDescripcion("");
-      setIndicador("");
+      setIndicadorNombre("");
       setLineaBaseAnio("");
       setLineaBaseValor("");
       setUnidadMedida("");
       setMetasAnuales([]);
     }
     setErrors({});
-  }, [oei, isOpen]);
+  }, [oei, isOpen, pgdId]);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!codigo.trim()) newErrors.codigo = "El código es requerido.";
     if (!nombre.trim()) newErrors.nombre = "El nombre es requerido.";
+    if (!indicadorNombre.trim()) newErrors.indicadorNombre = "El nombre del indicador es requerido.";
+    if (!unidadMedida.trim()) newErrors.unidadMedida = "La unidad de medida es requerida.";
+    if (!lineaBaseAnio) newErrors.lineaBaseAnio = "El año de línea base es requerido.";
+    if (!lineaBaseValor) newErrors.lineaBaseValor = "El valor de línea base es requerido.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const isEditMode = !!oei;
 
   const handleSave = async () => {
     if (!validate()) return;
@@ -122,13 +144,14 @@ function OEIModal({
     setSaving(true);
     try {
       const data: CreateOEIInput | UpdateOEIInput = {
-        codigo,
+        // Solo enviar código en modo edición, en modo crear el backend lo genera
+        ...(isEditMode && { codigo }),
         nombre,
         descripcion: descripcion || undefined,
-        indicadorNombre: indicador || undefined,
-        lineaBaseAnio: lineaBaseAnio ? parseInt(lineaBaseAnio) : undefined,
-        lineaBaseValor: lineaBaseValor ? parseFloat(lineaBaseValor) : undefined,
-        unidadMedida: unidadMedida || undefined,
+        indicadorNombre,
+        lineaBaseAnio: parseInt(lineaBaseAnio),
+        lineaBaseValor: parseFloat(lineaBaseValor),
+        unidadMedida,
         metasAnuales: metasAnuales.length > 0 ? metasAnuales : undefined,
       };
 
@@ -174,29 +197,21 @@ function OEIModal({
         </DialogHeader>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            {/* Código siempre visible pero no editable */}
             <div>
               <label htmlFor="codigo" className="block text-sm font-medium text-gray-700 mb-1">
-                Código *
+                Código
               </label>
               <Input
                 id="codigo"
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Ej: OEI-001"
-                className={errors.codigo ? "border-red-500" : ""}
+                readOnly
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
               />
-              {errors.codigo && <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>}
-            </div>
-            <div>
-              <label htmlFor="unidadMedida" className="block text-sm font-medium text-gray-700 mb-1">
-                Unidad de Medida
-              </label>
-              <Input
-                id="unidadMedida"
-                value={unidadMedida}
-                onChange={(e) => setUnidadMedida(e.target.value)}
-                placeholder="Ej: Porcentaje"
-              />
+              <p className="text-xs text-gray-500 mt-1">
+                {isEditMode ? 'El código no es editable' : 'Código auto-generado'}
+              </p>
             </div>
           </div>
           <div>
@@ -217,24 +232,47 @@ function OEIModal({
             </label>
             <Textarea id="descripcion" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} />
           </div>
+          {/* Indicador */}
           <div>
-            <label htmlFor="indicador" className="block text-sm font-medium text-gray-700 mb-1">
-              Indicador
+            <label htmlFor="indicadorNombre" className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre del Indicador *
             </label>
-            <Input id="indicador" value={indicador} onChange={(e) => setIndicador(e.target.value)} placeholder="Nombre del indicador" />
+            <Input
+              id="indicadorNombre"
+              value={indicadorNombre}
+              onChange={(e) => setIndicadorNombre(e.target.value)}
+              placeholder="Nombre del indicador"
+              className={errors.indicadorNombre ? "border-red-500" : ""}
+            />
+            {errors.indicadorNombre && <p className="text-red-500 text-xs mt-1">{errors.indicadorNombre}</p>}
           </div>
           <div>
+            <label htmlFor="unidadMedida" className="block text-sm font-medium text-gray-700 mb-1">
+              Unidad de Medida *
+            </label>
+            <Input
+              id="unidadMedida"
+              value={unidadMedida}
+              onChange={(e) => setUnidadMedida(e.target.value)}
+              placeholder="Ej: Porcentaje"
+              className={errors.unidadMedida ? "border-red-500" : ""}
+            />
+            {errors.unidadMedida && <p className="text-red-500 text-xs mt-1">{errors.unidadMedida}</p>}
+          </div>
+
+          {/* Línea Base */}
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Línea Base
+              Línea Base *
             </label>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="lineaBaseAnio" className="block text-xs text-gray-500 mb-1">
-                  Año
+                  Año *
                 </label>
                 <Select onValueChange={(value) => setLineaBaseAnio(value)} value={lineaBaseAnio}>
-                  <SelectTrigger id="lineaBaseAnio">
-                    <SelectValue placeholder="Ej: 2024" />
+                  <SelectTrigger id="lineaBaseAnio" className={errors.lineaBaseAnio ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Seleccionar año" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableYears.map((year) => (
@@ -244,10 +282,11 @@ function OEIModal({
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.lineaBaseAnio && <p className="text-red-500 text-xs mt-1">{errors.lineaBaseAnio}</p>}
               </div>
               <div>
                 <label htmlFor="lineaBaseValor" className="block text-xs text-gray-500 mb-1">
-                  Valor
+                  Valor *
                 </label>
                 <Input
                   id="lineaBaseValor"
@@ -256,7 +295,9 @@ function OEIModal({
                   value={lineaBaseValor}
                   onChange={(e) => setLineaBaseValor(e.target.value)}
                   placeholder="Ej: 75.5"
+                  className={errors.lineaBaseValor ? "border-red-500" : ""}
                 />
+                {errors.lineaBaseValor && <p className="text-red-500 text-xs mt-1">{errors.lineaBaseValor}</p>}
               </div>
             </div>
           </div>
@@ -415,10 +456,17 @@ const OeiCard = ({
 // Main Page Component
 // ============================================
 export default function OeiDashboardPage() {
-  const [pgds, setPgds] = useState<PGD[]>([]);
-  const [selectedPgdId, setSelectedPgdId] = useState<string | undefined>(undefined);
+  // Global PGD state from store
+  const {
+    selectedPGD,
+    pgds,
+    isLoading,
+    setSelectedPGD,
+    initializePGD,
+    setLoading,
+  } = usePGD();
+
   const [oeis, setOeis] = useState<OEI[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingOeis, setIsLoadingOeis] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -430,16 +478,16 @@ export default function OeiDashboardPage() {
 
   const { toast } = useToast();
 
+  // Derived state
+  const selectedPgdId = selectedPGD?.id?.toString();
+
   // Load PGDs
   const loadPGDs = useCallback(async () => {
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
     try {
       const data = await getPGDs();
-      setPgds(data);
-      if (data.length > 0 && !selectedPgdId) {
-        setSelectedPgdId(data[0].id.toString());
-      }
+      initializePGD(data);
     } catch (err: any) {
       console.error("Error loading PGDs:", err);
       setError("Error al cargar los planes de gobierno digital");
@@ -448,10 +496,9 @@ export default function OeiDashboardPage() {
         description: "No se pudieron cargar los PGDs",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [selectedPgdId, toast]);
+  }, [initializePGD, setLoading, toast]);
 
   // Load OEIs when PGD changes
   const loadOEIs = useCallback(async () => {
@@ -477,7 +524,9 @@ export default function OeiDashboardPage() {
   }, [selectedPgdId, toast]);
 
   useEffect(() => {
-    loadPGDs();
+    if (pgds.length === 0) {
+      loadPGDs();
+    }
   }, []);
 
   useEffect(() => {
@@ -485,6 +534,14 @@ export default function OeiDashboardPage() {
       loadOEIs();
     }
   }, [selectedPgdId, loadOEIs]);
+
+  // Handle PGD selection change
+  const handleSelectPgd = (pgdId: string) => {
+    const pgd = pgds.find(p => p.id.toString() === pgdId);
+    if (pgd) {
+      setSelectedPGD(pgd);
+    }
+  };
 
   const handleOpenModal = (oei: OEI | null = null) => {
     setEditingOei(oei);
@@ -548,7 +605,7 @@ export default function OeiDashboardPage() {
     }
   };
 
-  const selectedPgd = pgds.find((p) => p.id.toString() === selectedPgdId);
+  const selectedPgd = selectedPGD;
 
   return (
     <ProtectedRoute module={MODULES.PGD}>
@@ -574,7 +631,7 @@ export default function OeiDashboardPage() {
                 </Button>
               ) : (
                 <>
-                  <Select value={selectedPgdId} onValueChange={setSelectedPgdId}>
+                  <Select value={selectedPgdId || ''} onValueChange={handleSelectPgd}>
                     <SelectTrigger className="w-[180px] bg-white border-[#484848]">
                       <SelectValue placeholder="Seleccionar PGD" />
                     </SelectTrigger>
@@ -638,6 +695,8 @@ export default function OeiDashboardPage() {
           onClose={handleCloseModal}
           oei={editingOei}
           pgdId={selectedPgdId ? Number(selectedPgdId) : 0}
+          pgd={selectedPgd || null}
+          existingOeisCount={oeis.length}
           onSave={handleSaveOei}
         />
 

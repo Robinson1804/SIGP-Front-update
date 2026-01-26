@@ -13,9 +13,9 @@
  * Modalidad de contratación del personal
  */
 export enum Modalidad {
-  PLANILLA = 'Planilla',
+  NOMBRADO = 'Nombrado',
   CAS = 'CAS',
-  LOCADOR = 'Locador',
+  ORDEN_DE_SERVICIO = 'Orden de Servicio',
   PRACTICANTE = 'Practicante',
 }
 
@@ -79,7 +79,7 @@ export interface Personal {
   updatedAt: string;
   // Relaciones
   division?: Division;
-  usuario?: { id: number; username: string; email: string };
+  usuario?: { id: number; username: string; email: string; rol?: Role };
   habilidades?: PersonalHabilidad[];
 }
 
@@ -93,6 +93,7 @@ export interface Division {
   descripcion?: string;
   divisionPadreId?: number;
   jefeId?: number;
+  coordinadorId?: number;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
@@ -100,6 +101,8 @@ export interface Division {
   jefe?: Personal;
   divisionPadre?: Division;
   hijos?: Division[];
+  coordinador?: Personal;
+  scrumMasters?: Personal[];
   totalPersonal?: number;
 }
 
@@ -154,6 +157,49 @@ export interface Asignacion {
   proyecto?: { id: number; codigo: string; nombre: string };
   actividad?: { id: number; codigo: string; nombre: string };
   subproyecto?: { id: number; codigo: string; nombre: string };
+}
+
+/**
+ * Roles de usuario del sistema
+ */
+export enum Role {
+  ADMIN = 'ADMIN',
+  PMO = 'PMO',
+  COORDINADOR = 'COORDINADOR',
+  SCRUM_MASTER = 'SCRUM_MASTER',
+  PATROCINADOR = 'PATROCINADOR',
+  DESARROLLADOR = 'DESARROLLADOR',
+  IMPLEMENTADOR = 'IMPLEMENTADOR',
+}
+
+/**
+ * Usuario del sistema
+ */
+export interface Usuario {
+  id: number;
+  email: string;
+  username: string;
+  nombre: string;
+  apellido: string;
+  rol: Role;
+  rolesAdicionales: Role[];
+  avatarUrl?: string;
+  telefono?: string;
+  activo: boolean;
+  ultimoAcceso?: string;
+  createdAt: string;
+  updatedAt: string;
+  // Relaciones
+  personal?: Personal;
+}
+
+/**
+ * Filtros para buscar usuarios
+ */
+export interface UsuarioFilters {
+  rol?: Role;
+  activo?: boolean;
+  busqueda?: string;
 }
 
 // ============================================================================
@@ -271,9 +317,9 @@ export function getNombreCompleto(personal: Personal): string {
  */
 export function getModalidadLabel(modalidad: Modalidad): string {
   const labels: Record<Modalidad, string> = {
-    [Modalidad.PLANILLA]: 'Planilla',
+    [Modalidad.NOMBRADO]: 'Nombrado',
     [Modalidad.CAS]: 'CAS',
-    [Modalidad.LOCADOR]: 'Locador',
+    [Modalidad.ORDEN_DE_SERVICIO]: 'Orden de Servicio',
     [Modalidad.PRACTICANTE]: 'Practicante',
   };
   return labels[modalidad] || modalidad;
@@ -365,4 +411,50 @@ export function getCargaColor(porcentaje: number): 'green' | 'yellow' | 'red' {
   if (porcentaje <= 80) return 'green';
   if (porcentaje <= 100) return 'yellow';
   return 'red';
+}
+
+/**
+ * Helper para obtener el label de un rol
+ */
+export function getRolLabel(rol: Role): string {
+  const labels: Record<Role, string> = {
+    [Role.ADMIN]: 'Administrador',
+    [Role.PMO]: 'PMO',
+    [Role.COORDINADOR]: 'Coordinador',
+    [Role.SCRUM_MASTER]: 'Scrum Master',
+    [Role.PATROCINADOR]: 'Patrocinador',
+    [Role.DESARROLLADOR]: 'Desarrollador',
+    [Role.IMPLEMENTADOR]: 'Implementador',
+  };
+  return labels[rol] || rol;
+}
+
+/**
+ * Helper para obtener el color de un rol
+ */
+export function getRolColor(rol: Role): string {
+  const colors: Record<Role, string> = {
+    [Role.ADMIN]: 'red',
+    [Role.PMO]: 'purple',
+    [Role.COORDINADOR]: 'blue',
+    [Role.SCRUM_MASTER]: 'cyan',
+    [Role.PATROCINADOR]: 'orange',
+    [Role.DESARROLLADOR]: 'green',
+    [Role.IMPLEMENTADOR]: 'teal',
+  };
+  return colors[rol] || 'gray';
+}
+
+/**
+ * Helper para verificar si un usuario tiene un rol específico
+ */
+export function tieneRol(usuario: Usuario, rol: Role): boolean {
+  return usuario.rol === rol || (usuario.rolesAdicionales || []).includes(rol);
+}
+
+/**
+ * Helper para obtener todos los roles de un usuario
+ */
+export function getTodosLosRoles(usuario: Usuario): Role[] {
+  return [usuario.rol, ...(usuario.rolesAdicionales || [])];
 }

@@ -646,7 +646,7 @@ function NuevaActaContent() {
                 nombre: `${formData.tipoReunion} - ${formData.fasePerteneciente}`,
                 tipo: 'Acta de Reunión' as const,
                 fecha: formatDateForDisplay(formData.fechaReunion),
-                estado: 'Pendiente' as const,
+                estado: 'Borrador' as const, // Estado inicial al crear
                 formData: formData, // Guardar todos los datos del formulario
             };
 
@@ -845,11 +845,11 @@ function NuevaActaContent() {
         );
     }
 
-    const projectCode = `PROY N° ${project.id}`;
+    const projectCode = project.code || `PROY N°${project.id}`;
+    // Breadcrumb simplificado: POI > Actas
     const breadcrumbs = [
         { label: "POI", href: paths.poi.base },
-        { label: 'Actas del proyecto', href: paths.poi.proyecto.actas },
-        { label: isEditing ? 'Editar Acta' : 'Nueva Acta' },
+        { label: 'Actas' },
     ];
 
     const secondaryHeader = (

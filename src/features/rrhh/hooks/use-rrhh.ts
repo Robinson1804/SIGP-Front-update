@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { rrhhService } from '../services';
+import { rrhhService, usuariosService } from '../services';
 import type {
   Personal,
   Division,
@@ -21,6 +21,9 @@ import type {
   DivisionFilters,
   HabilidadFilters,
   AsignacionFilters,
+  Usuario,
+  UsuarioFilters,
+  Role,
 } from '../types';
 import type {
   CreatePersonalDto,
@@ -57,6 +60,10 @@ interface UseRRHHState {
   asignaciones: Asignacion[];
   alertasSobrecarga: AlertaSobrecarga[];
   selectedAsignacion: Asignacion | null;
+
+  // Usuarios
+  usuarios: Usuario[];
+  selectedUsuario: Usuario | null;
 
   // Stats
   stats: RRHHStats | null;
@@ -107,6 +114,20 @@ interface UseRRHHActions {
   deleteAsignacion: (id: number) => Promise<void>;
   selectAsignacion: (asignacion: Asignacion | null) => void;
 
+  // Coordinadores y Scrum Masters
+  asignarCoordinador: (divisionId: number, personalId: number) => Promise<void>;
+  removerCoordinador: (divisionId: number) => Promise<void>;
+  asignarScrumMaster: (divisionId: number, personalId: number) => Promise<void>;
+  removerScrumMaster: (divisionId: number, personalId: number) => Promise<void>;
+
+  // Usuarios
+  loadUsuarios: (filters?: UsuarioFilters) => Promise<void>;
+  agregarRol: (usuarioId: number, rol: Role) => Promise<void>;
+  removerRol: (usuarioId: number, rol: Role) => Promise<void>;
+  resetearPassword: (usuarioId: number) => Promise<{ passwordTemporal: string }>;
+  toggleUsuarioActivo: (usuarioId: number, activo: boolean) => Promise<void>;
+  selectUsuario: (usuario: Usuario | null) => void;
+
   // Stats
   loadStats: () => Promise<void>;
 
@@ -133,6 +154,8 @@ const initialState: UseRRHHState = {
   asignaciones: [],
   alertasSobrecarga: [],
   selectedAsignacion: null,
+  usuarios: [],
+  selectedUsuario: null,
   stats: null,
   isLoading: false,
   error: null,
@@ -392,15 +415,18 @@ export function useRRHH(): UseRRHHReturn {
     setLoading(true);
     try {
       await rrhhService.deleteDivision(id);
+      // Backend hace soft delete (activo: false), así que actualizamos en lugar de remover
       setState((prev) => ({
         ...prev,
-        divisiones: prev.divisiones.filter((d) => d.id !== id),
+        divisiones: prev.divisiones.map((d) =>
+          d.id === id ? { ...d, activo: false } : d
+        ),
         selectedDivision: prev.selectedDivision?.id === id ? null : prev.selectedDivision,
         isLoading: false,
         error: null,
       }));
     } catch (err) {
-      setError('Error al eliminar la división');
+      setError('Error al desactivar la división');
       console.error('Error deleting division:', err);
       throw err;
     }
@@ -624,6 +650,174 @@ export function useRRHH(): UseRRHHReturn {
   }, []);
 
   // =========================================================================
+  // COORDINADORES Y SCRUM MASTERS
+  // =========================================================================
+
+  const asignarCoordinador = useCallback(
+    async (divisionId: number, personalId: number) => {
+      setLoading(true);
+      try {
+        const updated = await rrhhService.asignarCoordinador(divisionId, personalId);
+        setState((prev) => ({
+          ...prev,
+          divisiones: prev.divisiones.map((d) => (d.id === divisionId ? updated : d)),
+          isLoading: false,
+          error: null,
+        }));
+      } catch (err) {
+        setError('Error al asignar coordinador');
+        console.error('Error assigning coordinator:', err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  const removerCoordinador = useCallback(async (divisionId: number) => {
+    setLoading(true);
+    try {
+      const updated = await rrhhService.removerCoordinador(divisionId);
+      setState((prev) => ({
+        ...prev,
+        divisiones: prev.divisiones.map((d) => (d.id === divisionId ? updated : d)),
+        isLoading: false,
+        error: null,
+      }));
+    } catch (err) {
+      setError('Error al remover coordinador');
+      console.error('Error removing coordinator:', err);
+      throw err;
+    }
+  }, []);
+
+  const asignarScrumMaster = useCallback(
+    async (divisionId: number, personalId: number) => {
+      setLoading(true);
+      try {
+        const updated = await rrhhService.asignarScrumMaster(divisionId, personalId);
+        setState((prev) => ({
+          ...prev,
+          divisiones: prev.divisiones.map((d) => (d.id === divisionId ? updated : d)),
+          isLoading: false,
+          error: null,
+        }));
+      } catch (err) {
+        setError('Error al asignar scrum master');
+        console.error('Error assigning scrum master:', err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  const removerScrumMaster = useCallback(
+    async (divisionId: number, personalId: number) => {
+      setLoading(true);
+      try {
+        const updated = await rrhhService.removerScrumMaster(divisionId, personalId);
+        setState((prev) => ({
+          ...prev,
+          divisiones: prev.divisiones.map((d) => (d.id === divisionId ? updated : d)),
+          isLoading: false,
+          error: null,
+        }));
+      } catch (err) {
+        setError('Error al remover scrum master');
+        console.error('Error removing scrum master:', err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  // =========================================================================
+  // USUARIOS
+  // =========================================================================
+
+  const loadUsuarios = useCallback(async (filters?: UsuarioFilters) => {
+    try {
+      const data = await usuariosService.getUsuarios(filters);
+      setState((prev) => ({ ...prev, usuarios: data }));
+    } catch (err) {
+      console.error('Error loading usuarios:', err);
+    }
+  }, []);
+
+  const agregarRol = useCallback(async (usuarioId: number, rol: Role) => {
+    setLoading(true);
+    try {
+      const updated = await usuariosService.agregarRol(usuarioId, rol);
+      setState((prev) => ({
+        ...prev,
+        usuarios: prev.usuarios.map((u) => (u.id === usuarioId ? updated : u)),
+        isLoading: false,
+        error: null,
+      }));
+    } catch (err) {
+      setError('Error al agregar rol');
+      console.error('Error adding role:', err);
+      throw err;
+    }
+  }, []);
+
+  const removerRol = useCallback(async (usuarioId: number, rol: Role) => {
+    setLoading(true);
+    try {
+      const updated = await usuariosService.removerRol(usuarioId, rol);
+      setState((prev) => ({
+        ...prev,
+        usuarios: prev.usuarios.map((u) => (u.id === usuarioId ? updated : u)),
+        isLoading: false,
+        error: null,
+      }));
+    } catch (err) {
+      setError('Error al remover rol');
+      console.error('Error removing role:', err);
+      throw err;
+    }
+  }, []);
+
+  const resetearPassword = useCallback(
+    async (usuarioId: number): Promise<{ passwordTemporal: string }> => {
+      setLoading(true);
+      try {
+        const result = await usuariosService.resetearPassword(usuarioId);
+        setState((prev) => ({ ...prev, isLoading: false }));
+        return result;
+      } catch (err) {
+        setError('Error al resetear contraseña');
+        console.error('Error resetting password:', err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  const toggleUsuarioActivo = useCallback(
+    async (usuarioId: number, activo: boolean) => {
+      setLoading(true);
+      try {
+        const updated = await usuariosService.toggleUsuarioActivo(usuarioId, activo);
+        setState((prev) => ({
+          ...prev,
+          usuarios: prev.usuarios.map((u) => (u.id === usuarioId ? updated : u)),
+          isLoading: false,
+          error: null,
+        }));
+      } catch (err) {
+        setError('Error al cambiar estado del usuario');
+        console.error('Error toggling user status:', err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  const selectUsuario = useCallback((usuario: Usuario | null) => {
+    setState((prev) => ({ ...prev, selectedUsuario: usuario }));
+  }, []);
+
+  // =========================================================================
   // RETURN
   // =========================================================================
 
@@ -664,6 +858,18 @@ export function useRRHH(): UseRRHHReturn {
     finalizarAsignacion,
     deleteAsignacion,
     selectAsignacion,
+    // Coordinadores y Scrum Masters
+    asignarCoordinador,
+    removerCoordinador,
+    asignarScrumMaster,
+    removerScrumMaster,
+    // Usuarios
+    loadUsuarios,
+    agregarRol,
+    removerRol,
+    resetearPassword,
+    toggleUsuarioActivo,
+    selectUsuario,
     // Stats
     loadStats,
     // Utils

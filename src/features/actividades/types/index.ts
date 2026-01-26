@@ -49,6 +49,7 @@ export interface Actividad {
 
   // Responsables
   coordinadorId: number | null;
+  gestorId: number | null;
 
   // Financiero
   coordinacion: string | null;
@@ -79,6 +80,12 @@ export interface Actividad {
     apellido: string;
     email: string;
   };
+  gestor?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    email: string;
+  };
   accionEstrategica?: {
     id: number;
     codigo: string;
@@ -92,12 +99,13 @@ export interface Actividad {
  * Input para crear una Actividad
  */
 export interface CreateActividadInput {
-  codigo: string;
+  codigo?: string;
   nombre: string;
   descripcion?: string;
   clasificacion?: ActividadClasificacion;
   accionEstrategicaId?: number;
   coordinadorId?: number;
+  gestorId?: number;
   coordinacion?: string;
   areasFinancieras?: string[];
   montoAnual?: number;
@@ -122,6 +130,7 @@ export interface ActividadQueryFilters {
   estado?: ActividadEstado;
   coordinadorId?: number;
   accionEstrategicaId?: number;
+  pgdId?: number;
   anno?: number;
   activo?: boolean;
   page?: number;
@@ -140,7 +149,6 @@ export interface ActividadQueryFilters {
 export type TareaEstado =
   | 'Por hacer'
   | 'En progreso'
-  | 'En revision'
   | 'Finalizado';
 
 /**
@@ -167,7 +175,6 @@ export interface TareaKanban {
 
   // Asignación
   asignadoA: number | null;
-  informador: number | null;
 
   // Tiempo
   horasEstimadas: number | null;
@@ -201,16 +208,34 @@ export interface TareaKanban {
     apellido: string;
     email: string;
   };
-  informadorInfo?: {
+  /**
+   * Usuario que creó la tarea (informador)
+   */
+  creator?: {
     id: number;
     nombre: string;
     apellido: string;
+    email?: string;
   };
   actividad?: {
     id: number;
     codigo: string;
     nombre: string;
   };
+  /**
+   * Lista de usuarios asignados a la tarea (múltiples responsables)
+   */
+  asignados?: Array<{
+    id: number;
+    usuarioId: number;
+    rol: string;
+    usuario?: {
+      id: number;
+      nombre: string;
+      apellido: string;
+      email?: string;
+    };
+  }>;
   subtareasCount?: number;
   subtareasCompletadas?: number;
 }
@@ -225,6 +250,11 @@ export interface CreateTareaKanbanInput {
   actividadId: number;
   prioridad?: TareaPrioridad;
   asignadoA?: number;
+  /**
+   * Array de IDs de usuarios a asignar a la tarea.
+   * Máximo 5 responsables.
+   */
+  asignadosIds?: number[];
   informador?: number;
   horasEstimadas?: number;
   fechaInicio?: string;
@@ -278,8 +308,7 @@ export interface TareaKanbanQueryFilters {
 export type SubtareaEstado =
   | 'Por hacer'
   | 'En progreso'
-  | 'Finalizado'
-  | 'Validado';
+  | 'Finalizado';
 
 /**
  * Prioridades de una Subtarea
@@ -301,8 +330,13 @@ export interface Subtarea {
   prioridad: SubtareaPrioridad;
 
   // Asignación
-  responsable: number | null;
-  informador: number | null;
+  responsableId: number | null;
+  responsable?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    email?: string;
+  } | null;
 
   // Tiempo
   horasEstimadas: number | null;
@@ -336,10 +370,14 @@ export interface Subtarea {
     apellido: string;
     email: string;
   };
-  informadorInfo?: {
+  /**
+   * Usuario que creó la subtarea (informador)
+   */
+  creator?: {
     id: number;
     nombre: string;
     apellido: string;
+    email?: string;
   };
   tarea?: {
     id: number;
@@ -353,12 +391,11 @@ export interface Subtarea {
  */
 export interface CreateSubtareaInput {
   tareaId: number;
-  codigo?: string;
+  codigo: string;
   nombre: string;
   descripcion?: string;
   prioridad?: SubtareaPrioridad;
-  responsable?: number;
-  informador?: number;
+  responsableId?: number;
   horasEstimadas?: number;
   fechaInicio?: string;
   fechaFin?: string;
@@ -367,7 +404,8 @@ export interface CreateSubtareaInput {
 /**
  * Input para actualizar una Subtarea
  */
-export interface UpdateSubtareaInput extends Partial<Omit<CreateSubtareaInput, 'tareaId'>> {
+export interface UpdateSubtareaInput extends Partial<Omit<CreateSubtareaInput, 'tareaId' | 'codigo'>> {
+  codigo?: string;
   estado?: SubtareaEstado;
   horasReales?: number;
   evidenciaUrl?: string;
@@ -426,7 +464,6 @@ export interface TableroKanban {
     tareasCompletadas: number;
     tareasEnProgreso: number;
     tareasPorHacer: number;
-    tareasEnRevision: number;
     leadTimePromedio: number | null;
     cycleTimePromedio: number | null;
   };

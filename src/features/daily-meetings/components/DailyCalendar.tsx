@@ -15,7 +15,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
 
 interface DailyInfo {
   id: number;
@@ -87,8 +87,8 @@ export function DailyCalendar({
   today.setHours(0, 0, 0, 0);
 
   // Rango del sprint
-  const sprintStart = sprintFechaInicio ? new Date(sprintFechaInicio) : null;
-  const sprintEnd = sprintFechaFin ? new Date(sprintFechaFin) : null;
+  const sprintStart = sprintFechaInicio ? parseLocalDate(sprintFechaInicio) : null;
+  const sprintEnd = sprintFechaFin ? parseLocalDate(sprintFechaFin) : null;
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth((prev) => {
@@ -108,7 +108,12 @@ export function DailyCalendar({
   };
 
   const formatDateKey = (date: Date) => {
-    return date.toISOString().split('T')[0];
+    // Usar formato local para evitar problemas de zona horaria
+    // toISOString() convierte a UTC, lo que puede causar que el día cambie
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   return (
@@ -175,7 +180,7 @@ export function DailyCalendar({
                 isWeekend && !isSelected && 'text-gray-400',
                 dailyInfo && !isSelected && 'bg-blue-50',
               )}
-              disabled={!isInSprintRange}
+              disabled={!isInSprintRange && !dailyInfo}
             >
               <span className={cn(
                 'font-medium',

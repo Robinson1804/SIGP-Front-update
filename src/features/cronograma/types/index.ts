@@ -45,13 +45,38 @@ export type TipoDependencia = 'FS' | 'FF' | 'SS' | 'SF';
 export type TipoTarea = 'tarea' | 'hito' | 'proyecto';
 
 /**
- * Responsable simplificado para el cronograma
+ * Estados de una tarea del cronograma
  */
-export interface ResponsableCronograma {
-  id: number;
-  nombre: string;
-  email?: string;
-}
+export type TareaEstadoCronograma =
+  | 'Por hacer'
+  | 'En progreso'
+  | 'Completado';
+
+/**
+ * Opciones de estados para selectores
+ */
+export const ESTADOS_TAREA_CRONOGRAMA: { value: TareaEstadoCronograma; label: string; color: string }[] = [
+  { value: 'Por hacer', label: 'Por hacer', color: '#6b7280' },
+  { value: 'En progreso', label: 'En progreso', color: '#3b82f6' },
+  { value: 'Completado', label: 'Completado', color: '#10b981' },
+];
+
+/**
+ * Opciones de asignación para tareas del cronograma
+ * - Scrum Master: Solo el Scrum Master del proyecto
+ * - Desarrolladores: Todos los desarrolladores del proyecto
+ * - Todo el equipo: Scrum Master + Todos los desarrolladores
+ */
+export type AsignadoA = 'Scrum Master' | 'Desarrolladores' | 'Todo el equipo';
+
+/**
+ * Opciones de asignación para selectores
+ */
+export const ASIGNADO_A_OPTIONS: { value: AsignadoA; label: string; description: string }[] = [
+  { value: 'Scrum Master', label: 'Scrum Master', description: 'Solo el Scrum Master del proyecto' },
+  { value: 'Desarrolladores', label: 'Desarrolladores', description: 'Todos los desarrolladores del proyecto' },
+  { value: 'Todo el equipo', label: 'Todo el equipo', description: 'Scrum Master y todos los desarrolladores' },
+];
 
 /**
  * Dependencia entre tareas del cronograma
@@ -74,9 +99,9 @@ export interface TareaCronograma {
   inicio: Date;
   fin: Date;
   progreso: number; // 0-100
+  estado?: TareaEstadoCronograma; // Estado de la tarea del cronograma
   tipo: TipoTarea;
-  responsableId?: number;
-  responsable?: ResponsableCronograma;
+  asignadoA?: AsignadoA; // Asignación de la tarea
   color?: string;
   dependencias: DependenciaCronograma[];
   orden: number;
@@ -90,6 +115,11 @@ export interface TareaCronograma {
 }
 
 /**
+ * Estados del cronograma
+ */
+export type CronogramaEstado = 'Borrador' | 'En revisión' | 'Aprobado' | 'Rechazado';
+
+/**
  * Cronograma completo de un proyecto
  */
 export interface Cronograma {
@@ -97,10 +127,17 @@ export interface Cronograma {
   proyectoId: number;
   nombre: string;
   descripcion?: string;
+  estado: CronogramaEstado;
   tareas: TareaCronograma[];
   dependencias: DependenciaCronograma[];
   fechaBase?: string; // Fecha de linea base
   activo: boolean;
+  // Campos de aprobación dual (PMO + PATROCINADOR)
+  aprobadoPorPmo?: boolean;
+  aprobadoPorPatrocinador?: boolean;
+  fechaAprobacionPmo?: string | null;
+  fechaAprobacionPatrocinador?: string | null;
+  comentarioRechazo?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,7 +152,7 @@ export interface CreateTareaCronogramaInput {
   fin: string;
   tipo: TipoTarea;
   fase?: FaseCronograma;
-  responsableId?: number;
+  asignadoA?: AsignadoA;
   color?: string;
   orden?: number;
   padre?: string;
@@ -133,7 +170,7 @@ export interface UpdateTareaCronogramaInput {
   fin?: string;
   tipo?: TipoTarea;
   fase?: FaseCronograma | null;
-  responsableId?: number | null;
+  asignadoA?: AsignadoA | null;
   color?: string;
   orden?: number;
   padre?: string | null;
@@ -319,7 +356,7 @@ export interface TareaExportacion {
   porcentajeAvance: number;
   estado: string;
   prioridad: string;
-  responsable: string;
+  asignadoA: string;
   dependencias: string;
   esHito: boolean;
 }
@@ -329,7 +366,7 @@ export interface TareaExportacion {
  */
 export interface FiltrosCronograma {
   fases: FaseCronograma[];
-  responsableIds: number[];
+  asignadoA?: AsignadoA[];
   mostrarRutaCritica: boolean;
   mostrarConflictos: boolean;
   fechaDesde?: Date;

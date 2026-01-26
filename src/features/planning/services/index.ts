@@ -28,6 +28,7 @@ export {
   updateOEI,
   deleteOEI,
   toggleOEIActivo,
+  getNextOEICodigo,
 } from './oei.service';
 
 // AEI Service (NEW)
@@ -39,6 +40,7 @@ export {
   updateAEI,
   deleteAEI,
   toggleAEIActivo,
+  getNextAEICodigo,
 } from './aei.service';
 
 // OGD Service
@@ -50,6 +52,7 @@ export {
   updateOGD,
   deleteOGD,
   toggleOGDActivo,
+  getNextOGDCodigo,
 } from './ogd.service';
 
 // OEGD Service
@@ -62,6 +65,7 @@ export {
   updateOEGD,
   deleteOEGD,
   toggleOEGDActivo,
+  getNextOEGDCodigo,
 } from './oegd.service';
 
 // Acciones Estratégicas Service
@@ -77,4 +81,5 @@ export {
   getActividadesByAccionEstrategica,
   toggleAccionEstrategicaActivo,
   getAccionEstrategicaWithPOI,
+  getNextAECodigo,
 } from './acciones-estrategicas.service';

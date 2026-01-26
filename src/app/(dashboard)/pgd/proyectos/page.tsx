@@ -15,6 +15,9 @@ import {
   Users,
   Loader2,
   Trash2,
+  DollarSign,
+  Link2,
+  Link2Off,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -57,6 +60,7 @@ import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
 import { useToast } from "@/lib/hooks/use-toast";
+import { usePGD } from "@/stores";
 
 // Services
 import { getPGDs } from "@/features/planning/services/pgd.service";
@@ -70,8 +74,6 @@ import {
   type CostoAnual,
 } from "@/features/proyectos/services/proyectos.service";
 import type { Proyecto } from "@/lib/definitions";
-
-const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
 // Areas disponibles para selección
 const AREAS_DISPONIBLES = [
@@ -98,6 +100,10 @@ function POIModal({
   onSave,
   accionesEstrategicas,
   isLoading,
+  nextCodigo,
+  pgdAnioInicio,
+  pgdAnioFin,
+  isLinkedToPgd,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -105,6 +111,10 @@ function POIModal({
   onSave: (data: CreateProyectoData, isEdit: boolean, id?: number) => Promise<void>;
   accionesEstrategicas: AccionEstrategica[];
   isLoading: boolean;
+  nextCodigo: string;
+  pgdAnioInicio: number;
+  pgdAnioFin: number;
+  isLinkedToPgd: boolean;
 }) {
   const [formData, setFormData] = useState<Partial<CreateProyectoData>>({});
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -116,6 +126,23 @@ function POIModal({
   const [newCostoAnio, setNewCostoAnio] = useState<string>('');
   const [newCostoMonto, setNewCostoMonto] = useState<string>('');
 
+  // Generar opciones de años: si está vinculado a PGD usa ese rango, si no, rango libre (2020-2040)
+  const yearOptions: MultiSelectOption[] = isLinkedToPgd
+    ? Array.from(
+        { length: pgdAnioFin - pgdAnioInicio + 1 },
+        (_, i) => {
+          const year = (pgdAnioInicio + i).toString();
+          return { label: year, value: year };
+        }
+      )
+    : Array.from(
+        { length: 21 }, // 2020-2040 = 21 años
+        (_, i) => {
+          const year = (2020 + i).toString();
+          return { label: year, value: year };
+        }
+      );
+
   useEffect(() => {
     if (project) {
       const proyectoAny = project as any;
@@ -125,9 +152,11 @@ function POIModal({
         descripcion: project.descripcion || '',
         clasificacion: project.clasificacion as 'Al ciudadano' | 'Gestion interna',
         accionEstrategicaId: project.accionEstrategicaId || undefined,
-        areaResponsable: proyectoAny.areaResponsable || '',
+        // areaResponsable y coordinacion son el mismo campo - usar cualquiera que tenga valor
+        areaResponsable: proyectoAny.areaResponsable || proyectoAny.coordinacion || '',
         areasFinancieras: proyectoAny.areasFinancieras || [],
         costosAnuales: proyectoAny.costosAnuales || [],
+        anios: project.anios || [],
         alcances: proyectoAny.alcances || [],
         problematica: proyectoAny.problematica || '',
         beneficiarios: proyectoAny.beneficiarios || '',
@@ -143,6 +172,7 @@ function POIModal({
         areaResponsable: '',
         areasFinancieras: [],
         costosAnuales: [],
+        anios: [],
         alcances: [],
         problematica: '',
         beneficiarios: '',
@@ -158,11 +188,36 @@ function POIModal({
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!formData.codigo) newErrors.codigo = "El codigo es requerido.";
+
+    // Campos básicos obligatorios
     if (!formData.nombre) newErrors.nombre = "El nombre es requerido.";
-    if (!formData.accionEstrategicaId) newErrors.accionEstrategicaId = "La accion estrategica es requerida.";
+    // Acción Estratégica solo es requerida si el proyecto está vinculado a un PGD
+    if (isLinkedToPgd && !formData.accionEstrategicaId) {
+      newErrors.accionEstrategicaId = "La accion estrategica es requerida.";
+    }
     if (!formData.clasificacion) newErrors.clasificacion = "El tipo de proyecto es requerido.";
     if (!formData.areaResponsable) newErrors.areaResponsable = "El area responsable es requerida.";
+    if (!formData.anios || formData.anios.length === 0) newErrors.anios = "Debe seleccionar al menos un año.";
+
+    // Campos adicionales obligatorios para PMO
+    if (!formData.areasFinancieras || formData.areasFinancieras.length === 0) {
+      newErrors.areasFinancieras = "Debe seleccionar al menos un organo que contribuye.";
+    }
+    if (!formData.alcances || formData.alcances.length === 0) {
+      newErrors.alcances = "Debe agregar al menos un alcance.";
+    }
+    if (!formData.problematica || formData.problematica.trim() === '') {
+      newErrors.problematica = "La problematica es requerida.";
+    }
+    if (!formData.beneficiarios || formData.beneficiarios.trim() === '') {
+      newErrors.beneficiarios = "Los beneficiarios son requeridos.";
+    }
+    if (!formData.beneficios || formData.beneficios.length === 0) {
+      newErrors.beneficios = "Debe agregar al menos un beneficio.";
+    }
+    if (!formData.costosAnuales || formData.costosAnuales.length === 0) {
+      newErrors.costosAnuales = "Debe agregar al menos un costo anual.";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -305,14 +360,14 @@ function POIModal({
           {/* Código y Nombre */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium">Codigo *</label>
+              <label className="text-sm font-medium">Codigo</label>
               <Input
-                placeholder="Ej: PRY-001"
-                value={formData.codigo || ''}
-                onChange={e => setFormData(p => ({ ...p, codigo: e.target.value }))}
-                className={errors.codigo ? 'border-red-500' : ''}
+                placeholder="Autogenerado"
+                value={project ? project.codigo : nextCodigo}
+                disabled={true}
+                className="bg-muted font-medium"
               />
-              {errors.codigo && <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>}
+              <p className="text-xs text-muted-foreground mt-1">El codigo se genera automaticamente</p>
             </div>
             <div>
               <label className="text-sm font-medium">Nombre *</label>
@@ -329,29 +384,43 @@ function POIModal({
           {/* Sección: Alineamiento Estratégico */}
           <div className="border-t pt-4">
             <h3 className="text-sm font-semibold text-[#004272] mb-3">ALINEAMIENTO ESTRATEGICO</h3>
-            <div>
-              <label className="text-sm font-medium">Accion Estrategica *</label>
-              <Select
-                value={formData.accionEstrategicaId?.toString() || ''}
-                onValueChange={(value) => setFormData(p => ({ ...p, accionEstrategicaId: Number(value) }))}
-              >
-                <SelectTrigger className={errors.accionEstrategicaId ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Seleccionar AE" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accionesEstrategicas.map((ae) => (
-                    <SelectItem key={ae.id} value={ae.id.toString()}>
-                      {ae.codigo} - {ae.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.accionEstrategicaId && <p className="text-red-500 text-xs mt-1">{errors.accionEstrategicaId}</p>}
-            </div>
-            {selectedAE && (
-              <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
-                <p><strong>OEI:</strong> {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.nombre || 'Vinculado al PGD'}</p>
-                <p><strong>OGD:</strong> {(selectedAE as any).oegd?.ogd?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.nombre || 'Vinculado al PGD'}</p>
+            {isLinkedToPgd ? (
+              <>
+                <div>
+                  <label className="text-sm font-medium">Accion Estrategica *</label>
+                  <Select
+                    value={formData.accionEstrategicaId?.toString() || ''}
+                    onValueChange={(value) => setFormData(p => ({ ...p, accionEstrategicaId: Number(value) }))}
+                  >
+                    <SelectTrigger className={errors.accionEstrategicaId ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Seleccionar AE" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accionesEstrategicas.map((ae) => (
+                        <SelectItem key={ae.id} value={ae.id.toString()}>
+                          {ae.codigo} - {ae.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.accionEstrategicaId && <p className="text-red-500 text-xs mt-1">{errors.accionEstrategicaId}</p>}
+                </div>
+                {selectedAE && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
+                    <p><strong>OEI:</strong> {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.nombre || 'Vinculado al PGD'}</p>
+                    <p><strong>OGD:</strong> {(selectedAE as any).oegd?.ogd?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.nombre || 'Vinculado al PGD'}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Link2Off className="h-4 w-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-700">Sin PGD asociado</span>
+                </div>
+                <p className="text-xs text-amber-600 mt-1">
+                  Este proyecto no está vinculado a ningún PGD. Para asociarlo, utilice el botón &quot;Asociar&quot; en la sección &quot;No asociados a PGD&quot;.
+                </p>
               </div>
             )}
           </div>
@@ -395,8 +464,8 @@ function POIModal({
               </div>
             </div>
             <div className="mt-3">
-              <label className="text-sm font-medium">Organos que Contribuyen</label>
-              <div className="mt-2 space-y-2 max-h-32 overflow-y-auto border rounded-md p-3">
+              <label className="text-sm font-medium">Organos que Contribuyen *</label>
+              <div className={`mt-2 space-y-2 max-h-32 overflow-y-auto border rounded-md p-3 ${errors.areasFinancieras ? 'border-red-500' : ''}`}>
                 {AREAS_DISPONIBLES.map((area) => (
                   <div key={area} className="flex items-center space-x-2">
                     <Checkbox
@@ -408,12 +477,44 @@ function POIModal({
                   </div>
                 ))}
               </div>
+              {errors.areasFinancieras && <p className="text-red-500 text-xs mt-1">{errors.areasFinancieras}</p>}
+            </div>
+            <div className="mt-3">
+              <label className="text-sm font-medium">Años del Proyecto *</label>
+              {isLinkedToPgd ? (
+                <p className="text-xs text-gray-500 mb-2">Rango del PGD: {pgdAnioInicio} - {pgdAnioFin}</p>
+              ) : (
+                <p className="text-xs text-amber-600 mb-2">Proyecto no vinculado a PGD - Selección de años libre (2020-2040)</p>
+              )}
+              <MultiSelect
+                options={yearOptions}
+                selected={(formData.anios || []).map(a => a.toString())}
+                onChange={(selected) => {
+                  const nuevosAnios = selected.map(s => parseInt(s, 10));
+                  // Limpiar costos anuales de años que ya no están seleccionados
+                  const costosActualizados = (formData.costosAnuales || []).filter(
+                    c => nuevosAnios.includes(c.anio)
+                  );
+                  setFormData(p => ({
+                    ...p,
+                    anios: nuevosAnios,
+                    costosAnuales: costosActualizados
+                  }));
+                  // Limpiar el selector de costo si el año seleccionado ya no está disponible
+                  if (newCostoAnio && !nuevosAnios.includes(parseInt(newCostoAnio, 10))) {
+                    setNewCostoAnio('');
+                  }
+                }}
+                placeholder="Seleccionar año(s)"
+                className={errors.anios ? 'border-red-500' : ''}
+              />
+              {errors.anios && <p className="text-red-500 text-xs mt-1">{errors.anios}</p>}
             </div>
           </div>
 
           {/* Sección: Alcance */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-[#004272] mb-3">ALCANCE</h3>
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">ALCANCE *</h3>
             <div className="space-y-2">
               {(formData.alcances || []).map((alcance, index) => (
                 <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
@@ -428,41 +529,46 @@ function POIModal({
                   placeholder="Descripcion del alcance..."
                   value={newAlcance}
                   onChange={e => setNewAlcance(e.target.value)}
-                  className="flex-1"
+                  className={`flex-1 ${errors.alcances ? 'border-red-500' : ''}`}
                   rows={2}
                 />
                 <Button variant="outline" onClick={addAlcance} className="self-end">
                   <Plus className="h-4 w-4 mr-1" /> Agregar
                 </Button>
               </div>
+              {errors.alcances && <p className="text-red-500 text-xs mt-1">{errors.alcances}</p>}
             </div>
           </div>
 
           {/* Sección: Problemática */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-[#004272] mb-3">PROBLEMATICA IDENTIFICADA</h3>
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">PROBLEMATICA IDENTIFICADA *</h3>
             <Textarea
               placeholder="Descripcion de la problematica que el proyecto busca resolver..."
               value={formData.problematica || ''}
               onChange={e => setFormData(p => ({ ...p, problematica: e.target.value }))}
+              className={errors.problematica ? 'border-red-500' : ''}
               rows={3}
             />
+            {errors.problematica && <p className="text-red-500 text-xs mt-1">{errors.problematica}</p>}
           </div>
 
           {/* Sección: Beneficiarios */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-[#004272] mb-3">BENEFICIARIOS</h3>
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">BENEFICIARIOS *</h3>
             <Textarea
               placeholder="Ej: Todas las personas naturales y juridicas del pais"
               value={formData.beneficiarios || ''}
               onChange={e => setFormData(p => ({ ...p, beneficiarios: e.target.value }))}
+              className={errors.beneficiarios ? 'border-red-500' : ''}
               rows={2}
             />
+            {errors.beneficiarios && <p className="text-red-500 text-xs mt-1">{errors.beneficiarios}</p>}
           </div>
 
           {/* Sección: Beneficios */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-[#004272] mb-3">BENEFICIOS</h3>
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">BENEFICIOS *</h3>
             <div className="space-y-2">
               {(formData.beneficios || []).map((beneficio, index) => (
                 <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded">
@@ -477,79 +583,107 @@ function POIModal({
                   placeholder="Descripcion del beneficio..."
                   value={newBeneficio}
                   onChange={e => setNewBeneficio(e.target.value)}
-                  className="flex-1"
+                  className={`flex-1 ${errors.beneficios ? 'border-red-500' : ''}`}
                   rows={2}
                 />
                 <Button variant="outline" onClick={addBeneficio} className="self-end">
                   <Plus className="h-4 w-4 mr-1" /> Agregar
                 </Button>
               </div>
+              {errors.beneficios && <p className="text-red-500 text-xs mt-1">{errors.beneficios}</p>}
             </div>
           </div>
 
           {/* Sección: Costos por Año */}
           <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-[#004272] mb-3">COSTO ESTIMADO POR AÑOS</h3>
-            <div className="space-y-2">
-              {(formData.costosAnuales || []).length > 0 && (
-                <div className="border rounded-md overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="px-3 py-2 text-left">Año</th>
-                        <th className="px-3 py-2 text-right">Monto (S/)</th>
-                        <th className="px-3 py-2 w-10"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(formData.costosAnuales || []).map((costo, index) => (
-                        <tr key={index} className="border-t">
-                          <td className="px-3 py-2">{costo.anio}</td>
-                          <td className="px-3 py-2 text-right">{costo.monto.toLocaleString()}</td>
-                          <td className="px-3 py-2">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeCostoAnual(index)}>
-                              <X className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                      <tr className="border-t bg-gray-50 font-semibold">
-                        <td className="px-3 py-2">TOTAL</td>
-                        <td className="px-3 py-2 text-right">S/ {totalCostos.toLocaleString()}</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <label className="text-xs text-gray-500">Año</label>
-                  <Select value={newCostoAnio} onValueChange={setNewCostoAnio}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar año" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs text-gray-500">Monto (S/)</label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={newCostoMonto}
-                    onChange={e => setNewCostoMonto(e.target.value)}
-                  />
-                </div>
-                <Button variant="outline" onClick={addCostoAnual}>
-                  <Plus className="h-4 w-4 mr-1" /> Agregar
-                </Button>
+            <h3 className="text-sm font-semibold text-[#004272] mb-3">COSTO ESTIMADO POR AÑOS *</h3>
+            {(!formData.anios || formData.anios.length === 0) ? (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-700">
+                Primero selecciona los años del proyecto en el campo "Años del Proyecto" para poder asignar costos.
               </div>
-            </div>
+            ) : (
+              <div className="space-y-2">
+                {/* Años disponibles para asignar costo */}
+                {(() => {
+                  const aniosConCosto = (formData.costosAnuales || []).map(c => c.anio);
+                  const aniosDisponibles = (formData.anios || []).filter(a => !aniosConCosto.includes(a)).sort((a, b) => a - b);
+                  const todosAsignados = aniosDisponibles.length === 0 && (formData.anios || []).length > 0;
+
+                  return (
+                    <>
+                      {(formData.costosAnuales || []).length > 0 && (
+                        <div className={`border rounded-md overflow-hidden ${errors.costosAnuales ? 'border-red-500' : ''}`}>
+                          <table className="w-full text-sm">
+                            <thead className="bg-gray-100">
+                              <tr>
+                                <th className="px-3 py-2 text-left">Año</th>
+                                <th className="px-3 py-2 text-right">Monto (S/)</th>
+                                <th className="px-3 py-2 w-10"></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(formData.costosAnuales || []).sort((a, b) => a.anio - b.anio).map((costo, index) => (
+                                <tr key={costo.anio} className="border-t">
+                                  <td className="px-3 py-2">{costo.anio}</td>
+                                  <td className="px-3 py-2 text-right">S/ {costo.monto.toLocaleString()}</td>
+                                  <td className="px-3 py-2">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeCostoAnual(index)}>
+                                      <X className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                              <tr className="border-t bg-blue-50 font-semibold">
+                                <td className="px-3 py-2">MONTO TOTAL</td>
+                                <td className="px-3 py-2 text-right text-[#004272]">S/ {totalCostos.toLocaleString()}</td>
+                                <td></td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {todosAsignados ? (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-700 flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4" />
+                          Todos los años seleccionados tienen costo asignado.
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 items-end">
+                          <div className="flex-1">
+                            <label className="text-xs text-gray-500">Año (de los seleccionados)</label>
+                            <Select value={newCostoAnio} onValueChange={setNewCostoAnio}>
+                              <SelectTrigger className={errors.costosAnuales && (!formData.costosAnuales || formData.costosAnuales.length === 0) ? 'border-red-500' : ''}>
+                                <SelectValue placeholder="Seleccionar año" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {aniosDisponibles.map(year => (
+                                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs text-gray-500">Monto (S/)</label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={newCostoMonto}
+                              onChange={e => setNewCostoMonto(e.target.value)}
+                              className={errors.costosAnuales && (!formData.costosAnuales || formData.costosAnuales.length === 0) ? 'border-red-500' : ''}
+                            />
+                          </div>
+                          <Button variant="outline" onClick={addCostoAnual} disabled={!newCostoAnio}>
+                            <Plus className="h-4 w-4 mr-1" /> Agregar
+                          </Button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+                {errors.costosAnuales && <p className="text-red-500 text-xs mt-1">{errors.costosAnuales}</p>}
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
@@ -808,13 +942,26 @@ function ViewProjectModal({
           {proyectoAny.costosAnuales && proyectoAny.costosAnuales.length > 0 && (
             <div className="border-t pt-4">
               <h3 className="font-bold text-[#004272] mb-3">COSTO ESTIMADO POR AÑOS</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {proyectoAny.costosAnuales.map((costo: { anio: number; monto: number }, i: number) => (
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                {proyectoAny.costosAnuales
+                  .sort((a: { anio: number }, b: { anio: number }) => a.anio - b.anio)
+                  .map((costo: { anio: number; monto: number }, i: number) => (
                   <div key={i} className="bg-gray-50 p-3 rounded">
                     <p className="text-sm text-gray-500">Año {costo.anio}</p>
                     <p className="font-semibold">S/ {costo.monto.toLocaleString()}</p>
                   </div>
                 ))}
+              </div>
+              {/* Monto Total */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-[#004272]">MONTO TOTAL DEL PROYECTO</span>
+                  <span className="text-xl font-bold text-[#004272]">
+                    S/ {proyectoAny.costosAnuales
+                      .reduce((acc: number, c: { monto: number }) => acc + c.monto, 0)
+                      .toLocaleString()}
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -833,18 +980,262 @@ function ViewProjectModal({
   );
 }
 
+// Modal para asociar un proyecto a un PGD
+function AssociateProjectModal({
+  isOpen,
+  onClose,
+  project,
+  pgds,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  project: Proyecto | null;
+  pgds: PGD[];
+  onSave: (projectId: number, accionEstrategicaId: number) => Promise<void>;
+}) {
+  const [selectedPgdId, setSelectedPgdId] = useState<string>('');
+  const [selectedAeId, setSelectedAeId] = useState<string>('');
+  const [accionesDelPgd, setAccionesDelPgd] = useState<AccionEstrategica[]>([]);
+  const [loadingAes, setLoadingAes] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Validación de años del proyecto vs rango del PGD
+  const selectedPgd = pgds.find(p => p.id.toString() === selectedPgdId);
+
+  const yearValidation = React.useMemo(() => {
+    if (!selectedPgd || !project?.anios || project.anios.length === 0) {
+      return { isValid: true, invalidYears: [] as number[], message: '' };
+    }
+
+    const pgdStart = selectedPgd.anioInicio;
+    const pgdEnd = selectedPgd.anioFin;
+    const invalidYears = project.anios.filter(
+      (year) => year < pgdStart || year > pgdEnd
+    );
+
+    if (invalidYears.length > 0) {
+      return {
+        isValid: false,
+        invalidYears,
+        message: `El proyecto tiene años (${invalidYears.join(', ')}) que están fuera del rango del PGD seleccionado (${pgdStart}-${pgdEnd}).`,
+      };
+    }
+
+    return { isValid: true, invalidYears: [], message: '' };
+  }, [selectedPgd, project?.anios]);
+
+  // Reset cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedPgdId('');
+      setSelectedAeId('');
+      setAccionesDelPgd([]);
+    }
+  }, [isOpen]);
+
+  // Cargar AEs cuando se selecciona un PGD
+  useEffect(() => {
+    const loadAEs = async () => {
+      if (!selectedPgdId) {
+        setAccionesDelPgd([]);
+        setSelectedAeId('');
+        return;
+      }
+
+      try {
+        setLoadingAes(true);
+        const data = await getAccionesEstrategicasByPGD(selectedPgdId);
+        setAccionesDelPgd(data);
+        setSelectedAeId(''); // Reset AE selection when PGD changes
+      } catch (error) {
+        console.error('Error loading AEs:', error);
+        setAccionesDelPgd([]);
+      } finally {
+        setLoadingAes(false);
+      }
+    };
+    loadAEs();
+  }, [selectedPgdId]);
+
+  const handleSave = async () => {
+    if (!project || !selectedAeId) return;
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
+    setIsSaving(true);
+    try {
+      await onSave(project.id, parseInt(selectedAeId, 10));
+      setTimeout(() => {
+        onClose();
+      }, 0);
+    } catch (error) {
+      console.error('Error associating project:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      setTimeout(() => {
+        onClose();
+      }, 0);
+    }
+  };
+
+  const selectedAE = accionesDelPgd.find(ae => ae.id.toString() === selectedAeId);
+
+  if (!isOpen || !project) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="sm:max-w-lg p-0"
+        showCloseButton={false}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+          <DialogTitle>ASOCIAR PROYECTO A PGD</DialogTitle>
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white">
+              <X className="h-4 w-4" />
+            </Button>
+          </DialogClose>
+        </DialogHeader>
+        <div className="p-6 space-y-4">
+          {/* Info del proyecto */}
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-500">Proyecto a asociar:</p>
+            <p className="font-semibold">{project.codigo} - {project.nombre}</p>
+          </div>
+
+          {/* Aviso */}
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-700">
+              Selecciona primero el PGD y luego la Accion Estrategica a la cual deseas vincular este proyecto.
+            </p>
+          </div>
+
+          {/* Paso 1: Selector de PGD */}
+          <div>
+            <label className="text-sm font-medium">1. Seleccionar PGD *</label>
+            <Select value={selectedPgdId} onValueChange={setSelectedPgdId}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Seleccionar Plan de Gobierno Digital" />
+              </SelectTrigger>
+              <SelectContent>
+                {pgds.map((pgd) => (
+                  <SelectItem key={pgd.id} value={pgd.id.toString()}>
+                    PGD {pgd.anioInicio} - {pgd.anioFin}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Advertencia: Años del proyecto fuera del rango del PGD */}
+          {selectedPgdId && !yearValidation.isValid && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-300 rounded-lg">
+              <X className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-red-700">
+                <p className="font-semibold">No es posible asociar este proyecto</p>
+                <p className="mt-1">{yearValidation.message}</p>
+                {project?.anios && project.anios.length > 0 && (
+                  <p className="mt-1 text-xs">
+                    Años del proyecto: <strong>{project.anios.join(', ')}</strong>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Paso 2: Selector de Acción Estratégica - Solo mostrar si años son válidos */}
+          {selectedPgdId && yearValidation.isValid && (
+            <div>
+              <label className="text-sm font-medium">2. Seleccionar Accion Estrategica *</label>
+              {loadingAes ? (
+                <div className="mt-1 p-3 border rounded-md flex items-center gap-2 text-gray-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando acciones estrategicas...
+                </div>
+              ) : accionesDelPgd.length === 0 ? (
+                <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+                  No hay Acciones Estrategicas registradas en este PGD. Primero registra las AEs en el modulo de Planning.
+                </div>
+              ) : (
+                <Select value={selectedAeId} onValueChange={setSelectedAeId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Seleccionar Accion Estrategica" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accionesDelPgd.map((ae) => (
+                      <SelectItem key={ae.id} value={ae.id.toString()}>
+                        {ae.codigo} - {ae.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {/* Info de la vinculación seleccionada */}
+          {selectedPgd && selectedAE && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-md text-sm">
+              <p className="font-medium text-green-800 flex items-center gap-2">
+                <Link2 className="h-4 w-4" />
+                El proyecto quedara vinculado a:
+              </p>
+              <p className="mt-1"><strong>PGD:</strong> {selectedPgd.anioInicio} - {selectedPgd.anioFin}</p>
+              <p><strong>AE:</strong> {selectedAE.codigo} - {selectedAE.nombre}</p>
+              {(selectedAE as any).oegd?.ogd && (
+                <p><strong>OGD:</strong> {(selectedAE as any).oegd.ogd.codigo || 'N/A'} - {(selectedAE as any).oegd.ogd.nombre || ''}</p>
+              )}
+            </div>
+          )}
+        </div>
+        <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => handleOpenChange(false)} style={{ borderColor: '#CFD6DD', color: 'black' }}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSave}
+            style={{ backgroundColor: '#018CD1', color: 'white' }}
+            disabled={isSaving || !selectedPgdId || !selectedAeId || !yearValidation.isValid}
+          >
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Link2 className="h-4 w-4 mr-2" />}
+            Asociar al PGD
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const ProjectCard = ({
   project,
   onEdit,
   onDelete,
   onView,
   accionEstrategica,
+  onAssociate,
+  showAssociateButton,
 }: {
   project: Proyecto;
   onEdit: () => void;
   onDelete: () => void;
   onView: () => void;
   accionEstrategica?: AccionEstrategica;
+  onAssociate?: () => void;
+  showAssociateButton?: boolean;
 }) => {
   const displayYears = project.anios?.join(', ') || '';
 
@@ -870,7 +1261,7 @@ const ProjectCard = ({
             <p className="text-sm text-[#ADADAD]">{project.codigo}</p>
           </div>
         </div>
-        <DropdownMenu>
+        <DropdownMenu modal={false}>
           <DropdownMenuTrigger asChild data-radix-dropdown-menu-trigger>
             <Button variant="ghost" size="icon" className="h-6 w-6">
               <MoreHorizontal className="h-4 w-4" />
@@ -903,8 +1294,30 @@ const ProjectCard = ({
         <div className="flex items-center gap-2 text-sm">
           <Folder className="w-4 h-4 text-[#272E35]" />
           <span className="font-semibold">AE:</span>
-          <span className="truncate">{accionEstrategica?.codigo || '-'}</span>
+          {accionEstrategica ? (
+            <span className="truncate">{accionEstrategica.codigo}</span>
+          ) : (
+            <span className="text-orange-500 flex items-center gap-1">
+              <Link2Off className="w-3 h-3" />
+              Sin vincular
+            </span>
+          )}
         </div>
+        {/* Botón para asociar proyecto sin PGD */}
+        {showAssociateButton && onAssociate && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 w-full border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAssociate();
+            }}
+          >
+            <Link2 className="w-4 h-4 mr-2" />
+            Asociar a PGD
+          </Button>
+        )}
         {project.clasificacion && (
           <div className="flex items-center gap-2 text-sm">
             <Users className="w-4 h-4 text-[#272E35]" />
@@ -912,6 +1325,21 @@ const ProjectCard = ({
             <span>{project.clasificacion}</span>
           </div>
         )}
+        {/* Monto Total del Proyecto */}
+        {(() => {
+          const proyectoAny = project as any;
+          const montoTotal = (proyectoAny.costosAnuales || []).reduce(
+            (acc: number, c: { monto: number }) => acc + c.monto,
+            0
+          );
+          return montoTotal > 0 ? (
+            <div className="flex items-center gap-2 text-sm mt-1 pt-2 border-t">
+              {/* <DollarSign className="w-4 h-4 text-[#004272]" /> */}
+              <span className="font-semibold">Monto Total:</span>
+              <span className="text-[#004272] font-bold">S/ {montoTotal.toLocaleString()}</span>
+            </div>
+          ) : null;
+        })()}
       </CardContent>
     </Card>
   );
@@ -920,10 +1348,18 @@ const ProjectCard = ({
 export default function PgdProyectosPage() {
   const { toast } = useToast();
 
-  // PGD State
-  const [pgds, setPgds] = useState<PGD[]>([]);
-  const [selectedPgdId, setSelectedPgdId] = useState<string>('');
-  const [loadingPgds, setLoadingPgds] = useState(true);
+  // Global PGD state from store
+  const {
+    selectedPGD,
+    pgds,
+    isLoading: loadingPgds,
+    setSelectedPGD,
+    initializePGD,
+    setLoading: setLoadingPgds,
+  } = usePGD();
+
+  // Derived state
+  const selectedPgdId = selectedPGD?.id?.toString() || '';
 
   // Acciones Estrategicas State
   const [accionesEstrategicas, setAccionesEstrategicas] = useState<AccionEstrategica[]>([]);
@@ -933,6 +1369,7 @@ export default function PgdProyectosPage() {
   const [projects, setProjects] = useState<Proyecto[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [filteredProjects, setFilteredProjects] = useState<Proyecto[]>([]);
+  const [allProjectsForCode, setAllProjectsForCode] = useState<Proyecto[]>([]); // Para calcular el próximo código
 
   // Modal State
   const [isPoiModalOpen, setIsPoiModalOpen] = useState(false);
@@ -946,10 +1383,28 @@ export default function PgdProyectosPage() {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClasificacion, setFilterClasificacion] = useState<string>('all');
+  const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterVinculacion, setFilterVinculacion] = useState<string>('vinculados'); // 'todos' | 'vinculados' | 'sin_pgd'
+
+  // State para proyectos sin PGD
+  const [unlinkedProjects, setUnlinkedProjects] = useState<Proyecto[]>([]);
+  const [loadingUnlinked, setLoadingUnlinked] = useState(false);
+
+  // Modal para asociar proyecto a PGD
+  const [isAssociateModalOpen, setIsAssociateModalOpen] = useState(false);
+  const [projectToAssociate, setProjectToAssociate] = useState<Proyecto | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 8;
+
+  // Handle PGD selection change
+  const handleSelectPgd = (pgdId: string) => {
+    const pgd = pgds.find(p => p.id.toString() === pgdId);
+    if (pgd) {
+      setSelectedPGD(pgd);
+    }
+  };
 
   // Load PGDs on mount
   useEffect(() => {
@@ -957,19 +1412,29 @@ export default function PgdProyectosPage() {
       try {
         setLoadingPgds(true);
         const data = await getPGDs();
-        setPgds(data);
-        // Select the first PGD by default
-        if (data.length > 0) {
-          setSelectedPgdId(data[0].id.toString());
-        }
+        initializePGD(data);
       } catch (error) {
         console.error('Error loading PGDs:', error);
         toast({ title: 'Error', description: 'Error al cargar los PGDs', variant: 'destructive' });
-      } finally {
         setLoadingPgds(false);
       }
     };
-    loadPGDs();
+    if (pgds.length === 0) {
+      loadPGDs();
+    }
+  }, []);
+
+  // Load all projects for next code calculation
+  useEffect(() => {
+    const loadAllProjectsForCode = async () => {
+      try {
+        const response = await getProyectos({ activo: true });
+        setAllProjectsForCode(response.data || []);
+      } catch (error) {
+        console.error('Error loading projects for code:', error);
+      }
+    };
+    loadAllProjectsForCode();
   }, []);
 
   // Load Acciones Estrategicas when PGD changes
@@ -1024,9 +1489,47 @@ export default function PgdProyectosPage() {
     loadProjects();
   }, [accionesEstrategicas]);
 
+  // Load unlinked projects (projects without PGD association)
+  useEffect(() => {
+    const loadUnlinkedProjects = async () => {
+      try {
+        setLoadingUnlinked(true);
+        const response = await getProyectos({ activo: true });
+        const allProjects = response.data || [];
+        // Filter projects without accionEstrategicaId (no PGD association)
+        const unlinked = allProjects.filter(
+          (p: Proyecto) => !p.accionEstrategicaId
+        );
+        setUnlinkedProjects(unlinked);
+      } catch (error) {
+        console.error('Error loading unlinked projects:', error);
+        setUnlinkedProjects([]);
+      } finally {
+        setLoadingUnlinked(false);
+      }
+    };
+    loadUnlinkedProjects();
+  }, [projects]); // Reload when linked projects change
+
+  // Obtener el PGD seleccionado para filtrar por rango de años
+  const selectedPgdForFilter = pgds.find(p => p.id.toString() === selectedPgdId);
+
   // Apply filters
   useEffect(() => {
-    let result = [...projects];
+    // Determinar la fuente de datos según el filtro de vinculación
+    let result: Proyecto[] = [];
+
+    if (filterVinculacion === 'sin_pgd') {
+      // Mostrar proyectos sin PGD asociado
+      result = [...unlinkedProjects];
+    } else if (filterVinculacion === 'todos') {
+      // Mostrar todos los proyectos (vinculados + sin vincular)
+      result = [...projects, ...unlinkedProjects];
+    } else {
+      // 'vinculados' - solo proyectos vinculados al PGD seleccionado
+      // Mostrar TODOS los proyectos vinculados a las AEs del PGD, sin importar si tienen años o no
+      result = [...projects];
+    }
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -1040,9 +1543,26 @@ export default function PgdProyectosPage() {
       result = result.filter(p => p.clasificacion === filterClasificacion);
     }
 
+    // Filtrar por año específico (basado en costosAnuales o anios del proyecto)
+    if (filterYear && filterYear !== 'all') {
+      const yearNum = parseInt(filterYear, 10);
+      result = result.filter(p => {
+        // Verificar si el proyecto tiene costos para ese año
+        const proyectoAny = p as any;
+        if (proyectoAny.costosAnuales && proyectoAny.costosAnuales.length > 0) {
+          return proyectoAny.costosAnuales.some((c: { anio: number }) => c.anio === yearNum);
+        }
+        // O verificar si tiene el año en anios
+        if (p.anios && p.anios.length > 0) {
+          return p.anios.includes(yearNum);
+        }
+        return false;
+      });
+    }
+
     setFilteredProjects(result);
     setCurrentPage(1);
-  }, [projects, searchTerm, filterClasificacion]);
+  }, [projects, unlinkedProjects, searchTerm, filterClasificacion, filterYear, filterVinculacion, selectedPgdForFilter]);
 
   // Paginated projects
   const paginatedProjects = filteredProjects.slice(
@@ -1071,21 +1591,109 @@ export default function PgdProyectosPage() {
     setViewingProject(null);
   };
 
+  // Handlers para modal de asociación
+  const handleOpenAssociateModal = (project: Proyecto) => {
+    setProjectToAssociate(project);
+    setIsAssociateModalOpen(true);
+  };
+
+  const handleCloseAssociateModal = () => {
+    setIsAssociateModalOpen(false);
+    setProjectToAssociate(null);
+  };
+
+  const handleAssociateProject = async (projectId: number, accionEstrategicaId: number) => {
+    try {
+      await updateProyecto(projectId, { accionEstrategicaId });
+      toast({ title: 'Exito', description: 'Proyecto asociado al PGD correctamente' });
+
+      // Reload projects
+      const response = await getProyectos({ activo: true });
+      const allProjects = response.data || [];
+      setAllProjectsForCode(allProjects);
+
+      // Actualizar proyectos vinculados
+      const aeIds = accionesEstrategicas.map(ae => ae.id);
+      const filtered = allProjects.filter(
+        (p: Proyecto) => p.accionEstrategicaId && aeIds.includes(p.accionEstrategicaId)
+      );
+      setProjects(filtered);
+
+      // Actualizar proyectos sin vincular
+      const unlinked = allProjects.filter((p: Proyecto) => !p.accionEstrategicaId);
+      setUnlinkedProjects(unlinked);
+    } catch (error: unknown) {
+      console.error('Error associating project:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Error al asociar el proyecto';
+      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      throw error;
+    }
+  };
+
   const handleSaveProject = async (data: CreateProyectoData, isEdit: boolean, id?: number) => {
     try {
+      // Excluir 'codigo' del payload (el backend lo genera automaticamente)
+      const { codigo, ...dataWithoutCodigo } = data;
+
+      // Calcular montoAnual como la suma de costosAnuales
+      const montoTotal = (dataWithoutCodigo.costosAnuales || []).reduce(
+        (acc, c) => acc + c.monto,
+        0
+      );
+
+      // Agregar montoAnual calculado al payload
+      // También mapear areaResponsable a coordinacion (son el mismo dato en POI)
+      let dataConMontoTotal: Record<string, unknown> = {
+        ...dataWithoutCodigo,
+        montoAnual: montoTotal > 0 ? montoTotal : undefined,
+        // areaResponsable y coordinacion son el mismo campo - sincronizar
+        coordinacion: dataWithoutCodigo.areaResponsable || undefined,
+      };
+
+      // Si es edición, verificar si los años cambiaron y si las fechas existentes son válidas
+      if (isEdit && id && editingProject) {
+        const newAnios = data.anios || [];
+        const oldFechaInicio = (editingProject as Record<string, unknown>).fechaInicio as string | undefined;
+        const oldFechaFin = (editingProject as Record<string, unknown>).fechaFin as string | undefined;
+
+        if (newAnios.length > 0 && (oldFechaInicio || oldFechaFin)) {
+          const minAnio = Math.min(...newAnios);
+          const maxAnio = Math.max(...newAnios);
+
+          // Verificar si fechaInicio está fuera del rango de nuevos años
+          if (oldFechaInicio) {
+            const anioFechaInicio = new Date(oldFechaInicio).getFullYear();
+            if (anioFechaInicio < minAnio || anioFechaInicio > maxAnio) {
+              // Limpiar fechaInicio porque está fuera del rango
+              dataConMontoTotal = { ...dataConMontoTotal, fechaInicio: null };
+            }
+          }
+
+          // Verificar si fechaFin está fuera del rango de nuevos años
+          if (oldFechaFin) {
+            const anioFechaFin = new Date(oldFechaFin).getFullYear();
+            if (anioFechaFin < minAnio || anioFechaFin > maxAnio) {
+              // Limpiar fechaFin porque está fuera del rango
+              dataConMontoTotal = { ...dataConMontoTotal, fechaFin: null };
+            }
+          }
+        }
+      }
+
       if (isEdit && id) {
-        // Excluir 'codigo' del payload para update (el backend no lo acepta)
-        const { codigo, ...updateData } = data;
-        await updateProyecto(id, updateData);
+        await updateProyecto(id, dataConMontoTotal as Partial<CreateProyectoData>);
         toast({ title: 'Exito', description: 'Proyecto actualizado correctamente' });
       } else {
-        await createProyecto(data);
+        await createProyecto(dataConMontoTotal);
         toast({ title: 'Exito', description: 'Proyecto creado correctamente' });
       }
 
       // Reload projects (solo activos)
       const response = await getProyectos({ activo: true });
       const allProjects = response.data || [];
+      // Actualizar lista completa para cálculo de próximo código
+      setAllProjectsForCode(allProjects);
+      // Filtrar para la vista actual
       const aeIds = accionesEstrategicas.map(ae => ae.id);
       const filtered = allProjects.filter(
         (p: Proyecto) => p.accionEstrategicaId && aeIds.includes(p.accionEstrategicaId)
@@ -1147,8 +1755,8 @@ export default function PgdProyectosPage() {
             </h2>
             <div className="flex items-center gap-2">
               <Select
-                value={selectedPgdId}
-                onValueChange={setSelectedPgdId}
+                value={selectedPgdId || ''}
+                onValueChange={handleSelectPgd}
                 disabled={loadingPgds}
               >
                 <SelectTrigger className="w-[180px] bg-white border-[#484848]">
@@ -1198,6 +1806,30 @@ export default function PgdProyectosPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            {/* Filtro de Vinculación */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm">Vinculacion</label>
+              <Select value={filterVinculacion} onValueChange={setFilterVinculacion}>
+                <SelectTrigger className="w-[180px] bg-white border-[#CFD6DD] text-[#7E8C9A]">
+                  <SelectValue placeholder="Vinculados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vinculados">
+                    <div className="flex items-center gap-2">
+                      <Link2 className="h-4 w-4 text-green-600" />
+                      Vinculados al PGD
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="sin_pgd">
+                    <div className="flex items-center gap-2">
+                      <Link2Off className="h-4 w-4 text-orange-500" />
+                      Sin PGD asociado ({unlinkedProjects.length})
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="todos">Todos los proyectos</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-center gap-2">
               <label className="text-sm">Clasificacion</label>
               <Select value={filterClasificacion} onValueChange={setFilterClasificacion}>
@@ -1208,6 +1840,26 @@ export default function PgdProyectosPage() {
                   <SelectItem value="all">Todas</SelectItem>
                   <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
                   <SelectItem value="Gestion interna">Gestion interna</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Filtro de Año (dentro del rango del PGD seleccionado) */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm">
+                Año {selectedPgd && <span className="text-xs text-gray-500">({selectedPgd.anioInicio}-{selectedPgd.anioFin})</span>}
+              </label>
+              <Select value={filterYear} onValueChange={setFilterYear} disabled={!selectedPgd || filterVinculacion === 'sin_pgd'}>
+                <SelectTrigger className="w-[120px] bg-white border-[#CFD6DD] text-[#7E8C9A]">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {selectedPgd && Array.from(
+                    { length: selectedPgd.anioFin - selectedPgd.anioInicio + 1 },
+                    (_, i) => selectedPgd.anioInicio + i
+                  ).map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1237,6 +1889,8 @@ export default function PgdProyectosPage() {
                     onDelete={() => handleOpenDeleteModal(p)}
                     onView={() => handleOpenViewModal(p)}
                     accionEstrategica={getAeForProject(p)}
+                    onAssociate={() => handleOpenAssociateModal(p)}
+                    showAssociateButton={!p.accionEstrategicaId}
                   />
                 ))}
               </div>
@@ -1290,6 +1944,21 @@ export default function PgdProyectosPage() {
           onSave={handleSaveProject}
           accionesEstrategicas={accionesEstrategicas}
           isLoading={loadingAEs}
+          nextCodigo={(() => {
+            // Calcular el próximo código basado en TODOS los proyectos existentes
+            const maxNum = allProjectsForCode.reduce((max, p) => {
+              const match = p.codigo?.match(/PROY N°(\d+)/);
+              if (match) {
+                const num = parseInt(match[1], 10);
+                return num > max ? num : max;
+              }
+              return max;
+            }, 0);
+            return `PROY N°${maxNum + 1}`;
+          })()}
+          pgdAnioInicio={pgds.find(p => p.id.toString() === selectedPgdId)?.anioInicio || new Date().getFullYear()}
+          pgdAnioFin={pgds.find(p => p.id.toString() === selectedPgdId)?.anioFin || new Date().getFullYear() + 4}
+          isLinkedToPgd={editingProject ? !!editingProject.accionEstrategicaId : !!selectedPgdId}
         />
 
         <DeleteConfirmationModal
@@ -1309,6 +1978,14 @@ export default function PgdProyectosPage() {
               handleOpenPoiModal(viewingProject);
             }
           }}
+        />
+
+        <AssociateProjectModal
+          isOpen={isAssociateModalOpen}
+          onClose={handleCloseAssociateModal}
+          project={projectToAssociate}
+          pgds={pgds}
+          onSave={handleAssociateProject}
         />
       </AppLayout>
     </ProtectedRoute>

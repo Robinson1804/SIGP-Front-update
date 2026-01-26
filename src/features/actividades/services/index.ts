@@ -60,7 +60,6 @@ export {
   getTareasByUsuario,
   getTareasPendientesValidacion,
   iniciarTarea,
-  enviarARevision,
   finalizarTarea,
   devolverTarea,
   registrarHoras,

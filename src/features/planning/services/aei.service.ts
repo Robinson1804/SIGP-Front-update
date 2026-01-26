@@ -77,3 +77,13 @@ export async function toggleAEIActivo(
 ): Promise<AEI> {
   return updateAEI(id, { activo });
 }
+
+/**
+ * Obtener el siguiente código AEI disponible para un OEI
+ */
+export async function getNextAEICodigo(oeiId: number | string): Promise<string> {
+  const response = await apiClient.get<string>(`${ENDPOINTS.PLANNING.AEI}/next-codigo`, {
+    params: { oeiId },
+  });
+  return response.data;
+}

@@ -76,7 +76,13 @@ export default function ProyectoActasPage() {
   const handleDownloadPdf = async (acta: Acta) => {
     try {
       setDownloadingPdf(acta.id);
-      const filename = `${acta.tipo === 'Constitucion' ? 'Acta_Constitucion' : 'Acta_Reunion'}_${acta.codigo}.pdf`;
+      let filename = 'Acta_Reunion';
+      if (acta.tipo === 'Acta de Constitucion') {
+        filename = 'Acta_Constitucion';
+      } else if (acta.tipo === 'Acta de Daily Meeting') {
+        filename = 'Acta_Daily_Meeting';
+      }
+      filename = `${filename}_${acta.codigo}.pdf`;
       await saveActaPdf(acta.id, filename);
       toast({
         title: 'PDF descargado',

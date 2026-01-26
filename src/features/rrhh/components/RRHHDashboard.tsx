@@ -96,9 +96,9 @@ export function RRHHDashboard({
 
   const getModalidadColor = (modalidad: Modalidad): string => {
     const colors: Record<Modalidad, string> = {
-      [Modalidad.PLANILLA]: 'bg-blue-500',
+      [Modalidad.NOMBRADO]: 'bg-blue-500',
       [Modalidad.CAS]: 'bg-purple-500',
-      [Modalidad.LOCADOR]: 'bg-orange-500',
+      [Modalidad.ORDEN_DE_SERVICIO]: 'bg-orange-500',
       [Modalidad.PRACTICANTE]: 'bg-green-500',
     };
     return colors[modalidad];

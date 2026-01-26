@@ -75,9 +75,17 @@ export function DocumentoListTable({
 }: DocumentoListTableProps) {
   const { user } = useAuth();
   const userRole = user?.role;
+
+  // ADMIN tiene acceso total a todas las funciones
+  const isAdmin = userRole === ROLES.ADMIN;
+  // SCRUM_MASTER tiene todas las acciones de gestión (agregar, editar, eliminar)
+  const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
+  const canEdit = isAdmin || isScrumMaster;
+
+  // PMO y PATROCINADOR solo pueden ver, descargar y validar (aprobar/rechazar)
   const isPmo = userRole === ROLES.PMO;
-  const canEdit = isPmo || userRole === ROLES.COORDINADOR || userRole === ROLES.SCRUM_MASTER;
-  const canApprove = isPmo;
+  const isPatrocinador = userRole === ROLES.PATROCINADOR;
+  const canApprove = isAdmin || isPmo || isPatrocinador;
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-PE', {
@@ -96,7 +104,14 @@ export function DocumentoListTable({
 
   const getCreadorName = (documento: Documento) => {
     if (documento.creador) {
-      return `${documento.creador.nombres} ${documento.creador.apellidoPaterno}`;
+      // Preferir nombreCompleto si está disponible
+      if (documento.creador.nombreCompleto) {
+        return documento.creador.nombreCompleto;
+      }
+      // Fallback a nombres + apellido
+      if (documento.creador.nombres && documento.creador.apellidoPaterno) {
+        return `${documento.creador.nombres} ${documento.creador.apellidoPaterno}`;
+      }
     }
     return `Usuario ${documento.createdBy}`;
   };
@@ -210,7 +225,7 @@ export function DocumentoListTable({
 
                   {/* Acciones */}
                   <TableCell>
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <MoreHorizontal className="h-4 w-4" />

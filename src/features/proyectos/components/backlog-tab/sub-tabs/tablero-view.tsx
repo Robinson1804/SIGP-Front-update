@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { Loader2, AlertCircle, RefreshCw, Plus, MoreHorizontal, Calendar, MessageSquare, Eye, Edit, FileText } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Plus, MoreHorizontal, Eye, Edit, Trash2, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -20,19 +20,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useTableroData, type TareaConHistoria, type HistoriaConTareas } from '../hooks/use-tablero-data';
-import { TareaFormModal } from '../components/tarea-form-modal';
-import { TareaDetailModal } from '../components/tarea-detail-modal';
+import { useTableroData, type HistoriaConTareas } from '../hooks/use-tablero-data';
 import { HistoriaFormModal } from '../components/historia-form-modal';
-import type { TareaEstado, Tarea } from '@/features/proyectos/services/tareas.service';
-import type { HistoriaUsuario } from '@/features/proyectos/services/historias.service';
-import { cn } from '@/lib/utils';
+import { TareaFormModal } from '../components/tarea-form-modal';
+import type { HistoriaUsuario, HistoriaEstado } from '@/features/proyectos/services/historias.service';
+import { cn, formatDate as formatDateUtil } from '@/lib/utils';
 
 interface TableroViewProps {
   proyectoId: number;
   onCreateHistoria?: (sprintId?: number) => void;
   onEditHistoria?: (historia: HistoriaUsuario) => void;
   onViewHistoria?: (historia: HistoriaUsuario) => void;
+  onDeleteHistoria?: (historia: HistoriaUsuario) => void;
+  proyectoFechaInicio?: string | null;
+  proyectoFechaFin?: string | null;
+  /** Modo solo lectura */
+  isReadOnly?: boolean;
 }
 
 // Colores para avatares basados en iniciales
@@ -61,17 +64,19 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-function formatDate(dateString?: string | null): string | null {
-  if (!dateString) return null;
-  const date = new Date(dateString);
-  return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }).toUpperCase();
-}
-
-// Colores para prioridades de tareas
+// Colores para prioridades de HU
 const prioridadColors: Record<string, string> = {
-  Alta: 'text-red-600',
-  Media: 'text-orange-600',
-  Baja: 'text-green-600',
+  Alta: 'text-red-600 bg-red-50',
+  Media: 'text-orange-600 bg-orange-50',
+  Baja: 'text-green-600 bg-green-50',
+};
+
+// Colores para columnas de estado
+const columnColors: Record<HistoriaEstado, { bg: string; border: string; headerBg: string }> = {
+  'Por hacer': { bg: 'bg-gray-50', border: 'border-gray-200', headerBg: 'bg-gray-100' },
+  'En progreso': { bg: 'bg-blue-50', border: 'border-blue-200', headerBg: 'bg-blue-100' },
+  'En revision': { bg: 'bg-amber-50', border: 'border-amber-200', headerBg: 'bg-amber-100' },
+  'Finalizado': { bg: 'bg-green-50', border: 'border-green-200', headerBg: 'bg-green-100' },
 };
 
 export function TableroView({
@@ -79,6 +84,10 @@ export function TableroView({
   onCreateHistoria,
   onEditHistoria,
   onViewHistoria,
+  onDeleteHistoria,
+  proyectoFechaInicio,
+  proyectoFechaFin,
+  isReadOnly = false,
 }: TableroViewProps) {
   const {
     tableroData,
@@ -88,19 +97,14 @@ export function TableroView({
     isLoadingSprints,
     error,
     setSelectedSprintId,
-    moverTareaEnTablero,
+    moverHistoriaEnTablero,
     refresh,
   } = useTableroData(proyectoId);
 
   // Modal states
-  const [isTareaModalOpen, setIsTareaModalOpen] = useState(false);
-  const [editingTarea, setEditingTarea] = useState<Tarea | null>(null);
-  const [targetHistoriaId, setTargetHistoriaId] = useState<number | null>(null);
   const [isHistoriaModalOpen, setIsHistoriaModalOpen] = useState(false);
-
-  // Tarea Detail Modal states
-  const [isTareaDetailOpen, setIsTareaDetailOpen] = useState(false);
-  const [selectedTareaId, setSelectedTareaId] = useState<number | null>(null);
+  const [isTareaModalOpen, setIsTareaModalOpen] = useState(false);
+  const [selectedHistoriaForTarea, setSelectedHistoriaForTarea] = useState<number | null>(null);
 
   // Get selected sprint
   const selectedSprint = sprints.find((s) => s.id === selectedSprintId);
@@ -115,6 +119,9 @@ export function TableroView({
   };
 
   const handleDragEnd = async (result: DropResult) => {
+    // Disable drag and drop in read-only mode
+    if (isReadOnly) return;
+
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -126,34 +133,15 @@ export function TableroView({
       return;
     }
 
-    // Mover tarea al nuevo estado
-    const tareaId = parseInt(draggableId.replace('tarea-', ''));
-    const nuevoEstado = destination.droppableId as TareaEstado;
+    // Mover historia al nuevo estado
+    const historiaId = parseInt(draggableId.replace('historia-', ''));
+    const nuevoEstado = destination.droppableId as HistoriaEstado;
 
     try {
-      await moverTareaEnTablero(tareaId, nuevoEstado, destination.index);
+      await moverHistoriaEnTablero(historiaId, nuevoEstado);
     } catch (err) {
-      console.error('Error al mover tarea:', err);
+      console.error('Error al mover historia:', err);
     }
-  };
-
-  const handleCreateTarea = (historiaId: number) => {
-    setTargetHistoriaId(historiaId);
-    setEditingTarea(null);
-    setIsTareaModalOpen(true);
-  };
-
-  const handleEditTarea = (tarea: Tarea) => {
-    setEditingTarea(tarea);
-    setTargetHistoriaId(tarea.historiaUsuarioId);
-    setIsTareaModalOpen(true);
-  };
-
-  const handleTareaSuccess = () => {
-    setIsTareaModalOpen(false);
-    setEditingTarea(null);
-    setTargetHistoriaId(null);
-    refresh();
   };
 
   const handleAddHistoria = () => {
@@ -169,20 +157,14 @@ export function TableroView({
     refresh();
   };
 
-  // Ver detalle de tarea
-  const handleViewTareaDetail = (tareaId: number) => {
-    setSelectedTareaId(tareaId);
-    setIsTareaDetailOpen(true);
+  const handleCreateTarea = (historiaId: number) => {
+    setSelectedHistoriaForTarea(historiaId);
+    setIsTareaModalOpen(true);
   };
 
-  const handleTareaDetailClose = (open: boolean) => {
-    setIsTareaDetailOpen(open);
-    if (!open) {
-      setSelectedTareaId(null);
-    }
-  };
-
-  const handleTareaDetailUpdate = () => {
+  const handleTareaSuccess = () => {
+    setIsTareaModalOpen(false);
+    setSelectedHistoriaForTarea(null);
     refresh();
   };
 
@@ -209,14 +191,6 @@ export function TableroView({
     );
   }
 
-  // Obtener primera historia para crear tareas si no hay ninguna seleccionada
-  const getDefaultHistoriaId = (): number | null => {
-    if (tableroData?.historias && tableroData.historias.length > 0) {
-      return tableroData.historias[0].id;
-    }
-    return null;
-  };
-
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -237,7 +211,7 @@ export function TableroView({
                       Sprint {selectedSprint.numero}{' '}
                       <span className="text-gray-500">
                         {selectedSprint.fechaInicio && selectedSprint.fechaFin
-                          ? `${new Date(selectedSprint.fechaInicio).toLocaleDateString('es-PE')} - ${new Date(selectedSprint.fechaFin).toLocaleDateString('es-PE')}`
+                          ? `${formatDateUtil(selectedSprint.fechaInicio, { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${formatDateUtil(selectedSprint.fechaFin, { day: '2-digit', month: '2-digit', year: 'numeric' })}`
                           : ''}
                       </span>
                     </span>
@@ -246,12 +220,16 @@ export function TableroView({
               </SelectTrigger>
               <SelectContent>
                 {sprints.map((sprint) => (
-                  <SelectItem key={sprint.id} value={sprint.id.toString()}>
+                  <SelectItem
+                    key={sprint.id}
+                    value={sprint.id.toString()}
+                    className="group"
+                  >
                     <div className="flex items-center gap-2">
                       <span>Sprint {sprint.numero}</span>
-                      <span className="text-gray-500 text-xs">
+                      <span className="text-xs text-gray-500 group-hover:text-white group-focus:text-white group-data-[state=checked]:text-white">
                         {sprint.fechaInicio && sprint.fechaFin
-                          ? `${new Date(sprint.fechaInicio).toLocaleDateString('es-PE')} - ${new Date(sprint.fechaFin).toLocaleDateString('es-PE')}`
+                          ? `${formatDateUtil(sprint.fechaInicio, { day: '2-digit', month: '2-digit', year: 'numeric' })} - ${formatDateUtil(sprint.fechaFin, { day: '2-digit', month: '2-digit', year: 'numeric' })}`
                           : ''}
                       </span>
                     </div>
@@ -261,16 +239,15 @@ export function TableroView({
             </Select>
           </div>
 
-          {/* Estado filter badge */}
-          <Badge variant="outline" className="bg-gray-50 text-gray-600 font-normal">
-            Por hacer
-          </Badge>
-
           {/* Metrics */}
           {tableroData?.metricas && (
-            <span className="text-sm text-gray-500">
-              ({tableroData.metricas.totalHistorias} historias)
-            </span>
+            <div className="flex items-center gap-3 text-sm text-gray-500">
+              <span>{tableroData.metricas.totalHistorias} historias</span>
+              <span className="text-gray-300">|</span>
+              <span>{tableroData.metricas.totalPuntos} pts totales</span>
+              <span className="text-gray-300">|</span>
+              <span className="text-green-600">{tableroData.metricas.puntosCompletados} pts completados</span>
+            </div>
           )}
         </div>
 
@@ -285,21 +262,16 @@ export function TableroView({
             <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-gray-600"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Agregar columna
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-gray-600"
-          >
-            Cerrar Sprint
-          </Button>
+          {!isReadOnly && (
+            <Button
+              size="sm"
+              onClick={handleAddHistoria}
+              disabled={!selectedSprintId}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Nueva Historia
+            </Button>
+          )}
         </div>
       </div>
 
@@ -326,192 +298,97 @@ export function TableroView({
           </p>
         </div>
       ) : (
-        /* Tablero Kanban - 4 columnas horizontales lado a lado */
+        /* Tablero Kanban - 4 columnas de HU por estado */
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="overflow-x-auto">
             <div className="inline-flex gap-4 min-h-[600px] w-full min-w-max pb-4">
-              {tableroData.columnas.map((columna) => (
-                <div key={columna.id} className="w-[280px] flex-shrink-0 flex flex-col bg-gray-50 rounded-lg">
-                {/* Column Header */}
-                <div className="flex items-center justify-between px-3 py-3 border-b border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-800">{columna.nombre}</h3>
-                    <span className="text-sm text-gray-500">({columna.totalTareas})</span>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-gray-600">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Editar columna</DropdownMenuItem>
-                      <DropdownMenuItem>Ocultar columna</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                {/* Column Content - Droppable area for tasks */}
-                <Droppable droppableId={columna.id} type="tarea">
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={cn(
-                        'flex-1 p-2 space-y-3 overflow-y-auto min-h-[500px]',
-                        snapshot.isDraggingOver && 'bg-blue-50'
+              {tableroData.columnasHU.map((columna) => {
+                const colors = columnColors[columna.id] || columnColors['Por hacer'];
+                return (
+                  <div
+                    key={columna.id}
+                    className={cn(
+                      'w-[320px] flex-shrink-0 flex flex-col rounded-lg border',
+                      colors.bg,
+                      colors.border
+                    )}
+                  >
+                    {/* Column Header */}
+                    <div className={cn(
+                      'flex items-center justify-between px-3 py-3 rounded-t-lg border-b',
+                      colors.headerBg,
+                      colors.border
+                    )}>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-800">{columna.nombre}</h3>
+                        <Badge variant="secondary" className="text-xs">
+                          {columna.totalHistorias}
+                        </Badge>
+                      </div>
+                      {columna.totalPuntos > 0 && (
+                        <span className="text-xs font-medium text-gray-600">
+                          {columna.totalPuntos} pts
+                        </span>
                       )}
-                    >
-                      {columna.tareas.map((tarea, index) => (
-                        <Draggable
-                          key={tarea.id}
-                          draggableId={`tarea-${tarea.id}`}
-                          index={index}
-                        >
-                          {(provided, snapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className={cn(
-                                'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow cursor-grab',
-                                snapshot.isDragging && 'shadow-lg rotate-1 cursor-grabbing'
-                              )}
-                            >
-                              {/* Task Card Content - Clickable to open detail */}
-                              <div
-                                className="p-3 cursor-pointer"
-                                onClick={(e) => {
-                                  // Evitar abrir el modal si se hace clic en el menú
-                                  if ((e.target as HTMLElement).closest('[data-no-click]')) {
-                                    return;
-                                  }
-                                  handleViewTareaDetail(tarea.id);
-                                }}
-                              >
-                                {/* Title and menu */}
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                  <h4 className="text-sm font-medium text-gray-900 line-clamp-2 flex-1">
-                                    {tarea.nombre}
-                                  </h4>
-                                  <div data-no-click onClick={(e) => e.stopPropagation()}>
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0 text-gray-400 hover:text-gray-600">
-                                          <MoreHorizontal className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleViewTareaDetail(tarea.id)}>
-                                          <Eye className="h-4 w-4 mr-2" />
-                                          Ver detalles
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleEditTarea(tarea)}>
-                                          <Edit className="h-4 w-4 mr-2" />
-                                          Editar tarea
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => onViewHistoria?.(tarea.historia)}>
-                                          <FileText className="h-4 w-4 mr-2" />
-                                          Ver historia
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                </div>
-
-                                {/* Historia badge */}
-                                <div className="flex items-center justify-between mb-3">
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs px-2 py-0.5 font-normal"
-                                    style={{
-                                      backgroundColor: tarea.historia.epica?.color ? `${tarea.historia.epica.color}20` : '#f3f4f6',
-                                      color: tarea.historia.epica?.color || '#6b7280',
-                                    }}
-                                  >
-                                    {tarea.historia.epica?.nombre || tarea.historia.codigo}
-                                  </Badge>
-                                  {tarea.fechaLimite && (
-                                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                                      <Calendar className="h-3 w-3" />
-                                      <span>{formatDate(tarea.fechaLimite)}</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Footer: Code, priority, comments, avatar */}
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                                  <div className="flex items-center gap-3 text-xs">
-                                    <span className={cn('font-medium', prioridadColors[tarea.prioridad] || 'text-gray-600')}>
-                                      {tarea.historia.codigo}
-                                    </span>
-                                    {tarea.horasEstimadas && (
-                                      <span className="text-blue-600 font-semibold">
-                                        {tarea.horasEstimadas}h
-                                      </span>
-                                    )}
-                                    <div className="flex items-center gap-1 text-gray-500">
-                                      <MessageSquare className="h-3 w-3" />
-                                      <span>{tarea.historia.tareas?.length || 0}</span>
-                                    </div>
-                                  </div>
-                                  {tarea.responsable ? (
-                                    <div
-                                      className={cn(
-                                        'w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-medium',
-                                        getAvatarColor(tarea.responsable.nombre || 'U')
-                                      )}
-                                      title={tarea.responsable.nombre}
-                                    >
-                                      {getInitials(tarea.responsable.nombre || 'U')}
-                                    </div>
-                                  ) : (
-                                    <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
-                                      ?
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-
-                      {/* Add new task button */}
-                      <button
-                        onClick={() => {
-                          const defaultHistoriaId = getDefaultHistoriaId();
-                          if (defaultHistoriaId) {
-                            handleCreateTarea(defaultHistoriaId);
-                          } else {
-                            handleAddHistoria();
-                          }
-                        }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <Plus className="h-4 w-4" />
-                        <span>Nuevo</span>
-                      </button>
                     </div>
-                  )}
-                </Droppable>
-              </div>
-              ))}
+
+                    {/* Column Content - Droppable area for historias */}
+                    <Droppable droppableId={columna.id} type="historia">
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.droppableProps}
+                          className={cn(
+                            'flex-1 p-2 space-y-3 overflow-y-auto min-h-[500px]',
+                            snapshot.isDraggingOver && 'bg-blue-100/50 ring-2 ring-blue-300 ring-inset'
+                          )}
+                        >
+                          {columna.historias.length === 0 ? (
+                            <div className="flex items-center justify-center h-32 text-gray-400 text-sm">
+                              Sin historias
+                            </div>
+                          ) : (
+                            columna.historias.map((historia, index) => (
+                              <Draggable
+                                key={historia.id}
+                                draggableId={`historia-${historia.id}`}
+                                index={index}
+                                isDragDisabled={isReadOnly}
+                              >
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    className={cn(
+                                      'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow',
+                                      !isReadOnly && 'cursor-grab',
+                                      snapshot.isDragging && 'shadow-lg rotate-1 cursor-grabbing'
+                                    )}
+                                  >
+                                    <HistoriaCard
+                                      historia={historia}
+                                      onView={onViewHistoria}
+                                      onEdit={isReadOnly ? undefined : onEditHistoria}
+                                      onDelete={isReadOnly ? undefined : onDeleteHistoria}
+                                      onCreateTarea={isReadOnly ? undefined : handleCreateTarea}
+                                    />
+                                  </div>
+                                )}
+                              </Draggable>
+                            ))
+                          )}
+                          {provided.placeholder}
+                        </div>
+                      )}
+                    </Droppable>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </DragDropContext>
       )}
-
-      {/* Modal para crear/editar tarea */}
-      <TareaFormModal
-        open={isTareaModalOpen}
-        onOpenChange={setIsTareaModalOpen}
-        historiaUsuarioId={targetHistoriaId || 0}
-        tarea={editingTarea}
-        onSuccess={handleTareaSuccess}
-      />
 
       {/* Modal para crear historia */}
       <HistoriaFormModal
@@ -520,18 +397,152 @@ export function TableroView({
         proyectoId={proyectoId}
         sprintId={selectedSprintId || undefined}
         onSuccess={handleHistoriaSuccess}
+        proyectoFechaInicio={proyectoFechaInicio}
+        proyectoFechaFin={proyectoFechaFin}
       />
 
-      {/* Modal para ver detalle de tarea */}
-      {selectedTareaId && (
-        <TareaDetailModal
-          open={isTareaDetailOpen}
-          onOpenChange={handleTareaDetailClose}
-          tareaId={selectedTareaId}
-          proyectoId={proyectoId}
-          onUpdate={handleTareaDetailUpdate}
+      {/* Modal para crear tarea */}
+      {selectedHistoriaForTarea && (
+        <TareaFormModal
+          open={isTareaModalOpen}
+          onOpenChange={(open) => {
+            setIsTareaModalOpen(open);
+            if (!open) setSelectedHistoriaForTarea(null);
+          }}
+          historiaUsuarioId={selectedHistoriaForTarea}
+          onSuccess={handleTareaSuccess}
         />
       )}
+    </div>
+  );
+}
+
+// Componente de tarjeta de historia para el tablero
+interface HistoriaCardProps {
+  historia: HistoriaConTareas;
+  onView?: (historia: HistoriaUsuario) => void;
+  onEdit?: (historia: HistoriaUsuario) => void;
+  onDelete?: (historia: HistoriaUsuario) => void;
+  onCreateTarea?: (historiaId: number) => void;
+}
+
+function HistoriaCard({ historia, onView, onEdit, onDelete, onCreateTarea }: HistoriaCardProps) {
+  // Calcular progreso de tareas
+  const totalTareas = historia.tareas?.length || 0;
+  const tareasFinalizadas = historia.tareas?.filter((t) => t.estado === 'Finalizado').length || 0;
+  const progreso = totalTareas > 0 ? Math.round((tareasFinalizadas / totalTareas) * 100) : 0;
+
+  return (
+    <div className="p-3">
+      {/* Header: Code and menu */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono font-medium text-gray-500">
+            {historia.codigo}
+          </span>
+          {historia.prioridad && (
+            <Badge
+              variant="secondary"
+              className={cn(
+                'text-[10px] px-1.5 py-0',
+                prioridadColors[historia.prioridad] || 'bg-gray-100'
+              )}
+            >
+              {historia.prioridad}
+            </Badge>
+          )}
+        </div>
+        <div onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 text-gray-400 hover:text-gray-600">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onView && (
+                <DropdownMenuItem onClick={() => onView(historia)}>
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver detalle
+                </DropdownMenuItem>
+              )}
+              {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(historia)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+              )}
+              {onCreateTarea && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onCreateTarea(historia.id)}>
+                    <ListTodo className="h-4 w-4 mr-2" />
+                    <Plus className="h-3 w-3 -ml-1 mr-1" />
+                    Crear tarea
+                  </DropdownMenuItem>
+                </>
+              )}
+              {onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onDelete(historia)}
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Title */}
+      <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
+        {historia.titulo}
+      </h4>
+
+      {/* Epica badge */}
+      {historia.epica && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: historia.epica.color || '#888' }}
+          />
+          <span className="text-xs text-gray-500 truncate">
+            {historia.epica.nombre}
+          </span>
+        </div>
+      )}
+
+      {/* Stats row */}
+      <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          {historia.storyPoints && (
+            <span className="font-semibold text-blue-600">
+              {historia.storyPoints} pts
+            </span>
+          )}
+          {totalTareas > 0 && (
+            <span>
+              {tareasFinalizadas}/{totalTareas} tareas
+            </span>
+          )}
+        </div>
+        {progreso > 0 && (
+          <div className="flex items-center gap-1">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-green-500 rounded-full transition-all"
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
+            <span className="text-[10px] text-gray-500">{progreso}%</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

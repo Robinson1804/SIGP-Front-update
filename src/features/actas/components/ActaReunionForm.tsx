@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, Loader2, X } from 'lucide-react';
+import { Save, Loader2, X, UserPlus, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CollapsibleSection } from './CollapsibleSection';
 import { DynamicTable, ColumnDefinition } from './DynamicTable';
 import type {
@@ -38,6 +47,7 @@ import type {
   ActaProximoPaso,
   ActaAnexo,
 } from '@/features/documentos/types';
+import { getPersonal, type Personal } from '@/features/rrhh';
 
 const TIPOS_REUNION: { value: TipoReunion; label: string }[] = [
   { value: 'Planificacion', label: 'Planificacion' },
@@ -52,6 +62,15 @@ const MODALIDADES: { value: Modalidad; label: string }[] = [
   { value: 'Presencial', label: 'Presencial' },
   { value: 'Virtual', label: 'Virtual' },
   { value: 'Hibrida', label: 'Hibrida' },
+];
+
+const FASES_PROYECTO: { value: string; label: string }[] = [
+  { value: 'Analisis', label: 'Analisis' },
+  { value: 'Diseno', label: 'Diseño' },
+  { value: 'Desarrollo', label: 'Desarrollo' },
+  { value: 'Pruebas', label: 'Pruebas' },
+  { value: 'Implementacion', label: 'Implementacion' },
+  { value: 'Mantenimiento', label: 'Mantenimiento' },
 ];
 
 const formSchema = z.object({
@@ -123,6 +142,74 @@ export function ActaReunionForm({
     ensureArray(acta?.anexosReferenciados)
   );
 
+  // Estado para errores de validación de arrays
+  const [arrayErrors, setArrayErrors] = useState<{
+    asistentes?: string;
+    agenda?: string;
+    temasDesarrollados?: string;
+    acuerdos?: string;
+  }>({});
+
+  // Estado para selección de personal
+  const [personalList, setPersonalList] = useState<Personal[]>([]);
+  const [loadingPersonal, setLoadingPersonal] = useState(false);
+  const [showPersonalDialog, setShowPersonalDialog] = useState<'asistentes' | 'ausentes' | null>(null);
+  const [selectedPersonalIds, setSelectedPersonalIds] = useState<Set<number>>(new Set());
+
+  // Cargar lista de personal al montar el componente
+  useEffect(() => {
+    const loadPersonal = async () => {
+      setLoadingPersonal(true);
+      try {
+        const data = await getPersonal({ activo: true });
+        setPersonalList(data);
+      } catch (error) {
+        console.error('Error loading personal:', error);
+      } finally {
+        setLoadingPersonal(false);
+      }
+    };
+    loadPersonal();
+  }, []);
+
+  // Función para agregar personal seleccionado a la lista
+  const handleAddSelectedPersonal = () => {
+    if (!showPersonalDialog) return;
+
+    const selectedPeople = personalList.filter(p => selectedPersonalIds.has(p.id));
+    const newParticipants: ActaParticipante[] = selectedPeople.map(p => ({
+      id: `personal-${p.id}`,
+      nombre: `${p.nombres} ${p.apellidos}`.trim(),
+      cargo: p.cargo || '',
+      organizacion: p.division?.nombre || '',
+      usuarioId: p.usuarioId,
+    }));
+
+    if (showPersonalDialog === 'asistentes') {
+      setAsistentes(prev => [...prev, ...newParticipants]);
+    } else {
+      // Para ausentes, incluir campo motivo
+      const ausentesWithMotivo = newParticipants.map(p => ({ ...p, motivo: '' }));
+      setAusentes(prev => [...prev, ...ausentesWithMotivo]);
+    }
+
+    setSelectedPersonalIds(new Set());
+    setShowPersonalDialog(null);
+  };
+
+  // Toggle selección de personal
+  const togglePersonalSelection = (personalId: number) => {
+    setSelectedPersonalIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(personalId)) {
+        newSet.delete(personalId);
+      } else {
+        newSet.add(personalId);
+      }
+      return newSet;
+    });
+  };
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -139,16 +226,97 @@ export function ActaReunionForm({
     },
   });
 
+  // Sincronizar estado con el acta cuando cambie (importante para edición)
+  useEffect(() => {
+    if (acta) {
+      // Sincronizar arrays
+      setAsistentes(ensureArray(acta.asistentes));
+      setAusentes(ensureArray(acta.ausentes));
+      setAgenda(ensureArray(acta.agenda));
+      setTemasDesarrollados(ensureArray(acta.temasDesarrollados));
+      setAcuerdos(ensureArray(acta.acuerdos));
+      setProximosPasos(ensureArray(acta.proximosPasos));
+      setAnexosReferenciados(ensureArray(acta.anexosReferenciados));
+      // Sincronizar campos del formulario
+      form.reset({
+        nombre: acta.nombre || '',
+        fecha: acta.fecha || new Date().toISOString().split('T')[0],
+        tipoReunion: acta.tipoReunion || '',
+        fasePerteneciente: acta.fasePerteneciente || '',
+        horaInicio: acta.horaInicio || '',
+        horaFin: acta.horaFin || '',
+        modalidad: acta.modalidad || '',
+        lugarLink: acta.lugarLink || '',
+        observaciones: acta.observaciones || '',
+        proximaReunionFecha: acta.proximaReunionFecha || '',
+      });
+    }
+  }, [acta, form]);
+
+  // Validar arrays requeridos
+  const validateArrays = (): boolean => {
+    const errors: typeof arrayErrors = {};
+    let isValid = true;
+
+    // Filtrar items con datos válidos (no vacíos)
+    const asistentesValidos = asistentes.filter(a => a.nombre?.trim());
+    const agendaValida = agenda.filter(a => a.tema?.trim());
+    const temasValidos = temasDesarrollados.filter(t => t.tema?.trim());
+    const acuerdosValidos = acuerdos.filter(a => a.descripcion?.trim());
+
+    if (asistentesValidos.length === 0) {
+      errors.asistentes = 'Debe incluir al menos un asistente';
+      isValid = false;
+    }
+
+    if (agendaValida.length === 0) {
+      errors.agenda = 'Debe incluir al menos un tema en la agenda';
+      isValid = false;
+    }
+
+    if (temasValidos.length === 0) {
+      errors.temasDesarrollados = 'Debe incluir al menos un tema desarrollado';
+      isValid = false;
+    }
+
+    if (acuerdosValidos.length === 0) {
+      errors.acuerdos = 'Debe incluir al menos un acuerdo';
+      isValid = false;
+    }
+
+    setArrayErrors(errors);
+    return isValid;
+  };
+
   const onSubmit = async (values: FormValues) => {
+    // Limpiar errores previos
+    setArrayErrors({});
+
+    // Validar arrays requeridos
+    if (!validateArrays()) {
+      return;
+    }
+
+    // Filtrar items vacíos antes de enviar
+    const asistentesValidos = asistentes.filter(a => a.nombre?.trim());
+    const ausentesValidos = ausentes.filter(a => a.nombre?.trim());
+    const agendaValida = agenda.filter(a => a.tema?.trim());
+    const temasValidos = temasDesarrollados.filter(t => t.tema?.trim());
+    const acuerdosValidos = acuerdos.filter(a => a.descripcion?.trim());
+    const proximosPasosValidos = proximosPasos.filter(p => p.descripcion?.trim());
+    const anexosValidos = anexosReferenciados.filter(a => a.nombre?.trim());
+
     await onSave({
       ...values,
-      asistentes,
-      ausentes,
-      agenda,
-      temasDesarrollados,
-      acuerdos,
-      proximosPasos,
-      anexosReferenciados,
+      // Si proximaReunionFecha está vacío, enviar null en lugar de string vacío
+      proximaReunionFecha: values.proximaReunionFecha || null,
+      asistentes: asistentesValidos,
+      ausentes: ausentesValidos,
+      agenda: agendaValida,
+      temasDesarrollados: temasValidos,
+      acuerdos: acuerdosValidos,
+      proximosPasos: proximosPasosValidos,
+      anexosReferenciados: anexosValidos,
     });
   };
 
@@ -207,6 +375,13 @@ export function ActaReunionForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {/* Leyenda de campos requeridos */}
+        <div className="bg-muted/50 border rounded-lg p-3 text-sm">
+          <p className="text-muted-foreground">
+            <span className="text-red-500 font-medium">*</span> Los campos marcados con asterisco son obligatorios
+          </p>
+        </div>
+
         {/* Datos Generales */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -214,7 +389,9 @@ export function ActaReunionForm({
             name="nombre"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre de la Reunion</FormLabel>
+                <FormLabel>
+                  Nombre de la Reunion <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input {...field} placeholder="Ej: Reunion de planificacion Sprint 1" />
                 </FormControl>
@@ -227,7 +404,9 @@ export function ActaReunionForm({
             name="fecha"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Fecha</FormLabel>
+                <FormLabel>
+                  Fecha <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
@@ -243,7 +422,9 @@ export function ActaReunionForm({
             name="tipoReunion"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Tipo de Reunion</FormLabel>
+                <FormLabel>
+                  Tipo de Reunion <span className="text-red-500">*</span>
+                </FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
                     <SelectTrigger>
@@ -268,9 +449,20 @@ export function ActaReunionForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Fase del Proyecto</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Ej: Analisis, Desarrollo, Pruebas" />
-                </FormControl>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar fase" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {FASES_PROYECTO.map((fase) => (
+                      <SelectItem key={fase.value} value={fase.value}>
+                        {fase.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -348,38 +540,129 @@ export function ActaReunionForm({
 
         {/* Asistentes y Ausentes */}
         <CollapsibleSection
-          title="Asistentes y Ausentes"
-          description="Registre los participantes de la reunion"
+          title={<>Asistentes y Ausentes <span className="text-red-500">*</span></>}
+          description="Registre los participantes de la reunion (minimo 1 asistente requerido)"
         >
           <div className="space-y-6">
+            {arrayErrors.asistentes && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{arrayErrors.asistentes}</AlertDescription>
+              </Alert>
+            )}
             <div>
-              <Label className="text-base font-semibold mb-3 block">Asistentes</Label>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-base font-semibold">
+                  Asistentes <span className="text-red-500">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPersonalDialog('asistentes')}
+                  disabled={loadingPersonal}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Agregar del Personal
+                </Button>
+              </div>
               <DynamicTable
                 columns={asistentesColumns}
                 data={asistentes}
                 onChange={setAsistentes}
                 emptyRowTemplate={{ id: '', nombre: '', cargo: '', organizacion: '' }}
-                addLabel="Agregar asistente"
+                addLabel="Agregar asistente manual"
               />
             </div>
             <div>
-              <Label className="text-base font-semibold mb-3 block">Ausentes</Label>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-base font-semibold">Ausentes</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPersonalDialog('ausentes')}
+                  disabled={loadingPersonal}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Agregar del Personal
+                </Button>
+              </div>
               <DynamicTable
                 columns={ausentesColumns}
                 data={ausentes}
                 onChange={setAusentes}
                 emptyRowTemplate={{ id: '', nombre: '', cargo: '', motivo: '' }}
-                addLabel="Agregar ausente"
+                addLabel="Agregar ausente manual"
               />
             </div>
           </div>
         </CollapsibleSection>
 
+        {/* Dialog para selección de personal */}
+        <Dialog open={showPersonalDialog !== null} onOpenChange={(open) => !open && setShowPersonalDialog(null)}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>
+                Seleccionar Personal como {showPersonalDialog === 'asistentes' ? 'Asistentes' : 'Ausentes'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[400px] overflow-y-auto">
+              {loadingPersonal ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : personalList.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No hay personal disponible</p>
+              ) : (
+                <div className="space-y-2">
+                  {personalList.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer"
+                      onClick={() => togglePersonalSelection(p.id)}
+                    >
+                      <Checkbox
+                        checked={selectedPersonalIds.has(p.id)}
+                        onCheckedChange={() => togglePersonalSelection(p.id)}
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">{p.nombres} {p.apellidos}</p>
+                        <p className="text-sm text-gray-500">
+                          {p.cargo || 'Sin cargo'} • {p.division?.nombre || 'Sin área'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowPersonalDialog(null)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleAddSelectedPersonal}
+                disabled={selectedPersonalIds.size === 0}
+              >
+                Agregar {selectedPersonalIds.size} seleccionado(s)
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Agenda */}
         <CollapsibleSection
-          title="Agenda"
-          description="Puntos a tratar en la reunion"
+          title={<>Agenda <span className="text-red-500">*</span></>}
+          description="Puntos a tratar en la reunion (minimo 1 tema requerido)"
         >
+          {arrayErrors.agenda && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{arrayErrors.agenda}</AlertDescription>
+            </Alert>
+          )}
           <DynamicTable
             columns={agendaColumns}
             data={agenda}
@@ -391,9 +674,15 @@ export function ActaReunionForm({
 
         {/* Temas Desarrollados */}
         <CollapsibleSection
-          title="Temas Desarrollados"
-          description="Detalle de los temas tratados durante la reunion"
+          title={<>Temas Desarrollados <span className="text-red-500">*</span></>}
+          description="Detalle de los temas tratados durante la reunion (minimo 1 tema requerido)"
         >
+          {arrayErrors.temasDesarrollados && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{arrayErrors.temasDesarrollados}</AlertDescription>
+            </Alert>
+          )}
           <DynamicTable
             columns={temasColumns}
             data={temasDesarrollados}
@@ -405,9 +694,15 @@ export function ActaReunionForm({
 
         {/* Acuerdos */}
         <CollapsibleSection
-          title="Acuerdos y Compromisos"
-          description="Compromisos adquiridos durante la reunion"
+          title={<>Acuerdos y Compromisos <span className="text-red-500">*</span></>}
+          description="Compromisos adquiridos durante la reunion (minimo 1 acuerdo requerido)"
         >
+          {arrayErrors.acuerdos && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{arrayErrors.acuerdos}</AlertDescription>
+            </Alert>
+          )}
           <DynamicTable
             columns={acuerdosColumns}
             data={acuerdos}

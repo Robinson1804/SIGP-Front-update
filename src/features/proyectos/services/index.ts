@@ -25,3 +25,6 @@ export * from './historias.service';
 
 // Tareas
 export * from './tareas.service';
+
+// Subproyectos
+export * from './subproyectos.service';

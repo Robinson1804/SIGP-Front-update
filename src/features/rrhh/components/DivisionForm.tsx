@@ -6,6 +6,7 @@
  * Formulario para crear y editar divisiones
  */
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,8 +39,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Loader2 } from 'lucide-react';
-import type { Division, Personal } from '../types';
-import { getNombreCompleto } from '../types';
+import type { Division } from '../types';
 import type { CreateDivisionDto, UpdateDivisionDto } from '../types/dto';
 import { VALIDATION_RULES } from '../types/dto';
 
@@ -60,7 +60,6 @@ const divisionSchema = z.object({
     .optional()
     .or(z.literal('')),
   divisionPadreId: z.number().optional().nullable(),
-  jefeId: z.number().optional().nullable(),
   activo: z.boolean().optional(),
 });
 
@@ -72,7 +71,6 @@ interface DivisionFormProps {
   onSubmit: (data: CreateDivisionDto | UpdateDivisionDto) => Promise<void>;
   division?: Division | null;
   divisiones: Division[];
-  personal: Personal[];
   isLoading?: boolean;
 }
 
@@ -82,7 +80,6 @@ export function DivisionForm({
   onSubmit,
   division,
   divisiones,
-  personal,
   isLoading = false,
 }: DivisionFormProps) {
   const isEditing = !!division;
@@ -90,14 +87,27 @@ export function DivisionForm({
   const form = useForm<DivisionFormData>({
     resolver: zodResolver(divisionSchema),
     defaultValues: {
-      codigo: division?.codigo || '',
-      nombre: division?.nombre || '',
-      descripcion: division?.descripcion || '',
-      divisionPadreId: division?.divisionPadreId || null,
-      jefeId: division?.jefeId || null,
-      activo: division?.activo ?? true,
+      codigo: '',
+      nombre: '',
+      descripcion: '',
+      divisionPadreId: null,
+      activo: true,
     },
   });
+
+  // Reset form when dialog opens or division changes
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        codigo: division?.codigo || '',
+        nombre: division?.nombre || '',
+        descripcion: division?.descripcion || '',
+        divisionPadreId: division?.divisionPadreId || null,
+        activo: division?.activo ?? true,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, division]);
 
   // Filtrar divisiones para evitar seleccionar la misma o sus hijos
   const divisionesDisponibles = divisiones.filter((d) => {
@@ -110,12 +120,24 @@ export function DivisionForm({
 
   const handleSubmit = async (data: DivisionFormData) => {
     try {
-      const submitData = {
-        ...data,
-        descripcion: data.descripcion || undefined,
-        divisionPadreId: data.divisionPadreId || undefined,
-        jefeId: data.jefeId || undefined,
-      };
+      // For updates, exclude codigo as backend doesn't allow updating it
+      // For creates, exclude activo as backend CreateDivisionDto doesn't accept it
+      const { activo, codigo, ...baseFields } = data;
+
+      const submitData = isEditing
+        ? {
+            ...baseFields,
+            activo, // Include activo only for updates
+            descripcion: data.descripcion || undefined,
+            divisionPadreId: data.divisionPadreId || undefined,
+          }
+        : {
+            codigo, // Include codigo only for creates
+            ...baseFields,
+            // Note: activo is excluded for creates - backend sets default
+            descripcion: data.descripcion || undefined,
+            divisionPadreId: data.divisionPadreId || undefined,
+          };
       await onSubmit(submitData as CreateDivisionDto | UpdateDivisionDto);
       form.reset();
       onClose();
@@ -154,8 +176,9 @@ export function DivisionForm({
                     <FormLabel>Código *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="DIV-01"
+                        placeholder="Ingresar codigo"
                         {...field}
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                         className="uppercase"
                         disabled={isEditing}
                       />
@@ -215,7 +238,7 @@ export function DivisionForm({
                         <SelectValue placeholder="Seleccionar división padre (opcional)" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="item-aligned">
                       <SelectItem value="none">Sin división padre</SelectItem>
                       {divisionesDisponibles.map((div) => (
                         <SelectItem key={div.id} value={String(div.id)}>
@@ -232,39 +255,6 @@ export function DivisionForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="jefeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Jefe de División</FormLabel>
-                  <Select
-                    value={field.value?.toString() || 'none'}
-                    onValueChange={(value) =>
-                      field.onChange(value === 'none' ? null : Number(value))
-                    }
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar jefe (opcional)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Sin jefe asignado</SelectItem>
-                      {personal
-                        .filter((p) => p.activo)
-                        .map((p) => (
-                          <SelectItem key={p.id} value={String(p.id)}>
-                            {getNombreCompleto(p)} - {p.cargo || 'Sin cargo'}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {isEditing && (
               <FormField
                 control={form.control}
@@ -274,7 +264,7 @@ export function DivisionForm({
                     <div className="space-y-0.5">
                       <FormLabel>Estado</FormLabel>
                       <FormDescription>
-                        División activa en el sistema
+                        {field.value ? 'División activa en el sistema' : 'División inactiva (no visible para asignaciones)'}
                       </FormDescription>
                     </div>
                     <FormControl>

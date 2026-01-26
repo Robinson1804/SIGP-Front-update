@@ -38,19 +38,20 @@ interface EpicasViewProps {
   onCreateEpica: () => void;
   onEditEpica: (epica: Epica) => void;
   onRefresh: () => void;
+  /** Modo solo lectura */
+  isReadOnly?: boolean;
 }
 
 const PRIORIDAD_COLORS: Record<string, string> = {
-  Must: 'bg-red-100 text-red-800',
-  Should: 'bg-orange-100 text-orange-800',
-  Could: 'bg-yellow-100 text-yellow-800',
-  Wont: 'bg-gray-100 text-gray-800',
+  Alta: 'bg-red-100 text-red-800',
+  Media: 'bg-orange-100 text-orange-800',
+  Baja: 'bg-green-100 text-green-800',
 };
 
 const ESTADO_COLORS: Record<string, string> = {
-  Pendiente: 'bg-gray-100 text-gray-800',
+  'Por hacer': 'bg-gray-100 text-gray-800',
   'En progreso': 'bg-blue-100 text-blue-800',
-  Completada: 'bg-green-100 text-green-800',
+  'Finalizado': 'bg-green-100 text-green-800',
 };
 
 export function EpicasView({
@@ -60,6 +61,7 @@ export function EpicasView({
   onCreateEpica,
   onEditEpica,
   onRefresh,
+  isReadOnly = false,
 }: EpicasViewProps) {
   const [deletingEpica, setDeletingEpica] = useState<Epica | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -96,10 +98,12 @@ export function EpicasView({
           <h4 className="text-lg font-semibold">Epicas del Proyecto</h4>
           <Badge variant="secondary">{epicas.length}</Badge>
         </div>
-        <Button onClick={onCreateEpica} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nueva Epica
-        </Button>
+        {!isReadOnly && (
+          <Button onClick={onCreateEpica} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nueva Epica
+          </Button>
+        )}
       </div>
 
       {/* Epicas Grid */}
@@ -112,10 +116,12 @@ export function EpicasView({
               <br />
               Las epicas agrupan historias de usuario relacionadas.
             </p>
-            <Button onClick={onCreateEpica} variant="outline" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Crear primera Epica
-            </Button>
+            {!isReadOnly && (
+              <Button onClick={onCreateEpica} variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Crear primera Epica
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -124,8 +130,9 @@ export function EpicasView({
             <EpicaCard
               key={epica.id}
               epica={epica}
-              onEdit={() => onEditEpica(epica)}
-              onDelete={() => setDeletingEpica(epica)}
+              onEdit={isReadOnly ? undefined : () => onEditEpica(epica)}
+              onDelete={isReadOnly ? undefined : () => setDeletingEpica(epica)}
+              isReadOnly={isReadOnly}
             />
           ))}
         </div>
@@ -160,14 +167,15 @@ export function EpicasView({
 
 interface EpicaCardProps {
   epica: Epica;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  isReadOnly?: boolean;
 }
 
-function EpicaCard({ epica, onEdit, onDelete }: EpicaCardProps) {
+function EpicaCard({ epica, onEdit, onDelete, isReadOnly = false }: EpicaCardProps) {
   const husCount = epica.historiasUsuario?.length || 0;
   const husCompletas = epica.historiasUsuario?.filter(
-    (h) => h.estado === 'Terminada'
+    (h) => h.estado === 'Finalizado'
   ).length || 0;
   const porcentaje = husCount > 0 ? Math.round((husCompletas / husCount) * 100) : 0;
   const totalSP = epica.historiasUsuario?.reduce((sum, h) => sum + (h.puntos || 0), 0) || 0;
@@ -188,23 +196,29 @@ function EpicaCard({ epica, onEdit, onDelete }: EpicaCardProps) {
             </CardDescription>
             <CardTitle className="text-base">{epica.nombre}</CardTitle>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDelete} className="text-red-600">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Eliminar
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {!isReadOnly && (onEdit || onDelete) && (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onEdit && (
+                  <DropdownMenuItem onClick={onEdit}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem onClick={onDelete} className="text-red-600">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </CardHeader>
 
@@ -252,18 +266,6 @@ function EpicaCard({ epica, onEdit, onDelete }: EpicaCardProps) {
           </span>
         </div>
 
-        {/* Dates */}
-        {(epica.fechaInicio || epica.fechaFin) && (
-          <div className="flex items-center gap-2 text-xs text-gray-500 pt-1 border-t">
-            {epica.fechaInicio && (
-              <span>Inicio: {new Date(epica.fechaInicio).toLocaleDateString('es-PE')}</span>
-            )}
-            {epica.fechaInicio && epica.fechaFin && <span>-</span>}
-            {epica.fechaFin && (
-              <span>Fin: {new Date(epica.fechaFin).toLocaleDateString('es-PE')}</span>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

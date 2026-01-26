@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Loader2,
   ArrowRight,
@@ -8,17 +8,61 @@ import {
   Target,
   Calendar,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 import type { Sprint, HistoriaUsuario } from '@/features/proyectos/types';
 import {
   getSprintHistorias,
   updateSprint,
 } from '@/features/proyectos/services/sprints.service';
 import { updateHistoria } from '@/features/proyectos/services/historias.service';
+import { formatDate } from '@/lib/utils';
+
+// Función para validar si una HU tiene fechas fuera del rango del sprint
+function checkHistoriaDateConflict(
+  historia: HistoriaUsuario,
+  sprint: Sprint
+): { hasConflict: boolean; conflictType: string } {
+  if (!sprint.fechaInicio || !sprint.fechaFin) {
+    return { hasConflict: false, conflictType: '' };
+  }
+
+  const sprintInicio = new Date(sprint.fechaInicio.substring(0, 10) + 'T00:00:00');
+  const sprintFin = new Date(sprint.fechaFin.substring(0, 10) + 'T00:00:00');
+  const conflicts: string[] = [];
+
+  if (historia.fechaInicio) {
+    const huInicio = new Date(historia.fechaInicio.substring(0, 10) + 'T00:00:00');
+    if (huInicio < sprintInicio || huInicio > sprintFin) {
+      conflicts.push('fecha inicio');
+    }
+  }
+
+  if (historia.fechaFin) {
+    const huFin = new Date(historia.fechaFin.substring(0, 10) + 'T00:00:00');
+    if (huFin < sprintInicio || huFin > sprintFin) {
+      conflicts.push('fecha fin');
+    }
+  }
+
+  if (conflicts.length > 0) {
+    return {
+      hasConflict: true,
+      conflictType: conflicts.join(' y ') + ' fuera del rango del sprint',
+    };
+  }
+
+  return { hasConflict: false, conflictType: '' };
+}
 
 interface SprintPlanningViewProps {
   proyectoId: number;
@@ -71,6 +115,11 @@ export function SprintPlanningView({
 
   const moveToSprint = async () => {
     if (selectedBacklog.length === 0) return;
+
+    // Bloquear si hay conflictos de fechas
+    if (hasDateConflicts) {
+      return;
+    }
 
     try {
       setIsSaving(true);
@@ -139,6 +188,26 @@ export function SprintPlanningView({
     );
   };
 
+  // Verificar conflictos de fechas en las historias seleccionadas del backlog
+  const dateConflicts = useMemo(() => {
+    const conflicts: { codigo: string; conflictType: string }[] = [];
+    selectedBacklog.forEach((id) => {
+      const historia = availableHistorias.find((h) => h.id === id);
+      if (historia && (historia.fechaInicio || historia.fechaFin)) {
+        const result = checkHistoriaDateConflict(historia, sprint);
+        if (result.hasConflict) {
+          conflicts.push({
+            codigo: historia.codigo,
+            conflictType: result.conflictType,
+          });
+        }
+      }
+    });
+    return conflicts;
+  }, [selectedBacklog, availableHistorias, sprint]);
+
+  const hasDateConflicts = dateConflicts.length > 0;
+
   // Calculate totals
   const backlogSP = availableHistorias.reduce((sum, h) => sum + (h.puntos || 0), 0);
   const sprintSP = sprintHistorias.reduce((sum, h) => sum + (h.puntos || 0), 0);
@@ -166,8 +235,8 @@ export function SprintPlanningView({
             <Calendar className="h-4 w-4" />
             {sprint.fechaInicio && sprint.fechaFin && (
               <span>
-                {new Date(sprint.fechaInicio).toLocaleDateString('es-PE')} -{' '}
-                {new Date(sprint.fechaFin).toLocaleDateString('es-PE')}
+                {formatDate(sprint.fechaInicio, { day: '2-digit', month: '2-digit', year: 'numeric' })} -{' '}
+                {formatDate(sprint.fechaFin, { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </span>
             )}
           </div>
@@ -190,6 +259,27 @@ export function SprintPlanningView({
           </Button>
         </div>
       </div>
+
+      {/* Error de conflictos de fechas */}
+      {hasDateConflicts && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>No se puede mover: Fechas fuera de rango</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">Las siguientes historias tienen fechas que no coinciden con el rango del sprint:</p>
+            <ul className="list-disc list-inside text-sm space-y-1">
+              {dateConflicts.map((conflict, index) => (
+                <li key={index}>
+                  <span className="font-medium">{conflict.codigo}</span>: {conflict.conflictType}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-sm">
+              Modifique las fechas de las historias para que coincidan con el rango del sprint antes de moverlas.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Split view */}
       <div className="grid grid-cols-[1fr_auto_1fr] gap-4">
@@ -232,8 +322,9 @@ export function SprintPlanningView({
             variant="outline"
             size="icon"
             onClick={moveToSprint}
-            disabled={selectedBacklog.length === 0 || isSaving}
+            disabled={selectedBacklog.length === 0 || isSaving || hasDateConflicts}
             className="h-10 w-10"
+            title={hasDateConflicts ? 'No se puede mover: hay historias con fechas fuera del rango del sprint' : 'Mover al sprint'}
           >
             <ArrowRight className="h-4 w-4" />
           </Button>

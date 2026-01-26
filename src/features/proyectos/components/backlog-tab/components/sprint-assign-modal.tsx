@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2, Calendar } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Loader2, Calendar, AlertTriangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,10 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { moverHistoriaASprint } from '@/features/proyectos/services/historias.service';
+import { moverHistoriaASprint, type HistoriaUsuario } from '@/features/proyectos/services/historias.service';
 import { type Sprint } from '@/features/proyectos/services/sprints.service';
+import { formatDate } from '@/lib/utils';
 
 interface SprintAssignModalProps {
   open: boolean;
@@ -28,6 +34,45 @@ interface SprintAssignModalProps {
   historiaIds: number[];
   sprints: Sprint[];
   onSuccess: () => void;
+  /** Historias del backlog (para validar fechas) */
+  historias?: HistoriaUsuario[];
+}
+
+// Función para validar si una HU tiene fechas fuera del rango del sprint
+function checkHistoriaDateConflict(
+  historia: HistoriaUsuario,
+  sprint: Sprint
+): { hasConflict: boolean; message: string } {
+  if (!sprint.fechaInicio || !sprint.fechaFin) {
+    return { hasConflict: false, message: '' };
+  }
+
+  const sprintInicio = new Date(sprint.fechaInicio.substring(0, 10) + 'T00:00:00');
+  const sprintFin = new Date(sprint.fechaFin.substring(0, 10) + 'T00:00:00');
+  const conflicts: string[] = [];
+
+  if (historia.fechaInicio) {
+    const huInicio = new Date(historia.fechaInicio.substring(0, 10) + 'T00:00:00');
+    if (huInicio < sprintInicio || huInicio > sprintFin) {
+      conflicts.push('fecha inicio');
+    }
+  }
+
+  if (historia.fechaFin) {
+    const huFin = new Date(historia.fechaFin.substring(0, 10) + 'T00:00:00');
+    if (huFin < sprintInicio || huFin > sprintFin) {
+      conflicts.push('fecha fin');
+    }
+  }
+
+  if (conflicts.length > 0) {
+    return {
+      hasConflict: true,
+      message: `${historia.codigo}: ${conflicts.join(' y ')} fuera del rango del sprint`,
+    };
+  }
+
+  return { hasConflict: false, message: '' };
 }
 
 export function SprintAssignModal({
@@ -36,12 +81,50 @@ export function SprintAssignModal({
   historiaIds,
   sprints,
   onSuccess,
+  historias = [],
 }: SprintAssignModalProps) {
   const [selectedSprintId, setSelectedSprintId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Obtener las historias que se van a asignar
+  const historiasToAssign = useMemo(() => {
+    return historias.filter(h => historiaIds.includes(h.id));
+  }, [historias, historiaIds]);
+
+  // Verificar conflictos de fechas cuando se selecciona un sprint
+  const dateConflicts = useMemo(() => {
+    if (!selectedSprintId) return [];
+
+    const sprint = sprints.find(s => s.id.toString() === selectedSprintId);
+    if (!sprint) return [];
+
+    const conflicts: { codigo: string; conflictType: string }[] = [];
+    historiasToAssign.forEach(historia => {
+      // Solo verificar si la historia tiene fechas definidas
+      if (historia.fechaInicio || historia.fechaFin) {
+        const result = checkHistoriaDateConflict(historia, sprint);
+        if (result.hasConflict) {
+          conflicts.push({
+            codigo: historia.codigo,
+            conflictType: result.message.replace(`${historia.codigo}: `, ''),
+          });
+        }
+      }
+    });
+
+    return conflicts;
+  }, [selectedSprintId, sprints, historiasToAssign]);
+
+  // No permitir asignar si hay conflictos de fechas
+  const hasDateConflicts = dateConflicts.length > 0;
+
   const handleSubmit = async () => {
     if (!selectedSprintId || historiaIds.length === 0) return;
+
+    // Bloquear si hay conflictos de fechas
+    if (hasDateConflicts) {
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -69,8 +152,12 @@ export function SprintAssignModal({
     onOpenChange(newOpen);
   };
 
-  const activeSprint = sprints.find((s) => s.estado === 'Activo');
-  const plannedSprints = sprints.filter((s) => s.estado === 'Planificado');
+  const handleSprintChange = (value: string) => {
+    setSelectedSprintId(value);
+  };
+
+  const activeSprint = sprints.find((s) => s.estado === 'En progreso' || s.estado === 'Activo');
+  const plannedSprints = sprints.filter((s) => s.estado === 'Por hacer' || s.estado === 'Planificado');
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -90,9 +177,30 @@ export function SprintAssignModal({
             {historiaIds.length} historia(s) seran asignadas al sprint seleccionado.
           </div>
 
+          {/* Error de conflictos de fechas - bloquea la asignación */}
+          {hasDateConflicts && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>No se puede asignar: Fechas fuera de rango</AlertTitle>
+              <AlertDescription>
+                <p className="mb-2">Las siguientes historias tienen fechas que no coinciden con el rango del sprint:</p>
+                <ul className="list-disc list-inside text-sm space-y-1">
+                  {dateConflicts.map((conflict, index) => (
+                    <li key={index}>
+                      <span className="font-medium">{conflict.codigo}</span>: {conflict.conflictType}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-sm">
+                  Modifique las fechas de las historias para que coincidan con el rango del sprint antes de asignarlas.
+                </p>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Seleccionar Sprint</label>
-            <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+            <Select value={selectedSprintId} onValueChange={handleSprintChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona un sprint" />
               </SelectTrigger>
@@ -130,7 +238,7 @@ export function SprintAssignModal({
                               <span>Sprint {sprint.numero}</span>
                               {sprint.fechaInicio && (
                                 <span className="text-xs text-gray-500">
-                                  {new Date(sprint.fechaInicio).toLocaleDateString('es-PE', {
+                                  {formatDate(sprint.fechaInicio, {
                                     day: 'numeric',
                                     month: 'short',
                                   })}
@@ -165,7 +273,7 @@ export function SprintAssignModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting || !selectedSprintId}
+            disabled={isSubmitting || !selectedSprintId || hasDateConflicts}
             className="bg-[#018CD1] hover:bg-[#0179b5]"
           >
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

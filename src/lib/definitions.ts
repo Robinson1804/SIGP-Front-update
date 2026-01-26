@@ -8,13 +8,14 @@ import { z } from 'zod';
  * Roles del sistema
  */
 export const ROLES = {
-  ADMINISTRADOR: 'ADMINISTRADOR',
+  ADMIN: 'ADMIN',  // Administrador con acceso completo a todo el sistema
   PMO: 'PMO',
   SCRUM_MASTER: 'SCRUM_MASTER',
   DESARROLLADOR: 'DESARROLLADOR',
   IMPLEMENTADOR: 'IMPLEMENTADOR',
   COORDINADOR: 'COORDINADOR',
   USUARIO: 'USUARIO',
+  PATROCINADOR: 'PATROCINADOR',
 } as const;
 
 export type Role = typeof ROLES[keyof typeof ROLES];
@@ -97,7 +98,7 @@ export type AuthUser = {
 export const LoginFormSchema = z.object({
   username: z.string().min(1, { message: 'Nombre de usuario es requerido.' }),
   password: z.string().min(1, { message: 'Contraseña es requerida.' }),
-  captcha: z.string().min(1, { message: 'Código captcha es requerido.' }),
+  // captcha: z.string().min(1, { message: 'Código captcha es requerido.' }),
 });
 
 export type LoginFormState = {
@@ -113,13 +114,15 @@ export type SubProject = {
     id: string;
     name: string;
     description: string;
-    responsible: string[];
+    responsible: string[]; // IDs de personal (para guardar)
+    responsibleNames?: string[]; // Nombres de personal (para mostrar)
     scrumMaster: string;
     years: string[];
     amount: number; // Changed from annualAmount to amount
     managementMethod: string;
     financialArea?: string[];
     progress?: number;
+    status?: string; // Estado del subproyecto (Pendiente, En planificación, En desarrollo, Finalizado)
 }
 
 export type Subtask = {
@@ -156,7 +159,7 @@ export type Project = {
     name: string;
     description: string;
     type: 'Proyecto' | 'Actividad';
-    classification: 'Al ciudadano' | 'Gestión interna';
+    classification: 'Al ciudadano' | 'Gestion interna';
     status: 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
     scrumMaster: string;
     annualAmount: number;
@@ -201,6 +204,33 @@ export type ProyectoClasificacion =
 export type MetodoGestion = 'Scrum' | 'Kanban';
 
 /**
+ * Interfaz para usuario relacionado (coordinador, scrum master, etc.)
+ */
+export interface UsuarioRelacionado {
+  id: number;
+  email?: string;
+  username?: string;
+  nombre?: string;
+  apellido?: string;
+  personal?: {
+    id: number;
+    nombre: string;
+    apellidoPaterno?: string;
+    apellidoMaterno?: string;
+  };
+}
+
+/**
+ * Interfaz para Acción Estratégica relacionada
+ */
+export interface AccionEstrategicaRelacionada {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+}
+
+/**
  * Interfaz completa de Proyecto basada en backend schema
  */
 export interface Proyecto {
@@ -214,11 +244,15 @@ export interface Proyecto {
 
   // Vinculación estratégica
   accionEstrategicaId: number | null;
+  accionEstrategica?: AccionEstrategicaRelacionada | null;
 
   // Responsables
   coordinadorId: number | null;
+  coordinador?: UsuarioRelacionado | null;
   scrumMasterId: number | null;
+  scrumMaster?: UsuarioRelacionado | null;
   patrocinadorId: number | null;
+  patrocinador?: UsuarioRelacionado | null;
 
   // Financiero
   coordinacion: string | null;
@@ -272,7 +306,7 @@ export interface UpdateProyectoInput extends Partial<CreateProyectoInput> {
  * Schema de validación para crear proyecto
  */
 export const CreateProyectoSchema = z.object({
-  codigo: z.string().min(3, 'Código debe tener al menos 3 caracteres').max(20),
+  codigo: z.string().optional(), // Autogenerado por el backend
   nombre: z.string().min(3, 'Nombre debe tener al menos 3 caracteres').max(200),
   descripcion: z.string().optional(),
   clasificacion: z.enum(['Al ciudadano', 'Gestion interna']).optional(),

@@ -34,13 +34,14 @@ import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
 
 // Mapeo de roles a nombres legibles
 const ROLE_DISPLAY_NAMES: Record<Role, string> = {
-  [ROLES.ADMINISTRADOR]: 'Administrador',
+  [ROLES.ADMIN]: 'Administrador',
   [ROLES.PMO]: 'PMO',
   [ROLES.SCRUM_MASTER]: 'Scrum Master',
   [ROLES.DESARROLLADOR]: 'Desarrollador',
   [ROLES.IMPLEMENTADOR]: 'Implementador',
   [ROLES.COORDINADOR]: 'Coordinador',
   [ROLES.USUARIO]: 'Usuario',
+  [ROLES.PATROCINADOR]: 'Patrocinador',
 };
 
 function UserProfile() {
@@ -49,7 +50,7 @@ function UserProfile() {
   if (!user) return null;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-3 text-white">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200/50">

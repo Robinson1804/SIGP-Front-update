@@ -25,6 +25,10 @@ interface CerrarSprintModalProps {
   onOpenChange: (open: boolean) => void;
   sprint: Sprint;
   onSuccess: () => void;
+  /** Todos los sprints del proyecto para verificar si es el último */
+  allSprints?: Sprint[];
+  /** Callback cuando todos los sprints están finalizados */
+  onAllSprintsFinalized?: () => void;
 }
 
 type AccionHUs = 'mover_siguiente' | 'devolver_backlog';
@@ -34,6 +38,8 @@ export function CerrarSprintModal({
   onOpenChange,
   sprint,
   onSuccess,
+  allSprints,
+  onAllSprintsFinalized,
 }: CerrarSprintModalProps) {
   const [historias, setHistorias] = useState<HistoriaUsuario[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,6 +76,21 @@ export function CerrarSprintModal({
         accionHUsPendientes: husIncompletas.length > 0 ? accionHUs : undefined,
       });
 
+      // Verificar si todos los sprints estarán finalizados después de cerrar este
+      if (allSprints && onAllSprintsFinalized) {
+        const otherSprints = allSprints.filter(s => s.id !== sprint.id);
+        const allOthersFinalized = otherSprints.every(s => s.estado === 'Finalizado');
+
+        if (allOthersFinalized) {
+          // Todos los demás sprints ya están finalizados, y este se acaba de cerrar
+          onSuccess();
+          onOpenChange(false);
+          // Disparar el modal de finalización de proyecto
+          onAllSprintsFinalized();
+          return;
+        }
+      }
+
       onSuccess();
     } catch (err: any) {
       console.error('Error closing sprint:', err);
@@ -79,10 +100,10 @@ export function CerrarSprintModal({
     }
   };
 
-  const husCompletas = historias.filter((h) => h.estado === 'Terminada');
-  const husIncompletas = historias.filter((h) => h.estado !== 'Terminada');
-  const spCompletados = husCompletas.reduce((sum, h) => sum + (h.puntos || 0), 0);
-  const spIncompletos = husIncompletas.reduce((sum, h) => sum + (h.puntos || 0), 0);
+  const husCompletas = historias.filter((h) => h.estado === 'Finalizado');
+  const husIncompletas = historias.filter((h) => h.estado !== 'Finalizado');
+  const spCompletados = husCompletas.reduce((sum, h) => sum + (h.storyPoints || 0), 0);
+  const spIncompletos = husIncompletas.reduce((sum, h) => sum + (h.storyPoints || 0), 0);
   const spTotal = spCompletados + spIncompletos;
   const porcentajeCompletado = spTotal > 0 ? Math.round((spCompletados / spTotal) * 100) : 0;
 

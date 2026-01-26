@@ -84,7 +84,8 @@ function DashboardContent() {
   const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null);
   const [sprints, setSprints] = useState<SprintResumen[]>([]);
 
-  // Verificar rol del usuario
+  // Verificar rol del usuario - ADMIN tiene acceso completo
+  const isAdmin = user?.role === ROLES.ADMIN;
   const isDeveloper = user?.role === ROLES.DESARROLLADOR;
 
   // Load dashboard data from API
@@ -226,11 +227,10 @@ function DashboardContent() {
     { name: 'Tarea', count: tareasCount, percentage: totalItems > 0 ? Math.round((tareasCount / totalItems) * 100) : 0, icon: ClipboardCheck, color: 'bg-green-500' },
   ];
 
-  const projectCode = `PROY N${project.id}`;
+  const projectCode = project.code || `PROY N°${project.id}`;
 
-  const breadcrumbs = isDeveloper
-    ? [{ label: 'POI', href: paths.poi.base }, { label: 'Dashboard' }]
-    : [{ label: 'POI', href: paths.poi.base }, { label: 'Proyecto', href: paths.poi.proyecto.detalles }, { label: 'Dashboard' }];
+  // Breadcrumb simplificado: POI > Backlog (mantener Backlog aunque esté en Dashboard)
+  const breadcrumbs = [{ label: 'POI', href: paths.poi.base }, { label: 'Backlog' }];
 
   const secondaryHeader = (
     <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">

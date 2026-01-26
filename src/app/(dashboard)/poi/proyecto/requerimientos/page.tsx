@@ -366,9 +366,9 @@ function RequerimientosContent() {
         return 'Requerimientos';
     };
 
-    // Código del proyecto
+    // Código del proyecto - usar code si está disponible, sino fallback a ID
     const isProject = project?.type === 'Proyecto';
-    const projectCode = project ? `${isProject ? 'PROY' : 'ACT'} N°${project.id}` : '';
+    const projectCode = project ? (project.code || `${isProject ? 'PROY' : 'ACT'} N°${project.id}`) : '';
 
     // Breadcrumbs para la navegación
     const breadcrumbs = [

@@ -16,10 +16,11 @@ import {
  */
 export const ROLE_PERMISSIONS: RolePermissionConfig = {
   // ============================================
-  // ADMINISTRADOR
+  // ADMIN (Administrador)
   // Acceso completo a TODOS los módulos del sistema
+  // ÚNICO ROL con acceso al módulo RRHH (Recursos Humanos)
   // ============================================
-  [ROLES.ADMINISTRADOR]: {
+  [ROLES.ADMIN]: {
     modules: [
       MODULES.PGD,
       MODULES.POI,
@@ -74,13 +75,12 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
 
   // ============================================
   // PMO (Project Management Office)
-  // Acceso total a todos los módulos
+  // Acceso a PGD, POI, Dashboard, Notificaciones (sin RRHH)
   // ============================================
   [ROLES.PMO]: {
     modules: [
       MODULES.PGD,
       MODULES.POI,
-      MODULES.RECURSOS_HUMANOS,
       MODULES.DASHBOARD,
       MODULES.NOTIFICACIONES,
     ],
@@ -107,15 +107,6 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
         PERMISSIONS.UPDATE_TASK_STATUS,
         PERMISSIONS.VIEW_REPORTS,
       ],
-      [MODULES.RECURSOS_HUMANOS]: [
-        PERMISSIONS.VIEW,
-        PERMISSIONS.CREATE,
-        PERMISSIONS.EDIT,
-        PERMISSIONS.DELETE,
-        PERMISSIONS.EXPORT,
-        PERMISSIONS.MANAGE_USERS,
-        PERMISSIONS.ASSIGN_ROLES,
-      ],
       [MODULES.DASHBOARD]: [
         PERMISSIONS.VIEW,
         PERMISSIONS.EXPORT,
@@ -131,12 +122,12 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
 
   // ============================================
   // SCRUM MASTER
-  // POI (sin crear), RRHH (solo lectura), Notificaciones
+  // POI (sin crear), Notificaciones
+  // NO tiene acceso a RRHH
   // ============================================
   [ROLES.SCRUM_MASTER]: {
     modules: [
       MODULES.POI,
-      MODULES.RECURSOS_HUMANOS,
       MODULES.NOTIFICACIONES,
     ],
     permissions: {
@@ -149,9 +140,6 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
         PERMISSIONS.ASSIGN_TASKS,
         PERMISSIONS.UPDATE_TASK_STATUS,
         PERMISSIONS.VIEW_REPORTS,
-      ],
-      [MODULES.RECURSOS_HUMANOS]: [
-        PERMISSIONS.VIEW, // Solo lectura
       ],
       [MODULES.NOTIFICACIONES]: [
         PERMISSIONS.VIEW,
@@ -208,12 +196,12 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
 
   // ============================================
   // COORDINADOR
-  // POI, RRHH (lectura), Notificaciones
+  // POI, Notificaciones
+  // NO tiene acceso a RRHH
   // ============================================
   [ROLES.COORDINADOR]: {
     modules: [
       MODULES.POI,
-      MODULES.RECURSOS_HUMANOS,
       MODULES.NOTIFICACIONES,
     ],
     permissions: {
@@ -225,8 +213,26 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
         PERMISSIONS.UPDATE_TASK_STATUS,
         PERMISSIONS.VIEW_REPORTS,
       ],
-      [MODULES.RECURSOS_HUMANOS]: [
-        PERMISSIONS.VIEW, // Solo lectura
+      [MODULES.NOTIFICACIONES]: [
+        PERMISSIONS.VIEW,
+      ],
+    },
+  },
+
+  // ============================================
+  // PATROCINADOR
+  // POI (solo ver y validar), Notificaciones
+  // ============================================
+  [ROLES.PATROCINADOR]: {
+    modules: [
+      MODULES.POI,
+      MODULES.NOTIFICACIONES,
+    ],
+    permissions: {
+      [MODULES.POI]: [
+        PERMISSIONS.VIEW,
+        PERMISSIONS.EXPORT,
+        PERMISSIONS.VIEW_REPORTS,
       ],
       [MODULES.NOTIFICACIONES]: [
         PERMISSIONS.VIEW,
@@ -401,7 +407,7 @@ export function getNavItemsForRole(role: Role): NavItem[] {
  */
 export function getDefaultRouteForRole(role: Role): string {
   switch (role) {
-    case ROLES.ADMINISTRADOR:
+    case ROLES.ADMIN:
       return '/dashboard'; // Admin tiene acceso a todo, inicia en Dashboard
     case ROLES.PMO:
       return '/pgd';
@@ -410,6 +416,7 @@ export function getDefaultRouteForRole(role: Role): string {
     case ROLES.DESARROLLADOR:
     case ROLES.IMPLEMENTADOR:
     case ROLES.USUARIO:
+    case ROLES.PATROCINADOR:
       return '/poi';
     default:
       return '/login';

@@ -73,7 +73,7 @@ export function ProyectoCard({ data }: ProyectoCardProps) {
           module={MODULES.POI}
           permission={PERMISSIONS.EDIT}
         >
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreVertical className="h-4 w-4" />
@@ -119,6 +119,21 @@ export function ProyectoCard({ data }: ProyectoCardProps) {
             {data.metodoGestion}
           </Badge>
         </div>
+
+        {/* Scrum Master */}
+        {data.scrumMaster && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Users className="h-3 w-3" />
+            <span className="font-medium">SM:</span>
+            <span>
+              {data.scrumMaster.personal
+                ? `${data.scrumMaster.personal.nombre || ''} ${data.scrumMaster.personal.apellidoPaterno || ''}`.trim()
+                : data.scrumMaster.nombre && data.scrumMaster.apellido
+                  ? `${data.scrumMaster.nombre} ${data.scrumMaster.apellido}`.trim()
+                  : data.scrumMaster.username || `ID: ${data.scrumMasterId}`}
+            </span>
+          </div>
+        )}
 
         {/* Info adicional */}
         <div className="flex items-center justify-between text-sm text-muted-foreground">

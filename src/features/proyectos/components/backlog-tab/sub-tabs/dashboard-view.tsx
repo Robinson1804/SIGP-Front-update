@@ -278,7 +278,7 @@ export function DashboardView({ proyectoId }: DashboardViewProps) {
               </div>
               <div>
                 <p className="text-3xl font-bold text-gray-900">{summaryCards.enProgreso}</p>
-                <p className="text-sm text-gray-500">Actualizadas</p>
+                <p className="text-sm text-gray-500">En Progreso</p>
               </div>
             </div>
           </CardContent>
@@ -393,29 +393,36 @@ export function DashboardView({ proyectoId }: DashboardViewProps) {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-700">
                           <span className="font-semibold text-gray-900">{activity.usuario}</span>
-                          {' '}ha{' '}
-                          <span className="text-gray-600">
-                            {activity.accion === 'finalizo' ? 'cambiado el estado de' : activity.accion === 'inicio' ? 'creado' : 'actualizado'}
-                          </span>
-                          {' '}<span className="font-medium">{activity.objeto}</span>
+                          {' '}{activity.accion}{' '}
+                          <span className="font-medium">"{activity.objeto}"</span>
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
-                            TAR-{activity.id}
+                            {activity.codigo}
                           </Badge>
                           <Badge
                             className={cn(
                               'text-[10px] px-1.5 py-0 font-normal',
-                              activity.accion === 'finalizo'
+                              activity.estado === 'Finalizado'
                                 ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                                : activity.accion === 'inicio'
-                                ? 'bg-gray-100 text-gray-700 hover:bg-gray-100'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                                : activity.estado === 'En progreso'
+                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-100'
+                                : activity.estado === 'En revision'
+                                ? 'bg-purple-100 text-purple-700 hover:bg-purple-100'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-100'
                             )}
                           >
-                            {activity.accion === 'finalizo' ? 'Finalizado' : activity.accion === 'inicio' ? 'Por hacer' : 'En progreso'}
+                            {activity.estado}
                           </Badge>
-                          <span className="text-[10px] text-gray-400">(antes: Por hacer)</span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'text-[10px] px-1.5 py-0 font-normal',
+                              activity.tipo === 'historia' ? 'border-blue-300 text-blue-600' : 'border-orange-300 text-orange-600'
+                            )}
+                          >
+                            {activity.tipo === 'historia' ? 'HU' : 'Tarea'}
+                          </Badge>
                         </div>
                       </div>
                     </div>

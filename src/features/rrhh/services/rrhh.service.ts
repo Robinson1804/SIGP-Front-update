@@ -219,6 +219,67 @@ export async function deleteDivision(id: number | string): Promise<void> {
   await apiClient.delete(ENDPOINTS.RRHH.DIVISION_BY_ID(id));
 }
 
+/**
+ * Asignar coordinador a una división
+ */
+export async function asignarCoordinador(
+  divisionId: number | string,
+  personalId: number
+): Promise<Division> {
+  const response = await apiClient.post<Division>(
+    ENDPOINTS.RRHH.DIVISION_COORDINADOR(divisionId),
+    { personalId }
+  );
+  return response.data;
+}
+
+/**
+ * Remover coordinador de una división
+ */
+export async function removerCoordinador(divisionId: number | string): Promise<Division> {
+  const response = await apiClient.delete<Division>(
+    ENDPOINTS.RRHH.DIVISION_COORDINADOR(divisionId)
+  );
+  return response.data;
+}
+
+/**
+ * Obtener scrum masters de una división
+ */
+export async function getScrumMasters(divisionId: number | string): Promise<Personal[]> {
+  const response = await apiClient.get<Personal[]>(
+    ENDPOINTS.RRHH.DIVISION_SCRUM_MASTERS(divisionId)
+  );
+  return response.data;
+}
+
+/**
+ * Asignar scrum master a una división
+ */
+export async function asignarScrumMaster(
+  divisionId: number | string,
+  personalId: number
+): Promise<Division> {
+  const response = await apiClient.post<Division>(
+    ENDPOINTS.RRHH.DIVISION_SCRUM_MASTERS(divisionId),
+    { personalId }
+  );
+  return response.data;
+}
+
+/**
+ * Remover scrum master de una división
+ */
+export async function removerScrumMaster(
+  divisionId: number | string,
+  personalId: number | string
+): Promise<Division> {
+  const response = await apiClient.delete<Division>(
+    ENDPOINTS.RRHH.DIVISION_SCRUM_MASTER(divisionId, personalId)
+  );
+  return response.data;
+}
+
 // ============================================================================
 // HABILIDADES
 // ============================================================================
@@ -442,6 +503,11 @@ export const rrhhService = {
   createDivision,
   updateDivision,
   deleteDivision,
+  asignarCoordinador,
+  removerCoordinador,
+  getScrumMasters,
+  asignarScrumMaster,
+  removerScrumMaster,
 
   // Habilidades
   getHabilidades,

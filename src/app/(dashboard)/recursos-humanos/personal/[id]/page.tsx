@@ -65,7 +65,10 @@ import type {
   Asignacion,
   DisponibilidadResponse,
   Habilidad,
+  Division,
 } from '@/features/rrhh/types';
+import { PersonalForm } from '@/features/rrhh/components';
+import type { UpdatePersonalDto } from '@/features/rrhh/types/dto';
 import {
   Modalidad,
   NivelHabilidad,
@@ -109,8 +112,13 @@ export default function PersonalDetailPage() {
   const [habilidades, setHabilidades] = useState<PersonalHabilidad[]>([]);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
   const [catalogoHabilidades, setCatalogoHabilidades] = useState<Habilidad[]>([]);
+  const [divisiones, setDivisiones] = useState<Division[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Estado para modal de edición
+  const [editFormOpen, setEditFormOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Estados para modales
   const [habilidadDialogOpen, setHabilidadDialogOpen] = useState(false);
@@ -137,13 +145,14 @@ export default function PersonalDetailPage() {
 
       const personalId = typeof id === 'string' ? id : String(id);
 
-      const [personalData, disponibilidadData, habilidadesData, asignacionesData, catalogoData] =
+      const [personalData, disponibilidadData, habilidadesData, asignacionesData, catalogoData, divisionesData] =
         await Promise.all([
           rrhhService.getPersonalById(personalId),
           rrhhService.getPersonalDisponibilidad(personalId).catch(() => null),
           rrhhService.getPersonalHabilidades(personalId).catch(() => []),
           rrhhService.getAsignaciones({ personalId: Number(personalId), activo: true }).catch(() => []),
           rrhhService.getHabilidades({ activo: true }).catch(() => []),
+          rrhhService.getDivisiones({ activo: true }).catch(() => []),
         ]);
 
       setPersonal(personalData);
@@ -151,6 +160,7 @@ export default function PersonalDetailPage() {
       setHabilidades(habilidadesData);
       setAsignaciones(asignacionesData);
       setCatalogoHabilidades(catalogoData);
+      setDivisiones(divisionesData);
     } catch (err) {
       console.error('Error loading personal:', err);
       setError('No se pudo cargar la información del personal');
@@ -165,8 +175,29 @@ export default function PersonalDetailPage() {
   };
 
   const handleEdit = () => {
-    // TODO: Abrir modal de edición o navegar a página de edición
-    toast({ title: 'Función de edición', description: 'Próximamente disponible' });
+    setEditFormOpen(true);
+  };
+
+  const handleSubmitPersonal = async (data: UpdatePersonalDto) => {
+    if (!personal) return;
+
+    try {
+      setIsUpdating(true);
+      await rrhhService.updatePersonal(personal.id, data);
+      toast({ title: 'Personal actualizado correctamente' });
+      setEditFormOpen(false);
+      // Recargar datos
+      await loadData();
+    } catch (err) {
+      console.error('Error updating personal:', err);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar el personal',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleAddHabilidad = async () => {
@@ -219,8 +250,14 @@ export default function PersonalDetailPage() {
     return `${p.nombres[0]}${p.apellidos[0]}`.toUpperCase();
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('es-PE', {
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return 'No especificada';
+    // Para fechas tipo DATE (sin hora), agregar T12:00:00 para evitar
+    // que la conversión de zona horaria muestre el día anterior
+    const dateStr = typeof date === 'string' ? date : date.toISOString();
+    const dateOnly = dateStr.split('T')[0]; // Obtener solo YYYY-MM-DD
+    const safeDate = new Date(`${dateOnly}T12:00:00`);
+    return safeDate.toLocaleDateString('es-PE', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -229,9 +266,9 @@ export default function PersonalDetailPage() {
 
   const getModalidadBadge = (modalidad: Modalidad) => {
     const colorClasses: Record<Modalidad, string> = {
-      [Modalidad.PLANILLA]: 'bg-blue-100 text-blue-800 border-blue-200',
+      [Modalidad.NOMBRADO]: 'bg-blue-100 text-blue-800 border-blue-200',
       [Modalidad.CAS]: 'bg-purple-100 text-purple-800 border-purple-200',
-      [Modalidad.LOCADOR]: 'bg-orange-100 text-orange-800 border-orange-200',
+      [Modalidad.ORDEN_DE_SERVICIO]: 'bg-orange-100 text-orange-800 border-orange-200',
       [Modalidad.PRACTICANTE]: 'bg-green-100 text-green-800 border-green-200',
     };
 
@@ -624,7 +661,7 @@ export default function PersonalDetailPage() {
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar habilidad" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="item-aligned">
                     {habilidadesDisponibles.map((h) => (
                       <SelectItem key={h.id} value={String(h.id)}>
                         {h.nombre} ({getCategoriaLabel(h.categoria)})
@@ -645,7 +682,7 @@ export default function PersonalDetailPage() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="item-aligned">
                     {Object.values(NivelHabilidad).map((nivel) => (
                       <SelectItem key={nivel} value={nivel}>
                         {getNivelLabel(nivel)}
@@ -725,6 +762,16 @@ export default function PersonalDetailPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Modal de edición de personal */}
+        <PersonalForm
+          open={editFormOpen}
+          onClose={() => setEditFormOpen(false)}
+          onSubmit={handleSubmitPersonal}
+          personal={personal}
+          divisiones={divisiones}
+          isLoading={isUpdating}
+        />
       </AppLayout>
     </ProtectedRoute>
   );

@@ -5,19 +5,13 @@ import {
   Plus,
   Trash2,
   Check,
-  X,
-  AlertCircle,
   Loader2,
-  GripVertical,
   CheckCircle2,
-  Clock,
-  XCircle,
+  Circle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
 import {
   Collapsible,
   CollapsibleContent,
@@ -35,12 +29,10 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   type CriterioAceptacion,
-  type CriterioEstado,
   getCriteriosByHistoria,
   createCriterioForHistoria,
-  updateCriterio,
+  toggleCriterioCompletado,
   deleteCriterio,
-  verificarCriterio,
 } from '@/features/proyectos/services/criterios.service';
 
 interface CriteriosAceptacionSectionProps {
@@ -48,34 +40,6 @@ interface CriteriosAceptacionSectionProps {
   readOnly?: boolean;
   onCriteriosChange?: (criterios: CriterioAceptacion[]) => void;
 }
-
-interface CriterioPendiente {
-  id: string;
-  given: string;
-  when: string;
-  then: string;
-}
-
-const ESTADO_CONFIG: Record<
-  CriterioEstado,
-  { icon: React.ElementType; color: string; label: string }
-> = {
-  Pendiente: {
-    icon: Clock,
-    color: 'bg-gray-100 text-gray-700 border-gray-200',
-    label: 'Pendiente',
-  },
-  Cumplido: {
-    icon: CheckCircle2,
-    color: 'bg-green-100 text-green-700 border-green-200',
-    label: 'Cumplido',
-  },
-  Fallido: {
-    icon: XCircle,
-    color: 'bg-red-100 text-red-700 border-red-200',
-    label: 'Fallido',
-  },
-};
 
 export function CriteriosAceptacionSection({
   historiaId,
@@ -88,10 +52,7 @@ export function CriteriosAceptacionSection({
   const [isOpen, setIsOpen] = useState(true);
 
   // Form state for new criterio
-  const [newGiven, setNewGiven] = useState('');
-  const [newWhen, setNewWhen] = useState('');
-  const [newThen, setNewThen] = useState('');
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newDescripcion, setNewDescripcion] = useState('');
 
   // Delete confirmation
   const [deletingCriterio, setDeletingCriterio] = useState<CriterioAceptacion | null>(
@@ -117,21 +78,17 @@ export function CriteriosAceptacionSection({
   };
 
   const handleAddCriterio = async () => {
-    if (!newGiven.trim() || !newWhen.trim() || !newThen.trim()) return;
+    if (!newDescripcion.trim()) return;
 
     try {
       setIsSubmitting(true);
       const newCriterio = await createCriterioForHistoria(historiaId, {
-        given: newGiven.trim(),
-        when: newWhen.trim(),
-        then: newThen.trim(),
+        descripcion: newDescripcion.trim(),
+        completado: false,
       });
       setCriterios([...criterios, newCriterio]);
       onCriteriosChange?.([...criterios, newCriterio]);
-      setNewGiven('');
-      setNewWhen('');
-      setNewThen('');
-      setIsAddingNew(false);
+      setNewDescripcion('');
     } catch (err) {
       console.error('Error creating criterio:', err);
     } finally {
@@ -139,9 +96,9 @@ export function CriteriosAceptacionSection({
     }
   };
 
-  const handleVerificar = async (criterio: CriterioAceptacion, estado: CriterioEstado) => {
+  const handleToggleCompletado = async (criterio: CriterioAceptacion) => {
     try {
-      const updated = await verificarCriterio(criterio.id, estado);
+      const updated = await toggleCriterioCompletado(criterio.id, !criterio.completado);
       const newCriterios = criterios.map((c) => (c.id === criterio.id ? updated : c));
       setCriterios(newCriterios);
       onCriteriosChange?.(newCriterios);
@@ -167,9 +124,9 @@ export function CriteriosAceptacionSection({
     }
   };
 
-  const cumplidos = criterios.filter((c) => c.estado === 'Cumplido').length;
+  const completados = criterios.filter((c) => c.completado).length;
   const total = criterios.length;
-  const porcentaje = total > 0 ? Math.round((cumplidos / total) * 100) : 0;
+  const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
 
   return (
     <div className="space-y-3">
@@ -180,12 +137,12 @@ export function CriteriosAceptacionSection({
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <span className="font-medium text-gray-700">Criterios de Aceptacion</span>
               <Badge variant="secondary" className="text-xs">
-                {cumplidos}/{total}
+                {completados}/{total}
               </Badge>
             </div>
             <div className="flex items-center gap-2">
               {total > 0 && (
-                <span className="text-xs text-gray-500">{porcentaje}% cumplidos</span>
+                <span className="text-xs text-gray-500">{porcentaje}% completados</span>
               )}
               <svg
                 className={`h-4 w-4 text-gray-500 transition-transform ${
@@ -225,7 +182,7 @@ export function CriteriosAceptacionSection({
                       key={criterio.id}
                       criterio={criterio}
                       readOnly={readOnly}
-                      onVerificar={handleVerificar}
+                      onToggle={() => handleToggleCompletado(criterio)}
                       onDelete={() => setDeletingCriterio(criterio)}
                     />
                   ))}
@@ -234,83 +191,31 @@ export function CriteriosAceptacionSection({
 
               {/* Formulario para agregar nuevo criterio */}
               {!readOnly && (
-                <>
-                  {isAddingNew ? (
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
-                      <p className="text-sm font-medium text-blue-800">
-                        Nuevo Criterio de Aceptacion (Formato GWT)
-                      </p>
-                      <div className="space-y-2">
-                        <div>
-                          <Label className="text-xs text-blue-700">DADO QUE (Given)</Label>
-                          <Input
-                            placeholder="El usuario esta autenticado"
-                            value={newGiven}
-                            onChange={(e) => setNewGiven(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-blue-700">CUANDO (When)</Label>
-                          <Input
-                            placeholder="El usuario hace click en cerrar sesion"
-                            value={newWhen}
-                            onChange={(e) => setNewWhen(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-blue-700">ENTONCES (Then)</Label>
-                          <Input
-                            placeholder="El sistema redirige al login"
-                            value={newThen}
-                            onChange={(e) => setNewThen(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          onClick={handleAddCriterio}
-                          disabled={
-                            isSubmitting ||
-                            !newGiven.trim() ||
-                            !newWhen.trim() ||
-                            !newThen.trim()
-                          }
-                        >
-                          {isSubmitting && (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          )}
-                          Agregar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setIsAddingNew(false);
-                            setNewGiven('');
-                            setNewWhen('');
-                            setNewThen('');
-                          }}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full gap-2"
-                      onClick={() => setIsAddingNew(true)}
-                    >
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nuevo criterio de aceptacion..."
+                    value={newDescripcion}
+                    onChange={(e) => setNewDescripcion(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddCriterio();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleAddCriterio}
+                    disabled={isSubmitting || !newDescripcion.trim()}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
                       <Plus className="h-4 w-4" />
-                      Agregar Criterio
-                    </Button>
-                  )}
-                </>
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -349,85 +254,61 @@ export function CriteriosAceptacionSection({
 interface CriterioCardProps {
   criterio: CriterioAceptacion;
   readOnly: boolean;
-  onVerificar: (criterio: CriterioAceptacion, estado: CriterioEstado) => void;
+  onToggle: () => void;
   onDelete: () => void;
 }
 
-function CriterioCard({ criterio, readOnly, onVerificar, onDelete }: CriterioCardProps) {
-  const estadoConfig = ESTADO_CONFIG[criterio.estado];
-  const EstadoIcon = estadoConfig.icon;
-
+function CriterioCard({ criterio, readOnly, onToggle, onDelete }: CriterioCardProps) {
   return (
-    <div className={`p-3 rounded-lg border ${estadoConfig.color}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 space-y-1.5 text-sm">
-          <div>
-            <span className="font-medium text-gray-600">DADO QUE: </span>
-            <span>{criterio.given}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-600">CUANDO: </span>
-            <span>{criterio.when}</span>
-          </div>
-          <div>
-            <span className="font-medium text-gray-600">ENTONCES: </span>
-            <span>{criterio.then}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {!readOnly && (
-            <>
-              {criterio.estado !== 'Cumplido' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-100"
-                  onClick={() => onVerificar(criterio, 'Cumplido')}
-                  title="Marcar como Cumplido"
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-              )}
-              {criterio.estado !== 'Fallido' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-100"
-                  onClick={() => onVerificar(criterio, 'Fallido')}
-                  title="Marcar como Fallido"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-              {criterio.estado !== 'Pendiente' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-gray-600 hover:text-gray-700 hover:bg-gray-100"
-                  onClick={() => onVerificar(criterio, 'Pendiente')}
-                  title="Marcar como Pendiente"
-                >
-                  <Clock className="h-4 w-4" />
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                onClick={onDelete}
-                title="Eliminar"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
+    <div
+      className={`flex items-center gap-3 p-3 rounded-lg border ${
+        criterio.completado
+          ? 'bg-green-50 border-green-200'
+          : 'bg-white border-gray-200'
+      }`}
+    >
+      {!readOnly ? (
+        <button
+          onClick={onToggle}
+          className={`flex-shrink-0 ${
+            criterio.completado ? 'text-green-600' : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          {criterio.completado ? (
+            <CheckCircle2 className="h-5 w-5" />
+          ) : (
+            <Circle className="h-5 w-5" />
           )}
-          <Badge variant="outline" className={`text-xs ${estadoConfig.color}`}>
-            <EstadoIcon className="h-3 w-3 mr-1" />
-            {estadoConfig.label}
-          </Badge>
-        </div>
-      </div>
+        </button>
+      ) : (
+        <span className={criterio.completado ? 'text-green-600' : 'text-gray-400'}>
+          {criterio.completado ? (
+            <CheckCircle2 className="h-5 w-5" />
+          ) : (
+            <Circle className="h-5 w-5" />
+          )}
+        </span>
+      )}
+
+      <span
+        className={`flex-1 text-sm ${
+          criterio.completado ? 'text-gray-500 line-through' : 'text-gray-700'
+        }`}
+      >
+        {criterio.descripcion}
+      </span>
+
+      {!readOnly && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-gray-400 hover:text-red-600 hover:bg-red-50"
+          onClick={onDelete}
+          title="Eliminar"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }

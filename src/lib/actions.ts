@@ -71,7 +71,8 @@ export async function getProyectos(): Promise<Proyecto[]> {
     const token = await getAuthToken();
 
     // Construir URL con filtros basados en rol
-    let url = `${API_BASE}/api/v1/proyectos`;
+    // Siempre filtrar solo proyectos activos (no eliminados)
+    let url = `${API_BASE}/api/v1/proyectos?activo=true`;
 
     if (token) {
       const payload = decodeJwtPayload(token);
@@ -80,9 +81,9 @@ export async function getProyectos(): Promise<Proyecto[]> {
 
         // Aplicar filtro por rol
         if (rol === 'SCRUM_MASTER') {
-          url += `?scrumMasterId=${userId}`;
+          url += `&scrumMasterId=${userId}`;
         } else if (rol === 'COORDINADOR') {
-          url += `?coordinadorId=${userId}`;
+          url += `&coordinadorId=${userId}`;
         }
         // PMO, ADMIN y otros roles ven todos los proyectos
       }

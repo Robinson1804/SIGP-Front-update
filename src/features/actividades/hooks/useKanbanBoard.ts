@@ -16,7 +16,6 @@ import type { TaskFiltersState } from '../components/TaskFilters';
 const DEFAULT_WIP_LIMITS: Record<TareaEstado, number | null> = {
   'Por hacer': null,
   'En progreso': 5,
-  'En revision': 3,
   'Finalizado': null,
 };
 

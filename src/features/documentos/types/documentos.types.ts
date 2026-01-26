@@ -84,14 +84,16 @@ export interface Documento {
   // Relaciones expandidas (opcional, según endpoint)
   creador?: {
     id: number;
-    nombres: string;
-    apellidoPaterno: string;
+    nombreCompleto?: string;
+    nombres?: string;
+    apellidoPaterno?: string;
     apellidoMaterno?: string;
   };
   aprobador?: {
     id: number;
-    nombres: string;
-    apellidoPaterno: string;
+    nombreCompleto?: string;
+    nombres?: string;
+    apellidoPaterno?: string;
     apellidoMaterno?: string;
   };
 }
@@ -111,6 +113,7 @@ export interface CreateDocumentoInput {
   archivoNombre?: string;
   archivoTamano?: number;
   archivoId?: string;
+  tipoArchivo?: string;
   esObligatorio?: boolean;
   categoria?: DocumentoCategoria;
 }
@@ -170,7 +173,7 @@ export type ActaTipo = 'Reunion' | 'Constitucion' | 'DailyMeeting';
 /**
  * Estados de aprobacion de acta
  */
-export type ActaEstado = 'Borrador' | 'Pendiente' | 'Aprobado' | 'Rechazado';
+export type ActaEstado = 'Borrador' | 'En revisión' | 'Aprobado' | 'Rechazado';
 
 /**
  * Tipos de reunion
@@ -386,6 +389,12 @@ export interface Acta {
   aprobador?: { id: number; nombres: string; apellidoPaterno: string } | null;
   fechaAprobacion?: string | null;
 
+  // Aprobación dual (PMO y PATROCINADOR)
+  aprobadoPorPmo?: boolean;
+  fechaAprobacionPmo?: string | null;
+  aprobadoPorPatrocinador?: boolean;
+  fechaAprobacionPatrocinador?: string | null;
+
   // Auditoria
   activo: boolean;
   createdBy?: number | null;
@@ -422,6 +431,7 @@ export interface ActaHistorialAprobacion {
  */
 export interface CreateActaReunionInput {
   proyectoId: number;
+  codigo?: string;
   nombre: string;
   fecha: string;
   tipoReunion: TipoReunion;
@@ -449,6 +459,7 @@ export interface CreateActaConstitucionInput {
   proyectoId: number;
   nombre: string;
   fecha: string;
+  moderadorId?: number; // Usuario que genera el acta
   objetivoSmart?: string;
   justificacion?: string;
   alcance?: string[];
@@ -470,6 +481,7 @@ export interface CreateActaDailyInput {
   proyectoId: number;
   nombre: string;
   fecha: string;
+  moderadorId?: number; // Usuario que genera el acta
   horaInicio?: string;
   horaFin?: string;
   sprintId?: number;

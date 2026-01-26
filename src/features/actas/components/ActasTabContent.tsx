@@ -13,7 +13,8 @@ import {
   AlertCircle,
   Loader2,
   ArrowLeft,
-  Users,
+  Trash2,
+  Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +32,19 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from '@/lib/hooks/use-toast';
+import { useAuth } from '@/stores';
+import { ROLES } from '@/lib/definitions';
 import {
   getActasByProyecto,
   getActaById,
@@ -41,21 +54,21 @@ import {
   updateActaReunion,
   createActaConstitucion,
   updateActaConstitucion,
-  createActaDaily,
-  updateActaDaily,
+  deleteActa,
+  aprobarActa,
+  enviarActaARevision,
 } from '@/features/documentos/services/actas.service';
-import type { Acta, ActasByProyectoResponse, CreateActaDailyInput } from '@/features/documentos/types';
+import type { Acta, ActasByProyectoResponse } from '@/features/documentos/types';
 import { ActaReunionForm } from './ActaReunionForm';
 import { ActaReunionWizard } from './ActaReunionWizard';
 import { ActaReunionView } from './ActaReunionView';
 import { ActaConstitucionForm } from './ActaConstitucionForm';
 import { ActaConstitucionView } from './ActaConstitucionView';
-import { ActaDailyForm } from './ActaDailyForm';
-import { ActaDailyView } from './ActaDailyView';
+import { AprobacionActaDialog } from './AprobacionActaDialog';
 
 const estadoIcons = {
   Borrador: <Clock className="h-4 w-4" />,
-  Pendiente: <AlertCircle className="h-4 w-4" />,
+  'En revisión': <AlertCircle className="h-4 w-4" />,
   Aprobado: <CheckCircle className="h-4 w-4" />,
   Rechazado: <XCircle className="h-4 w-4" />,
 };
@@ -68,16 +81,37 @@ type ViewType =
   | 'view-reunion'
   | 'new-constitucion'
   | 'edit-constitucion'
-  | 'view-constitucion'
-  | 'new-daily'
-  | 'edit-daily'
-  | 'view-daily';
+  | 'view-constitucion';
 
 interface ActasTabContentProps {
   proyectoId: number;
 }
 
 export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
+  const { user } = useAuth();
+
+  // Permisos por rol
+  // ADMIN: acceso total a todas las funciones
+  // SCRUM_MASTER/COORDINADOR: crear, editar, eliminar, ver, descargar, enviar a revisión
+  // PMO y PATROCINADOR: solo ver, descargar, validar (aprobar/rechazar cuando estado = En revisión)
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const isScrumMaster = user?.role === ROLES.SCRUM_MASTER;
+  const isCoordinador = user?.role === ROLES.COORDINADOR;
+  const isPmo = user?.role === ROLES.PMO;
+  const isPatrocinador = user?.role === ROLES.PATROCINADOR;
+
+  const canManageActas = isAdmin || isScrumMaster || isCoordinador; // crear, editar, eliminar, enviar a revisión
+  const canApprove = isPmo || isPatrocinador; // aprobar/rechazar (solo cuando estado = En revisión)
+
+  // Verifica si el usuario actual puede aprobar un acta específica
+  // PMO no puede aprobar si ya aprobó, PATROCINADOR igual
+  const canCurrentUserApproveActa = (acta: Acta): boolean => {
+    if (acta.estado !== 'En revisión') return false;
+    if (isPmo && acta.aprobadoPorPmo) return false; // PMO ya aprobó
+    if (isPatrocinador && acta.aprobadoPorPatrocinador) return false; // PATROCINADOR ya aprobó
+    return canApprove;
+  };
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ActasByProyectoResponse | null>(null);
   const [downloadingPdf, setDownloadingPdf] = useState<number | null>(null);
@@ -87,6 +121,16 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
   const [selectedActa, setSelectedActa] = useState<Acta | null>(null);
   const [saving, setSaving] = useState(false);
   const [formMode, setFormMode] = useState<'wizard' | 'form'>('form');
+
+  // Estados para eliminación
+  const [deletingActa, setDeletingActa] = useState<Acta | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Estados para aprobación/rechazo
+  const [approvingActa, setApprovingActa] = useState<Acta | null>(null);
+
+  // Estados para enviar a revisión
+  const [sendingToReview, setSendingToReview] = useState(false);
 
   const fetchActas = useCallback(async () => {
     try {
@@ -112,7 +156,11 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
   const handleDownloadPdf = async (acta: Acta) => {
     try {
       setDownloadingPdf(acta.id);
-      const filename = `${acta.tipo === 'Constitucion' ? 'Acta_Constitucion' : 'Acta_Reunion'}_${acta.codigo}.pdf`;
+      let filename = 'Acta_Reunion';
+      if (acta.tipo === 'Acta de Constitucion') {
+        filename = 'Acta_Constitucion';
+      }
+      filename = `${filename}_${acta.codigo}.pdf`;
       await saveActaPdf(acta.id, filename);
       toast({
         title: 'PDF descargado',
@@ -127,6 +175,84 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
       });
     } finally {
       setDownloadingPdf(null);
+    }
+  };
+
+  const handleDeleteActa = async () => {
+    if (!deletingActa) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteActa(deletingActa.id);
+      toast({
+        title: 'Acta eliminada',
+        description: `El acta ${deletingActa.codigo} se ha eliminado correctamente`,
+      });
+      fetchActas();
+    } catch (error) {
+      console.error('Error deleting acta:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar el acta',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeletingActa(null);
+    }
+  };
+
+  const handleAprobarActa = async (aprobado: boolean, comentario?: string) => {
+    if (!approvingActa) return;
+
+    try {
+      await aprobarActa(approvingActa.id, {
+        aprobado,
+        comentario,
+      });
+      toast({
+        title: aprobado ? 'Acta aprobada' : 'Acta rechazada',
+        description: aprobado
+          ? `El acta ${approvingActa.codigo} ha sido aprobada correctamente`
+          : `El acta ${approvingActa.codigo} ha sido rechazada`,
+        variant: aprobado ? 'default' : 'destructive',
+      });
+      fetchActas();
+      setApprovingActa(null);
+    } catch (error) {
+      console.error('Error approving acta:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo procesar la aprobación del acta',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const handleEnviarARevision = async (acta: Acta) => {
+    try {
+      setSendingToReview(true);
+      await enviarActaARevision(acta.id);
+      toast({
+        title: 'Acta enviada a revisión',
+        description: `El acta ${acta.codigo} ha sido enviada a PMO y Patrocinador para su aprobación`,
+      });
+      fetchActas();
+      // Si estamos en la vista de detalle, actualizar el acta seleccionada
+      if (selectedActa?.id === acta.id) {
+        const updatedActa = await getActaById(acta.id);
+        setSelectedActa(updatedActa);
+      }
+    } catch (error) {
+      console.error('Error sending to review:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo enviar el acta a revisión',
+        variant: 'destructive',
+      });
+    } finally {
+      setSendingToReview(false);
     }
   };
 
@@ -215,42 +341,6 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
     }
   };
 
-  // Navegacion Daily Meeting
-  const goToNewDaily = () => {
-    setSelectedActa(null);
-    setCurrentView('new-daily');
-  };
-
-  const goToEditDaily = async (acta: Acta) => {
-    try {
-      const fullActa = await getActaById(acta.id);
-      setSelectedActa(fullActa);
-      setCurrentView('edit-daily');
-    } catch (error) {
-      console.error('Error loading acta:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo cargar el acta',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const goToViewDaily = async (acta: Acta) => {
-    try {
-      const fullActa = await getActaById(acta.id);
-      setSelectedActa(fullActa);
-      setCurrentView('view-daily');
-    } catch (error) {
-      console.error('Error loading acta:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo cargar el acta',
-        variant: 'destructive',
-      });
-    }
-  };
-
   // Handlers de guardado
   const handleSaveReunion = async (formData: any) => {
     try {
@@ -262,7 +352,12 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
           description: 'El acta de reunion se ha actualizado correctamente',
         });
       } else {
-        await createActaReunion({ ...formData, proyectoId });
+        // Generar código automático si no existe
+        const reunionesCount = data?.reuniones?.length || 0;
+        const codigo = `AR-${proyectoId}-${String(reunionesCount + 1).padStart(3, '0')}`;
+        // El moderadorId es el usuario que genera el acta
+        const moderadorId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : undefined;
+        await createActaReunion({ ...formData, proyectoId, codigo, moderadorId });
         toast({
           title: 'Acta creada',
           description: 'El acta de reunion se ha creado correctamente',
@@ -305,36 +400,6 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
       toast({
         title: 'Error',
         description: 'No se pudo guardar el acta de constitucion',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveDaily = async (formData: CreateActaDailyInput) => {
-    try {
-      setSaving(true);
-      if (selectedActa) {
-        await updateActaDaily(selectedActa.id, formData);
-        toast({
-          title: 'Acta actualizada',
-          description: 'El acta de daily meeting se ha actualizado correctamente',
-        });
-      } else {
-        await createActaDaily(formData);
-        toast({
-          title: 'Acta creada',
-          description: 'El acta de daily meeting se ha creado correctamente',
-        });
-      }
-      goToList();
-      fetchActas();
-    } catch (error) {
-      console.error('Error saving acta:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo guardar el acta de daily meeting',
         variant: 'destructive',
       });
     } finally {
@@ -412,43 +477,59 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
   // =============================================
   if (currentView === 'view-reunion' && selectedActa) {
     return (
-      <div className="space-y-4">
-        {/* Header con navegacion */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={goToList}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h3 className="text-xl font-bold">{selectedActa.nombre}</h3>
-              <p className="text-sm text-muted-foreground">{selectedActa.codigo}</p>
+      <>
+        <div className="space-y-4">
+          {/* Header con navegacion */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={goToList}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h3 className="text-xl font-bold">{selectedActa.nombre}</h3>
+                <p className="text-sm text-muted-foreground">{selectedActa.codigo}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {canManageActas && selectedActa.estado === 'Borrador' && (
+                <Button variant="outline" onClick={() => goToEditReunion(selectedActa)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => handleDownloadPdf(selectedActa)}
+                disabled={downloadingPdf === selectedActa.id}
+              >
+                {downloadingPdf === selectedActa.id ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Descargar PDF
+              </Button>
+              {canCurrentUserApproveActa(selectedActa) && (
+                <Button onClick={() => setApprovingActa(selectedActa)}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Validar
+                </Button>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {selectedActa.estado === 'Borrador' && (
-              <Button variant="outline" onClick={() => goToEditReunion(selectedActa)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => handleDownloadPdf(selectedActa)}
-              disabled={downloadingPdf === selectedActa.id}
-            >
-              {downloadingPdf === selectedActa.id ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Descargar PDF
-            </Button>
-          </div>
+
+          {/* Vista del acta */}
+          <ActaReunionView acta={selectedActa} />
         </div>
 
-        {/* Vista del acta */}
-        <ActaReunionView acta={selectedActa} />
-      </div>
+        {/* Dialog de aprobación/rechazo */}
+        <AprobacionActaDialog
+          open={!!approvingActa}
+          onClose={() => setApprovingActa(null)}
+          onAprobar={handleAprobarActa}
+          tipo="Reunion"
+        />
+      </>
     );
   }
 
@@ -496,127 +577,74 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
   // =============================================
   if (currentView === 'view-constitucion' && selectedActa) {
     return (
-      <div className="space-y-4">
-        {/* Header con navegacion */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={goToList}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h3 className="text-xl font-bold">{selectedActa.nombre}</h3>
-              <p className="text-sm text-muted-foreground">{selectedActa.codigo}</p>
+      <>
+        <div className="space-y-4">
+          {/* Header con navegacion */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={goToList}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h3 className="text-xl font-bold">{selectedActa.nombre}</h3>
+                <p className="text-sm text-muted-foreground">{selectedActa.codigo}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {canManageActas && selectedActa.estado === 'Borrador' && (
+                <Button variant="outline" onClick={() => goToEditConstitucion(selectedActa)}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => handleDownloadPdf(selectedActa)}
+                disabled={downloadingPdf === selectedActa.id}
+              >
+                {downloadingPdf === selectedActa.id ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Descargar PDF
+              </Button>
+              {/* Botón Enviar a Revisión: solo SCRUM_MASTER/COORDINADOR cuando estado = Borrador */}
+              {canManageActas && selectedActa.estado === 'Borrador' && (
+                <Button
+                  onClick={() => handleEnviarARevision(selectedActa)}
+                  disabled={sendingToReview}
+                >
+                  {sendingToReview ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Enviar a Revisión
+                </Button>
+              )}
+              {/* Botón Validar: solo PMO/PATROCINADOR cuando estado = En revisión y no hayan aprobado aún */}
+              {canCurrentUserApproveActa(selectedActa) && (
+                <Button onClick={() => setApprovingActa(selectedActa)}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Validar
+                </Button>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {selectedActa.estado === 'Borrador' && (
-              <Button variant="outline" onClick={() => goToEditConstitucion(selectedActa)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => handleDownloadPdf(selectedActa)}
-              disabled={downloadingPdf === selectedActa.id}
-            >
-              {downloadingPdf === selectedActa.id ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Descargar PDF
-            </Button>
-          </div>
+
+          {/* Vista del acta */}
+          <ActaConstitucionView acta={selectedActa} />
         </div>
 
-        {/* Vista del acta */}
-        <ActaConstitucionView acta={selectedActa} />
-      </div>
-    );
-  }
-
-  // =============================================
-  // VISTA: Nueva/Editar Acta de Daily Meeting
-  // =============================================
-  if (currentView === 'new-daily' || currentView === 'edit-daily') {
-    return (
-      <div className="space-y-4">
-        {/* Header con navegacion */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={goToList}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h3 className="text-xl font-bold">
-              {currentView === 'new-daily' ? 'Nueva Acta de Daily Meeting' : 'Editar Acta de Daily Meeting'}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {currentView === 'new-daily'
-                ? 'Registre las actividades del daily meeting del equipo'
-                : `Editando: ${selectedActa?.codigo}`}
-            </p>
-          </div>
-        </div>
-
-        {/* Formulario */}
-        <Card>
-          <CardContent className="pt-6">
-            <ActaDailyForm
-              acta={selectedActa}
-              proyectoId={proyectoId}
-              onSave={handleSaveDaily}
-              onCancel={goToList}
-              saving={saving}
-            />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // =============================================
-  // VISTA: Ver Acta de Daily Meeting
-  // =============================================
-  if (currentView === 'view-daily' && selectedActa) {
-    return (
-      <div className="space-y-4">
-        {/* Header con navegacion */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={goToList}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h3 className="text-xl font-bold">{selectedActa.nombre}</h3>
-              <p className="text-sm text-muted-foreground">{selectedActa.codigo}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedActa.estado === 'Borrador' && (
-              <Button variant="outline" onClick={() => goToEditDaily(selectedActa)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => handleDownloadPdf(selectedActa)}
-              disabled={downloadingPdf === selectedActa.id}
-            >
-              {downloadingPdf === selectedActa.id ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Descargar PDF
-            </Button>
-          </div>
-        </div>
-
-        {/* Vista del acta */}
-        <ActaDailyView acta={selectedActa} />
-      </div>
+        {/* Dialog de aprobación/rechazo */}
+        <AprobacionActaDialog
+          open={!!approvingActa}
+          onClose={() => setApprovingActa(null)}
+          onAprobar={handleAprobarActa}
+          tipo="Constitucion"
+        />
+      </>
     );
   }
 
@@ -646,7 +674,7 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
                 Documento formal que autoriza el inicio del proyecto
               </CardDescription>
             </div>
-            {!data?.constitucion && (
+            {!data?.constitucion && canManageActas && (
               <Button onClick={goToNewConstitucion}>
                 <Plus className="h-4 w-4 mr-2" />
                 Crear Acta de Constitucion
@@ -683,7 +711,7 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  {data.constitucion.estado === 'Borrador' && (
+                  {canManageActas && data.constitucion.estado === 'Borrador' && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -704,6 +732,45 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
                       <Download className="h-4 w-4" />
                     )}
                   </Button>
+                  {/* Botón Enviar a Revisión: solo SCRUM_MASTER/COORDINADOR cuando estado = Borrador */}
+                  {canManageActas && data.constitucion.estado === 'Borrador' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEnviarARevision(data.constitucion!)}
+                      disabled={sendingToReview}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      title="Enviar a revisión"
+                    >
+                      {sendingToReview ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                  {/* Botón Validar: solo PMO/PATROCINADOR cuando estado = En revisión y no hayan aprobado aún */}
+                  {canCurrentUserApproveActa(data.constitucion) && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setApprovingActa(data.constitucion!)}
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      title="Validar acta"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {canManageActas && data.constitucion.estado === 'Borrador' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeletingActa(data.constitucion!)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -732,10 +799,12 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
                 Registro de las reuniones realizadas durante el proyecto
               </CardDescription>
             </div>
-            <Button onClick={goToNewReunion}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Acta de Reunion
-            </Button>
+            {canManageActas && (
+              <Button onClick={goToNewReunion}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Acta de Reunion
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -775,7 +844,7 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {acta.estado === 'Borrador' && (
+                        {canManageActas && acta.estado === 'Borrador' && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -796,6 +865,27 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
                             <Download className="h-4 w-4" />
                           )}
                         </Button>
+                        {canCurrentUserApproveActa(acta) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setApprovingActa(acta)}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            title="Validar acta"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canManageActas && acta.estado === 'Borrador' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeletingActa(acta)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -814,103 +904,50 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
         </CardContent>
       </Card>
 
-      {/* Actas de Daily Meeting Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Users className="h-5 w-5" />
-                Actas de Daily Meetings
-              </CardTitle>
-              <CardDescription>
-                Registro diario del progreso del equipo con las 3 preguntas Scrum
-              </CardDescription>
-            </div>
-            <Button onClick={goToNewDaily}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Acta de Daily
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {data?.dailies && data.dailies.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Codigo</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Participantes</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.dailies.map((acta) => (
-                  <TableRow key={acta.id}>
-                    <TableCell className="font-mono text-sm">{acta.codigo}</TableCell>
-                    <TableCell>{acta.nombre}</TableCell>
-                    <TableCell>{formatDate(acta.fecha)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        <Users className="h-3 w-3 mr-1" />
-                        {acta.participantesDaily?.length || 0}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getEstadoLabel(acta.estado).variant}>
-                        {estadoIcons[acta.estado]}
-                        <span className="ml-1">{getEstadoLabel(acta.estado).label}</span>
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => goToViewDaily(acta)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {acta.estado === 'Borrador' && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => goToEditDaily(acta)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDownloadPdf(acta)}
-                          disabled={downloadingPdf === acta.id}
-                        >
-                          {downloadingPdf === acta.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Download className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>No hay actas de daily meeting registradas</p>
-              <p className="text-sm">
-                Crea una nueva acta para documentar los daily meetings del equipo
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Dialog de confirmación de eliminación */}
+      <AlertDialog open={!!deletingActa} onOpenChange={(open) => !open && setDeletingActa(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar acta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el acta <strong>{deletingActa?.codigo}</strong> ({deletingActa?.nombre}).
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteActa}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog de aprobación/rechazo */}
+      <AprobacionActaDialog
+        open={!!approvingActa}
+        onClose={() => setApprovingActa(null)}
+        onAprobar={handleAprobarActa}
+        tipo={
+          approvingActa?.tipo === 'Acta de Constitucion'
+            ? 'Constitucion'
+            : 'Reunion'
+        }
+      />
     </div>
   );
 }

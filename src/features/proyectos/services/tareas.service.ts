@@ -17,7 +17,7 @@ import type { PaginatedResponse } from '@/types';
 /**
  * Estados posibles de una tarea
  */
-export type TareaEstado = 'Por hacer' | 'En progreso' | 'En revision' | 'Finalizado';
+export type TareaEstado = 'Por hacer' | 'En progreso' | 'Finalizado';
 
 /**
  * Prioridad de tarea
@@ -46,12 +46,20 @@ export interface Tarea {
   estado: TareaEstado;
   prioridad: TareaPrioridad;
 
-  // Asignacion
-  responsableId: number | null;
+  // Asignacion - Backend usa asignadoA, relacion a Usuario
+  asignadoA: number | null;
+  asignado?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    email?: string;
+  } | null;
+  // Alias para compatibilidad con código existente
+  responsableId?: number | null;
   responsable?: {
     id: number;
     nombre: string;
-    email: string;
+    email?: string;
   } | null;
 
   // Estimacion
@@ -131,12 +139,12 @@ export interface CreateEvidenciaData {
  * Datos para crear una tarea Scrum
  */
 export interface CreateTareaData {
-  codigo?: string;
+  codigo: string;  // Required, format: TAR-001
   nombre: string;
   descripcion?: string;
   historiaUsuarioId: number;
   prioridad?: TareaPrioridad;
-  responsableId?: number;
+  asignadoA?: number | null;  // Backend field name (not responsableId) - null para quitar asignado
   horasEstimadas?: number;
   fechaInicio?: string;
   fechaFin?: string;
@@ -386,4 +394,36 @@ export async function eliminarEvidencia(
   evidenciaId: number | string
 ): Promise<void> {
   await del(`${ENDPOINTS.TAREAS.BY_ID(tareaId)}/evidencias/${evidenciaId}`);
+}
+
+// ==================== HISTORIAL ====================
+
+/**
+ * Registro de cambio en el historial de una tarea
+ */
+export interface TareaHistorial {
+  id: number;
+  entidadTipo: string;
+  entidadId: number;
+  accion: string;
+  campoModificado?: string;
+  valorAnterior?: string;
+  valorNuevo?: string;
+  usuarioId: number;
+  usuario?: {
+    id: number;
+    nombre: string;
+    email?: string;
+  };
+  createdAt: string;
+}
+
+/**
+ * Obtener historial de cambios de una tarea
+ */
+export async function getTareaHistorial(tareaId: number | string): Promise<TareaHistorial[]> {
+  const response = await apiClient.get<TareaHistorial[]>(
+    `${ENDPOINTS.TAREAS.BY_ID(tareaId)}/historial`
+  );
+  return response.data;
 }

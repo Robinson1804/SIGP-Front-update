@@ -33,6 +33,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -43,13 +47,20 @@ import {
   Trash2,
   UserPlus,
   Users,
+  KeyRound,
+  UserCheck,
+  Shield,
+  UserX,
+  Check,
 } from 'lucide-react';
 import type { Personal, Division } from '../types';
 import {
   Modalidad,
+  Role,
   getModalidadLabel,
   getNombreCompleto,
   getCargaColor,
+  getRolLabel,
 } from '../types';
 
 interface PersonalTableProps {
@@ -59,6 +70,9 @@ interface PersonalTableProps {
   onEdit: (persona: Personal) => void;
   onDelete: (persona: Personal) => void;
   onCreate: () => void;
+  onCrearAcceso?: (persona: Personal) => void;
+  onCambiarRol?: (persona: Personal, nuevoRol: Role) => void;
+  onRevocarAcceso?: (persona: Personal) => void;
   isLoading?: boolean;
 }
 
@@ -69,6 +83,9 @@ export function PersonalTable({
   onEdit,
   onDelete,
   onCreate,
+  onCrearAcceso,
+  onCambiarRol,
+  onRevocarAcceso,
   isLoading = false,
 }: PersonalTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,9 +132,9 @@ export function PersonalTable({
 
   const getModalidadBadge = (modalidad: Modalidad) => {
     const colorClasses: Record<Modalidad, string> = {
-      [Modalidad.PLANILLA]: 'bg-blue-100 text-blue-800 border-blue-200',
+      [Modalidad.NOMBRADO]: 'bg-blue-100 text-blue-800 border-blue-200',
       [Modalidad.CAS]: 'bg-purple-100 text-purple-800 border-purple-200',
-      [Modalidad.LOCADOR]: 'bg-orange-100 text-orange-800 border-orange-200',
+      [Modalidad.ORDEN_DE_SERVICIO]: 'bg-orange-100 text-orange-800 border-orange-200',
       [Modalidad.PRACTICANTE]: 'bg-green-100 text-green-800 border-green-200',
     };
 
@@ -161,7 +178,7 @@ export function PersonalTable({
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="División" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todas las divisiones</SelectItem>
               {divisiones.map((div) => (
                 <SelectItem key={div.id} value={String(div.id)}>
@@ -175,7 +192,7 @@ export function PersonalTable({
             <SelectTrigger className="w-[150px]">
               <SelectValue placeholder="Modalidad" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todas</SelectItem>
               {modalidades.map((mod) => (
                 <SelectItem key={mod} value={mod}>
@@ -189,7 +206,7 @@ export function PersonalTable({
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="activo">Activo</SelectItem>
               <SelectItem value="inactivo">Inactivo</SelectItem>
@@ -258,7 +275,7 @@ export function PersonalTable({
                     </TableCell>
                     <TableCell>{getEstadoBadge(persona)}</TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
+                      <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />
@@ -273,6 +290,57 @@ export function PersonalTable({
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
+                          {!persona.usuarioId && onCrearAcceso && (
+                            <DropdownMenuItem onClick={() => onCrearAcceso(persona)}>
+                              <KeyRound className="h-4 w-4 mr-2" />
+                              Crear acceso
+                            </DropdownMenuItem>
+                          )}
+                          {persona.usuarioId && persona.usuario?.rol && onCambiarRol && (
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <Shield className="h-4 w-4 mr-2" />
+                                Rol: {getRolLabel(persona.usuario.rol)}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                {Object.values(Role).map((rol) => (
+                                  <DropdownMenuItem
+                                    key={rol}
+                                    onClick={() => onCambiarRol(persona, rol)}
+                                    disabled={persona.usuario?.rol === rol}
+                                  >
+                                    {persona.usuario?.rol === rol && (
+                                      <Check className="h-4 w-4 mr-2" />
+                                    )}
+                                    {persona.usuario?.rol !== rol && (
+                                      <span className="w-4 mr-2" />
+                                    )}
+                                    {getRolLabel(rol)}
+                                  </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => onRevocarAcceso?.(persona)}
+                                >
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Revocar acceso
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          )}
+                          {persona.usuarioId && !persona.usuario?.rol && (
+                            <DropdownMenuItem disabled>
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Tiene acceso
+                            </DropdownMenuItem>
+                          )}
+                          {persona.usuarioId && persona.usuario?.rol && !onCambiarRol && (
+                            <DropdownMenuItem disabled>
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Tiene acceso
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => onDelete(persona)}

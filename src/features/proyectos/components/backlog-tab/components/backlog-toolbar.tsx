@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, HelpCircle } from 'lucide-react';
+import { Search, HelpCircle, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -17,12 +17,23 @@ import {
 } from '@/components/ui/tooltip';
 import { type Epica } from '@/features/proyectos/services/epicas.service';
 
+interface SprintCounts {
+  total: number;
+  activo: number;
+  planificados: number;
+  finalizados: number;
+}
+
 interface BacklogToolbarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   selectedEpicaId: string;
   onEpicaChange: (epicaId: string) => void;
   epicas: Epica[];
+  // Filtro de estado de sprint
+  selectedSprintEstado?: string;
+  onSprintEstadoChange?: (estado: string) => void;
+  sprintCounts?: SprintCounts;
 }
 
 export function BacklogToolbar({
@@ -31,6 +42,9 @@ export function BacklogToolbar({
   selectedEpicaId,
   onEpicaChange,
   epicas,
+  selectedSprintEstado = 'todos',
+  onSprintEstadoChange,
+  sprintCounts,
 }: BacklogToolbarProps) {
   return (
     <div className="flex items-center gap-4 mb-6">
@@ -66,6 +80,32 @@ export function BacklogToolbar({
           ))}
         </SelectContent>
       </Select>
+
+      {/* Sprint estado filter */}
+      {onSprintEstadoChange && sprintCounts && (
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-gray-500" />
+          <Select value={selectedSprintEstado} onValueChange={onSprintEstadoChange}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Filtrar sprints" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">
+                Todos ({sprintCounts.total})
+              </SelectItem>
+              <SelectItem value="en_progreso">
+                En progreso ({sprintCounts.activo})
+              </SelectItem>
+              <SelectItem value="por_hacer">
+                Por hacer ({sprintCounts.planificados})
+              </SelectItem>
+              <SelectItem value="finalizado">
+                Finalizado ({sprintCounts.finalizados})
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Help tooltip */}
       <TooltipProvider>

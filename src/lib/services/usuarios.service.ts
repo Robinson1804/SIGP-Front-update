@@ -19,6 +19,11 @@ export interface Usuario {
   avatarUrl?: string;
   telefono?: string;
   activo: boolean;
+  personal?: {
+    nombre: string;
+    apellidoPaterno?: string;
+    apellidoMaterno?: string;
+  };
 }
 
 /**
@@ -77,6 +82,15 @@ export async function getCoordinadores(): Promise<Usuario[]> {
  */
 export async function getScrumMasters(): Promise<Usuario[]> {
   const response = await apiClient.get<Usuario[]>(ENDPOINTS.USUARIOS.SCRUM_MASTERS);
+  return response.data || [];
+}
+
+/**
+ * Obtener usuarios elegibles para ser Scrum Master (SCRUM_MASTER + COORDINADOR)
+ * Usado para el campo "Scrum Master" en proyectos POI
+ */
+export async function getScrumMastersElegibles(): Promise<Usuario[]> {
+  const response = await apiClient.get<Usuario[]>(ENDPOINTS.USUARIOS.SCRUM_MASTERS_ELEGIBLES);
   return response.data || [];
 }
 

@@ -45,7 +45,7 @@ import {
 import { type Project, type Proyecto, MODULES, PERMISSIONS, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { ProtectedRoute } from "@/features/auth";
-import { useAuth } from '@/stores';
+import { useAuth, usePGD } from '@/stores';
 import { useSidebar } from "@/contexts/sidebar-context";
 import { POIFullModal } from "@/features/proyectos";
 import { hasPermission } from "@/lib/permissions";
@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/dialog";
 import { getProyectos, type ProyectoQueryFilters } from '@/features/proyectos/services';
 import { getAllActividades } from '@/features/actividades/services/actividades.service';
+import { getPGDs, type PGD } from '@/features/planning';
 import { useToast } from '@/lib/hooks/use-toast';
 import type { PaginatedResponse } from '@/types';
 
@@ -86,6 +87,22 @@ function mapActividadToProject(actividad: {
   clasificacion?: string | null;
   estado: string;
   coordinadorId?: number | null;
+  coordinador?: {
+    id?: number;
+    nombre?: string;
+    apellido?: string;
+  } | null;
+  gestorId?: number | null;
+  gestor?: {
+    id?: number;
+    nombre?: string;
+    apellido?: string;
+  } | null;
+  accionEstrategicaId?: number | null;
+  accionEstrategica?: {
+    id?: number;
+    nombre?: string;
+  } | null;
   coordinacion?: string | null;
   areasFinancieras?: string[] | null;
   montoAnual?: number | null;
@@ -96,12 +113,16 @@ function mapActividadToProject(actividad: {
   createdAt?: string;
   updatedAt?: string;
 }): ProjectWithIds {
-  // Formatear fecha de ISO a YYYY-MM
-  const formatDateToMonthYear = (dateStr: string | null | undefined): string | undefined => {
+  // Formatear fecha de ISO a YYYY-MM-DD (parseando string directo para evitar problemas de timezone)
+  const formatDateToFullDate = (dateStr: string | null | undefined): string | undefined => {
     if (!dateStr) return undefined;
     try {
-      const date = new Date(dateStr);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      // Parsear directamente del string ISO: "YYYY-MM-DDTHH:mm:ss" o "YYYY-MM-DD"
+      const datePart = dateStr.split('T')[0]; // "YYYY-MM-DD"
+      if (datePart && datePart.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return datePart;
+      }
+      return undefined;
     } catch {
       return undefined;
     }
@@ -113,11 +134,11 @@ function mapActividadToProject(actividad: {
     return anios.map(a => a.toString());
   };
 
-  // Mapear clasificación
+  // Mapear clasificación: usar "Gestion interna" sin tilde (coincide con backend y SelectItem)
   const mapClasificacion = (clasificacion: string | null | undefined): Project['classification'] => {
-    if (!clasificacion) return 'Gestión interna';
+    if (!clasificacion) return 'Gestion interna';
     if (clasificacion.toLowerCase().includes('ciudadano')) return 'Al ciudadano';
-    return 'Gestión interna';
+    return 'Gestion interna';
   };
 
   // Mapear estado
@@ -134,6 +155,20 @@ function mapActividadToProject(actividad: {
     return estadoMap[estado] || 'Pendiente';
   };
 
+  // Obtener nombre del gestor si está disponible (equivalente a Scrum Master para Kanban)
+  const gestorNombre = actividad.gestor
+    ? `${actividad.gestor.nombre || ''} ${actividad.gestor.apellido || ''}`.trim() || 'Sin nombre'
+    : actividad.gestorId
+      ? `Gestor #${actividad.gestorId}`
+      : 'Sin asignar';
+
+  // Obtener nombre del coordinador si está disponible
+  const coordinadorNombre = actividad.coordinador
+    ? `${actividad.coordinador.nombre || ''} ${actividad.coordinador.apellido || ''}`.trim() || 'Sin nombre'
+    : actividad.coordinadorId
+      ? `Coordinador #${actividad.coordinadorId}`
+      : undefined;
+
   return {
     id: actividad.id.toString(),
     code: actividad.codigo,
@@ -142,20 +177,22 @@ function mapActividadToProject(actividad: {
     type: 'Actividad',
     classification: mapClasificacion(actividad.clasificacion),
     status: mapEstado(actividad.estado),
-    scrumMaster: 'N/A (Kanban)',
+    scrumMaster: gestorNombre, // Para Actividades, mostrar el gestor (equivalente a Scrum Master)
     annualAmount: actividad.montoAnual || 0,
-    strategicAction: 'Sin AE',
+    strategicAction: actividad.accionEstrategica?.nombre || 'Sin AE',
     missingData: !actividad.descripcion,
     years: aniosToYears(actividad.anios),
     responsibles: [],
     financialArea: actividad.areasFinancieras || [],
     coordination: actividad.coordinacion || undefined,
-    coordinator: actividad.coordinadorId ? `Coordinador #${actividad.coordinadorId}` : undefined,
+    coordinator: coordinadorNombre,
     managementMethod: actividad.metodoGestion || 'Kanban',
     subProjects: [],
-    startDate: formatDateToMonthYear(actividad.fechaInicio),
-    endDate: formatDateToMonthYear(actividad.fechaFin),
+    startDate: formatDateToFullDate(actividad.fechaInicio),
+    endDate: formatDateToFullDate(actividad.fechaFin),
     coordinadorId: actividad.coordinadorId || undefined,
+    scrumMasterId: actividad.gestorId || undefined, // Para Actividades, gestorId es equivalente a scrumMasterId
+    accionEstrategicaId: actividad.accionEstrategicaId || undefined,
   };
 }
 
@@ -172,11 +209,11 @@ function mapProyectoToProject(proyecto: Proyecto): ProjectWithIds {
     return estadoMap[estado] || 'Pendiente';
   };
 
-  // Mapear clasificación: API puede usar "Gestion interna" (sin tilde)
+  // Mapear clasificación: API usa "Gestion interna" (sin tilde), SelectItem también
   const mapClasificacion = (clasificacion: string | null): Project['classification'] => {
-    if (!clasificacion) return 'Gestión interna';
+    if (!clasificacion) return 'Gestion interna';
     if (clasificacion.toLowerCase().includes('ciudadano')) return 'Al ciudadano';
-    return 'Gestión interna';
+    return 'Gestion interna';
   };
 
   // Convertir años de number[] a string[]
@@ -185,12 +222,17 @@ function mapProyectoToProject(proyecto: Proyecto): ProjectWithIds {
     return anios.map(a => a.toString());
   };
 
-  // Formatear fecha de ISO a YYYY-MM
+  // Formatear fecha de ISO a YYYY-MM (parseando string directo para evitar problemas de timezone)
   const formatDateToMonthYear = (dateStr: string | null): string | undefined => {
     if (!dateStr) return undefined;
     try {
-      const date = new Date(dateStr);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      // Parsear directamente del string ISO: "YYYY-MM-DDTHH:mm:ss" o "YYYY-MM-DD"
+      const datePart = dateStr.split('T')[0]; // "YYYY-MM-DD"
+      const [year, month] = datePart.split('-');
+      if (year && month) {
+        return `${year}-${month}`;
+      }
+      return undefined;
     } catch {
       return undefined;
     }
@@ -204,7 +246,11 @@ function mapProyectoToProject(proyecto: Proyecto): ProjectWithIds {
     type: proyecto.tipo === 'Proyecto' ? 'Proyecto' : 'Actividad',
     classification: mapClasificacion(proyecto.clasificacion),
     status: mapEstado(proyecto.estado),
-    scrumMaster: proyecto.scrumMasterId ? `Scrum Master #${proyecto.scrumMasterId}` : 'Sin asignar',
+    scrumMaster: proyecto.scrumMaster
+      ? `${proyecto.scrumMaster.nombre || ''} ${proyecto.scrumMaster.apellido || ''}`.trim() || 'Sin nombre'
+      : proyecto.scrumMasterId
+        ? `Scrum Master #${proyecto.scrumMasterId}`
+        : 'Sin asignar',
     annualAmount: proyecto.montoAnual || 0,
     strategicAction: proyecto.accionEstrategicaId ? `AE N${proyecto.accionEstrategicaId}` : 'Sin AE',
     missingData: !proyecto.descripcion || !proyecto.scrumMasterId,
@@ -212,7 +258,9 @@ function mapProyectoToProject(proyecto: Proyecto): ProjectWithIds {
     responsibles: [], // Se cargará con equipo si es necesario
     financialArea: proyecto.areasFinancieras || [],
     coordination: proyecto.coordinacion || undefined,
-    coordinator: proyecto.coordinadorId ? `Coordinador #${proyecto.coordinadorId}` : undefined,
+    coordinator: proyecto.coordinador
+      ? `${proyecto.coordinador.nombre || ''} ${proyecto.coordinador.apellido || ''}`.trim() || undefined
+      : undefined,
     managementMethod: proyecto.metodoGestion || 'Scrum',
     subProjects: [],
     startDate: formatDateToMonthYear(proyecto.fechaInicio),
@@ -248,11 +296,12 @@ const ProjectCard = ({
         if (!startDate || !endDate) return '';
         const formatDate = (dateStr: string) => {
             const [year, month] = dateStr.split('-');
-            return `${month}-${year}`;
+            return `${month}/${year}`;
         };
-        return `Inicio: ${formatDate(startDate)} - Fin: ${formatDate(endDate)}`;
+        return `${formatDate(startDate)} - ${formatDate(endDate)}`;
     };
 
+    // Mostrar rango de fechas si existen, sino solo los años
     const displayDate = project.startDate && project.endDate
         ? formatDateRange(project.startDate, project.endDate)
         : project.years?.join(', ');
@@ -288,8 +337,20 @@ const ProjectCard = ({
                 </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-2 flex-grow pt-0" style={{ fontFamily: 'Inter', fontSize: '12px' }}>
-                {/* Badge de Tipo */}
-                <p className="text-xs text-[#ADADAD] font-bold">{project.type}</p>
+                {/* Tipo y Clasificación */}
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-[#ADADAD] font-bold">{project.type}</span>
+                    <Badge
+                        variant="outline"
+                        className={`text-xs font-normal ${
+                            project.classification === 'Al ciudadano'
+                                ? 'border-green-500 text-green-700 bg-green-50'
+                                : 'border-blue-500 text-blue-700 bg-blue-50'
+                        }`}
+                    >
+                        {project.classification}
+                    </Badge>
+                </div>
 
                 {/* Estado */}
                 <div className="flex items-center gap-2">
@@ -392,14 +453,25 @@ function PmoPoiView() {
     const [totalItems, setTotalItems] = useState(0);
     const pageSize = 12;
 
+    // Usar el store global de PGD para mantener la selección entre páginas
+    const {
+        selectedPGD: currentPGD,
+        pgds,
+        isLoading: loadingPGD,
+        setSelectedPGD: setCurrentPGD,
+        initializePGD,
+        setLoading: setLoadingPGD,
+        availableYears: pgdAvailableYears,
+    } = usePGD();
+
     // Filtros
     const [selectedType, setSelectedType] = useState<string>("Proyecto");
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedClassification, setSelectedClassification] = useState<string>("all");
-    const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+    const [selectedYear, setSelectedYear] = useState<string>("all");
 
-    // Generar lista de años disponibles (desde 2020 hasta 5 años en el futuro)
-    const availableYears = Array.from({ length: 15 }, (_, i) => (2020 + i).toString());
+    // Generar lista de años disponibles basado en el PGD seleccionado (del store global)
+    const availableYears = pgdAvailableYears.map(y => y.toString());
 
     // Estados para modales
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -407,9 +479,10 @@ function PmoPoiView() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<ProjectWithIds | null>(null);
 
-    // Verificar permisos del usuario
+    // Verificar permisos del usuario - ADMIN tiene acceso total
     const userRole = user?.role;
     const userName = user?.name;
+    const isAdmin = userRole === ROLES.ADMIN;
     const canCreate = userRole ? hasPermission(userRole, MODULES.POI, PERMISSIONS.CREATE) : false;
     const isDeveloper = userRole === ROLES.DESARROLLADOR;
     const isImplementador = userRole === ROLES.IMPLEMENTADOR;
@@ -420,6 +493,22 @@ function PmoPoiView() {
     // DESARROLLADOR solo puede ver "Proyecto"
     // IMPLEMENTADOR solo puede ver "Actividad"
     const effectiveType = isDeveloper ? "Proyecto" : isImplementador ? "Actividad" : selectedType;
+
+    // Cargar lista de PGDs disponibles al montar el componente (usa el store global)
+    useEffect(() => {
+        const loadPGDs = async () => {
+            try {
+                setLoadingPGD(true);
+                const pgdsList = await getPGDs({ activo: true });
+                // initializePGD guarda los PGDs y selecciona el vigente si no hay uno seleccionado
+                initializePGD(pgdsList);
+            } catch (error) {
+                console.error('Error loading PGDs:', error);
+                setLoadingPGD(false);
+            }
+        };
+        loadPGDs();
+    }, [initializePGD, setLoadingPGD]);
 
     /**
      * Función para cargar proyectos o actividades desde la API
@@ -433,13 +522,16 @@ function PmoPoiView() {
 
             if (effectiveType === 'Actividad') {
                 // Cargar Actividades desde el endpoint /actividades
+                // IMPORTANTE: Filtrar por PGD actual y solo mostrar actividades activas (no eliminadas)
                 const actividadesData = await getAllActividades({
                     search: searchQuery.trim() || undefined,
+                    pgdId: currentPGD?.id,
+                    activo: true, // Solo mostrar actividades no eliminadas
                 });
 
-                // Filtrar por año si es necesario
+                // Filtrar por año (siempre dentro del rango del PGD)
                 let filteredActividades = actividadesData;
-                if (selectedYear && selectedYear !== "all") {
+                if (selectedYear && selectedYear !== 'all') {
                     filteredActividades = actividadesData.filter(a =>
                         a.anios?.includes(parseInt(selectedYear, 10)) ||
                         !a.anios ||
@@ -464,26 +556,32 @@ function PmoPoiView() {
                     pageSize: pageSize,
                 };
 
+                // IMPORTANTE: Filtrar por PGD actual para mostrar solo proyectos de este PGD
+                if (currentPGD?.id) {
+                    filters.pgdId = currentPGD.id;
+                }
+
                 // Agregar búsqueda si existe
                 if (searchQuery.trim()) {
                     filters.search = searchQuery.trim();
                 }
 
-                // Agregar filtro de año si existe
-                if (selectedYear && selectedYear !== "all") {
+                // Agregar filtro de año (siempre dentro del rango del PGD)
+                if (selectedYear && selectedYear !== 'all') {
                     filters.anno = parseInt(selectedYear, 10);
                 }
 
                 // Filtrar por rol del usuario
+                // ADMIN y PMO ven todos los proyectos (sin filtro adicional)
                 // SCRUM_MASTER: solo ve proyectos donde está asignado como Scrum Master
-                if (isScrumMaster && user?.id) {
+                if (!isAdmin && !isPmo && isScrumMaster && user?.id) {
                     filters.scrumMasterId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
                 }
                 // COORDINADOR: solo ve proyectos donde está asignado como Coordinador
-                else if (userRole === ROLES.COORDINADOR && user?.id) {
+                else if (!isAdmin && !isPmo && userRole === ROLES.COORDINADOR && user?.id) {
                     filters.coordinadorId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
                 }
-                // PMO y ADMIN ven todos los proyectos (sin filtro adicional)
+                // ADMIN y PMO ven todos los proyectos (sin filtro adicional)
 
                 const response = await getProyectos(filters);
 
@@ -525,12 +623,14 @@ function PmoPoiView() {
         } finally {
             setIsLoading(false);
         }
-    }, [effectiveType, currentPage, searchQuery, selectedYear, toast, isScrumMaster, userRole, user]);
+    }, [effectiveType, currentPage, searchQuery, selectedYear, toast, isScrumMaster, userRole, user, currentPGD]);
 
-    // Cargar proyectos cuando cambien los filtros
+    // Cargar proyectos cuando cambien los filtros o el PGD seleccionado
     useEffect(() => {
-        fetchProyectos();
-    }, [fetchProyectos]);
+        if (!loadingPGD && currentPGD) {
+            fetchProyectos();
+        }
+    }, [fetchProyectos, loadingPGD, currentPGD]);
 
     // Resetear página cuando cambian los filtros
     useEffect(() => {
@@ -545,10 +645,10 @@ function PmoPoiView() {
         }
 
         // Filtro por asignación según el rol del usuario (filtro local)
-        // PMO ve todos los proyectos/actividades
+        // ADMIN y PMO ven todos los proyectos/actividades
         // NOTA: La API ya debería filtrar por scrumMasterId para SCRUM_MASTER,
         // así que este filtro local es solo una validación adicional
-        if (!isPmo && user) {
+        if (!isAdmin && !isPmo && user) {
             // DESARROLLADOR e IMPLEMENTADOR: ven donde están como responsables
             if (isDeveloper || isImplementador) {
                 const isResponsible = p.responsibles?.some(r => r === userName);
@@ -565,8 +665,8 @@ function PmoPoiView() {
             }
         }
 
-        // Filtro por año local (validación adicional)
-        if (selectedYear && selectedYear !== "all") {
+        // Filtro por año local (validación adicional - solo si no es "all")
+        if (selectedYear && selectedYear !== 'all') {
             // Si tiene años definidos, verificar si el año coincide
             if (p.years && p.years.length > 0) {
                 if (!p.years.includes(selectedYear)) return false;
@@ -576,11 +676,10 @@ function PmoPoiView() {
         return true;
     });
 
-    // Contar filtros activos
+    // Contar filtros activos (el año ya no cuenta como filtro ya que siempre debe estar dentro del PGD)
     const activeFiltersCount = [
         searchQuery,
         selectedClassification !== "all",
-        selectedYear !== "all",
     ].filter(Boolean).length;
 
     const sectionTitle = effectiveType === "Proyecto" ? "Mis Proyectos" : "Mis Actividades";
@@ -650,7 +749,7 @@ function PmoPoiView() {
         return pages;
     };
 
-    // Función para limpiar todos los filtros
+    // Función para limpiar todos los filtros (el año se resetea a "Todos")
     const clearAllFilters = () => {
         setSearchQuery("");
         setSelectedClassification("all");
@@ -661,9 +760,37 @@ function PmoPoiView() {
         <>
             <div className="bg-[#D5D5D5] border-y border-[#1A5581] w-full">
                 <div className="p-2 flex items-center justify-between w-full">
-                    <h2 className="font-bold text-black pl-2">
-                        PLAN OPERATIVO INFORMÁTICO (POI)
-                    </h2>
+                    <div className="flex items-center gap-4">
+                        <h2 className="font-bold text-black pl-2">
+                            PLAN OPERATIVO INFORMÁTICO (POI)
+                        </h2>
+                        {/* Selector de PGD */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">PGD:</span>
+                            <Select
+                                value={currentPGD?.id?.toString() || ''}
+                                onValueChange={(value) => {
+                                    const selectedPgd = pgds.find(p => p.id.toString() === value);
+                                    if (selectedPgd) {
+                                        setCurrentPGD(selectedPgd);
+                                        setSelectedYear('all'); // Resetear filtro de año al cambiar PGD
+                                    }
+                                }}
+                                disabled={loadingPGD || pgds.length === 0}
+                            >
+                                <SelectTrigger className="w-[160px] h-8 bg-white border-[#1A5581] text-black text-sm">
+                                    <SelectValue placeholder={loadingPGD ? "Cargando..." : "Seleccionar PGD"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {pgds.map(pgd => (
+                                        <SelectItem key={pgd.id} value={pgd.id.toString()}>
+                                            {pgd.anioInicio} - {pgd.anioFin}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                     <Button
                         onClick={() => setIsNewModalOpen(true)}
                         style={{backgroundColor: canCreate ? '#018CD1' : '#9CA3AF', color: 'white'}}
@@ -732,17 +859,21 @@ function PmoPoiView() {
                             <SelectContent>
                                 <SelectItem value="all">Todos</SelectItem>
                                 <SelectItem value="Al ciudadano">Al ciudadano</SelectItem>
-                                <SelectItem value="Gestión interna">Gestión interna</SelectItem>
+                                <SelectItem value="Gestion interna">Gestión interna</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
-                    {/* Año */}
+                    {/* Año (filtrado por PGD seleccionado) */}
                     <div className="flex items-center gap-2">
                         <label className="text-sm text-black">Año</label>
-                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <Select
+                            value={selectedYear}
+                            onValueChange={setSelectedYear}
+                            disabled={loadingPGD || availableYears.length === 0}
+                        >
                             <SelectTrigger className="w-[120px] bg-white border-[#CFD6DD] text-black">
-                                <SelectValue placeholder="Todos" />
+                                <SelectValue placeholder={loadingPGD ? "Cargando..." : "Seleccionar"} />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos</SelectItem>
@@ -886,6 +1017,9 @@ function PmoPoiView() {
                 onClose={() => setIsNewModalOpen(false)}
                 project={null}
                 onSave={handleCreateProject}
+                pgdId={currentPGD?.id}
+                pgdAnioInicio={currentPGD?.anioInicio}
+                pgdAnioFin={currentPGD?.anioFin}
             />
 
             {/* Modal para editar POI */}
@@ -897,6 +1031,9 @@ function PmoPoiView() {
                 }}
                 project={selectedProject}
                 onSave={handleEditProject}
+                pgdId={currentPGD?.id}
+                pgdAnioInicio={currentPGD?.anioInicio}
+                pgdAnioFin={currentPGD?.anioFin}
             />
 
             {/* Modal de confirmación de eliminación */}

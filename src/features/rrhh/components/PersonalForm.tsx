@@ -7,9 +7,11 @@
  * Sincronizado con Backend - Dic 2024
  */
 
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { apiClient } from '@/lib/api/client';
 import {
   Dialog,
   DialogContent,
@@ -47,9 +49,10 @@ import { VALIDATION_RULES } from '../types/dto';
 const personalSchema = z.object({
   codigoEmpleado: z
     .string()
-    .min(VALIDATION_RULES.codigoEmpleado.minLength, 'El código debe tener al menos 3 caracteres')
     .max(VALIDATION_RULES.codigoEmpleado.maxLength, 'El código no puede exceder 20 caracteres')
-    .regex(VALIDATION_RULES.codigoEmpleado.pattern, VALIDATION_RULES.codigoEmpleado.message),
+    .regex(VALIDATION_RULES.codigoEmpleado.pattern, VALIDATION_RULES.codigoEmpleado.message)
+    .optional()
+    .or(z.literal('')),
   dni: z
     .string()
     .regex(VALIDATION_RULES.dni.pattern, VALIDATION_RULES.dni.message)
@@ -106,33 +109,85 @@ export function PersonalForm({
   isLoading = false,
 }: PersonalFormProps) {
   const isEditing = !!personal;
+  const [nextCode, setNextCode] = useState<string>('');
 
   const form = useForm<PersonalFormData>({
     resolver: zodResolver(personalSchema),
     defaultValues: {
-      codigoEmpleado: personal?.codigoEmpleado || '',
-      dni: personal?.dni || '',
-      nombres: personal?.nombres || '',
-      apellidos: personal?.apellidos || '',
-      email: personal?.email || '',
-      telefono: personal?.telefono || '',
-      divisionId: personal?.divisionId || undefined,
-      cargo: personal?.cargo || '',
-      modalidad: personal?.modalidad || Modalidad.PLANILLA,
-      horasSemanales: personal?.horasSemanales || VALIDATION_RULES.horasSemanales.default,
-      fechaIngreso: personal?.fechaIngreso?.split('T')[0] || new Date().toISOString().split('T')[0],
-      activo: personal?.activo ?? true,
+      codigoEmpleado: '',
+      dni: '',
+      nombres: '',
+      apellidos: '',
+      email: '',
+      telefono: '',
+      divisionId: undefined,
+      cargo: '',
+      modalidad: Modalidad.NOMBRADO,
+      horasSemanales: VALIDATION_RULES.horasSemanales.default,
+      fechaIngreso: new Date().toISOString().split('T')[0],
+      activo: true,
     },
   });
 
+  // Fetch next code when creating new personal
+  useEffect(() => {
+    if (open && !personal) {
+      apiClient.get('/personal/next-code')
+        .then((response) => {
+          const code = response.data?.data || response.data;
+          setNextCode(code);
+        })
+        .catch((err) => {
+          console.error('Error fetching next code:', err);
+          setNextCode('');
+        });
+    }
+  }, [open, personal]);
+
+  // Reset form when dialog opens or personal changes
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        codigoEmpleado: personal?.codigoEmpleado || '',
+        dni: personal?.dni || '',
+        nombres: personal?.nombres || '',
+        apellidos: personal?.apellidos || '',
+        email: personal?.email || '',
+        telefono: personal?.telefono || '',
+        divisionId: personal?.divisionId || undefined,
+        cargo: personal?.cargo || '',
+        modalidad: personal?.modalidad || Modalidad.NOMBRADO,
+        horasSemanales: personal?.horasSemanales ? Number(personal.horasSemanales) : VALIDATION_RULES.horasSemanales.default,
+        fechaIngreso: personal?.fechaIngreso?.split('T')[0] || new Date().toISOString().split('T')[0],
+        activo: personal?.activo ?? true,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, personal]);
+
   const handleSubmit = async (data: PersonalFormData) => {
     try {
-      const submitData = {
-        ...data,
-        dni: data.dni || undefined,
-        telefono: data.telefono || undefined,
-        cargo: data.cargo || undefined,
-      };
+      // For updates, exclude codigoEmpleado as backend doesn't allow updating it
+      // For creates, exclude activo as backend CreatePersonalDto doesn't accept it
+      const { codigoEmpleado, activo, ...baseFields } = data;
+
+      const submitData = isEditing
+        ? {
+            ...baseFields,
+            activo, // Include activo only for updates
+            dni: data.dni || undefined,
+            telefono: data.telefono || undefined,
+            cargo: data.cargo || undefined,
+          }
+        : {
+            // Solo incluir codigoEmpleado si tiene valor, sino el backend lo genera
+            ...(codigoEmpleado ? { codigoEmpleado } : {}),
+            ...baseFields,
+            // Note: activo is excluded for creates - backend sets default
+            dni: data.dni || undefined,
+            telefono: data.telefono || undefined,
+            cargo: data.cargo || undefined,
+          };
       await onSubmit(submitData as CreatePersonalDto | UpdatePersonalDto);
       form.reset();
       onClose();
@@ -167,24 +222,22 @@ export function PersonalForm({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             {/* Código y DNI */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="codigoEmpleado"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Código Empleado *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="EMP-001"
-                        {...field}
-                        className="uppercase"
-                        disabled={isEditing}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <FormItem>
+                <FormLabel>Código Empleado</FormLabel>
+                <FormControl>
+                  <Input
+                    value={isEditing ? (personal?.codigoEmpleado || '') : nextCode}
+                    className="uppercase bg-muted"
+                    disabled
+                    readOnly
+                  />
+                </FormControl>
+                {!isEditing && (
+                  <FormDescription>
+                    Código auto-generado por el sistema
+                  </FormDescription>
                 )}
-              />
+              </FormItem>
 
               <FormField
                 control={form.control}
@@ -284,7 +337,7 @@ export function PersonalForm({
                           <SelectValue placeholder="Seleccionar división" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="item-aligned">
                         {divisiones
                           .filter((d) => d.activo)
                           .map((div) => (
@@ -328,7 +381,7 @@ export function PersonalForm({
                           <SelectValue placeholder="Seleccionar modalidad" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="item-aligned">
                         {modalidades.map((mod) => (
                           <SelectItem key={mod} value={mod}>
                             {getModalidadLabel(mod)}

@@ -148,7 +148,7 @@ export function HistoriaKanbanCard({
             </div>
 
             {/* Actions */}
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"

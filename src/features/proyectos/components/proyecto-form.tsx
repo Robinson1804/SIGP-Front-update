@@ -26,7 +26,8 @@ import { createProyecto, updateProyecto } from '@/lib/actions';
 import { paths } from '@/lib/paths';
 import { CreateProyectoSchema } from '@/lib/definitions';
 import type { Proyecto, CreateProyectoInput } from '@/lib/definitions';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getNextProyectoCodigo } from '../services/proyectos.service';
 
 type FormValues = CreateProyectoInput;
 
@@ -46,30 +47,63 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
           codigo: initialData.codigo,
           nombre: initialData.nombre,
           descripcion: initialData.descripcion || '',
-          clasificacion: initialData.clasificacion || undefined,
-          coordinadorId: initialData.coordinadorId || undefined,
-          scrumMasterId: initialData.scrumMasterId || undefined,
-          patrocinadorId: initialData.patrocinadorId || undefined,
-          coordinacion: initialData.coordinacion || undefined,
-          montoAnual: initialData.montoAnual || undefined,
-          fechaInicio: initialData.fechaInicio || undefined,
-          fechaFin: initialData.fechaFin || undefined,
+          // Asegurar que clasificacion sea el valor exacto del backend o undefined
+          clasificacion: initialData.clasificacion ?? undefined,
+          coordinadorId: initialData.coordinadorId ?? undefined,
+          scrumMasterId: initialData.scrumMasterId ?? undefined,
+          patrocinadorId: initialData.patrocinadorId ?? undefined,
+          coordinacion: initialData.coordinacion ?? undefined,
+          montoAnual: initialData.montoAnual ?? undefined,
         }
       : {
-          codigo: '',
+          codigo: 'Cargando...',
           nombre: '',
           descripcion: '',
         },
   });
+
+  // Cargar el próximo código disponible en modo crear
+  useEffect(() => {
+    if (mode === 'create') {
+      getNextProyectoCodigo()
+        .then((codigo) => {
+          form.setValue('codigo', codigo);
+        })
+        .catch(() => {
+          form.setValue('codigo', 'Error al obtener código');
+        });
+    }
+  }, [mode, form]);
+
+  // Resetear el formulario cuando cambian los datos en modo edición
+  useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      form.reset({
+        codigo: initialData.codigo,
+        nombre: initialData.nombre,
+        descripcion: initialData.descripcion || '',
+        clasificacion: initialData.clasificacion ?? undefined,
+        coordinadorId: initialData.coordinadorId ?? undefined,
+        scrumMasterId: initialData.scrumMasterId ?? undefined,
+        patrocinadorId: initialData.patrocinadorId ?? undefined,
+        coordinacion: initialData.coordinacion ?? undefined,
+        montoAnual: initialData.montoAnual ?? undefined,
+      });
+    }
+  }, [mode, initialData, form]);
 
   const onSubmit = async (values: FormValues) => {
     try {
       setError(null);
 
       if (mode === 'create') {
-        await createProyecto(values);
+        // No enviar codigo, el backend lo genera automáticamente
+        const { codigo, ...dataWithoutCodigo } = values;
+        await createProyecto(dataWithoutCodigo);
       } else {
-        await updateProyecto({ id: initialData!.id, ...values });
+        // En edición tampoco se envía el código (no es editable)
+        const { codigo, ...dataWithoutCodigo } = values;
+        await updateProyecto({ id: initialData!.id, ...dataWithoutCodigo });
       }
 
       router.push(paths.poi.proyectos.base);
@@ -104,16 +138,17 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
               name="codigo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Código *</FormLabel>
+                  <FormLabel>Código</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="PRY001"
+                      placeholder="PROY N°X"
                       {...field}
-                      disabled={mode === 'edit'}
+                      disabled={true}
+                      className="bg-muted"
                     />
                   </FormControl>
                   <FormDescription>
-                    Código único del proyecto (3-20 caracteres)
+                    Código autogenerado del proyecto
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -128,7 +163,7 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
                   <FormLabel>Clasificación</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value || ''}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -279,7 +314,7 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
               name="montoAnual"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Monto Anual (S/)</FormLabel>
+                  <FormLabel>Monto Total (S/)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -309,34 +344,6 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
                       placeholder="Dirección de Tecnología"
                       {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="fechaInicio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha de Inicio</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} value={field.value || ''} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="fechaFin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Fecha de Fin</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

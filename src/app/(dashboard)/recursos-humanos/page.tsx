@@ -30,11 +30,16 @@ import {
   PersonalForm,
   DivisionTable,
   DivisionForm,
+  DivisionDetailModal,
   HabilidadTable,
   HabilidadForm,
   AsignacionTable,
   AsignacionForm,
   RRHHDashboard,
+  CoordinadoresTable,
+  ScrumMastersTable,
+  UsuariosTable,
+  CrearAccesoModal,
 } from '@/features/rrhh/components';
 import type {
   Personal,
@@ -42,6 +47,8 @@ import type {
   Habilidad,
   Asignacion,
   RRHHStats,
+  Usuario,
+  Role,
 } from '@/features/rrhh/types';
 import type {
   CreatePersonalDto,
@@ -53,6 +60,14 @@ import type {
   CreateAsignacionDto,
   UpdateAsignacionDto,
 } from '@/features/rrhh/types/dto';
+import { apiClient } from '@/lib/api/client';
+
+// Tipo para proyectos básicos del POI
+interface ProyectoBasico {
+  id: number;
+  codigo: string;
+  nombre: string;
+}
 import {
   Users,
   Building2,
@@ -62,6 +77,9 @@ import {
   UserCheck,
   Activity,
   LayoutDashboard,
+  UserCog,
+  Users2,
+  Shield,
 } from 'lucide-react';
 
 export default function RecursosHumanosPage() {
@@ -106,6 +124,18 @@ export default function RecursosHumanosPage() {
     deleteAsignacion,
     selectAsignacion,
     selectedAsignacion,
+    // Coordinadores y Scrum Masters
+    asignarCoordinador,
+    removerCoordinador,
+    asignarScrumMaster,
+    removerScrumMaster,
+    // Usuarios
+    usuarios,
+    loadUsuarios,
+    agregarRol,
+    removerRol,
+    resetearPassword,
+    toggleUsuarioActivo,
     // Stats
     loadStats,
     // Utils
@@ -115,6 +145,8 @@ export default function RecursosHumanosPage() {
   // Estados para modales
   const [personalFormOpen, setPersonalFormOpen] = useState(false);
   const [divisionFormOpen, setDivisionFormOpen] = useState(false);
+  const [divisionDetailOpen, setDivisionDetailOpen] = useState(false);
+  const [viewDivision, setViewDivision] = useState<Division | null>(null);
   const [habilidadFormOpen, setHabilidadFormOpen] = useState(false);
   const [asignacionFormOpen, setAsignacionFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -123,6 +155,30 @@ export default function RecursosHumanosPage() {
     item: Personal | Division | Habilidad | Asignacion;
   } | null>(null);
 
+  // Estado para modal de crear acceso
+  const [crearAccesoModalOpen, setCrearAccesoModalOpen] = useState(false);
+  const [personalParaAcceso, setPersonalParaAcceso] = useState<Personal | null>(null);
+
+  // Estado para proyectos del POI (para asignaciones)
+  const [proyectos, setProyectos] = useState<ProyectoBasico[]>([]);
+
+  // Función para cargar proyectos del POI
+  const loadProyectos = async () => {
+    try {
+      const response = await apiClient.get('/proyectos');
+      const proyectosData = response.data?.data || response.data || [];
+      setProyectos(
+        proyectosData.map((p: { id: number; codigo: string; nombre: string }) => ({
+          id: p.id,
+          codigo: p.codigo,
+          nombre: p.nombre,
+        }))
+      );
+    } catch (err) {
+      console.error('Error loading proyectos:', err);
+    }
+  };
+
   // Cargar datos iniciales
   useEffect(() => {
     loadPersonal();
@@ -130,7 +186,9 @@ export default function RecursosHumanosPage() {
     loadHabilidades();
     loadAsignaciones();
     loadAlertasSobrecarga();
+    loadUsuarios();
     loadStats();
+    loadProyectos();
   }, []);
 
   // Mostrar errores
@@ -172,6 +230,47 @@ export default function RecursosHumanosPage() {
     setPersonalFormOpen(false);
   };
 
+  const handleCrearAcceso = (persona: Personal) => {
+    setPersonalParaAcceso(persona);
+    setCrearAccesoModalOpen(true);
+  };
+
+  const handleCrearAccesoSubmit = async (personalId: number, rol: Role) => {
+    const response = await apiClient.post(`/usuarios/para-personal/${personalId}`, { rol });
+    // Recargar ambos: personal y usuarios para mantener sincronizados
+    await Promise.all([loadPersonal(), loadUsuarios()]);
+    return response.data.data || response.data;
+  };
+
+  const handleCambiarRol = async (persona: Personal, nuevoRol: Role) => {
+    if (!persona.usuarioId) return;
+    try {
+      await apiClient.patch(`/usuarios/${persona.usuarioId}`, { rol: nuevoRol });
+      // Recargar ambos: personal y usuarios para mantener sincronizados
+      await Promise.all([loadPersonal(), loadUsuarios()]);
+      toast({ title: 'Rol actualizado correctamente' });
+    } catch (error) {
+      console.error('Error al cambiar rol:', error);
+      toast({ title: 'Error al cambiar rol', variant: 'destructive' });
+    }
+  };
+
+  const handleRevocarAcceso = async (persona: Personal) => {
+    if (!persona.usuarioId) return;
+    if (!confirm(`¿Está seguro de desactivar el acceso de ${persona.nombres} ${persona.apellidos}? El usuario será desactivado.`)) {
+      return;
+    }
+    try {
+      await apiClient.patch(`/usuarios/${persona.usuarioId}`, { activo: false });
+      // Recargar ambos: personal y usuarios para mantener sincronizados
+      await Promise.all([loadPersonal(), loadUsuarios()]);
+      toast({ title: 'Acceso revocado correctamente' });
+    } catch (error) {
+      console.error('Error al revocar acceso:', error);
+      toast({ title: 'Error al revocar acceso', variant: 'destructive' });
+    }
+  };
+
   // Handlers División
   const handleCreateDivision = () => {
     selectDivision(null);
@@ -184,7 +283,14 @@ export default function RecursosHumanosPage() {
   };
 
   const handleViewDivision = (division: Division) => {
-    // TODO: Navigate or show detail
+    setViewDivision(division);
+    setDivisionDetailOpen(true);
+  };
+
+  const handleEditDivisionFromDetail = (division: Division) => {
+    setViewDivision(null);
+    setDivisionDetailOpen(false);
+    handleEditDivision(division);
   };
 
   const handleSubmitDivision = async (data: CreateDivisionDto | UpdateDivisionDto) => {
@@ -267,7 +373,7 @@ export default function RecursosHumanosPage() {
           break;
         case 'division':
           await deleteDivision((itemToDelete.item as Division).id);
-          toast({ title: 'División eliminada correctamente' });
+          toast({ title: 'División desactivada correctamente' });
           break;
         case 'habilidad':
           await deleteHabilidad((itemToDelete.item as Habilidad).id);
@@ -369,7 +475,7 @@ export default function RecursosHumanosPage() {
           {/* Contenido con Tabs */}
           <div className="flex-1 p-6">
             <Tabs defaultValue="dashboard" className="w-full">
-              <TabsList className="mb-6">
+              <TabsList className="mb-6 flex-wrap">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
                   <LayoutDashboard className="h-4 w-4" />
                   Dashboard
@@ -381,6 +487,18 @@ export default function RecursosHumanosPage() {
                 <TabsTrigger value="divisiones" className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   Divisiones
+                </TabsTrigger>
+                <TabsTrigger value="coordinadores" className="flex items-center gap-2">
+                  <UserCog className="h-4 w-4" />
+                  Coordinadores
+                </TabsTrigger>
+                <TabsTrigger value="scrum-masters" className="flex items-center gap-2">
+                  <Users2 className="h-4 w-4" />
+                  Scrum Masters
+                </TabsTrigger>
+                <TabsTrigger value="usuarios" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Usuarios
                 </TabsTrigger>
                 <TabsTrigger value="habilidades" className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
@@ -411,6 +529,9 @@ export default function RecursosHumanosPage() {
                   onEdit={handleEditPersonal}
                   onDelete={(p) => handleDeleteConfirm('personal', p)}
                   onCreate={handleCreatePersonal}
+                  onCrearAcceso={handleCrearAcceso}
+                  onCambiarRol={handleCambiarRol}
+                  onRevocarAcceso={handleRevocarAcceso}
                   isLoading={isLoading}
                 />
               </TabsContent>
@@ -422,6 +543,37 @@ export default function RecursosHumanosPage() {
                   onEdit={handleEditDivision}
                   onDelete={(d) => handleDeleteConfirm('division', d)}
                   onCreate={handleCreateDivision}
+                  isLoading={isLoading}
+                />
+              </TabsContent>
+
+              <TabsContent value="coordinadores">
+                <CoordinadoresTable
+                  divisiones={divisiones}
+                  personal={personal}
+                  onAsignarCoordinador={asignarCoordinador}
+                  onRemoverCoordinador={removerCoordinador}
+                  isLoading={isLoading}
+                />
+              </TabsContent>
+
+              <TabsContent value="scrum-masters">
+                <ScrumMastersTable
+                  divisiones={divisiones}
+                  personal={personal}
+                  onAsignarScrumMaster={asignarScrumMaster}
+                  onRemoverScrumMaster={removerScrumMaster}
+                  isLoading={isLoading}
+                />
+              </TabsContent>
+
+              <TabsContent value="usuarios">
+                <UsuariosTable
+                  usuarios={usuarios}
+                  onResetearPassword={resetearPassword}
+                  onToggleActivo={toggleUsuarioActivo}
+                  onAgregarRol={agregarRol}
+                  onRemoverRol={removerRol}
                   isLoading={isLoading}
                 />
               </TabsContent>
@@ -467,8 +619,30 @@ export default function RecursosHumanosPage() {
           onSubmit={handleSubmitDivision}
           division={selectedDivision}
           divisiones={divisiones}
-          personal={personal}
           isLoading={isLoading}
+        />
+
+        <DivisionDetailModal
+          open={divisionDetailOpen}
+          onClose={() => {
+            setDivisionDetailOpen(false);
+            setViewDivision(null);
+          }}
+          onEdit={handleEditDivisionFromDetail}
+          division={viewDivision}
+          miembros={
+            viewDivision
+              ? personal.filter((p) => {
+                  // Solo personal de esta división
+                  if (p.divisionId !== viewDivision.id) return false;
+                  // Excluir al coordinador
+                  if (viewDivision.coordinador?.id === p.id) return false;
+                  // Excluir a los scrum masters
+                  if (viewDivision.scrumMasters?.some((sm) => sm.id === p.id)) return false;
+                  return true;
+                })
+              : []
+          }
         />
 
         <HabilidadForm
@@ -485,20 +659,42 @@ export default function RecursosHumanosPage() {
           onSubmit={handleSubmitAsignacion}
           asignacion={selectedAsignacion}
           personal={personal}
-          proyectos={[]} // TODO: Load from POI
+          proyectos={proyectos}
           actividades={[]} // TODO: Load from POI
           subproyectos={[]} // TODO: Load from POI
           isLoading={isLoading}
+        />
+
+        <CrearAccesoModal
+          open={crearAccesoModalOpen}
+          onClose={() => {
+            setCrearAccesoModalOpen(false);
+            setPersonalParaAcceso(null);
+          }}
+          personal={personalParaAcceso}
+          onCrearAcceso={handleCrearAccesoSubmit}
         />
 
         {/* Diálogo de confirmación de eliminación */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
+              <AlertDialogTitle>
+                {itemToDelete?.type === 'division' ? 'Confirmar desactivación' : 'Confirmar eliminación'}
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                ¿Estás seguro de que deseas eliminar este registro?
-                Esta acción no se puede deshacer.
+                {itemToDelete?.type === 'division' ? (
+                  <>
+                    ¿Estás seguro de que deseas desactivar esta división?
+                    La división quedará inactiva y no estará disponible para asignaciones.
+                    Puedes reactivarla posteriormente desde la opción de editar.
+                  </>
+                ) : (
+                  <>
+                    ¿Estás seguro de que deseas eliminar este registro?
+                    Esta acción no se puede deshacer.
+                  </>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -507,7 +703,7 @@ export default function RecursosHumanosPage() {
                 onClick={handleDelete}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Eliminar
+                {itemToDelete?.type === 'division' ? 'Desactivar' : 'Eliminar'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

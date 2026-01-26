@@ -19,7 +19,7 @@ interface AprobacionActaDialogProps {
   open: boolean;
   onClose: () => void;
   onAprobar: (aprobado: boolean, comentario?: string) => Promise<void>;
-  tipo: 'Constitucion' | 'Reunion';
+  tipo: 'Constitucion' | 'Reunion' | 'Daily';
 }
 
 export function AprobacionActaDialog({
@@ -68,12 +68,14 @@ export function AprobacionActaDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
-            Aprobar Acta de {tipo === 'Constitucion' ? 'Constitución' : 'Reunión'}
+            Aprobar Acta de {tipo === 'Constitucion' ? 'Constitución' : tipo === 'Daily' ? 'Daily Meeting' : 'Reunión'}
           </DialogTitle>
           <DialogDescription>
             Revise el acta y decida si aprobarla o rechazarla.
             {tipo === 'Constitucion'
               ? ' El acta de constitución formaliza el inicio del proyecto.'
+              : tipo === 'Daily'
+              ? ' El acta de daily meeting documenta el seguimiento diario del equipo.'
               : ' El acta de reunión documenta los acuerdos y compromisos.'}
           </DialogDescription>
         </DialogHeader>

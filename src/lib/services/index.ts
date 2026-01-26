@@ -4,3 +4,4 @@
 
 export * from './notificaciones.service';
 export * from './usuarios.service';
+export * from './asignaciones.service';

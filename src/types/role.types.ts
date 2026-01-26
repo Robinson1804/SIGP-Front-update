@@ -1,18 +1,21 @@
 /**
  * Tipos relacionados con roles, permisos y módulos
+ *
+ * NOTA: Preferir usar las definiciones de '@/lib/definitions.ts'
  */
 
 /**
  * Roles disponibles en el sistema
  */
 export const ROLES = {
-  ADMINISTRADOR: 'ADMINISTRADOR',
+  ADMIN: 'ADMIN',
   PMO: 'PMO',
   SCRUM_MASTER: 'SCRUM_MASTER',
   COORDINADOR: 'COORDINADOR',
   DESARROLLADOR: 'DESARROLLADOR',
   IMPLEMENTADOR: 'IMPLEMENTADOR',
   USUARIO: 'USUARIO',
+  PATROCINADOR: 'PATROCINADOR',
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];

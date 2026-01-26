@@ -36,26 +36,31 @@ class SocketClient {
   private isConnected: boolean = false;
   private isDevelopment: boolean = process.env.NODE_ENV === 'development';
   private connectionErrorLogged: boolean = false;
+  private isConnecting: boolean = false;
 
   /**
    * Conectar al servidor WebSocket
    * @param token JWT token para autenticación
    */
   connect(token: string): void {
-    if (this.socket?.connected) {
+    // Prevent duplicate connections
+    if (this.socket?.connected || this.isConnecting) {
       return;
     }
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3010';
+    this.isConnecting = true;
+    // Backend WebSocket Gateway está en namespace /ws
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3010';
 
-    this.socket = io(wsUrl, {
+    this.socket = io(`${wsUrl}/ws`, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 2, // Reduced to minimize noise
+      reconnectionAttempts: 5,
       reconnectionDelay: 2000,
       reconnectionDelayMax: 5000,
-      timeout: 5000,
+      timeout: 10000,
+      autoConnect: true,
     });
 
     this.setupBaseListeners();
@@ -69,14 +74,17 @@ class SocketClient {
 
     this.socket.on('connect', () => {
       this.isConnected = true;
+      this.isConnecting = false;
       this.connectionErrorLogged = false; // Reset on successful connection
     });
 
     this.socket.on('disconnect', () => {
       this.isConnected = false;
+      this.isConnecting = false;
     });
 
     this.socket.on('connect_error', () => {
+      this.isConnecting = false;
       // Only log once to avoid console spam
       if (!this.connectionErrorLogged) {
         this.connectionErrorLogged = true;
@@ -85,6 +93,7 @@ class SocketClient {
     });
 
     this.socket.on('error', () => {
+      this.isConnecting = false;
       // Silently ignore errors - WebSocket is optional
     });
 
@@ -143,11 +152,21 @@ class SocketClient {
 
   /**
    * Desconectar del servidor y limpiar todos los listeners
+   * @param force Force disconnect even if still connecting (default: false)
    */
-  disconnect(): void {
-    this.socket?.disconnect();
+  disconnect(force: boolean = false): void {
+    // If still connecting and not forcing, let it finish first
+    if (this.isConnecting && !force && this.socket) {
+      // Remove listeners but don't force close during handshake
+      this.socket.removeAllListeners();
+      this.socket.close();
+    } else if (this.socket) {
+      this.socket.disconnect();
+    }
+
     this.socket = null;
     this.isConnected = false;
+    this.isConnecting = false;
     this.connectionErrorLogged = false; // Reset for next connection attempt
     this.listeners.clear();
   }

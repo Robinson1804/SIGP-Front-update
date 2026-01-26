@@ -103,9 +103,11 @@ function TableroContent() {
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
   const [isClosingSprint, setIsClosingSprint] = useState(false);
 
-  // Derived state
+  // Derived state - ADMIN tiene acceso completo
+  const isAdmin = user?.role === ROLES.ADMIN;
   const isScrumMaster = user?.role === ROLES.SCRUM_MASTER;
   const isDeveloper = user?.role === ROLES.DESARROLLADOR;
+  const canCloseSprint = isAdmin || isScrumMaster;
   const currentSprint = sprints.find(s => s.id === selectedSprintId);
 
   // ==================== LOAD PROJECT ====================
@@ -128,7 +130,7 @@ function TableroContent() {
         setSprints(sprintsData);
 
         // Auto-select active sprint or first sprint
-        const activeSprint = sprintsData.find(s => s.estado === 'Activo');
+        const activeSprint = sprintsData.find(s => s.estado === 'En progreso' || s.estado === 'Activo');
         const defaultSprint = activeSprint || sprintsData[0];
         if (defaultSprint) {
           setSelectedSprintId(defaultSprint.id);
@@ -282,16 +284,11 @@ function TableroContent() {
     );
   }
 
-  const projectCode = project ? `PROY N°${project.id}` : 'Proyecto';
+  const projectCode = project ? (project.code || `PROY N°${project.id}`) : 'Proyecto';
   const projectName = project?.name || 'Cargando...';
 
-  const breadcrumbs = isDeveloper
-    ? [{ label: 'POI', href: paths.poi.base }, { label: 'Tablero' }]
-    : [
-        { label: 'POI', href: paths.poi.base },
-        { label: 'Proyecto', href: paths.poi.proyecto.detalles },
-        { label: 'Tablero' },
-      ];
+  // Breadcrumb simplificado: POI > Backlog (mantener Backlog aunque esté en Tablero)
+  const breadcrumbs = [{ label: 'POI', href: paths.poi.base }, { label: 'Backlog' }];
 
   const tabs = ['Backlog', 'Tablero', 'Dashboard'];
 
@@ -351,10 +348,10 @@ function TableroContent() {
                         <span className="font-medium">{sprint.nombre}</span>
                         <span className="text-gray-500 text-sm">
                           {sprint.fechaInicio
-                            ? new Date(sprint.fechaInicio).toLocaleDateString('es-PE')
+                            ? new Date(sprint.fechaInicio + 'T00:00:00').toLocaleDateString('es-PE')
                             : ''
                           } - {sprint.fechaFin
-                            ? new Date(sprint.fechaFin).toLocaleDateString('es-PE')
+                            ? new Date(sprint.fechaFin + 'T00:00:00').toLocaleDateString('es-PE')
                             : ''
                           }
                         </span>
@@ -371,9 +368,9 @@ function TableroContent() {
                 <Badge
                   variant="secondary"
                   className={cn('text-xs', {
-                    'bg-blue-100 text-blue-800': currentSprint.estado === 'Planificado',
-                    'bg-yellow-100 text-yellow-800': currentSprint.estado === 'Activo',
-                    'bg-green-100 text-green-800': currentSprint.estado === 'Completado',
+                    'bg-blue-100 text-blue-800': currentSprint.estado === 'Por hacer' || currentSprint.estado === 'Planificado',
+                    'bg-yellow-100 text-yellow-800': currentSprint.estado === 'En progreso' || currentSprint.estado === 'Activo',
+                    'bg-green-100 text-green-800': currentSprint.estado === 'Finalizado' || currentSprint.estado === 'Completado',
                   })}
                 >
                   {currentSprint.estado}
@@ -395,8 +392,8 @@ function TableroContent() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            {/* Close Sprint Button - Only for Scrum Master and if sprint is active */}
-            {isScrumMaster && currentSprint?.estado === 'Activo' && (
+            {/* Close Sprint Button - Only for Admin/Scrum Master and if sprint is active */}
+            {canCloseSprint && (currentSprint?.estado === 'En progreso' || currentSprint?.estado === 'Activo') && (
               <Button
                 className="gap-2 bg-[#018CD1] hover:bg-[#018CD1]/90"
                 onClick={handleCloseSprint}

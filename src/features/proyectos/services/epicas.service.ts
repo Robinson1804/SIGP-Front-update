@@ -11,14 +11,14 @@ import { apiClient, del, ENDPOINTS } from '@/lib/api';
 // ============================================
 
 /**
- * Estados posibles de una epica
+ * Estados posibles de una epica (calculado automáticamente según HUs)
  */
-export type EpicaEstado = 'Pendiente' | 'En progreso' | 'Completada';
+export type EpicaEstado = 'Por hacer' | 'En progreso' | 'Finalizado';
 
 /**
- * Prioridad MoSCoW
+ * Prioridad de épica
  */
-export type PrioridadMoSCoW = 'Must' | 'Should' | 'Could' | 'Wont';
+export type EpicaPrioridad = 'Baja' | 'Media' | 'Alta';
 
 /**
  * Interfaz de Epica basada en el backend schema
@@ -30,10 +30,8 @@ export interface Epica {
   descripcion: string | null;
   proyectoId: number;
   estado: EpicaEstado;
-  prioridad: PrioridadMoSCoW | null;
+  prioridad: EpicaPrioridad | null;
   color: string | null;
-  fechaInicio: string | null;
-  fechaFin: string | null;
   orden: number;
   activo: boolean;
   createdAt: string;
@@ -62,10 +60,8 @@ export interface CreateEpicaData {
   nombre: string;
   descripcion?: string;
   proyectoId: number;
-  prioridad?: PrioridadMoSCoW;
+  prioridad?: EpicaPrioridad;
   color?: string;
-  fechaInicio?: string;
-  fechaFin?: string;
   orden?: number;
 }
 
@@ -81,7 +77,7 @@ export interface UpdateEpicaData extends Partial<Omit<CreateEpicaData, 'proyecto
  */
 export interface EpicaQueryFilters {
   estado?: EpicaEstado;
-  prioridad?: PrioridadMoSCoW;
+  prioridad?: EpicaPrioridad;
   page?: number;
   pageSize?: number;
 }

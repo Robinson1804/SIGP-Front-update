@@ -376,19 +376,6 @@ export async function iniciarTarea(id: number | string): Promise<TareaKanban> {
 }
 
 /**
- * Enviar tarea a revisión
- * Cambia el estado a "En revision"
- *
- * @param id - ID de la tarea
- * @returns Tarea actualizada
- */
-export async function enviarARevision(
-  id: number | string
-): Promise<TareaKanban> {
-  return cambiarEstado(id, 'En revision');
-}
-
-/**
  * Finalizar tarea
  * Cambia el estado a "Finalizado"
  *

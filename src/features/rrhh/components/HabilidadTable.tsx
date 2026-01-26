@@ -136,7 +136,7 @@ export function HabilidadTable({
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Categoría" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todas las categorías</SelectItem>
               {categorias.map((cat) => (
                 <SelectItem key={cat} value={cat}>
@@ -150,7 +150,7 @@ export function HabilidadTable({
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="activo">Activo</SelectItem>
               <SelectItem value="inactivo">Inactivo</SelectItem>
@@ -203,7 +203,7 @@ export function HabilidadTable({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
+                      <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />

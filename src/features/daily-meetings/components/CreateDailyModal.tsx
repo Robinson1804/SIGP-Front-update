@@ -24,7 +24,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -272,8 +271,8 @@ export function CreateDailyModal({
           </div>
 
           {/* Lista de participantes */}
-          <ScrollArea className="flex-1 px-4">
-            <div className="py-4 space-y-2">
+          <div className="flex-1 min-h-0 overflow-y-auto max-h-[40vh]">
+            <div className="py-4 px-4 space-y-2">
               <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
                 <MessageSquare className="h-5 w-5 text-purple-600" />
                 Participantes y Respuestas
@@ -439,7 +438,7 @@ export function CreateDailyModal({
                 ))}
               </Accordion>
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Notas generales */}
           <div className="p-4 border-t bg-gray-50">

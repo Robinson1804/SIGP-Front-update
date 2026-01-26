@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -14,47 +15,65 @@ import {
   FileText,
   Calendar,
   User,
+  Users,
   Target,
   Layers,
   Edit,
 } from 'lucide-react';
 import { type HistoriaUsuario, type HistoriaEstado } from '@/features/proyectos/services/historias.service';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
 import { CriteriosAceptacionSection } from './criterios-aceptacion-section';
+
+interface MiembroEquipo {
+  id: number;
+  nombre: string;
+}
 
 interface HistoriaDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   historia: HistoriaUsuario;
+  equipo?: MiembroEquipo[];
   onEdit?: () => void;
 }
 
 const estadoColors: Record<HistoriaEstado, string> = {
-  Pendiente: 'bg-gray-100 text-gray-700',
-  'En analisis': 'bg-blue-100 text-blue-700',
-  Lista: 'bg-cyan-100 text-cyan-700',
-  'En desarrollo': 'bg-yellow-100 text-yellow-700',
-  'En pruebas': 'bg-purple-100 text-purple-700',
-  'En revision': 'bg-orange-100 text-orange-700',
-  Terminada: 'bg-green-100 text-green-700',
+  'Por hacer': 'bg-gray-100 text-gray-700',
+  'En progreso': 'bg-yellow-100 text-yellow-700',
+  'Finalizado': 'bg-green-100 text-green-700',
 };
 
 const prioridadConfig: Record<string, { label: string; color: string }> = {
-  Must: { label: 'Alta - Critico', color: 'bg-red-100 text-red-700 border-red-200' },
-  Should: { label: 'Media - Importante', color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  Could: { label: 'Baja - Deseable', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  Wont: { label: 'No incluir', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+  Alta: { label: 'Alta', color: 'bg-red-100 text-red-700 border-red-200' },
+  Media: { label: 'Media', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  Baja: { label: 'Baja', color: 'bg-blue-100 text-blue-700 border-blue-200' },
 };
 
 export function HistoriaDetailModal({
   open,
   onOpenChange,
   historia,
+  equipo = [],
   onEdit,
 }: HistoriaDetailModalProps) {
-  const formatDate = (dateString: string | null) => {
+  // Crear mapa de equipo para buscar nombres rápidamente
+  const equipoMap = new Map(equipo.map(m => [m.id, m.nombre]));
+
+  // Obtener nombres de los responsables
+  const getResponsablesNombres = (): string[] => {
+    if (!historia.asignadoA || historia.asignadoA.length === 0) {
+      return [];
+    }
+    return historia.asignadoA.map((id) => {
+      const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+      return equipoMap.get(numId) || `ID: ${numId}`;
+    });
+  };
+  const formatDisplayDate = (dateString: string | null) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('es-PE', {
+    const date = parseLocalDate(dateString);
+    if (!date) return '-';
+    return date.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -63,11 +82,11 @@ export function HistoriaDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-start justify-between">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="border-b pb-4">
+          <div className="flex items-start justify-between pr-6">
             <div>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 text-lg">
                 <FileText className="h-5 w-5 text-[#018CD1]" />
                 {historia.codigo}
               </DialogTitle>
@@ -75,21 +94,10 @@ export function HistoriaDetailModal({
                 {historia.titulo}
               </DialogDescription>
             </div>
-            {onEdit && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onEdit}
-                className="flex items-center gap-1"
-              >
-                <Edit className="h-4 w-4" />
-                Editar
-              </Button>
-            )}
           </div>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-4 overflow-y-auto flex-1">
           {/* Status and Priority Row */}
           <div className="flex flex-wrap items-center gap-3">
             <Badge className={cn('font-medium', estadoColors[historia.estado])}>
@@ -134,6 +142,23 @@ export function HistoriaDetailModal({
             )}
           </div>
 
+          {/* Responsables */}
+          <div className="flex items-start gap-2 text-sm">
+            <Users className="h-4 w-4 text-gray-400 mt-0.5" />
+            <span className="text-gray-500">Responsables:</span>
+            <div className="flex flex-wrap gap-1">
+              {getResponsablesNombres().length > 0 ? (
+                getResponsablesNombres().map((nombre, idx) => (
+                  <Badge key={idx} variant="secondary" className="text-xs">
+                    {nombre}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-gray-400 italic">Sin asignar</span>
+              )}
+            </div>
+          </div>
+
           {/* Dates - Only show if sprint has dates */}
           {historia.sprint && (
             <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded-lg">
@@ -151,16 +176,6 @@ export function HistoriaDetailModal({
           )}
 
           <Separator />
-
-          {/* Description (notas) */}
-          {historia.notas && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-gray-700">Notas</h4>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                {historia.notas}
-              </p>
-            </div>
-          )}
 
           {/* User Story Format */}
           {(historia.rol || historia.quiero || historia.para) && (
@@ -229,10 +244,30 @@ export function HistoriaDetailModal({
 
           {/* Metadata */}
           <div className="text-xs text-gray-400 pt-2 border-t">
-            <p>Creado: {formatDate(historia.createdAt)}</p>
-            <p>Actualizado: {formatDate(historia.updatedAt)}</p>
+            <p>Creado: {formatDisplayDate(historia.createdAt)}</p>
+            <p>Actualizado: {formatDisplayDate(historia.updatedAt)}</p>
           </div>
         </div>
+
+        <DialogFooter className="border-t pt-4 gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cerrar
+          </Button>
+          {onEdit && (
+            <Button
+              type="button"
+              onClick={onEdit}
+              className="bg-[#018CD1] hover:bg-[#0179b5] flex items-center gap-1"
+            >
+              <Edit className="h-4 w-4" />
+              Editar
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

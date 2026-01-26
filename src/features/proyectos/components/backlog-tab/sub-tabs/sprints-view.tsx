@@ -11,10 +11,20 @@ import {
   LayoutList,
   Target,
   Clock,
+  Pencil,
+  Trash2,
+  Filter,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Card,
   CardContent,
@@ -24,6 +34,7 @@ import {
 } from '@/components/ui/card';
 import type { Sprint } from '@/features/proyectos/types';
 import { getSprintsByProyecto } from '@/features/proyectos/services/sprints.service';
+import { parseLocalDate, formatDate } from '@/lib/utils';
 
 interface SprintsViewProps {
   proyectoId: number;
@@ -33,16 +44,28 @@ interface SprintsViewProps {
   onIniciarSprint: (sprintId: number) => void;
   onCerrarSprint: (sprint: Sprint) => void;
   onSprintPlanning: (sprint: Sprint) => void;
+  onEditSprint: (sprint: Sprint) => void;
+  onDeleteSprint: (sprint: Sprint) => void;
   onRefresh: () => void;
+  /** Modo solo lectura */
+  isReadOnly?: boolean;
 }
 
 const ESTADO_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  'Por hacer': { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
+  'En progreso': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-300' },
+  'Finalizado': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+  // Fallback para valores antiguos
   Planificado: { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' },
   Activo: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-300' },
   Completado: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
 };
 
 const ESTADO_BADGE: Record<string, string> = {
+  'Por hacer': 'bg-gray-100 text-gray-800',
+  'En progreso': 'bg-blue-100 text-blue-800',
+  'Finalizado': 'bg-green-100 text-green-800',
+  // Fallback para valores antiguos
   Planificado: 'bg-gray-100 text-gray-800',
   Activo: 'bg-blue-100 text-blue-800',
   Completado: 'bg-green-100 text-green-800',
@@ -56,18 +79,45 @@ export function SprintsView({
   onIniciarSprint,
   onCerrarSprint,
   onSprintPlanning,
+  onEditSprint,
+  onDeleteSprint,
   onRefresh,
+  isReadOnly = false,
 }: SprintsViewProps) {
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
   const [isLoading, setIsLoading] = useState(initialLoading);
+  const [estadoFiltro, setEstadoFiltro] = useState<string>('todos');
 
   useEffect(() => {
     setSprints(initialSprints);
   }, [initialSprints]);
 
-  const sprintActivo = sprints.find((s) => s.estado === 'Activo');
-  const sprintsPlanificados = sprints.filter((s) => s.estado === 'Planificado');
-  const sprintsCompletados = sprints.filter((s) => s.estado === 'Completado');
+  useEffect(() => {
+    setIsLoading(initialLoading);
+  }, [initialLoading]);
+
+  // Helpers para identificar estados (soporta formatos nuevos y antiguos)
+  const isActivo = (estado: string) => estado === 'En progreso' || estado === 'Activo';
+  const isPlanificado = (estado: string) => estado === 'Por hacer' || estado === 'Planificado';
+  const isFinalizado = (estado: string) => estado === 'Finalizado' || estado === 'Completado';
+
+  // Filtrar sprints según el filtro seleccionado
+  const sprintsFiltrados = sprints.filter((s) => {
+    if (estadoFiltro === 'todos') return true;
+    if (estadoFiltro === 'en_progreso') return isActivo(s.estado);
+    if (estadoFiltro === 'por_hacer') return isPlanificado(s.estado);
+    if (estadoFiltro === 'finalizado') return isFinalizado(s.estado);
+    return true;
+  });
+
+  const sprintActivo = sprintsFiltrados.find((s) => isActivo(s.estado));
+  const sprintsPlanificados = sprintsFiltrados.filter((s) => isPlanificado(s.estado));
+  const sprintsCompletados = sprintsFiltrados.filter((s) => isFinalizado(s.estado));
+
+  // Contadores para mostrar en el filtro
+  const countActivo = sprints.filter((s) => isActivo(s.estado)).length;
+  const countPlanificados = sprints.filter((s) => isPlanificado(s.estado)).length;
+  const countFinalizados = sprints.filter((s) => isFinalizado(s.estado)).length;
 
   if (isLoading) {
     return (
@@ -86,10 +136,37 @@ export function SprintsView({
           <h4 className="text-lg font-semibold">Sprints del Proyecto</h4>
           <Badge variant="secondary">{sprints.length}</Badge>
         </div>
-        <Button onClick={onCreateSprint} size="sm" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Nuevo Sprint
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Filtro de estado */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">
+                  Todos ({sprints.length})
+                </SelectItem>
+                <SelectItem value="en_progreso">
+                  En progreso ({countActivo})
+                </SelectItem>
+                <SelectItem value="por_hacer">
+                  Por hacer ({countPlanificados})
+                </SelectItem>
+                <SelectItem value="finalizado">
+                  Finalizado ({countFinalizados})
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {!isReadOnly && (
+            <Button onClick={onCreateSprint} size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nuevo Sprint
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Sprint Timeline */}
@@ -103,8 +180,11 @@ export function SprintsView({
               sprint={sprintActivo}
               isActive
               onIniciar={() => {}}
-              onCerrar={() => onCerrarSprint(sprintActivo)}
+              onCerrar={isReadOnly ? () => {} : () => onCerrarSprint(sprintActivo)}
               onPlanning={() => onSprintPlanning(sprintActivo)}
+              onEdit={isReadOnly ? () => {} : () => onEditSprint(sprintActivo)}
+              onDelete={isReadOnly ? () => {} : () => onDeleteSprint(sprintActivo)}
+              isReadOnly={isReadOnly}
             />
           )}
 
@@ -118,9 +198,12 @@ export function SprintsView({
                 <SprintTimelineItem
                   key={sprint.id}
                   sprint={sprint}
-                  onIniciar={() => onIniciarSprint(sprint.id)}
+                  onIniciar={isReadOnly ? () => {} : () => onIniciarSprint(sprint.id)}
                   onCerrar={() => {}}
                   onPlanning={() => onSprintPlanning(sprint)}
+                  onEdit={isReadOnly ? () => {} : () => onEditSprint(sprint)}
+                  onDelete={isReadOnly ? () => {} : () => onDeleteSprint(sprint)}
+                  isReadOnly={isReadOnly}
                 />
               ))}
             </div>
@@ -140,6 +223,9 @@ export function SprintsView({
                   onIniciar={() => {}}
                   onCerrar={() => {}}
                   onPlanning={() => {}}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                  isReadOnly={true}
                 />
               ))}
             </div>
@@ -147,7 +233,7 @@ export function SprintsView({
         </div>
       </div>
 
-      {/* Empty state */}
+      {/* Empty state - No sprints at all */}
       {sprints.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -155,11 +241,28 @@ export function SprintsView({
             <p className="text-gray-500 text-center mb-4">
               No hay sprints creados para este proyecto.
               <br />
-              Crea un sprint para comenzar a planificar el trabajo.
+              {isReadOnly ? 'No se pueden crear sprints en un proyecto finalizado.' : 'Crea un sprint para comenzar a planificar el trabajo.'}
             </p>
-            <Button onClick={onCreateSprint} variant="outline" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Crear primer Sprint
+            {!isReadOnly && (
+              <Button onClick={onCreateSprint} variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Crear primer Sprint
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Empty state - Filter has no results */}
+      {sprints.length > 0 && sprintsFiltrados.length === 0 && (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Filter className="h-12 w-12 text-gray-300 mb-4" />
+            <p className="text-gray-500 text-center mb-4">
+              No hay sprints con el estado seleccionado.
+            </p>
+            <Button onClick={() => setEstadoFiltro('todos')} variant="outline" className="gap-2">
+              Ver todos los sprints
             </Button>
           </CardContent>
         </Card>
@@ -175,6 +278,9 @@ interface SprintTimelineItemProps {
   onIniciar: () => void;
   onCerrar: () => void;
   onPlanning: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  isReadOnly?: boolean;
 }
 
 function SprintTimelineItem({
@@ -184,6 +290,9 @@ function SprintTimelineItem({
   onIniciar,
   onCerrar,
   onPlanning,
+  onEdit,
+  onDelete,
+  isReadOnly = false,
 }: SprintTimelineItemProps) {
   const colors = ESTADO_COLORS[sprint.estado] || ESTADO_COLORS.Planificado;
   const porcentaje =
@@ -191,22 +300,13 @@ function SprintTimelineItem({
       ? Math.round(((sprint.puntosCompletados || 0) / sprint.totalPuntos) * 100)
       : 0;
 
-  const fechaInicio = sprint.fechaInicio
-    ? new Date(sprint.fechaInicio).toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: 'short',
-      })
-    : '--';
-  const fechaFin = sprint.fechaFin
-    ? new Date(sprint.fechaFin).toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: 'short',
-      })
-    : '--';
+  const fechaInicioStr = formatDate(sprint.fechaInicio, { day: '2-digit', month: 'short' });
+  const fechaFinStr = formatDate(sprint.fechaFin, { day: '2-digit', month: 'short' });
 
   const getDaysRemaining = () => {
-    if (!sprint.fechaFin || sprint.estado !== 'Activo') return null;
-    const end = new Date(sprint.fechaFin);
+    if (!sprint.fechaFin || (sprint.estado !== 'En progreso' && sprint.estado !== 'Activo')) return null;
+    const end = parseLocalDate(sprint.fechaFin);
+    if (!end) return null;
     const now = new Date();
     const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     return diff;
@@ -260,7 +360,30 @@ function SprintTimelineItem({
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              {sprint.estado === 'Planificado' && (
+              {/* Editar y Eliminar siempre visibles (excepto en sprints completados o readonly) */}
+              {!isCompleted && !isReadOnly && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onEdit}
+                    className="gap-1"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onDelete}
+                    className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Eliminar
+                  </Button>
+                </>
+              )}
+              {(sprint.estado === 'Por hacer' || sprint.estado === 'Planificado') && (
                 <>
                   <Button
                     variant="outline"
@@ -271,13 +394,15 @@ function SprintTimelineItem({
                     <LayoutList className="h-3.5 w-3.5" />
                     Planning
                   </Button>
-                  <Button size="sm" onClick={onIniciar} className="gap-1">
-                    <Play className="h-3.5 w-3.5" />
-                    Iniciar
-                  </Button>
+                  {!isReadOnly && (
+                    <Button size="sm" onClick={onIniciar} className="gap-1">
+                      <Play className="h-3.5 w-3.5" />
+                      Iniciar
+                    </Button>
+                  )}
                 </>
               )}
-              {sprint.estado === 'Activo' && (
+              {(sprint.estado === 'En progreso' || sprint.estado === 'Activo') && (
                 <>
                   <Button
                     variant="outline"
@@ -288,15 +413,17 @@ function SprintTimelineItem({
                     <LayoutList className="h-3.5 w-3.5" />
                     Ver Planning
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={onCerrar}
-                    className="gap-1"
-                  >
-                    <Square className="h-3.5 w-3.5" />
-                    Cerrar Sprint
-                  </Button>
+                  {!isReadOnly && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={onCerrar}
+                      className="gap-1"
+                    >
+                      <Square className="h-3.5 w-3.5" />
+                      Cerrar Sprint
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -309,7 +436,7 @@ function SprintTimelineItem({
             <div className="flex items-center gap-1.5 text-gray-600">
               <Clock className="h-4 w-4" />
               <span>
-                {fechaInicio} - {fechaFin}
+                {fechaInicioStr} - {fechaFinStr}
               </span>
             </div>
 

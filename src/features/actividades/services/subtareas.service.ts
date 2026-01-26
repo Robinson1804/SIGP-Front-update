@@ -244,9 +244,9 @@ export function calcularEstadisticasLocal(
   const porHacer = subtareas.filter((s) => s.estado === 'Por hacer').length;
   const enProgreso = subtareas.filter((s) => s.estado === 'En progreso').length;
   const finalizadas = subtareas.filter((s) => s.estado === 'Finalizado').length;
-  const validadas = subtareas.filter((s) => s.estado === 'Validado').length;
+  const validadas = subtareas.filter((s) => s.validada === true).length;
 
-  const completadas = finalizadas + validadas;
+  const completadas = finalizadas;
   const porcentajeCompletado = total > 0 ? (completadas / total) * 100 : 0;
 
   const horasEstimadas = subtareas.reduce(
@@ -424,8 +424,7 @@ export async function todasSubtareasCompletadas(
   }
 
   return subtareas.every(
-    (subtarea) =>
-      subtarea.estado === 'Finalizado' || subtarea.estado === 'Validado'
+    (subtarea) => subtarea.estado === 'Finalizado'
   );
 }
 

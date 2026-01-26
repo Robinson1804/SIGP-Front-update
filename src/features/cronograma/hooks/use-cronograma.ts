@@ -143,17 +143,29 @@ export function useCronograma({
   // Crear tarea
   const createTarea = useCallback(
     async (data: CreateTareaCronogramaInput): Promise<TareaCronograma | null> => {
-      if (!cronograma) {
-        toast({
-          title: 'Error',
-          description: 'Primero debe crear un cronograma',
-          variant: 'destructive',
-        });
-        return null;
+      let currentCronograma = cronograma;
+
+      // Si no existe cronograma, crearlo automáticamente
+      if (!currentCronograma) {
+        try {
+          const newCronograma = await cronogramaService.createCronograma(proyectoId, {
+            nombre: `Cronograma del Proyecto`,
+            descripcion: 'Cronograma creado automáticamente',
+          });
+          currentCronograma = newCronograma;
+          setCronograma(newCronograma);
+        } catch (err) {
+          toast({
+            title: 'Error',
+            description: 'No se pudo crear el cronograma',
+            variant: 'destructive',
+          });
+          return null;
+        }
       }
 
       try {
-        const newTarea = await cronogramaService.createTarea(cronograma.id, data);
+        const newTarea = await cronogramaService.createTarea(currentCronograma.id, data);
 
         // Actualizar estado local
         setCronograma((prev) =>
@@ -179,7 +191,7 @@ export function useCronograma({
         return null;
       }
     },
-    [cronograma, toast]
+    [cronograma, proyectoId, toast]
   );
 
   // Actualizar tarea

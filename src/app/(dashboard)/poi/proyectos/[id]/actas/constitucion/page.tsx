@@ -17,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { paths } from '@/lib/paths';
 import { toast } from '@/lib/hooks/use-toast';
+import { useAuth } from '@/stores';
+import { ROLES } from '@/lib/definitions';
 import {
   getActasByProyecto,
   updateActaConstitucion,
@@ -35,8 +37,17 @@ export default function ActaConstitucionPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const proyectoId = params.id as string;
   const isEditMode = searchParams.get('edit') === 'true';
+
+  // Permisos por rol
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const isScrumMaster = user?.role === ROLES.SCRUM_MASTER;
+  const isPmo = user?.role === ROLES.PMO;
+  const isPatrocinador = user?.role === ROLES.PATROCINADOR;
+  const canManageActas = isAdmin || isScrumMaster;
+  const canApprove = isAdmin || isPmo || isPatrocinador;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -202,7 +213,7 @@ export default function ActaConstitucionPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!editMode && acta.estado === 'Borrador' && (
+          {!editMode && canManageActas && acta.estado === 'Borrador' && (
             <Button variant="outline" onClick={() => setEditMode(true)}>
               <Edit className="h-4 w-4 mr-2" />
               Editar
@@ -226,10 +237,10 @@ export default function ActaConstitucionPage() {
               Subir Firmado
             </Button>
           )}
-          {acta.estado === 'Pendiente' && (
+          {canApprove && acta.estado === 'En revisión' && (
             <Button onClick={() => setShowAprobacionDialog(true)}>
               <CheckCircle className="h-4 w-4 mr-2" />
-              Aprobar
+              Validar
             </Button>
           )}
         </div>

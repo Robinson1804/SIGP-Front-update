@@ -2,7 +2,7 @@
 
 import { GripVertical, User, Clock, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
 import type { Tarea, TareaPrioridad } from '@/features/proyectos/services/tareas.service';
 
 interface TareaKanbanCardProps {
@@ -24,9 +24,11 @@ export function TareaKanbanCard({
 }: TareaKanbanCardProps) {
   const prioridadStyle = prioridadConfig[tarea.prioridad] || prioridadConfig.Media;
 
-  const formatDate = (date: string | null) => {
+  const formatTareaDate = (date: string | null) => {
     if (!date) return null;
-    return new Date(date).toLocaleDateString('es-PE', {
+    const parsedDate = parseLocalDate(date);
+    if (!parsedDate) return null;
+    return parsedDate.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
     });
@@ -34,7 +36,7 @@ export function TareaKanbanCard({
 
   const isOverdue =
     tarea.fechaLimite &&
-    new Date(tarea.fechaLimite) < new Date() &&
+    (parseLocalDate(tarea.fechaLimite)?.getTime() || 0) < new Date().getTime() &&
     tarea.estado !== 'Finalizado';
 
   return (
@@ -106,7 +108,7 @@ export function TareaKanbanCard({
               )}
             >
               <Calendar className="h-3 w-3" />
-              <span>{formatDate(tarea.fechaLimite)}</span>
+              <span>{formatTareaDate(tarea.fechaLimite)}</span>
             </div>
           )}
 

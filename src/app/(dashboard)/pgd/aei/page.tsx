@@ -50,6 +50,7 @@ import {
   createAEI,
   updateAEI,
   deleteAEI,
+  getNextAEICodigo,
   type PGD,
   type OEI,
   type AEI,
@@ -57,8 +58,6 @@ import {
   type UpdateAEIInput,
   type MetaAnual,
 } from "@/features/planning";
-
-const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
 // ============================================
 // AEI Modal Component
@@ -68,18 +67,31 @@ function AEIModal({
   onClose,
   aei,
   oeiId,
+  oei,
+  pgd,
+  existingAeisCount,
   onSave,
 }: {
   isOpen: boolean;
   onClose: () => void;
   aei: AEI | null;
   oeiId: number;
+  oei: OEI | null;
+  pgd: PGD | null;
+  existingAeisCount: number;
   onSave: (data: CreateAEIInput | UpdateAEIInput, id?: number) => Promise<void>;
 }) {
+  // Calculate available years based on PGD range (anioInicio to anioFin)
+  const availableYears = pgd
+    ? Array.from(
+        { length: pgd.anioFin - pgd.anioInicio + 1 },
+        (_, i) => pgd.anioInicio + i
+      )
+    : [];
   const [codigo, setCodigo] = useState("");
   const [nombre, setNombre] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [indicador, setIndicador] = useState("");
+  const [indicadorNombre, setIndicadorNombre] = useState("");
   const [unidadMedida, setUnidadMedida] = useState("");
   const [lineaBaseAnio, setLineaBaseAnio] = useState<string>("");
   const [lineaBaseValor, setLineaBaseValor] = useState<string>("");
@@ -92,30 +104,42 @@ function AEIModal({
       setCodigo(aei.codigo);
       setNombre(aei.nombre);
       setDescripcion(aei.descripcion || "");
-      setIndicador(aei.indicadorNombre || "");
+      setIndicadorNombre(aei.indicadorNombre || "");
       setUnidadMedida(aei.unidadMedida || "");
       setLineaBaseAnio(aei.lineaBaseAnio !== null ? String(aei.lineaBaseAnio) : "");
       setLineaBaseValor(aei.lineaBaseValor !== null ? String(aei.lineaBaseValor) : "");
       setMetasAnuales(aei.metasAnuales || []);
     } else {
-      setCodigo("");
+      // Obtener el próximo código desde el backend
+      setCodigo("Cargando...");
+      if (oeiId && isOpen) {
+        getNextAEICodigo(oeiId)
+          .then((nextCodigo) => setCodigo(nextCodigo))
+          .catch(() => setCodigo("Error al obtener código"));
+      }
       setNombre("");
       setDescripcion("");
-      setIndicador("");
+      setIndicadorNombre("");
       setUnidadMedida("");
       setLineaBaseAnio("");
       setLineaBaseValor("");
       setMetasAnuales([]);
     }
     setErrors({});
-  }, [aei, isOpen]);
+  }, [aei, isOpen, oeiId]);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
     if (!nombre.trim()) newErrors.nombre = "El nombre es requerido.";
+    if (!indicadorNombre.trim()) newErrors.indicadorNombre = "El nombre del indicador es requerido.";
+    if (!unidadMedida.trim()) newErrors.unidadMedida = "La unidad de medida es requerida.";
+    if (!lineaBaseAnio) newErrors.lineaBaseAnio = "El año de línea base es requerido.";
+    if (!lineaBaseValor) newErrors.lineaBaseValor = "El valor de línea base es requerido.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const isEditMode = !!aei;
 
   const handleSave = async () => {
     if (!validate()) return;
@@ -123,13 +147,14 @@ function AEIModal({
     setSaving(true);
     try {
       const data: CreateAEIInput | UpdateAEIInput = {
-        codigo: codigo || undefined,
+        // Solo enviar código en modo edición, en modo crear el backend lo genera
+        ...(isEditMode && { codigo }),
         nombre,
         descripcion: descripcion || undefined,
-        indicadorNombre: indicador || undefined,
-        unidadMedida: unidadMedida || undefined,
-        lineaBaseAnio: lineaBaseAnio ? parseInt(lineaBaseAnio) : undefined,
-        lineaBaseValor: lineaBaseValor ? parseFloat(lineaBaseValor) : undefined,
+        indicadorNombre,
+        unidadMedida,
+        lineaBaseAnio: parseInt(lineaBaseAnio),
+        lineaBaseValor: parseFloat(lineaBaseValor),
         metasAnuales: metasAnuales.length > 0 ? metasAnuales : undefined,
       };
 
@@ -175,6 +200,7 @@ function AEIModal({
         </DialogHeader>
         <div className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
+            {/* Código siempre visible pero no editable */}
             <div>
               <label htmlFor="codigo" className="block text-sm font-medium text-gray-700 mb-1">
                 Código
@@ -182,21 +208,13 @@ function AEIModal({
               <Input
                 id="codigo"
                 value={codigo}
-                onChange={(e) => setCodigo(e.target.value)}
-                placeholder="Auto-generado si se deja vacío"
+                readOnly
+                disabled
+                className="bg-gray-100 cursor-not-allowed"
               />
-              <p className="text-xs text-gray-500 mt-1">Formato: AEI.XX.YY (se genera automáticamente)</p>
-            </div>
-            <div>
-              <label htmlFor="unidadMedida" className="block text-sm font-medium text-gray-700 mb-1">
-                Unidad de Medida
-              </label>
-              <Input
-                id="unidadMedida"
-                value={unidadMedida}
-                onChange={(e) => setUnidadMedida(e.target.value)}
-                placeholder="Ej: Porcentaje"
-              />
+              <p className="text-xs text-gray-500 mt-1">
+                {isEditMode ? 'El código no es editable' : 'Código auto-generado'}
+              </p>
             </div>
           </div>
           <div>
@@ -221,28 +239,43 @@ function AEIModal({
 
           {/* Indicador */}
           <div>
-            <label htmlFor="indicador" className="block text-sm font-medium text-gray-700 mb-1">
-              Indicador
+            <label htmlFor="indicadorNombre" className="block text-sm font-medium text-gray-700 mb-1">
+              Nombre del Indicador *
             </label>
             <Input
-              id="indicador"
-              value={indicador}
-              onChange={(e) => setIndicador(e.target.value)}
+              id="indicadorNombre"
+              value={indicadorNombre}
+              onChange={(e) => setIndicadorNombre(e.target.value)}
               placeholder="Nombre del indicador"
+              className={errors.indicadorNombre ? "border-red-500" : ""}
             />
+            {errors.indicadorNombre && <p className="text-red-500 text-xs mt-1">{errors.indicadorNombre}</p>}
+          </div>
+          <div>
+            <label htmlFor="unidadMedida" className="block text-sm font-medium text-gray-700 mb-1">
+              Unidad de Medida *
+            </label>
+            <Input
+              id="unidadMedida"
+              value={unidadMedida}
+              onChange={(e) => setUnidadMedida(e.target.value)}
+              placeholder="Ej: Porcentaje"
+              className={errors.unidadMedida ? "border-red-500" : ""}
+            />
+            {errors.unidadMedida && <p className="text-red-500 text-xs mt-1">{errors.unidadMedida}</p>}
           </div>
 
           {/* Línea Base */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Línea Base</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Línea Base *</label>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="lineaBaseAnio" className="block text-xs text-gray-500 mb-1">
-                  Año
+                  Año *
                 </label>
                 <Select onValueChange={(value) => setLineaBaseAnio(value)} value={lineaBaseAnio}>
-                  <SelectTrigger id="lineaBaseAnio">
-                    <SelectValue placeholder="Ej: 2024" />
+                  <SelectTrigger id="lineaBaseAnio" className={errors.lineaBaseAnio ? "border-red-500" : ""}>
+                    <SelectValue placeholder="Seleccionar año" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableYears.map((year) => (
@@ -252,10 +285,11 @@ function AEIModal({
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.lineaBaseAnio && <p className="text-red-500 text-xs mt-1">{errors.lineaBaseAnio}</p>}
               </div>
               <div>
                 <label htmlFor="lineaBaseValor" className="block text-xs text-gray-500 mb-1">
-                  Valor
+                  Valor *
                 </label>
                 <Input
                   id="lineaBaseValor"
@@ -264,7 +298,9 @@ function AEIModal({
                   value={lineaBaseValor}
                   onChange={(e) => setLineaBaseValor(e.target.value)}
                   placeholder="Ej: 75.5"
+                  className={errors.lineaBaseValor ? "border-red-500" : ""}
                 />
+                {errors.lineaBaseValor && <p className="text-red-500 text-xs mt-1">{errors.lineaBaseValor}</p>}
               </div>
             </div>
           </div>
@@ -602,6 +638,7 @@ export default function AeiDashboardPage() {
   };
 
   const selectedOei = oeis.find((o) => o.id.toString() === selectedOeiId);
+  const selectedPgd = pgds.find((p) => p.id.toString() === selectedPgdId);
 
   return (
     <ProtectedRoute module={MODULES.PGD}>
@@ -722,6 +759,9 @@ export default function AeiDashboardPage() {
           onClose={handleCloseModal}
           aei={editingAei}
           oeiId={selectedOeiId ? Number(selectedOeiId) : 0}
+          oei={selectedOei || null}
+          pgd={selectedPgd || null}
+          existingAeisCount={aeis.length}
           onSave={handleSaveAei}
         />
 

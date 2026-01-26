@@ -34,6 +34,7 @@ import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
 import { useToast } from "@/lib/hooks/use-toast";
+import { usePGD } from "@/stores";
 
 // Import from planning module
 import {
@@ -44,6 +45,7 @@ import {
   createOEGD,
   updateOEGD,
   deleteOEGD,
+  getNextOEGDCodigo,
   type PGD,
   type OGD,
   type OEGD,
@@ -61,6 +63,7 @@ function OEGDModal({
   oegd,
   ogdId,
   availableAeis,
+  existingOegdsCount,
   onSave,
 }: {
   isOpen: boolean;
@@ -68,6 +71,7 @@ function OEGDModal({
   oegd: OEGD | null;
   ogdId: number;
   availableAeis: AEI[];
+  existingOegdsCount: number;
   onSave: (data: CreateOEGDInput | UpdateOEGDInput, id?: number) => Promise<void>;
 }) {
   const [codigo, setCodigo] = useState("");
@@ -88,13 +92,19 @@ function OEGDModal({
         || [];
       setSelectedAeiIds(aeiIds);
     } else {
-      setCodigo("");
+      // Obtener el próximo código desde el backend
+      setCodigo("Cargando...");
+      if (ogdId && isOpen) {
+        getNextOEGDCodigo(ogdId)
+          .then((nextCodigo) => setCodigo(nextCodigo))
+          .catch(() => setCodigo("Error al obtener código"));
+      }
       setNombre("");
       setDescripcion("");
       setSelectedAeiIds([]);
     }
     setErrors({});
-  }, [oegd, isOpen]);
+  }, [oegd, isOpen, ogdId]);
 
   const toggleAeiSelection = (aeiId: number) => {
     setSelectedAeiIds(prev =>
@@ -106,11 +116,13 @@ function OEGDModal({
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
-    if (!codigo.trim()) newErrors.codigo = "El código es requerido.";
+    // Código ya no es requerido - se auto-genera en el backend
     if (!nombre.trim()) newErrors.nombre = "El nombre es requerido.";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const isEditMode = !!oegd;
 
   const handleSave = async () => {
     if (!validate()) return;
@@ -118,7 +130,8 @@ function OEGDModal({
     setSaving(true);
     try {
       const data: CreateOEGDInput | UpdateOEGDInput = {
-        codigo,
+        // Solo enviar código en modo edición, en modo crear el backend lo genera
+        ...(isEditMode && { codigo }),
         nombre,
         descripcion: descripcion || undefined,
         aeiIds: selectedAeiIds.length > 0 ? selectedAeiIds : undefined,
@@ -151,18 +164,21 @@ function OEGDModal({
           </DialogClose>
         </DialogHeader>
         <div className="p-6 space-y-4">
+          {/* Código siempre visible pero no editable */}
           <div>
             <label htmlFor="codigo" className="block text-sm font-medium text-gray-700 mb-1">
-              Código *
+              Código
             </label>
             <Input
               id="codigo"
               value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              placeholder="Ej: OEGD-001"
-              className={errors.codigo ? "border-red-500" : ""}
+              readOnly
+              disabled
+              className="bg-gray-100 cursor-not-allowed"
             />
-            {errors.codigo && <p className="text-red-500 text-xs mt-1">{errors.codigo}</p>}
+            <p className="text-xs text-gray-500 mt-1">
+              {isEditMode ? 'El código no es editable' : 'Código auto-generado'}
+            </p>
           </div>
           <div>
             <label htmlFor="nombre" className="block text-sm font-medium text-gray-700 mb-1">
@@ -318,15 +334,22 @@ const OegdCard = ({
 // Main Page Component
 // ============================================
 export default function OegdDashboardPage() {
-  const [pgds, setPgds] = useState<PGD[]>([]);
+  // Global PGD state from store
+  const {
+    selectedPGD,
+    pgds,
+    isLoading,
+    setSelectedPGD,
+    initializePGD,
+    setLoading,
+  } = usePGD();
+
   const [ogds, setOgds] = useState<OGD[]>([]);
   const [oegds, setOegds] = useState<OEGD[]>([]);
   const [availableAeis, setAvailableAeis] = useState<AEI[]>([]);
 
-  const [selectedPgdId, setSelectedPgdId] = useState<string | undefined>(undefined);
   const [selectedOgdId, setSelectedOgdId] = useState<string | undefined>(undefined);
 
-  const [isLoading, setIsLoading] = useState(true);
   const [isLoadingOgds, setIsLoadingOgds] = useState(false);
   const [isLoadingOegds, setIsLoadingOegds] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -339,24 +362,23 @@ export default function OegdDashboardPage() {
 
   const { toast } = useToast();
 
+  // Derived state
+  const selectedPgdId = selectedPGD?.id?.toString();
+
   // Load PGDs
   const loadPGDs = useCallback(async () => {
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
     try {
       const data = await getPGDs();
-      setPgds(data);
-      if (data.length > 0 && !selectedPgdId) {
-        setSelectedPgdId(data[0].id.toString());
-      }
+      initializePGD(data);
     } catch (err: any) {
       console.error("Error loading PGDs:", err);
       setError("Error al cargar los planes de gobierno digital");
       toast({ title: "Error", description: "No se pudieron cargar los PGDs", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [selectedPgdId, toast]);
+  }, [initializePGD, setLoading, toast]);
 
   // Load OGDs when PGD changes
   const loadOGDs = useCallback(async () => {
@@ -382,6 +404,14 @@ export default function OegdDashboardPage() {
       setIsLoadingOgds(false);
     }
   }, [selectedPgdId, toast]);
+
+  // Handle PGD selection change
+  const handleSelectPgd = (pgdId: string) => {
+    const pgd = pgds.find(p => p.id.toString() === pgdId);
+    if (pgd) {
+      setSelectedPGD(pgd);
+    }
+  };
 
   // Load OEGDs when OGD changes
   const loadOEGDs = useCallback(async () => {
@@ -445,7 +475,9 @@ export default function OegdDashboardPage() {
   }, [selectedOgdId, ogds]);
 
   useEffect(() => {
-    loadPGDs();
+    if (pgds.length === 0) {
+      loadPGDs();
+    }
   }, []);
 
   useEffect(() => {
@@ -539,7 +571,7 @@ export default function OegdDashboardPage() {
                 </Button>
               ) : (
                 <>
-                  <Select value={selectedPgdId} onValueChange={setSelectedPgdId}>
+                  <Select value={selectedPgdId || ''} onValueChange={handleSelectPgd}>
                     <SelectTrigger className="w-[150px] bg-white border-[#484848]">
                       <SelectValue placeholder="Seleccionar PGD" />
                     </SelectTrigger>
@@ -622,6 +654,7 @@ export default function OegdDashboardPage() {
           oegd={editingOegd}
           ogdId={selectedOgdId ? Number(selectedOgdId) : 0}
           availableAeis={availableAeis}
+          existingOegdsCount={oegds.length}
           onSave={handleSaveOegd}
         />
 

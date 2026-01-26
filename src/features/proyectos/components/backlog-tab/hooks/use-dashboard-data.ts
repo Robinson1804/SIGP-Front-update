@@ -77,6 +77,8 @@ export interface ActivityItem {
   tipo: 'tarea' | 'historia' | 'sprint';
   accion: string;
   objeto: string;
+  codigo: string;
+  estado: string;
   usuario: string;
   fecha: string;
 }
@@ -175,17 +177,17 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
         getBacklog(proyectoId),
       ]);
 
+      // Helper para verificar estados (soporta ambos formatos)
+      const isEnProgreso = (estado: string) => estado === 'En progreso' || estado === 'Activo';
+      const isPorHacer = (estado: string) => estado === 'Por hacer' || estado === 'Planificado';
+
       // Obtener sprint activo
-      const sprintActivo = sprintsData.find((s) => s.estado === 'Activo');
+      const sprintActivo = sprintsData.find((s) => isEnProgreso(s.estado));
       setActiveSprint(sprintActivo || null);
 
-      // Cargar historias de todos los sprints activos/planificados
-      const activeSprints = sprintsData.filter(
-        (s) => s.estado === 'Activo' || s.estado === 'Planificado'
-      );
-
+      // Cargar historias de TODOS los sprints (incluyendo finalizados)
       const allHistorias: HistoriaUsuario[] = [...backlogData.backlog];
-      for (const sprint of activeSprints) {
+      for (const sprint of sprintsData) {
         try {
           const sprintHistorias = await getHistoriasBySprint(sprint.id);
           allHistorias.push(...sprintHistorias);
@@ -210,8 +212,8 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
       const enUnaSemana = new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       const tareasFinalizadas = allTareas.filter((t) => t.estado === 'Finalizado').length;
-      const tareasEnProgreso = allTareas.filter(
-        (t) => t.estado === 'En progreso' || t.estado === 'En revision'
+      const husEnProgreso = allHistorias.filter(
+        (h) => h.estado === 'En progreso' || h.estado === 'En revision'
       ).length;
       const tareasCreadasHoy = allTareas.filter((t) => {
         const created = new Date(t.createdAt);
@@ -225,15 +227,15 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
 
       setSummaryCards({
         finalizadas: tareasFinalizadas,
-        enProgreso: tareasEnProgreso,
+        enProgreso: husEnProgreso,
         creadas: tareasCreadasHoy,
         porVencer: tareasPorVencer,
       });
 
-      // Calcular estadisticas por estado de tareas
+      // Calcular estadisticas por estado de HUs (Historias de Usuario)
       const estadoCounts: Record<string, number> = {};
-      allTareas.forEach((t) => {
-        estadoCounts[t.estado] = (estadoCounts[t.estado] || 0) + 1;
+      allHistorias.forEach((h) => {
+        estadoCounts[h.estado] = (estadoCounts[h.estado] || 0) + 1;
       });
 
       setEstadoStats(
@@ -244,10 +246,12 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
         }))
       );
 
-      // Calcular estadisticas por prioridad de tareas
+      // Calcular estadisticas por prioridad de HUs (Historias de Usuario)
       const prioridadCounts: Record<string, number> = {};
-      allTareas.forEach((t) => {
-        prioridadCounts[t.prioridad] = (prioridadCounts[t.prioridad] || 0) + 1;
+      allHistorias.forEach((h) => {
+        if (h.prioridad) {
+          prioridadCounts[h.prioridad] = (prioridadCounts[h.prioridad] || 0) + 1;
+        }
       });
 
       setPrioridadStats(
@@ -260,10 +264,10 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
 
       // Calcular progreso
       const epicasCompletadas = epicas.filter(
-        (e) => e.estado === 'Completada'
+        (e) => e.estado === 'Finalizado'
       ).length;
       const historiasCompletadas = allHistorias.filter(
-        (h) => h.estado === 'Terminada'
+        (h) => h.estado === 'Finalizado'
       ).length;
 
       setProgressData({
@@ -291,8 +295,9 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
       });
 
       // Calcular velocity data (sprints completados)
+      const isFinalizado = (estado: string) => estado === 'Finalizado' || estado === 'Completado';
       const sprintsCompletados = sprintsData
-        .filter((s) => s.estado === 'Completado')
+        .filter((s) => isFinalizado(s.estado))
         .sort((a, b) => a.numero - b.numero)
         .slice(-5); // Ultimos 5 sprints
 
@@ -305,30 +310,59 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
         }))
       );
 
-      // Generar activity feed (simulado basado en datos recientes)
+      // Generar activity feed basado en HUs y Tareas recientes
       const recentActivities: ActivityItem[] = [];
 
-      // Ordenar tareas por fecha de actualizacion
+      // Agregar HUs recientes
+      const sortedHistorias = [...allHistorias]
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 10);
+
+      sortedHistorias.forEach((historia) => {
+        const accion =
+          historia.estado === 'Finalizado' ? 'ha finalizado' :
+          historia.estado === 'En progreso' ? 'ha iniciado' :
+          historia.estado === 'En revision' ? 'ha enviado a revisión' :
+          new Date(historia.createdAt).getTime() === new Date(historia.updatedAt).getTime() ? 'ha creado' : 'ha actualizado';
+
+        recentActivities.push({
+          id: historia.id,
+          tipo: 'historia',
+          accion,
+          objeto: historia.titulo,
+          codigo: historia.codigo || `HU-${historia.id}`,
+          estado: historia.estado,
+          usuario: historia.asignadoANombre || 'Usuario',
+          fecha: historia.updatedAt,
+        });
+      });
+
+      // Agregar Tareas recientes
       const sortedTareas = [...allTareas]
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .slice(0, 10);
 
-      sortedTareas.forEach((tarea, index) => {
+      sortedTareas.forEach((tarea) => {
+        const accion =
+          tarea.estado === 'Finalizado' ? 'ha finalizado' :
+          tarea.estado === 'En progreso' ? 'ha iniciado' :
+          tarea.estado === 'En revision' ? 'ha enviado a revisión' :
+          new Date(tarea.createdAt).getTime() === new Date(tarea.updatedAt).getTime() ? 'ha creado' : 'ha actualizado';
+
         recentActivities.push({
           id: tarea.id,
           tipo: 'tarea',
-          accion:
-            tarea.estado === 'Finalizado'
-              ? 'finalizo'
-              : tarea.estado === 'En progreso'
-              ? 'inicio'
-              : 'actualizo',
+          accion,
           objeto: tarea.nombre,
+          codigo: tarea.codigo || `T-${tarea.id}`,
+          estado: tarea.estado,
           usuario: tarea.responsable?.nombre || 'Usuario',
           fecha: tarea.updatedAt,
         });
       });
 
+      // Ordenar todas las actividades por fecha y tomar las 8 más recientes
+      recentActivities.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
       setActivityFeed(recentActivities.slice(0, 8));
 
       // Cargar burndown del sprint activo

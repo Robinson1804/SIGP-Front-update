@@ -7,12 +7,19 @@ import { SprintSection } from '../components/sprint-section';
 import { BacklogSection } from '../components/backlog-section';
 import { type SprintWithHistorias } from '../hooks/use-backlog-data';
 import { type HistoriaUsuario } from '@/features/proyectos/services/historias.service';
+import { type Tarea } from '@/features/proyectos/services/tareas.service';
 import { type Epica } from '@/features/proyectos/services/epicas.service';
+
+interface MiembroEquipo {
+  id: number;
+  nombre: string;
+}
 
 interface BacklogViewProps {
   sprints: SprintWithHistorias[];
   backlogHistorias: HistoriaUsuario[];
   epicas: Epica[];
+  equipo?: MiembroEquipo[];
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
@@ -24,12 +31,24 @@ interface BacklogViewProps {
   onAssignToSprint?: (historiaIds: number[]) => void;
   onCreateSprint?: () => void;
   onIniciarSprint?: (sprintId: number) => void;
+  onEditSprint?: (sprint: SprintWithHistorias) => void;
+  onDeleteSprint?: (sprint: SprintWithHistorias) => void;
+  onCreateTarea?: (historiaId: number) => void;
+  onEditTarea?: (tarea: Tarea) => void;
+  onDeleteTarea?: (tarea: Tarea) => void;
+  tareasRefreshKey?: number;
+  // Acciones de validacion (solo para SCRUM_MASTER)
+  onVerDocumento?: (historia: HistoriaUsuario) => void;
+  onValidarHu?: (historia: HistoriaUsuario) => void;
+  /** Modo solo lectura - deshabilita todas las acciones de edición */
+  isReadOnly?: boolean;
 }
 
 export function BacklogView({
   sprints,
   backlogHistorias,
   epicas,
+  equipo = [],
   isLoading,
   error,
   onRefresh,
@@ -40,10 +59,45 @@ export function BacklogView({
   onAssignToSprint,
   onCreateSprint,
   onIniciarSprint,
+  onEditSprint,
+  onDeleteSprint,
+  onCreateTarea,
+  onEditTarea,
+  onDeleteTarea,
+  tareasRefreshKey,
+  onVerDocumento,
+  onValidarHu,
+  isReadOnly = false,
 }: BacklogViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEpicaId, setSelectedEpicaId] = useState('all');
   const [selectedBacklogIds, setSelectedBacklogIds] = useState<number[]>([]);
+  const [selectedSprintEstado, setSelectedSprintEstado] = useState('todos');
+
+  // Helpers para identificar estados de sprint (soporta formatos nuevos y antiguos)
+  const isActivo = (estado: string) => estado === 'En progreso' || estado === 'Activo';
+  const isPlanificado = (estado: string) => estado === 'Por hacer' || estado === 'Planificado';
+  const isFinalizado = (estado: string) => estado === 'Finalizado' || estado === 'Completado';
+
+  // Contadores de sprints por estado
+  const sprintCounts = useMemo(() => ({
+    total: sprints.length,
+    activo: sprints.filter((s) => isActivo(s.estado)).length,
+    planificados: sprints.filter((s) => isPlanificado(s.estado)).length,
+    finalizados: sprints.filter((s) => isFinalizado(s.estado)).length,
+  }), [sprints]);
+
+  // Filtrar sprints por estado seleccionado
+  const sprintsFiltradosPorEstado = useMemo(() => {
+    return sprints.filter((s) => {
+      if (selectedSprintEstado === 'todos') return true;
+      if (selectedSprintEstado === 'no_finalizado') return isActivo(s.estado) || isPlanificado(s.estado);
+      if (selectedSprintEstado === 'en_progreso') return isActivo(s.estado);
+      if (selectedSprintEstado === 'por_hacer') return isPlanificado(s.estado);
+      if (selectedSprintEstado === 'finalizado') return isFinalizado(s.estado);
+      return true;
+    });
+  }, [sprints, selectedSprintEstado]);
 
   // Filter function
   const filterHistorias = (historias: HistoriaUsuario[]) => {
@@ -65,13 +119,13 @@ export function BacklogView({
     });
   };
 
-  // Filtered data
+  // Filtered data - aplica filtro de estado de sprint + filtro de historias
   const filteredSprints = useMemo(() => {
-    return sprints.map((sprint) => ({
+    return sprintsFiltradosPorEstado.map((sprint) => ({
       ...sprint,
       historias: filterHistorias(sprint.historias),
     }));
-  }, [sprints, searchTerm, selectedEpicaId]);
+  }, [sprintsFiltradosPorEstado, searchTerm, selectedEpicaId]);
 
   const filteredBacklog = useMemo(() => {
     return filterHistorias(backlogHistorias);
@@ -119,6 +173,9 @@ export function BacklogView({
         selectedEpicaId={selectedEpicaId}
         onEpicaChange={setSelectedEpicaId}
         epicas={epicas}
+        selectedSprintEstado={selectedSprintEstado}
+        onSprintEstadoChange={setSelectedSprintEstado}
+        sprintCounts={sprintCounts}
       />
 
       {/* Sprint sections */}
@@ -127,31 +184,46 @@ export function BacklogView({
           key={sprint.id}
           sprint={sprint}
           historias={sprint.historias}
-          onAddHistoria={() => onCreateHistoria?.(sprint.id)}
+          equipo={equipo}
+          onAddHistoria={isReadOnly ? undefined : () => onCreateHistoria?.(sprint.id)}
           onIniciarSprint={
-            sprint.estado === 'Planificado'
+            isReadOnly ? undefined :
+            (sprint.estado === 'Por hacer' || sprint.estado === 'Planificado')
               ? () => onIniciarSprint?.(sprint.id)
               : undefined
           }
+          onEditSprint={isReadOnly ? undefined : () => onEditSprint?.(sprint)}
+          onDeleteSprint={isReadOnly ? undefined : () => onDeleteSprint?.(sprint)}
           onViewHistoria={onViewHistoria}
-          onEditHistoria={onEditHistoria}
-          onDeleteHistoria={onDeleteHistoria}
-          defaultOpen={sprint.estado === 'Activo'}
+          onEditHistoria={isReadOnly ? undefined : onEditHistoria}
+          onDeleteHistoria={isReadOnly ? undefined : onDeleteHistoria}
+          onCreateTarea={isReadOnly ? undefined : onCreateTarea}
+          onEditTarea={isReadOnly ? undefined : onEditTarea}
+          onDeleteTarea={isReadOnly ? undefined : onDeleteTarea}
+          defaultOpen={sprint.estado === 'En progreso' || sprint.estado === 'Activo'}
+          tareasRefreshKey={tareasRefreshKey}
+          onVerDocumento={onVerDocumento}
+          onValidarHu={isReadOnly ? undefined : onValidarHu}
+          isReadOnly={isReadOnly}
         />
       ))}
 
-      {/* Backlog section */}
+      {/* Backlog section - Sin opción de crear tareas (solo en Sprints) */}
       <BacklogSection
         historias={filteredBacklog}
+        equipo={equipo}
         selectedIds={selectedBacklogIds}
-        onSelectionChange={handleBacklogSelectionChange}
-        onCreateSprint={onCreateSprint}
-        onAssignToSprint={handleAssignSelected}
-        onAddHistoria={() => onCreateHistoria?.()}
+        onSelectionChange={isReadOnly ? undefined : handleBacklogSelectionChange}
+        onCreateSprint={isReadOnly ? undefined : onCreateSprint}
+        onAssignToSprint={isReadOnly ? undefined : handleAssignSelected}
+        onAddHistoria={isReadOnly ? undefined : () => onCreateHistoria?.()}
         onViewHistoria={onViewHistoria}
-        onEditHistoria={onEditHistoria}
-        onDeleteHistoria={onDeleteHistoria}
-        onAssignHistoriaToSprint={(h) => onAssignToSprint?.([h.id])}
+        onEditHistoria={isReadOnly ? undefined : onEditHistoria}
+        onDeleteHistoria={isReadOnly ? undefined : onDeleteHistoria}
+        onAssignHistoriaToSprint={isReadOnly ? undefined : (h) => onAssignToSprint?.([h.id])}
+        onVerDocumento={onVerDocumento}
+        onValidarHu={isReadOnly ? undefined : onValidarHu}
+        isReadOnly={isReadOnly}
       />
     </div>
   );

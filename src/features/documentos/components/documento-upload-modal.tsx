@@ -117,7 +117,9 @@ export function DocumentoUploadModal({
   onSuccess,
 }: DocumentoUploadModalProps) {
   const { user } = useAuth();
+  const isAdmin = user?.role === ROLES.ADMIN;
   const isPmo = user?.role === ROLES.PMO;
+  const canMarkObligatorio = isAdmin || isPmo; // ADMIN y PMO pueden marcar como obligatorio
   const isEditing = !!documento;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -297,7 +299,7 @@ export function DocumentoUploadModal({
           nombre: formData.nombre,
           descripcion: formData.descripcion || undefined,
           fase: formData.fase as DocumentoFase,
-          esObligatorio: isPmo ? formData.esObligatorio : undefined,
+          esObligatorio: canMarkObligatorio ? formData.esObligatorio : undefined,
         };
 
         if (formData.tipoEntrega === 'link') {
@@ -318,13 +320,17 @@ export function DocumentoUploadModal({
           fase: formData.fase as DocumentoFase,
           nombre: formData.nombre,
           descripcion: formData.descripcion || undefined,
-          esObligatorio: isPmo ? formData.esObligatorio : false,
+          esObligatorio: canMarkObligatorio ? formData.esObligatorio : false,
         };
 
         if (formData.tipoEntrega === 'link') {
           createData.link = formData.link;
         } else if (archivoId) {
           createData.archivoId = archivoId;
+          // Enviar el tipo MIME del archivo para la vista previa
+          if (formData.file) {
+            createData.tipoArchivo = formData.file.type;
+          }
         }
 
         await createDocumento(createData);
@@ -554,8 +560,8 @@ export function DocumentoUploadModal({
             </div>
           )}
 
-          {/* Obligatorio (solo PMO) */}
-          {isPmo && (
+          {/* Obligatorio (solo ADMIN y PMO) */}
+          {canMarkObligatorio && (
             <div className="flex items-center space-x-2 pt-2">
               <Checkbox
                 id="obligatorio"

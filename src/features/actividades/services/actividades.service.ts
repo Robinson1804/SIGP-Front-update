@@ -91,6 +91,18 @@ export async function getActividadById(id: number | string): Promise<Actividad> 
  *   coordinadorId: 5,
  * });
  */
+/**
+ * Obtener el siguiente código de actividad disponible
+ *
+ * @returns Código de actividad generado (ej: "ACT N°1")
+ */
+export async function getNextActividadCodigo(): Promise<string> {
+  const response = await apiClient.get<string>(
+    ENDPOINTS.ACTIVIDADES.NEXT_CODIGO
+  );
+  return response.data;
+}
+
 export async function createActividad(
   data: CreateActividadInput
 ): Promise<Actividad> {
@@ -302,6 +314,28 @@ export async function getActividadesActivas(
       params: {
         ...filters,
         estado: 'En ejecucion',
+        activo: true,
+      },
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener actividades vinculadas a un PGD
+ * (a través de las Acciones Estratégicas -> OEGD -> OGD -> PGD)
+ *
+ * @param pgdId - ID del PGD
+ * @returns Lista de actividades del PGD
+ */
+export async function getActividadesByPGD(
+  pgdId: number | string
+): Promise<Actividad[]> {
+  const response = await apiClient.get<Actividad[]>(
+    ENDPOINTS.ACTIVIDADES.BASE,
+    {
+      params: {
+        pgdId: Number(pgdId),
         activo: true,
       },
     }

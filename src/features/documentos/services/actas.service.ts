@@ -33,6 +33,7 @@ const ACTAS_ENDPOINTS = {
   PDF: (id: number | string) => `/actas/${id}/pdf`,
   DOCUMENTO_FIRMADO: (id: number | string) => `/actas/${id}/documento-firmado`,
   APROBAR: (id: number | string) => `/actas/${id}/aprobar`,
+  ENVIAR_REVISION: (id: number | string) => `/actas/${id}/enviar-revision`,
 };
 
 /**
@@ -222,13 +223,22 @@ export async function aprobarActa(
 }
 
 /**
+ * Enviar Acta de Constitución a revisión
+ * Cambia el estado de Borrador a En revisión y notifica a PMO y PATROCINADOR
+ */
+export async function enviarActaARevision(id: number | string): Promise<Acta> {
+  const response = await apiClient.post<Acta>(ACTAS_ENDPOINTS.ENVIAR_REVISION(id));
+  return response.data;
+}
+
+/**
  * Obtener workflow de aprobacion para un tipo de acta
  */
 export function getWorkflowAprobacion(tipo: ActaTipo): {
   niveles: string[];
   descripcion: string;
 } {
-  if (tipo === 'Constitucion') {
+  if (tipo === 'Acta de Constitucion') {
     return {
       niveles: ['Scrum Master', 'Coordinador', 'Patrocinador'],
       descripcion:
@@ -236,7 +246,7 @@ export function getWorkflowAprobacion(tipo: ActaTipo): {
     };
   }
 
-  if (tipo === 'DailyMeeting') {
+  if (tipo === 'Acta de Daily Meeting') {
     return {
       niveles: ['Scrum Master'],
       descripcion:

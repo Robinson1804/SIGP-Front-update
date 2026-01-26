@@ -101,8 +101,12 @@ export function DocumentoPhaseAccordion({
   onApprove,
 }: DocumentoPhaseAccordionProps) {
   const { user } = useAuth();
-  const isPmo = user?.role === ROLES.PMO;
-  const canUpload = isPmo || user?.role === ROLES.COORDINADOR || user?.role === ROLES.SCRUM_MASTER;
+
+  // Permisos de subida de documentos: ADMIN, SCRUM_MASTER, COORDINADOR
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const isScrumMaster = user?.role === ROLES.SCRUM_MASTER;
+  const isCoordinador = user?.role === ROLES.COORDINADOR;
+  const canUpload = isAdmin || isScrumMaster || isCoordinador;
 
   // Estado de acordeón
   const [openPhases, setOpenPhases] = useState<Set<DocumentoFase>>(new Set());

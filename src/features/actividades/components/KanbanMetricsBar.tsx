@@ -18,7 +18,6 @@ interface KanbanMetricsBarProps {
   tareasCompletadas: number;
   tareasEnProgreso: number;
   tareasPorHacer: number;
-  tareasEnRevision: number;
 }
 
 interface MetricCardProps {
@@ -71,7 +70,6 @@ export function KanbanMetricsBar({
   tareasCompletadas,
   tareasEnProgreso,
   tareasPorHacer,
-  tareasEnRevision,
 }: KanbanMetricsBarProps) {
   const porcentajeCompletado =
     totalTareas > 0 ? Math.round((tareasCompletadas / totalTareas) * 100) : 0;
@@ -117,9 +115,6 @@ export function KanbanMetricsBar({
           </Badge>
           <Badge variant="secondary" className="bg-blue-100 text-blue-800">
             {tareasEnProgreso} En progreso
-          </Badge>
-          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-            {tareasEnRevision} En revision
           </Badge>
           <Badge variant="secondary" className="bg-green-100 text-green-800">
             {tareasCompletadas} Completadas

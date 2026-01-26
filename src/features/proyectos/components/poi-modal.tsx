@@ -15,12 +15,21 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 import { type Project, type SubProject } from "@/lib/definitions";
-import { X, Plus, Trash2, Loader2 } from "lucide-react";
+import { X, Plus, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -39,28 +48,74 @@ import {
   type UpdateProyectoData
 } from "../services/proyectos.service";
 import {
+  createActividad,
+  updateActividad,
+  getNextActividadCodigo,
+} from "@/features/actividades/services/actividades.service";
+import type { CreateActividadInput, UpdateActividadInput } from "@/features/actividades/types";
+import {
+  createSubproyecto,
+  getSubproyectosByProyecto,
+  updateSubproyecto,
+  deleteSubproyecto,
+  generateSubproyectoCodigo,
+  type Subproyecto,
+} from "../services/subproyectos.service";
+import {
   getAccionesEstrategicas,
-  type AccionEstrategica
+  getAccionesEstrategicasByPGD,
+  getPGDs,
+  type AccionEstrategica,
+  type PGD
 } from "@/features/planning";
 import {
   getCoordinadores,
   getScrumMasters,
-  getResponsables,
+  getScrumMastersElegibles,
+  getAsignacionesByProyecto,
+  syncAsignacionesProyecto,
+  getAsignacionesBySubproyecto,
+  syncAsignacionesSubproyecto,
+  getAsignacionesByActividad,
+  syncAsignacionesActividad,
+  getPersonalDisponible,
+  getPersonalDesarrolladores,
+  getPersonalImplementadores,
+  formatPersonalNombre,
   type Usuario,
+  type Personal,
+  type AsignacionError,
   formatUsuarioNombre,
 } from "@/lib/services";
 
-const availableYears = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
-
 // Opciones predefinidas para áreas financieras
+// Los valores deben coincidir exactamente con lo que se guarda en la BD
 const financialAreaOptions: MultiSelectOption[] = [
-    { label: 'OTIN', value: 'OTIN' },
-    { label: 'DCNC', value: 'DCNC' },
-    { label: 'OTA', value: 'OTA' },
-    { label: 'DTI', value: 'DTI' },
+    { label: 'OTIN - Oficina de Tecnologías de la Información', value: 'Oficina de Tecnologías de la Información (OTIN)' },
+    { label: 'OTA - Oficina Técnica de Administración', value: 'OTA' },
+    { label: 'DCNC - Dirección de Censos y Encuestas', value: 'DCNC' },
+    { label: 'DTI - Dirección Técnica de Indicadores', value: 'DTI' },
+    { label: 'OAF - Oficina de Administración y Finanzas', value: 'Oficina de Administración y Finanzas' },
+    { label: 'OGD - Oficina de Gestión Documental', value: 'Oficina de Gestión Documental (OGD)' },
+    { label: 'OPP - Oficina de Planificación y Presupuesto', value: 'Oficina de Planificación y Presupuesto' },
 ];
 
-const yearOptions: MultiSelectOption[] = availableYears.map(y => ({ label: y.toString(), value: y.toString() }));
+/**
+ * Genera opciones de años basadas en el rango del PGD
+ */
+function generateYearOptions(anioInicio: number, anioFin: number): MultiSelectOption[] {
+    return Array.from(
+        { length: anioFin - anioInicio + 1 },
+        (_, i) => {
+            const year = (anioInicio + i).toString();
+            return { label: year, value: year };
+        }
+    );
+}
+
+// Años por defecto si no hay PGD (fallback)
+const DEFAULT_YEAR_START = new Date().getFullYear() - 2;
+const DEFAULT_YEAR_END = new Date().getFullYear() + 4;
 
 /**
  * Modal simple para PGD/Proyectos (campos básicos)
@@ -70,21 +125,42 @@ export function POIModal({
     onClose,
     project,
     onSave,
+    pgdAnioInicio,
+    pgdAnioFin,
 }: {
     isOpen: boolean;
     onClose: () => void;
     project: Partial<Project> | null;
     onSave: (data: Project) => void;
+    pgdAnioInicio?: number;
+    pgdAnioFin?: number;
 }) {
     const [formData, setFormData] = React.useState<Partial<Project>>({});
     const [errors, setErrors] = React.useState<{[key: string]: string}>({});
+
+    // Generar opciones de años basadas en el PGD o usar fallback
+    const yearOptions = generateYearOptions(
+        pgdAnioInicio ?? DEFAULT_YEAR_START,
+        pgdAnioFin ?? DEFAULT_YEAR_END
+    );
 
     React.useEffect(() => {
         if (isOpen) {
             if (project) {
                 const managementMethod = project.managementMethod ||
                     (project.type === 'Proyecto' ? 'Scrum' : project.type === 'Actividad' ? 'Kanban' : '');
-                setFormData({ ...project, managementMethod });
+                // Mapear fechas del backend (fechaInicio/fechaFin) a campos del form (startDate/endDate)
+                // También mapear areaResponsable a coordination (son el mismo campo en PGD vs POI)
+                const projectAny = project as any;
+                const projectWithMappedDates = {
+                    ...project,
+                    managementMethod,
+                    startDate: project.startDate || (project as unknown as { fechaInicio?: string }).fechaInicio || '',
+                    endDate: project.endDate || (project as unknown as { fechaFin?: string }).fechaFin || '',
+                    // coordination y areaResponsable son el mismo dato - usar cualquiera que tenga valor
+                    coordination: project.coordination || projectAny.coordinacion || projectAny.areaResponsable || '',
+                };
+                setFormData(projectWithMappedDates);
             } else {
                 setFormData({
                     id: '',
@@ -193,7 +269,7 @@ export function POIModal({
                         {errors.classification && <p className="text-red-500 text-xs mt-1"> {errors.classification}</p>}
                     </div>
                     <div>
-                       <label>Monto anual *</label>
+                       <label>Monto total *</label>
                        <Input type="number" placeholder="Ingresar monto" value={formData.annualAmount || ''} onChange={e => setFormData(p => ({...p, annualAmount: Number(e.target.value)}))} className={errors.annualAmount ? 'border-red-500' : ''} />
                         {errors.annualAmount && <p className="text-red-500 text-xs mt-1">{errors.annualAmount}</p>}
                     </div>
@@ -249,11 +325,17 @@ export function POIFullModal({
     onClose,
     project,
     onSave,
+    pgdId,
+    pgdAnioInicio,
+    pgdAnioFin,
 }: {
     isOpen: boolean;
     onClose: () => void;
     project: Partial<Project> | null;
     onSave: (data: Project) => void;
+    pgdId?: number;
+    pgdAnioInicio?: number;
+    pgdAnioFin?: number;
 }) {
     const { toast } = useToast();
 
@@ -267,33 +349,92 @@ export function POIFullModal({
     const [subProjectErrors, setSubProjectErrors] = useState<{[key: string]: string}>({});
     const [isSaving, setIsSaving] = useState(false);
 
+    // Estado para el modal de error/advertencia
+    const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string }>({
+        isOpen: false,
+        title: '',
+        message: '',
+    });
+    // Estado para guardar el proyecto cuando hay advertencias de asignación pendientes
+    const [pendingSaveProject, setPendingSaveProject] = useState<Project | null>(null);
+
     // Datos cargados desde la API
     const [accionesEstrategicas, setAccionesEstrategicas] = useState<AccionEstrategica[]>([]);
     const [coordinadores, setCoordinadores] = useState<Usuario[]>([]);
     const [scrumMasters, setScrumMasters] = useState<Usuario[]>([]);
-    const [responsables, setResponsables] = useState<Usuario[]>([]);
+    const [personalDisponible, setPersonalDisponible] = useState<Personal[]>([]);
+    const [desarrolladores, setDesarrolladores] = useState<Personal[]>([]);
+    const [implementadores, setImplementadores] = useState<Personal[]>([]);
     const [loadingData, setLoadingData] = useState(false);
+
+    // Estado del PGD para generar años válidos
+    const [pgdData, setPgdData] = useState<{ anioInicio: number; anioFin: number }>({
+        anioInicio: pgdAnioInicio ?? DEFAULT_YEAR_START,
+        anioFin: pgdAnioFin ?? DEFAULT_YEAR_END,
+    });
+
+    // Sincronizar pgdData cuando los props cambien
+    useEffect(() => {
+        if (pgdAnioInicio && pgdAnioFin) {
+            setPgdData({
+                anioInicio: pgdAnioInicio,
+                anioFin: pgdAnioFin,
+            });
+        }
+    }, [pgdAnioInicio, pgdAnioFin]);
+
+    // Generar opciones de años basadas en el PGD
+    const yearOptions = generateYearOptions(pgdData.anioInicio, pgdData.anioFin);
 
     // Cargar datos cuando se abre el modal
     const loadData = useCallback(async () => {
         setLoadingData(true);
         try {
-            const [aes, coords, sms, resps] = await Promise.all([
-                getAccionesEstrategicas().catch(() => []),
+            // Cargar PGD si no se pasaron props de años
+            let pgdPromise: Promise<PGD[]> | null = null;
+            if (!pgdAnioInicio || !pgdAnioFin) {
+                pgdPromise = getPGDs({ activo: true }).catch(() => []);
+            }
+
+            // Si tenemos pgdId, filtrar acciones estratégicas por PGD
+            // Esto asegura que solo se muestren las AE del PGD seleccionado
+            const aesPromise = pgdId
+                ? getAccionesEstrategicasByPGD(pgdId).catch(() => [])
+                : getAccionesEstrategicas().catch(() => []);
+
+            const [aes, coords, sms, personal, devs, impls, pgds] = await Promise.all([
+                aesPromise,
                 getCoordinadores().catch(() => []),
-                getScrumMasters().catch(() => []),
-                getResponsables().catch(() => []),
+                getScrumMastersElegibles().catch(() => []), // Incluye SCRUM_MASTER + COORDINADOR
+                getPersonalDisponible().catch(() => []),
+                getPersonalDesarrolladores().catch(() => []), // Personal con rol Desarrollador
+                getPersonalImplementadores().catch(() => []), // Personal con rol Implementador
+                pgdPromise,
             ]);
             setAccionesEstrategicas(aes);
             setCoordinadores(coords);
             setScrumMasters(sms);
-            setResponsables(resps);
+            setPersonalDisponible(personal);
+            setDesarrolladores(devs);
+            setImplementadores(impls);
+
+            // Si cargamos PGD, actualizar los años
+            if (pgds && pgds.length > 0) {
+                // Buscar el PGD vigente o el más reciente
+                const vigentePGD = pgds.find(p => p.estado === 'VIGENTE') || pgds[0];
+                if (vigentePGD) {
+                    setPgdData({
+                        anioInicio: vigentePGD.anioInicio,
+                        anioFin: vigentePGD.anioFin,
+                    });
+                }
+            }
         } catch (error) {
             console.error('Error loading data:', error);
         } finally {
             setLoadingData(false);
         }
-    }, []);
+    }, [pgdId, pgdAnioInicio, pgdAnioFin]);
 
     // Inicializar formulario cuando se abre el modal
     useEffect(() => {
@@ -308,20 +449,94 @@ export function POIFullModal({
                 const managementMethod = project.managementMethod ||
                     (project.type === 'Proyecto' ? 'Scrum' : project.type === 'Actividad' ? 'Kanban' : '');
 
-                // Extraer IDs correctamente desde el proyecto
+                // Extraer IDs y campos del backend correctamente desde el proyecto
                 const projectWithIds = project as Partial<Project> & {
                     accionEstrategicaId?: number;
                     coordinadorId?: number;
                     scrumMasterId?: number;
                     patrocinadorId?: number;
+                    clasificacion?: string; // Campo del backend en español
                 };
+
+                // Asegurar que los arrays sean válidos (copia profunda)
+                const financialAreaValue = Array.isArray(project.financialArea)
+                    ? [...project.financialArea]
+                    : [];
+                const yearsValue = Array.isArray(project.years)
+                    ? [...project.years]
+                    : [];
+
+                // Mapear clasificacion del backend a classification del formulario
+                // Backend y frontend usan "Gestion interna" sin tilde y "Al ciudadano"
+                const rawClassification = project.classification || projectWithIds.clasificacion;
+                let classificationValue: Project['classification'] | undefined = undefined;
+                if (rawClassification) {
+                    // Normalizar cualquier variante a los valores esperados
+                    if (rawClassification.toLowerCase().includes('ciudadano')) {
+                        classificationValue = 'Al ciudadano';
+                    } else if (rawClassification.toLowerCase().includes('gestion') || rawClassification.toLowerCase().includes('interna')) {
+                        classificationValue = 'Gestion interna';
+                    }
+                }
+
+                // Cargar asignaciones actuales del proyecto/actividad para obtener los responsables
+                let responsiblesIds: string[] = [];
+                if (project.id) {
+                    try {
+                        // Usar el endpoint correcto según el tipo
+                        const asignaciones = project.type === 'Actividad'
+                            ? await getAsignacionesByActividad(project.id)
+                            : await getAsignacionesByProyecto(project.id);
+                        responsiblesIds = asignaciones.map(a => a.personalId.toString());
+                        console.log('Asignaciones cargadas:', asignaciones);
+                        console.log('IDs de responsables:', responsiblesIds);
+                    } catch (error) {
+                        console.warn('Error al cargar asignaciones:', error);
+                    }
+                }
+
+                // Validar que las fechas estén dentro del rango de años seleccionados
+                // Si no lo están, limpiarlas para evitar problemas con el input de fecha
+                const getYearFromDate = (dateStr: string | undefined): number | null => {
+                    if (!dateStr) return null;
+                    const parts = dateStr.split('-');
+                    return parts.length >= 1 ? parseInt(parts[0], 10) : null;
+                };
+
+                const numericYears = yearsValue.map(y => typeof y === 'string' ? parseInt(y, 10) : y);
+                const hasYears = numericYears.length > 0;
+                const minYear = hasYears ? Math.min(...numericYears) : 0;
+                const maxYear = hasYears ? Math.max(...numericYears) : 0;
+
+                let validStartDate = project.startDate || '';
+                let validEndDate = project.endDate || '';
+
+                if (hasYears && validStartDate) {
+                    const startYear = getYearFromDate(validStartDate);
+                    if (startYear !== null && (startYear < minYear || startYear > maxYear)) {
+                        validStartDate = ''; // Limpiar fecha fuera de rango
+                    }
+                }
+
+                if (hasYears && validEndDate) {
+                    const endYear = getYearFromDate(validEndDate);
+                    if (endYear !== null && (endYear < minYear || endYear > maxYear)) {
+                        validEndDate = ''; // Limpiar fecha fuera de rango
+                    }
+                }
 
                 setFormData({
                     ...project,
                     managementMethod,
+                    financialArea: financialAreaValue,
+                    years: yearsValue,
+                    responsibles: responsiblesIds,
+                    classification: classificationValue as Project['classification'],
                     accionEstrategicaId: projectWithIds.accionEstrategicaId,
                     coordinadorId: projectWithIds.coordinadorId,
                     scrumMasterId: projectWithIds.scrumMasterId,
+                    startDate: validStartDate,
+                    endDate: validEndDate,
                 });
                 setSubProjects(project.subProjects || []);
             } else {
@@ -359,11 +574,43 @@ export function POIFullModal({
         initialize();
     }, [project, isOpen, loadData]);
 
-    // Convertir opciones de usuarios a MultiSelectOption
-    const responsibleOptions: MultiSelectOption[] = responsables.map(u => ({
-        label: formatUsuarioNombre(u),
-        value: u.id.toString(),
+    // Convertir opciones de personal de RRHH a MultiSelectOption
+    // Para Proyecto: solo Desarrolladores, para Actividad: solo Implementadores
+    const personalParaResponsables = formData.type === 'Proyecto'
+        ? desarrolladores
+        : formData.type === 'Actividad'
+            ? implementadores
+            : personalDisponible;
+
+    // Crear opciones base con los desarrolladores/implementadores según el tipo
+    const baseResponsibleOptions: MultiSelectOption[] = personalParaResponsables.map(p => ({
+        label: formatPersonalNombre(p),
+        value: p.id.toString(),
     }));
+
+    // Agregar los responsables ya seleccionados que no estén en la lista base
+    // (puede ocurrir si fueron asignados cuando tenían otro rol o si cambiaron de rol)
+    const responsibleOptions: MultiSelectOption[] = React.useMemo(() => {
+        const baseValues = new Set(baseResponsibleOptions.map(o => o.value));
+        const extraOptions: MultiSelectOption[] = [];
+
+        if (formData.responsibles && formData.responsibles.length > 0) {
+            for (const respId of formData.responsibles) {
+                if (!baseValues.has(respId)) {
+                    // Buscar en la lista completa de personal disponible
+                    const personal = personalDisponible.find(p => p.id.toString() === respId);
+                    if (personal) {
+                        extraOptions.push({
+                            label: formatPersonalNombre(personal),
+                            value: respId,
+                        });
+                    }
+                }
+            }
+        }
+
+        return [...baseResponsibleOptions, ...extraOptions];
+    }, [baseResponsibleOptions, formData.responsibles, personalDisponible]);
 
     const validate = () => {
         const newErrors: {[key: string]: string} = {};
@@ -372,8 +619,50 @@ export function POIFullModal({
         if (!formData.description) newErrors.description = "La descripción es requerida.";
         if (!formData.accionEstrategicaId) newErrors.strategicAction = "La acción estratégica es requerida.";
         if (!formData.classification) newErrors.classification = "La clasificación es requerida.";
-        if (!formData.annualAmount) newErrors.annualAmount = "El monto es requerido.";
+        if (!formData.coordination) newErrors.coordination = "La coordinación es requerida.";
+        if (!formData.financialArea || formData.financialArea.length === 0) newErrors.financialArea = "El área financiera es requerida.";
+        if (!formData.coordinadorId) newErrors.coordinador = "El coordinador es requerido.";
+        if (!formData.scrumMasterId) newErrors.scrumMaster = "El Gestor/Scrum Master es requerido.";
+        if (!formData.responsibles || formData.responsibles.length === 0) newErrors.responsibles = "Al menos un responsable es requerido.";
         if (!formData.years || formData.years.length === 0) newErrors.years = "El año es requerido.";
+        if (!formData.annualAmount) newErrors.annualAmount = "El monto es requerido.";
+        // Función helper para obtener el año de una fecha string (YYYY-MM-DD) sin problemas de timezone
+        const getYearFromDateString = (dateStr: string): number => {
+            // Parsear directamente del string para evitar problemas de timezone
+            const parts = dateStr.split('-');
+            return parseInt(parts[0], 10);
+        };
+
+        if (!formData.startDate) {
+            newErrors.startDate = "La fecha de inicio es requerida.";
+        } else if (formData.years && formData.years.length > 0) {
+            // Validar que la fecha de inicio esté dentro del rango de años seleccionados
+            const selectedYears = formData.years.map(y => typeof y === 'string' ? parseInt(y, 10) : y);
+            const minYear = Math.min(...selectedYears);
+            const maxYear = Math.max(...selectedYears);
+            const fechaInicioYear = getYearFromDateString(formData.startDate);
+            if (fechaInicioYear < minYear || fechaInicioYear > maxYear) {
+                newErrors.startDate = `La fecha de inicio debe estar dentro del rango de años seleccionados (${minYear} - ${maxYear}).`;
+            }
+        }
+        if (!formData.endDate) {
+            newErrors.endDate = "La fecha de fin es requerida.";
+        } else if (formData.years && formData.years.length > 0) {
+            // Validar que la fecha de fin esté dentro del rango de años seleccionados
+            const selectedYears = formData.years.map(y => typeof y === 'string' ? parseInt(y, 10) : y);
+            const minYear = Math.min(...selectedYears);
+            const maxYear = Math.max(...selectedYears);
+            const fechaFinYear = getYearFromDateString(formData.endDate);
+            if (fechaFinYear < minYear || fechaFinYear > maxYear) {
+                newErrors.endDate = `La fecha de fin debe estar dentro del rango de años seleccionados (${minYear} - ${maxYear}).`;
+            }
+        }
+        // Validar que fecha fin sea mayor o igual a fecha inicio
+        if (formData.startDate && formData.endDate) {
+            if (formData.endDate < formData.startDate) {
+                newErrors.endDate = "La fecha de fin debe ser mayor o igual a la fecha de inicio.";
+            }
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -384,7 +673,27 @@ export function POIFullModal({
         if (!subProjectForm.name) newErrors.name = "El nombre es requerido.";
         if (!subProjectForm.description) newErrors.description = "La descripción es requerida.";
         if (!subProjectForm.scrumMaster) newErrors.scrumMaster = "El scrum master es requerido.";
-        if (!subProjectForm.amount) newErrors.amount = "El monto es requerido.";
+        if (!subProjectForm.amount) {
+            newErrors.amount = "El monto es requerido.";
+        } else {
+            // Validar que el monto no exceda el monto del proyecto principal
+            const montoProyecto = formData.annualAmount || 0;
+            const montoSubproyecto = subProjectForm.amount || 0;
+
+            // Calcular la suma de montos de otros subproyectos (excluyendo el que se está editando)
+            const sumOtrosSubproyectos = subProjects
+                .filter(sp => sp.id !== editingSubProject?.id)
+                .reduce((sum, sp) => sum + (sp.amount || 0), 0);
+
+            const montoTotalConNuevo = sumOtrosSubproyectos + montoSubproyecto;
+
+            if (montoSubproyecto > montoProyecto) {
+                newErrors.amount = `El monto no puede exceder el monto del proyecto (S/ ${montoProyecto.toLocaleString('es-PE')}).`;
+            } else if (montoTotalConNuevo > montoProyecto) {
+                const montoDisponible = montoProyecto - sumOtrosSubproyectos;
+                newErrors.amount = `El monto excede el disponible. Monto disponible: S/ ${montoDisponible.toLocaleString('es-PE')}.`;
+            }
+        }
         if (!subProjectForm.years || subProjectForm.years.length === 0) newErrors.years = "El año es requerido.";
 
         setSubProjectErrors(newErrors);
@@ -392,7 +701,9 @@ export function POIFullModal({
     };
 
     const handleSave = async () => {
-        if (!validate()) return;
+        if (!validate()) {
+            return;
+        }
 
         setIsSaving(true);
 
@@ -400,10 +711,10 @@ export function POIFullModal({
             const isEditMode = !!project?.id && project.id !== '';
 
             // Preparar datos base para la API
-            // El frontend usa "Gestión interna" con tilde, el backend usa "Gestion interna" sin tilde
+            // Tanto frontend como backend usan "Gestion interna" sin tilde
             const clasificacionValue = formData.classification === 'Al ciudadano'
                 ? 'Al ciudadano' as const
-                : formData.classification === 'Gestión interna'
+                : formData.classification === 'Gestion interna'
                     ? 'Gestion interna' as const
                     : undefined;
 
@@ -415,6 +726,8 @@ export function POIFullModal({
                 coordinadorId: formData.coordinadorId,
                 scrumMasterId: formData.scrumMasterId,
                 coordinacion: formData.coordination,
+                // areaResponsable y coordinacion son el mismo campo - sincronizar
+                areaResponsable: formData.coordination,
                 areasFinancieras: formData.financialArea,
                 montoAnual: formData.annualAmount ? Number(formData.annualAmount) : undefined,
                 anios: formData.years?.map(y => typeof y === 'string' ? parseInt(y, 10) : y),
@@ -422,51 +735,320 @@ export function POIFullModal({
                 fechaFin: formData.endDate || undefined,
             };
 
+            let savedResult: any;
+            let syncErrorMessages: string[] = [];
+
             if (isEditMode) {
-                // Para update, NO enviar codigo (el backend lo rechaza)
-                await updateProyecto(project!.id!, baseData);
-                toast({ title: 'Éxito', description: 'POI actualizado correctamente' });
+                // Para update, verificar el tipo para usar el servicio correcto
+                if (formData.type === 'Actividad') {
+                    // Actualizar Actividad usando el servicio de actividades
+                    const updateActividadData: UpdateActividadInput = {
+                        nombre: formData.name!,
+                        descripcion: baseData.descripcion,
+                        clasificacion: baseData.clasificacion,
+                        accionEstrategicaId: baseData.accionEstrategicaId,
+                        coordinadorId: baseData.coordinadorId,
+                        gestorId: baseData.scrumMasterId, // Mapear scrumMasterId a gestorId para Actividades
+                        coordinacion: baseData.coordinacion,
+                        areasFinancieras: baseData.areasFinancieras,
+                        montoAnual: baseData.montoAnual,
+                        anios: baseData.anios,
+                        fechaInicio: baseData.fechaInicio,
+                        fechaFin: baseData.fechaFin,
+                    };
+                    savedResult = await updateActividad(project!.id!, updateActividadData);
+
+                    // Sincronizar asignaciones (responsables) para Actividades
+                    if (formData.responsibles && formData.responsibles.length >= 0) {
+                        try {
+                            const personalIds = formData.responsibles.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+                            const syncResult = await syncAsignacionesActividad(
+                                parseInt(project!.id!, 10),
+                                personalIds
+                            );
+
+                            // Convertir errores a mensajes con nombres de personal
+                            if (syncResult.errors && syncResult.errors.length > 0) {
+                                syncErrorMessages = syncResult.errors.map((err: AsignacionError) => {
+                                    const personal = personalDisponible.find(p => p.id === err.personalId);
+                                    const nombrePersonal = personal ? formatPersonalNombre(personal) : `Personal ID ${err.personalId}`;
+
+                                    if (err.dedicacionActual !== undefined) {
+                                        return `${nombrePersonal}: tiene ${err.dedicacionActual}% de dedicación asignada. Agregar 50% excedería el 100%.`;
+                                    }
+                                    return `${nombrePersonal}: ${err.mensaje}`;
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Error al sincronizar asignaciones de actividad:', error);
+                        }
+                    }
+                } else {
+                    // Actualizar Proyecto usando el servicio de proyectos
+                    savedResult = await updateProyecto(project!.id!, baseData);
+
+                    // Sincronizar asignaciones (responsables) si cambiaron - solo para Proyectos
+                    if (formData.responsibles && formData.responsibles.length >= 0) {
+                        try {
+                            const personalIds = formData.responsibles.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+                            const syncResult = await syncAsignacionesProyecto(
+                                parseInt(project!.id!, 10),
+                                personalIds
+                            );
+
+                            // Convertir errores a mensajes con nombres de personal
+                            if (syncResult.errors && syncResult.errors.length > 0) {
+                                syncErrorMessages = syncResult.errors.map((err: AsignacionError) => {
+                                    // Buscar el nombre del personal
+                                    const personal = personalDisponible.find(p => p.id === err.personalId);
+                                    const nombrePersonal = personal ? formatPersonalNombre(personal) : `Personal ID ${err.personalId}`;
+
+                                    if (err.dedicacionActual !== undefined) {
+                                        return `${nombrePersonal}: tiene ${err.dedicacionActual}% de dedicación asignada. Agregar 50% excedería el 100%.`;
+                                    }
+                                    return `${nombrePersonal}: ${err.mensaje}`;
+                                });
+                            }
+                        } catch (error) {
+                            console.error('Error al sincronizar asignaciones:', error);
+                            // No bloquear el guardado principal
+                        }
+                    }
+                }
             } else {
-                // Para create, incluir codigo y nombre obligatorio
-                const createData: CreateProyectoData = {
-                    codigo: formData.code || generateProyectoCodigo(formData.type as 'Proyecto' | 'Actividad'),
-                    nombre: formData.name!,
-                    descripcion: baseData.descripcion,
-                    clasificacion: baseData.clasificacion,
-                    accionEstrategicaId: baseData.accionEstrategicaId,
-                    coordinadorId: baseData.coordinadorId,
-                    scrumMasterId: baseData.scrumMasterId,
-                    coordinacion: baseData.coordinacion,
-                    areasFinancieras: baseData.areasFinancieras,
-                    montoAnual: baseData.montoAnual,
-                    anios: baseData.anios,
-                    fechaInicio: baseData.fechaInicio,
-                    fechaFin: baseData.fechaFin,
-                };
-                await createProyecto(createData);
-                toast({ title: 'Éxito', description: 'POI creado correctamente' });
+                // Para create, usar el servicio correcto según el tipo
+                if (formData.type === 'Actividad') {
+                    // Crear Actividad usando el servicio de actividades
+                    // El backend genera el código automáticamente si no se proporciona
+                    // Para Actividades: scrumMasterId del formulario se mapea a gestorId
+                    const createActividadData: CreateActividadInput = {
+                        nombre: formData.name!,
+                        descripcion: baseData.descripcion,
+                        clasificacion: baseData.clasificacion,
+                        accionEstrategicaId: baseData.accionEstrategicaId,
+                        coordinadorId: baseData.coordinadorId,
+                        gestorId: baseData.scrumMasterId, // Mapear scrumMasterId a gestorId para Actividades
+                        coordinacion: baseData.coordinacion,
+                        areasFinancieras: baseData.areasFinancieras,
+                        montoAnual: baseData.montoAnual,
+                        anios: baseData.anios,
+                        fechaInicio: baseData.fechaInicio,
+                        fechaFin: baseData.fechaFin,
+                    };
+                    savedResult = await createActividad(createActividadData);
+
+                    // Sincronizar asignaciones para nueva actividad
+                    if (savedResult?.id && formData.responsibles && formData.responsibles.length > 0) {
+                        try {
+                            const personalIds = formData.responsibles.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+                            const syncResult = await syncAsignacionesActividad(savedResult.id, personalIds);
+
+                            // Convertir errores a mensajes con nombres de personal
+                            if (syncResult.errors && syncResult.errors.length > 0) {
+                                syncErrorMessages = syncResult.errors.map((err: AsignacionError) => {
+                                    const personal = personalDisponible.find(p => p.id === err.personalId);
+                                    const nombrePersonal = personal ? formatPersonalNombre(personal) : `Personal ID ${err.personalId}`;
+
+                                    if (err.dedicacionActual !== undefined) {
+                                        return `${nombrePersonal}: tiene ${err.dedicacionActual}% de dedicación asignada. Agregar 50% excedería el 100%.`;
+                                    }
+                                    return `${nombrePersonal}: ${err.mensaje}`;
+                                });
+                            }
+                        } catch (error) {
+                            console.warn('Error al asignar responsables a actividad:', error);
+                        }
+                    }
+                } else {
+                    // Crear Proyecto usando el servicio de proyectos
+                    const generatedCode = formData.code || generateProyectoCodigo(formData.type as 'Proyecto' | 'Actividad');
+                    const createData: CreateProyectoData = {
+                        codigo: generatedCode,
+                        nombre: formData.name!,
+                        descripcion: baseData.descripcion,
+                        clasificacion: baseData.clasificacion,
+                        accionEstrategicaId: baseData.accionEstrategicaId,
+                        coordinadorId: baseData.coordinadorId,
+                        scrumMasterId: baseData.scrumMasterId,
+                        coordinacion: baseData.coordinacion,
+                        areasFinancieras: baseData.areasFinancieras,
+                        montoAnual: baseData.montoAnual,
+                        anios: baseData.anios,
+                        fechaInicio: baseData.fechaInicio,
+                        fechaFin: baseData.fechaFin,
+                    };
+                    savedResult = await createProyecto(createData);
+
+                    // Sincronizar asignaciones para nuevo proyecto (solo para Proyectos)
+                    if (savedResult?.id && formData.responsibles && formData.responsibles.length > 0) {
+                        try {
+                            const personalIds = formData.responsibles.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+                            await syncAsignacionesProyecto(savedResult.id, personalIds);
+                        } catch (error) {
+                            console.warn('Error al asignar responsables:', error);
+                        }
+                    }
+                }
             }
 
-            // Crear objeto Project para callback
+            // Guardar subproyectos si es tipo Proyecto
+            const proyectoId = savedResult?.id || (project?.id ? parseInt(project.id, 10) : null);
+            if (formData.type === 'Proyecto' && proyectoId && subProjects.length > 0) {
+                try {
+                    // Obtener subproyectos existentes del backend
+                    const existingSubproyectos = isEditMode
+                        ? await getSubproyectosByProyecto(proyectoId)
+                        : [];
+
+                    // Identificar subproyectos a crear, actualizar y eliminar
+                    const existingIds = existingSubproyectos.map(sp => sp.id);
+                    const currentIds = subProjects
+                        .filter(sp => sp.id && !sp.id.startsWith('sp-')) // Solo IDs numéricos reales
+                        .map(sp => parseInt(sp.id, 10));
+
+                    // Eliminar subproyectos que ya no están
+                    for (const existingSp of existingSubproyectos) {
+                        if (!currentIds.includes(existingSp.id)) {
+                            await deleteSubproyecto(existingSp.id);
+                        }
+                    }
+
+                    // Crear o actualizar subproyectos
+                    const proyectoCodigo = savedResult?.codigo || formData.code || `PROY-${proyectoId}`;
+                    let subIndex = existingSubproyectos.length;
+
+                    for (const sp of subProjects) {
+                        const isNewSubproject = sp.id.startsWith('sp-'); // IDs temporales empiezan con 'sp-'
+
+                        // Obtener el scrumMasterId del nombre del scrumMaster
+                        const smUser = scrumMasters.find(sm => formatUsuarioNombre(sm) === sp.scrumMaster);
+                        const scrumMasterId = smUser?.id;
+
+                        // Obtener IDs de responsables para asignaciones
+                        const responsablesIds = sp.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
+
+                        if (isNewSubproject) {
+                            // Crear nuevo subproyecto
+                            const aniosNumeros = sp.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+                            const newSubproyecto = await createSubproyecto({
+                                proyectoPadreId: proyectoId,
+                                codigo: generateSubproyectoCodigo(proyectoCodigo, subIndex),
+                                nombre: sp.name,
+                                descripcion: sp.description,
+                                monto: sp.amount,
+                                anios: aniosNumeros,
+                                areasFinancieras: sp.financialArea || [],
+                                scrumMasterId: scrumMasterId,
+                            });
+                            subIndex++;
+
+                            // Sincronizar asignaciones para el nuevo subproyecto
+                            if (newSubproyecto?.id && responsablesIds.length > 0) {
+                                try {
+                                    await syncAsignacionesSubproyecto(newSubproyecto.id, responsablesIds);
+                                    console.log('Asignaciones de subproyecto sincronizadas:', newSubproyecto.id);
+                                } catch (error) {
+                                    console.warn('Error al sincronizar asignaciones del subproyecto:', error);
+                                }
+                            }
+                        } else {
+                            // Actualizar subproyecto existente
+                            const aniosNumeros = sp.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+                            const subproyectoId = parseInt(sp.id, 10);
+                            await updateSubproyecto(subproyectoId, {
+                                nombre: sp.name,
+                                descripcion: sp.description,
+                                monto: sp.amount,
+                                anios: aniosNumeros,
+                                areasFinancieras: sp.financialArea || [],
+                                scrumMasterId: scrumMasterId,
+                            });
+
+                            // Sincronizar asignaciones para subproyecto existente
+                            try {
+                                await syncAsignacionesSubproyecto(subproyectoId, responsablesIds);
+                                console.log('Asignaciones de subproyecto actualizadas:', subproyectoId);
+                            } catch (error) {
+                                console.warn('Error al sincronizar asignaciones del subproyecto:', error);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Error al guardar subproyectos:', error);
+                    // No bloquear el guardado principal
+                }
+            }
+
+            // Crear objeto Project para callback con los datos actualizados del backend
             const savedProject: Project = {
                 ...formData as Project,
-                id: formData.id || Date.now().toString(),
+                id: savedResult?.id?.toString() || formData.id || Date.now().toString(),
+                name: savedResult?.nombre || formData.name || '',
+                description: savedResult?.descripcion || formData.description || '',
                 scrumMaster: formData.scrumMaster || '',
                 subProjects: subProjects,
             };
-
-            onSave(savedProject);
 
             // Blur active element before closing
             if (document.activeElement instanceof HTMLElement) {
                 document.activeElement.blur();
             }
+
+            // Si hubo errores de asignación, mostrar modal de advertencia
+            // El usuario deberá cerrar el modal de advertencia antes de continuar
+            if (syncErrorMessages.length > 0) {
+                setPendingSaveProject(savedProject);
+                setErrorModal({
+                    isOpen: true,
+                    title: 'Advertencia de Asignación',
+                    message: `El proyecto se guardó correctamente, pero los siguientes responsables no pudieron ser asignados:\n\n• ${syncErrorMessages.join('\n• ')}\n\nEstos usuarios no serán asignados al proyecto.`,
+                });
+                setIsSaving(false);
+                return; // El cierre se manejará cuando el usuario cierre el AlertDialog
+            }
+
+            // Primero cerrar el modal, luego notificar al padre
+            // Esto evita problemas de estado
             onClose();
+
+            // Notificar al padre después de cerrar - el padre recargará desde API
+            // Usamos setTimeout para asegurar que el modal se cerró completamente
+            setTimeout(() => {
+                onSave(savedProject);
+            }, 50);
+
         } catch (error: unknown) {
-            console.error('Error saving POI:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Error al guardar el POI';
-            toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
-        } finally {
+            // Extraer mensaje de error del backend
+            let errorMessage = 'Error al guardar el POI';
+            let errorTitle = 'Error';
+
+            if (error && typeof error === 'object') {
+                const axiosError = error as { response?: { data?: { message?: string; error?: { message?: string } } } };
+
+                // Intentar obtener el mensaje del backend
+                if (axiosError.response?.data?.message) {
+                    errorMessage = axiosError.response.data.message;
+                } else if (axiosError.response?.data?.error?.message) {
+                    errorMessage = axiosError.response.data.error.message;
+                } else if (error instanceof Error) {
+                    errorMessage = error.message;
+                }
+
+                // Detectar errores de validación específicos para mostrar advertencia más clara
+                if (errorMessage.includes('fecha') || errorMessage.includes('rango')) {
+                    errorTitle = 'Error de Validación de Fechas';
+                } else if (errorMessage.includes('requerido') || errorMessage.includes('obligatorio')) {
+                    errorTitle = 'Campos Requeridos';
+                }
+            }
+
+            // Mostrar modal de advertencia en lugar de solo toast
+            setErrorModal({
+                isOpen: true,
+                title: errorTitle,
+                message: errorMessage,
+            });
+
             setIsSaving(false);
         }
     }
@@ -490,10 +1072,24 @@ export function POIFullModal({
     };
 
     // Subproyecto handlers
-    const openSubProjectForm = (subProject?: SubProject) => {
+    const openSubProjectForm = async (subProject?: SubProject) => {
         if (subProject) {
             setEditingSubProject(subProject);
-            setSubProjectForm({ ...subProject });
+            // Si es un subproyecto existente (ID numérico), cargar asignaciones
+            const isExistingSubproject = subProject.id && !subProject.id.startsWith('sp-');
+            let responsiblesFromAsignaciones: string[] = subProject.responsible || [];
+
+            if (isExistingSubproject) {
+                try {
+                    const asignaciones = await getAsignacionesBySubproyecto(subProject.id);
+                    responsiblesFromAsignaciones = asignaciones.map(a => a.personalId.toString());
+                    console.log('Asignaciones de subproyecto cargadas:', asignaciones);
+                } catch (error) {
+                    console.warn('Error al cargar asignaciones del subproyecto:', error);
+                }
+            }
+
+            setSubProjectForm({ ...subProject, responsible: responsiblesFromAsignaciones });
         } else {
             setEditingSubProject(null);
             setSubProjectForm({
@@ -543,8 +1139,15 @@ export function POIFullModal({
     const isProyecto = formData.type === 'Proyecto';
 
     // Opciones de responsables y años para subproyecto
+    // Filtrar personal asignado al proyecto padre para subproyectos
     const subResponsibleOptions: MultiSelectOption[] = (formData.responsibles && formData.responsibles.length > 0)
-        ? formData.responsibles.map(r => ({ label: r, value: r }))
+        ? formData.responsibles.map(id => {
+            const personal = personalDisponible.find(p => p.id.toString() === id);
+            return {
+                label: personal ? formatPersonalNombre(personal) : id,
+                value: id,
+            };
+        })
         : responsibleOptions;
 
     const subYearOptions: MultiSelectOption[] = (formData.years && formData.years.length > 0)
@@ -554,6 +1157,7 @@ export function POIFullModal({
     if (!isOpen) return null;
 
     return (
+        <>
         <Dialog open={isOpen} onOpenChange={handleOpenChange}>
             <DialogContent className="sm:max-w-4xl p-0" showCloseButton={false}>
                 {currentView === 'main' ? (
@@ -621,11 +1225,12 @@ export function POIFullModal({
                                                     <label className="text-sm font-medium">Agregar subproyectos</label>
                                                     <Button
                                                         type="button"
-                                                        size="icon"
-                                                        className="h-8 w-8 bg-[#3B4466] hover:bg-[#2a3352]"
+                                                        size="sm"
+                                                        className="h-8 px-3 bg-[#018CD1] hover:bg-[#0177b3] text-white"
                                                         onClick={() => openSubProjectForm()}
                                                     >
-                                                        <Plus className="h-4 w-4 font-bold" />
+                                                        <Plus className="h-4 w-4 mr-1" />
+                                                        Agregar
                                                     </Button>
                                                 </div>
                                                 {subProjects.length > 0 && (
@@ -693,6 +1298,28 @@ export function POIFullModal({
                                                 </SelectContent>
                                             </Select>
                                             {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
+                                            {/* Mostrar OEI vinculado si la AE tiene relación con AEIs que pertenecen a OEIs */}
+                                            {formData.accionEstrategicaId && (() => {
+                                                const ae = accionesEstrategicas.find(a => a.id === formData.accionEstrategicaId);
+                                                const oeis = ae?.oegd?.oegdAeis?.map(oa => oa.aei?.oei).filter(Boolean);
+                                                const uniqueOeis = oeis?.filter((oei, index, self) =>
+                                                    oei && index === self.findIndex(o => o?.id === oei.id)
+                                                );
+                                                if (uniqueOeis && uniqueOeis.length > 0) {
+                                                    return (
+                                                        <div className="mt-2 text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200">
+                                                            <span className="font-medium">OEI vinculado:</span>{' '}
+                                                            {uniqueOeis.map((oei, idx) => (
+                                                                <span key={oei?.id}>
+                                                                    {idx > 0 && ', '}
+                                                                    <span className="font-semibold">{oei?.codigo}</span> - {oei?.nombre}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                          <div>
                                             <label className="text-sm font-medium">Clasificación *</label>
@@ -706,24 +1333,46 @@ export function POIFullModal({
                                             {errors.classification && <p className="text-red-500 text-xs mt-1">{errors.classification}</p>}
                                         </div>
                                         <div>
-                                           <label className="text-sm font-medium">Coordinación</label>
-                                           <Input placeholder="Ingresar coordinación" value={formData.coordination || ''} onChange={e => setFormData(p => ({...p, coordination: e.target.value}))} />
+                                           <label className="text-sm font-medium">Coordinación *</label>
+                                           <Input
+                                               placeholder="Ingresar coordinación"
+                                               value={formData.coordination || ''}
+                                               onChange={e => {
+                                                   setFormData(p => ({...p, coordination: e.target.value}));
+                                                   if (errors.coordination) setErrors(prev => ({...prev, coordination: ''}));
+                                               }}
+                                               className={errors.coordination ? 'border-red-500' : ''}
+                                           />
+                                           {errors.coordination && <p className="text-red-500 text-xs mt-1">{errors.coordination}</p>}
                                         </div>
                                     </div>
 
                                     {/* Segunda columna */}
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="text-sm font-medium">Área Financiera</label>
+                                            <label className="text-sm font-medium">Área Financiera *</label>
                                             <MultiSelect
-                                                options={financialAreaOptions}
+                                                options={(() => {
+                                                    // Combinar opciones predefinidas con valores existentes que no estén en las opciones
+                                                    const existingValues = formData.financialArea || [];
+                                                    const predefinedValues = financialAreaOptions.map(o => o.value);
+                                                    const extraOptions = existingValues
+                                                        .filter(v => !predefinedValues.includes(v))
+                                                        .map(v => ({ label: v, value: v }));
+                                                    return [...financialAreaOptions, ...extraOptions];
+                                                })()}
                                                 selected={formData.financialArea || []}
-                                                onChange={(selected) => setFormData(p => ({...p, financialArea: selected}))}
+                                                onChange={(selected) => {
+                                                    setFormData(p => ({...p, financialArea: selected}));
+                                                    if (errors.financialArea) setErrors(prev => ({...prev, financialArea: ''}));
+                                                }}
                                                 placeholder="Seleccionar área(s)"
+                                                className={errors.financialArea ? 'border-red-500' : ''}
                                             />
+                                            {errors.financialArea && <p className="text-red-500 text-xs mt-1">{errors.financialArea}</p>}
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium">Coordinador</label>
+                                            <label className="text-sm font-medium">Coordinador *</label>
                                             <Select
                                                 value={formData.coordinadorId?.toString() || ''}
                                                 onValueChange={(value) => {
@@ -733,9 +1382,10 @@ export function POIFullModal({
                                                         coordinadorId: parseInt(value, 10),
                                                         coordinator: coord ? formatUsuarioNombre(coord) : '',
                                                     }));
+                                                    if (errors.coordinador) setErrors(prev => ({...prev, coordinador: ''}));
                                                 }}
                                             >
-                                                <SelectTrigger>
+                                                <SelectTrigger className={errors.coordinador ? 'border-red-500' : ''}>
                                                     <SelectValue placeholder="Seleccionar coordinador" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -746,40 +1396,53 @@ export function POIFullModal({
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            {errors.coordinador && <p className="text-red-500 text-xs mt-1">{errors.coordinador}</p>}
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium">Gestor/Scrum Master</label>
+                                            <label className="text-sm font-medium">
+                                                {formData.type === 'Actividad' ? 'Gestor *' : 'Scrum Master *'}
+                                            </label>
                                             <Select
                                                 value={formData.scrumMasterId?.toString() || ''}
                                                 onValueChange={(value) => {
-                                                    const sm = scrumMasters.find(s => s.id.toString() === value);
+                                                    // Para Actividad usar coordinadores, para Proyecto usar scrumMasters (que incluye SM + Coord)
+                                                    const listaUsuarios = formData.type === 'Actividad' ? coordinadores : scrumMasters;
+                                                    const usuario = listaUsuarios.find(u => u.id.toString() === value);
                                                     setFormData(p => ({
                                                         ...p,
                                                         scrumMasterId: parseInt(value, 10),
-                                                        scrumMaster: sm ? formatUsuarioNombre(sm) : '',
+                                                        scrumMaster: usuario ? formatUsuarioNombre(usuario) : '',
                                                     }));
+                                                    if (errors.scrumMaster) setErrors(prev => ({...prev, scrumMaster: ''}));
                                                 }}
                                             >
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Seleccionar scrum master" />
+                                                <SelectTrigger className={errors.scrumMaster ? 'border-red-500' : ''}>
+                                                    <SelectValue placeholder={formData.type === 'Actividad' ? 'Seleccionar gestor' : 'Seleccionar scrum master'} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {scrumMasters.map((sm) => (
-                                                        <SelectItem key={sm.id} value={sm.id.toString()}>
-                                                            {formatUsuarioNombre(sm)}
+                                                    {/* Para Actividad mostrar solo Coordinadores, para Proyecto mostrar SM + Coordinadores */}
+                                                    {(formData.type === 'Actividad' ? coordinadores : scrumMasters).map((usuario) => (
+                                                        <SelectItem key={usuario.id} value={usuario.id.toString()}>
+                                                            {formatUsuarioNombre(usuario)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
                                         </div>
                                         <div>
-                                            <label className="text-sm font-medium">Responsable</label>
+                                            <label className="text-sm font-medium">Responsable *</label>
                                             <MultiSelect
                                                 options={responsibleOptions}
                                                 selected={formData.responsibles || []}
-                                                onChange={(selected) => setFormData(p => ({...p, responsibles: selected}))}
+                                                onChange={(selected) => {
+                                                    setFormData(p => ({...p, responsibles: selected}));
+                                                    if (errors.responsibles) setErrors(prev => ({...prev, responsibles: ''}));
+                                                }}
                                                 placeholder="Seleccionar responsable(s)"
+                                                className={errors.responsibles ? 'border-red-500' : ''}
                                             />
+                                            {errors.responsibles && <p className="text-red-500 text-xs mt-1">{errors.responsibles}</p>}
                                         </div>
                                         <div>
                                             <label className="text-sm font-medium">Año *</label>
@@ -787,7 +1450,40 @@ export function POIFullModal({
                                                 options={yearOptions}
                                                 selected={formData.years || []}
                                                 onChange={(selected) => {
-                                                    setFormData(p => ({...p, years: selected}));
+                                                    // Calcular nuevo rango de años
+                                                    const newYears = selected.map(y => typeof y === 'string' ? parseInt(y, 10) : y);
+                                                    const hasNewYears = newYears.length > 0;
+                                                    const newMinYear = hasNewYears ? Math.min(...newYears) : 0;
+                                                    const newMaxYear = hasNewYears ? Math.max(...newYears) : 0;
+
+                                                    setFormData(p => {
+                                                        let newStartDate = p.startDate;
+                                                        let newEndDate = p.endDate;
+
+                                                        // Verificar si las fechas existentes están fuera del nuevo rango
+                                                        // Helper para obtener año sin problemas de timezone
+                                                        const getYear = (dateStr: string) => parseInt(dateStr.split('-')[0], 10);
+
+                                                        if (hasNewYears && newStartDate) {
+                                                            const startYear = getYear(newStartDate);
+                                                            if (startYear < newMinYear || startYear > newMaxYear) {
+                                                                newStartDate = ''; // Limpiar fecha fuera de rango
+                                                            }
+                                                        }
+                                                        if (hasNewYears && newEndDate) {
+                                                            const endYear = getYear(newEndDate);
+                                                            if (endYear < newMinYear || endYear > newMaxYear) {
+                                                                newEndDate = ''; // Limpiar fecha fuera de rango
+                                                            }
+                                                        }
+
+                                                        return {
+                                                            ...p,
+                                                            years: selected,
+                                                            startDate: newStartDate,
+                                                            endDate: newEndDate,
+                                                        };
+                                                    });
                                                     if (errors.years) setErrors(prev => ({...prev, years: ''}));
                                                 }}
                                                 className={errors.years ? 'border-red-500' : ''}
@@ -796,7 +1492,7 @@ export function POIFullModal({
                                              {errors.years && <p className="text-red-500 text-xs mt-1">{errors.years}</p>}
                                         </div>
                                         <div>
-                                           <label className="text-sm font-medium">Monto anual *</label>
+                                           <label className="text-sm font-medium">Monto total *</label>
                                            <Input
                                                type="number"
                                                placeholder="Ingresar monto"
@@ -819,22 +1515,60 @@ export function POIFullModal({
                                            />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-sm font-medium">Fecha inicio</label>
-                                                <Input
-                                                    type="date"
-                                                    value={formData.startDate || ''}
-                                                    onChange={e => setFormData(p => ({...p, startDate: e.target.value}))}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-sm font-medium">Fecha fin</label>
-                                                <Input
-                                                    type="date"
-                                                    value={formData.endDate || ''}
-                                                    onChange={e => setFormData(p => ({...p, endDate: e.target.value}))}
-                                                />
-                                            </div>
+                                            {(() => {
+                                                // Calcular fechas mínima y máxima basadas en años seleccionados
+                                                const selectedYears = formData.years?.map(y => typeof y === 'string' ? parseInt(y, 10) : y) || [];
+                                                const hasYears = selectedYears.length > 0;
+                                                const minYear = hasYears ? Math.min(...selectedYears) : undefined;
+                                                const maxYear = hasYears ? Math.max(...selectedYears) : undefined;
+                                                const minDate = minYear ? `${minYear}-01-01` : undefined;
+                                                const maxDate = maxYear ? `${maxYear}-12-31` : undefined;
+
+                                                return (
+                                                    <>
+                                                        <div>
+                                                            <label className="text-sm font-medium">Fecha inicio *</label>
+                                                            {hasYears && (
+                                                                <p className="text-xs text-gray-500 mb-1">Rango permitido: {minYear} - {maxYear}</p>
+                                                            )}
+                                                            <Input
+                                                                type="date"
+                                                                value={formData.startDate || ''}
+                                                                min={minDate}
+                                                                max={maxDate}
+                                                                onChange={e => {
+                                                                    setFormData(p => ({...p, startDate: e.target.value}));
+                                                                    if (errors.startDate) setErrors(prev => ({...prev, startDate: ''}));
+                                                                }}
+                                                                className={errors.startDate ? 'border-red-500' : ''}
+                                                                disabled={!hasYears}
+                                                            />
+                                                            {!hasYears && <p className="text-xs text-amber-600 mt-1">Seleccione primero los años del proyecto</p>}
+                                                            {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-sm font-medium">Fecha fin *</label>
+                                                            {hasYears && (
+                                                                <p className="text-xs text-gray-500 mb-1">Rango permitido: {minYear} - {maxYear}</p>
+                                                            )}
+                                                            <Input
+                                                                type="date"
+                                                                value={formData.endDate || ''}
+                                                                min={minDate}
+                                                                max={maxDate}
+                                                                onChange={e => {
+                                                                    setFormData(p => ({...p, endDate: e.target.value}));
+                                                                    if (errors.endDate) setErrors(prev => ({...prev, endDate: ''}));
+                                                                }}
+                                                                className={errors.endDate ? 'border-red-500' : ''}
+                                                                disabled={!hasYears}
+                                                            />
+                                                            {!hasYears && <p className="text-xs text-amber-600 mt-1">Seleccione primero los años del proyecto</p>}
+                                                            {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -887,7 +1621,14 @@ export function POIFullModal({
                             <div>
                                 <label className="text-sm font-medium">Área Financiera</label>
                                 <MultiSelect
-                                    options={financialAreaOptions}
+                                    options={(() => {
+                                        const existingValues = subProjectForm.financialArea || [];
+                                        const predefinedValues = financialAreaOptions.map(o => o.value);
+                                        const extraOptions = existingValues
+                                            .filter(v => !predefinedValues.includes(v))
+                                            .map(v => ({ label: v, value: v }));
+                                        return [...financialAreaOptions, ...extraOptions];
+                                    })()}
                                     selected={subProjectForm.financialArea || []}
                                     onChange={(selected) => setSubProjectForm(p => ({ ...p, financialArea: selected }))}
                                     placeholder="Seleccionar área(s)"
@@ -940,6 +1681,29 @@ export function POIFullModal({
                             </div>
                             <div>
                                 <label className="text-sm font-medium">Monto anual *</label>
+                                {/* Mostrar información del monto disponible */}
+                                {formData.annualAmount && (
+                                    <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200 mb-2">
+                                        <div className="flex justify-between">
+                                            <span>Monto del proyecto:</span>
+                                            <span className="font-semibold">S/ {(formData.annualAmount || 0).toLocaleString('es-PE')}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Asignado a subproyectos:</span>
+                                            <span className="font-semibold">S/ {subProjects
+                                                .filter(sp => sp.id !== editingSubProject?.id)
+                                                .reduce((sum, sp) => sum + (sp.amount || 0), 0)
+                                                .toLocaleString('es-PE')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-green-700 font-medium border-t border-blue-300 pt-1 mt-1">
+                                            <span>Disponible:</span>
+                                            <span>S/ {((formData.annualAmount || 0) - subProjects
+                                                .filter(sp => sp.id !== editingSubProject?.id)
+                                                .reduce((sum, sp) => sum + (sp.amount || 0), 0))
+                                                .toLocaleString('es-PE')}</span>
+                                        </div>
+                                    </div>
+                                )}
                                 <Input
                                     type="number"
                                     placeholder="Ingresar monto anual"
@@ -969,24 +1733,143 @@ export function POIFullModal({
                 )}
             </DialogContent>
         </Dialog>
+
+        {/* Modal de Advertencia/Error */}
+        <AlertDialog open={errorModal.isOpen} onOpenChange={(open) => {
+            if (!open) {
+                setErrorModal(prev => ({ ...prev, isOpen: false }));
+                // Si hay un proyecto pendiente de guardar, completar el flujo
+                if (pendingSaveProject) {
+                    const projectToSave = pendingSaveProject;
+                    setPendingSaveProject(null);
+                    onClose();
+                    setTimeout(() => {
+                        onSave(projectToSave);
+                    }, 50);
+                }
+            }
+        }}>
+            <AlertDialogContent className="max-w-md">
+                <AlertDialogHeader>
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                            <AlertTriangle className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <AlertDialogTitle className="text-lg font-semibold">
+                            {errorModal.title}
+                        </AlertDialogTitle>
+                    </div>
+                    <AlertDialogDescription className="mt-3 text-sm text-gray-600 whitespace-pre-line">
+                        {errorModal.message}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction
+                        onClick={() => {
+                            setErrorModal({ isOpen: false, title: '', message: '' });
+                            // Si hay un proyecto pendiente de guardar, completar el flujo
+                            if (pendingSaveProject) {
+                                const projectToSave = pendingSaveProject;
+                                setPendingSaveProject(null);
+                                onClose();
+                                setTimeout(() => {
+                                    onSave(projectToSave);
+                                }, 50);
+                            }
+                        }}
+                        className="bg-[#018CD1] hover:bg-[#0177b3] text-white"
+                    >
+                        Entendido
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    </>
     );
 }
 
 /**
+ * Interfaz para opciones de select
+ */
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
+/**
+ * Interfaz para usuario (Scrum Master, Responsable)
+ */
+interface UsuarioOption {
+  id: number;
+  username?: string;
+  email?: string;
+  nombre?: string;
+  apellido?: string;
+  personal?: {
+    nombre: string;
+    apellidoPaterno?: string;
+    apellidoMaterno?: string;
+  };
+}
+
+/**
  * Modal de Subproyecto (exportado para uso externo)
+ * Misma estructura que el modal interno de POIFullModal
  */
 export function SubProjectModal({
   isOpen,
   onClose,
   onSave,
   subProject,
+  scrumMasters = [],
+  responsibleOptions = [],
+  financialAreaOptions: externalFinancialAreaOptions,
+  yearOptions: externalYearOptions,
+  projectAmount = 0,
+  existingSubProjects = [],
+  pgdAnioInicio,
+  pgdAnioFin,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: SubProject) => void;
   subProject: SubProject | null;
+  scrumMasters?: UsuarioOption[];
+  responsibleOptions?: SelectOption[];
+  financialAreaOptions?: SelectOption[];
+  yearOptions?: SelectOption[];
+  projectAmount?: number;
+  existingSubProjects?: SubProject[];
+  pgdAnioInicio?: number;
+  pgdAnioFin?: number;
 }) {
   const [formData, setFormData] = React.useState<Partial<SubProject>>({});
+  const [errors, setErrors] = React.useState<{[key: string]: string}>({});
+
+  // Opciones de área financiera (usar externas o default)
+  const financialAreaOpts = externalFinancialAreaOptions || financialAreaOptions;
+
+  // Generar opciones de años basadas en el PGD o usar externas
+  const yearOpts = externalYearOptions || generateYearOptions(
+    pgdAnioInicio ?? DEFAULT_YEAR_START,
+    pgdAnioFin ?? DEFAULT_YEAR_END
+  );
+
+  // Formatear nombre de usuario
+  const formatUsuarioNombreLocal = (usuario: UsuarioOption): string => {
+    if (usuario.personal) {
+      const { nombre, apellidoPaterno, apellidoMaterno } = usuario.personal;
+      const partes = [nombre, apellidoPaterno, apellidoMaterno].filter(Boolean);
+      if (partes.length > 0) return partes.join(' ');
+    }
+    if (usuario.nombre && usuario.apellido) {
+      return `${usuario.nombre} ${usuario.apellido}`;
+    }
+    if (usuario.nombre) return usuario.nombre;
+    if (usuario.username) return usuario.username;
+    if (usuario.email) return usuario.email.split('@')[0];
+    return `Usuario #${usuario.id}`;
+  };
 
   React.useEffect(() => {
     if (isOpen) {
@@ -1001,13 +1884,51 @@ export function SubProjectModal({
           scrumMaster: '',
           years: [],
           amount: 0,
-          managementMethod: '',
+          managementMethod: 'Scrum',
+          financialArea: [],
         });
       }
+      setErrors({});
     }
   }, [subProject, isOpen]);
 
+  const validate = (): boolean => {
+    const newErrors: {[key: string]: string} = {};
+
+    if (!formData.name?.trim()) {
+      newErrors.name = 'El nombre es requerido';
+    }
+    if (!formData.description?.trim()) {
+      newErrors.description = 'La descripción es requerida';
+    }
+    if (!formData.scrumMaster) {
+      newErrors.scrumMaster = 'El Gestor/Scrum Master es requerido';
+    }
+    if (!formData.years || formData.years.length === 0) {
+      newErrors.years = 'Debe seleccionar al menos un año';
+    }
+    if (!formData.amount || formData.amount <= 0) {
+      newErrors.amount = 'El monto debe ser mayor a 0';
+    }
+
+    // Validar que el monto no exceda el disponible
+    if (formData.amount && projectAmount > 0) {
+      const otherSubProjectsTotal = existingSubProjects
+        .filter(sp => sp.id !== subProject?.id)
+        .reduce((sum, sp) => sum + (sp.amount || 0), 0);
+      const availableAmount = projectAmount - otherSubProjectsTotal;
+
+      if (formData.amount > availableAmount) {
+        newErrors.amount = `El monto no puede exceder el disponible (S/ ${availableAmount.toLocaleString('es-PE')})`;
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSave = () => {
+    if (!validate()) return;
     onSave(formData as SubProject);
     onClose();
   };
@@ -1016,60 +1937,169 @@ export function SubProjectModal({
     onClose();
   };
 
+  // Calcular monto disponible
+  const otherSubProjectsTotal = existingSubProjects
+    .filter(sp => sp.id !== subProject?.id)
+    .reduce((sum, sp) => sum + (sp.amount || 0), 0);
+  const availableAmount = projectAmount - otherSubProjectsTotal;
+
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); }}>
       <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
         <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
-          <DialogTitle>{subProject ? 'Editar' : 'Agregar'} Subproyecto</DialogTitle>
+          <DialogTitle>{subProject ? 'EDITAR' : 'REGISTRAR'} SUBPROYECTO</DialogTitle>
           <Button type="button" variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white" onClick={handleCancel}>
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+          {/* Nombre */}
           <div>
-            <label>Nombre *</label>
+            <label className="text-sm font-medium">Nombre *</label>
             <Input
+              placeholder="Ingresar nombre"
               value={formData.name || ''}
-              onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
+              onChange={(e) => {
+                setFormData(p => ({ ...p, name: e.target.value }));
+                if (errors.name) setErrors(prev => ({...prev, name: ''}));
+              }}
+              className={errors.name ? 'border-red-500' : ''}
             />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
+
+          {/* Descripción */}
           <div>
-            <label>Descripción *</label>
+            <label className="text-sm font-medium">Descripción *</label>
             <Textarea
+              placeholder="Ingresar descripción"
               value={formData.description || ''}
-              onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
+              onChange={(e) => {
+                setFormData(p => ({ ...p, description: e.target.value }));
+                if (errors.description) setErrors(prev => ({...prev, description: ''}));
+              }}
+              className={`min-h-[80px] ${errors.description ? 'border-red-500' : ''}`}
+            />
+            {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+          </div>
+
+          {/* Área Financiera */}
+          <div>
+            <label className="text-sm font-medium">Área Financiera</label>
+            <MultiSelect
+              options={(() => {
+                const existingValues = formData.financialArea || [];
+                const predefinedValues = financialAreaOpts.map(o => o.value);
+                const extraOptions = existingValues
+                  .filter(v => !predefinedValues.includes(v))
+                  .map(v => ({ label: v, value: v }));
+                return [...financialAreaOpts, ...extraOptions];
+              })()}
+              selected={formData.financialArea || []}
+              onChange={(selected) => setFormData(p => ({ ...p, financialArea: selected }))}
+              placeholder="Seleccionar área(s)"
             />
           </div>
+
+          {/* Responsable */}
           <div>
-            <label>Scrum Master *</label>
-            <Input
+            <label className="text-sm font-medium">Responsable</label>
+            <MultiSelect
+              options={responsibleOptions}
+              selected={formData.responsible || []}
+              onChange={(selected) => setFormData(p => ({ ...p, responsible: selected }))}
+              placeholder="Seleccionar responsable(s)"
+            />
+          </div>
+
+          {/* Gestor/Scrum Master */}
+          <div>
+            <label className="text-sm font-medium">Gestor/Scrum Master *</label>
+            <Select
               value={formData.scrumMaster || ''}
-              onChange={(e) => setFormData(p => ({ ...p, scrumMaster: e.target.value }))}
-            />
+              onValueChange={(value) => {
+                setFormData(p => ({ ...p, scrumMaster: value }));
+                if (errors.scrumMaster) setErrors(prev => ({...prev, scrumMaster: ''}));
+              }}
+            >
+              <SelectTrigger className={errors.scrumMaster ? 'border-red-500' : ''}>
+                <SelectValue placeholder="Seleccionar scrum master" />
+              </SelectTrigger>
+              <SelectContent>
+                {scrumMasters.map((sm) => (
+                  <SelectItem key={sm.id} value={formatUsuarioNombreLocal(sm)}>
+                    {formatUsuarioNombreLocal(sm)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
           </div>
+
+          {/* Año */}
           <div>
-            <label>Monto *</label>
+            <label className="text-sm font-medium">Año *</label>
+            <MultiSelect
+              options={yearOpts}
+              selected={formData.years || []}
+              onChange={(selected) => {
+                setFormData(p => ({ ...p, years: selected }));
+                if (errors.years) setErrors(prev => ({...prev, years: ''}));
+              }}
+              className={errors.years ? 'border-red-500' : ''}
+              placeholder="Seleccionar año(s)"
+            />
+            {errors.years && <p className="text-red-500 text-xs mt-1">{errors.years}</p>}
+          </div>
+
+          {/* Monto anual */}
+          <div>
+            <label className="text-sm font-medium">Monto anual *</label>
+            {/* Mostrar información del monto disponible */}
+            {projectAmount > 0 && (
+              <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200 mb-2">
+                <div className="flex justify-between">
+                  <span>Monto del proyecto:</span>
+                  <span className="font-semibold">S/ {projectAmount.toLocaleString('es-PE')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Asignado a subproyectos:</span>
+                  <span className="font-semibold">S/ {otherSubProjectsTotal.toLocaleString('es-PE')}</span>
+                </div>
+                <div className="flex justify-between text-green-700 font-medium border-t border-blue-300 pt-1 mt-1">
+                  <span>Disponible:</span>
+                  <span>S/ {availableAmount.toLocaleString('es-PE')}</span>
+                </div>
+              </div>
+            )}
             <Input
               type="number"
+              placeholder="Ingresar monto anual"
               value={formData.amount || ''}
-              onChange={(e) => setFormData(p => ({ ...p, amount: Number(e.target.value) }))}
+              onChange={(e) => {
+                setFormData(p => ({ ...p, amount: Number(e.target.value) }));
+                if (errors.amount) setErrors(prev => ({...prev, amount: ''}));
+              }}
+              className={errors.amount ? 'border-red-500' : ''}
+            />
+            {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+          </div>
+
+          {/* Método de Gestión */}
+          <div>
+            <label className="text-sm font-medium">Método de Gestión del proyecto</label>
+            <Input
+              value="Scrum"
+              readOnly
+              className="bg-gray-100"
             />
           </div>
-           <div>
-            <label>Año *</label>
-            <MultiSelect
-                options={yearOptions}
-                selected={formData.years || []}
-                onChange={(selected) => setFormData(p => ({...p, years: selected}))}
-                placeholder="Seleccionar año(s)"
-            />
-           </div>
         </div>
-        <DialogFooter className="px-6 pb-6">
-          <Button type="button" variant="outline" onClick={handleCancel}>Cancelar</Button>
-          <Button type="button" onClick={handleSave}>Guardar</Button>
+        <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={handleCancel} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
+          <Button type="button" onClick={handleSave} style={{backgroundColor: '#018CD1', color: 'white'}}>Guardar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -20,7 +20,8 @@ import {
  * DTO para crear un nuevo personal
  */
 export interface CreatePersonalDto {
-  codigoEmpleado: string;
+  /** Código del empleado. Si no se proporciona, se genera automáticamente (EMP-XXX) */
+  codigoEmpleado?: string;
   dni?: string;
   nombres: string;
   apellidos: string;

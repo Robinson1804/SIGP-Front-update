@@ -14,7 +14,7 @@ import type { PaginatedResponse } from '@/types';
 /**
  * Estados posibles de un sprint
  */
-export type SprintEstado = 'Planificado' | 'Activo' | 'Completado';
+export type SprintEstado = 'Por hacer' | 'En progreso' | 'Finalizado';
 
 /**
  * Interfaz de Sprint basada en el backend schema
@@ -22,20 +22,24 @@ export type SprintEstado = 'Planificado' | 'Activo' | 'Completado';
 export interface Sprint {
   id: number;
   nombre: string;
-  objetivo: string | null;
   numero: number;
   proyectoId: number;
   estado: SprintEstado;
   fechaInicio: string | null;
   fechaFin: string | null;
-  velocidadPlanificada: number | null;
-  velocidadReal: number | null;
-  totalPuntos: number | null;
-  puntosCompletados: number | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;
   createdBy: number;
+  // Campos del backend (nombres originales)
+  sprintGoal: string | null;
+  capacidadEquipo: number | null;
+  velocidadReal: number | null;
+  totalPuntos: number | null;
+  puntosCompletados: number | null;
+  // Aliases para compatibilidad con el frontend
+  objetivo?: string | null;
+  velocidadPlanificada?: number | null;
 }
 
 /**
@@ -43,11 +47,12 @@ export interface Sprint {
  */
 export interface CreateSprintData {
   nombre: string;
-  objetivo?: string;
+  sprintGoal?: string;
   proyectoId: number;
   fechaInicio?: string;
   fechaFin?: string;
-  velocidadPlanificada?: number;
+  capacidadEquipo?: number;
+  estado?: SprintEstado;
 }
 
 /**
@@ -173,7 +178,7 @@ export async function deleteSprint(id: number | string): Promise<void> {
 }
 
 /**
- * Iniciar un sprint (cambiar estado a 'Activo')
+ * Iniciar un sprint (cambiar estado a 'En progreso')
  */
 export async function iniciarSprint(id: number | string): Promise<Sprint> {
   const response = await apiClient.patch<Sprint>(
@@ -183,7 +188,7 @@ export async function iniciarSprint(id: number | string): Promise<Sprint> {
 }
 
 /**
- * Cerrar un sprint (cambiar estado a 'Completado')
+ * Cerrar un sprint (cambiar estado a 'Finalizado')
  */
 export async function cerrarSprint(id: number | string): Promise<Sprint> {
   const response = await apiClient.patch<Sprint>(

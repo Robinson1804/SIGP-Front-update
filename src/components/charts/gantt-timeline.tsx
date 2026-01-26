@@ -40,8 +40,10 @@ const COLORS = {
 
 const getSprintColor = (estado: string) => {
   switch (estado) {
+    case 'En progreso':
     case 'Activo':
       return COLORS.activo;
+    case 'Finalizado':
     case 'Completado':
       return COLORS.completado;
     default:
@@ -68,12 +70,12 @@ export function GanttTimeline({
     if (!data || data.length === 0) return [];
 
     const minDate = rangoInicio
-      ? new Date(rangoInicio).getTime()
-      : Math.min(...data.map((s) => new Date(s.fechaInicio).getTime()));
+      ? new Date(rangoInicio + 'T00:00:00').getTime()
+      : Math.min(...data.map((s) => new Date(s.fechaInicio + 'T00:00:00').getTime()));
 
     return data.map((sprint) => {
-      const inicio = new Date(sprint.fechaInicio).getTime();
-      const fin = new Date(sprint.fechaFin).getTime();
+      const inicio = new Date(sprint.fechaInicio + 'T00:00:00').getTime();
+      const fin = new Date(sprint.fechaFin + 'T00:00:00').getTime();
       const offset = (inicio - minDate) / (1000 * 60 * 60 * 24); // days from start
       const duration = (fin - inicio) / (1000 * 60 * 60 * 24); // duration in days
 
@@ -91,7 +93,7 @@ export function GanttTimeline({
   // Calculate today's position
   const todayOffset = useMemo(() => {
     if (!rangoInicio) return null;
-    const minDate = new Date(rangoInicio).getTime();
+    const minDate = new Date(rangoInicio + 'T00:00:00').getTime();
     const today = new Date().getTime();
     return (today - minDate) / (1000 * 60 * 60 * 24);
   }, [rangoInicio]);
@@ -162,11 +164,11 @@ export function GanttTimeline({
           <div className="space-y-1 text-xs">
             <p>
               <span className="text-gray-500">Inicio:</span>{' '}
-              {new Date(sprint.fechaInicio).toLocaleDateString('es-PE')}
+              {new Date(sprint.fechaInicio + 'T00:00:00').toLocaleDateString('es-PE')}
             </p>
             <p>
               <span className="text-gray-500">Fin:</span>{' '}
-              {new Date(sprint.fechaFin).toLocaleDateString('es-PE')}
+              {new Date(sprint.fechaFin + 'T00:00:00').toLocaleDateString('es-PE')}
             </p>
             <p>
               <span className="text-gray-500">Progreso:</span> {sprint.progreso}%
@@ -179,9 +181,9 @@ export function GanttTimeline({
           <Badge
             className={cn(
               'mt-2',
-              sprint.estado === 'Activo' && 'bg-blue-600',
-              sprint.estado === 'Completado' && 'bg-green-600',
-              sprint.estado === 'Planificado' && 'bg-gray-500'
+              (sprint.estado === 'En progreso' || sprint.estado === 'Activo') && 'bg-blue-600',
+              (sprint.estado === 'Finalizado' || sprint.estado === 'Completado') && 'bg-green-600',
+              (sprint.estado === 'Por hacer' || sprint.estado === 'Planificado') && 'bg-gray-500'
             )}
           >
             {sprint.estado}
@@ -235,7 +237,7 @@ export function GanttTimeline({
               domain={[0, maxDays]}
               tickFormatter={(value) => {
                 if (!rangoInicio) return '';
-                const date = new Date(rangoInicio);
+                const date = new Date(rangoInicio + 'T00:00:00');
                 date.setDate(date.getDate() + value);
                 return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
               }}
@@ -293,10 +295,10 @@ export function GanttTimeline({
             Total: <strong>{data.length} sprints</strong>
           </span>
           <span>
-            Activos: <strong>{data.filter((s) => s.estado === 'Activo').length}</strong>
+            En progreso: <strong>{data.filter((s) => s.estado === 'En progreso' || s.estado === 'Activo').length}</strong>
           </span>
           <span>
-            Completados: <strong>{data.filter((s) => s.estado === 'Completado').length}</strong>
+            Finalizados: <strong>{data.filter((s) => s.estado === 'Finalizado' || s.estado === 'Completado').length}</strong>
           </span>
         </div>
       </CardContent>

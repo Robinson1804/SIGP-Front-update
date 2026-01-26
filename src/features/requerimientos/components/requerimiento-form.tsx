@@ -46,7 +46,7 @@ import {
 import {
   createRequerimiento,
   updateRequerimiento,
-  countRequerimientosByTipo,
+  countRequerimientosByProyecto,
 } from '../services';
 
 // Schema de validación
@@ -94,45 +94,46 @@ export function RequerimientoForm({
     },
   });
 
-  // Cargar datos del requerimiento al editar
-  useEffect(() => {
-    if (requerimiento) {
-      form.reset({
-        tipo: requerimiento.tipo,
-        codigo: requerimiento.codigo,
-        nombre: requerimiento.nombre,
-        descripcion: requerimiento.descripcion || '',
-        prioridad: requerimiento.prioridad,
-        observaciones: requerimiento.observaciones || '',
-      });
-      setCriterios(requerimiento.criteriosAceptacion || []);
-    } else {
-      form.reset({
-        tipo: 'Funcional',
-        codigo: '',
-        nombre: '',
-        descripcion: '',
-        prioridad: 'Media',
-        observaciones: '',
-      });
-      setCriterios([]);
-    }
-  }, [requerimiento, form]);
-
-  // Generar código automático al cambiar tipo (solo al crear)
-  const handleTipoChange = async (tipo: RequerimientoTipo) => {
-    form.setValue('tipo', tipo);
-
-    if (!isEditing) {
-      try {
-        const count = await countRequerimientosByTipo(proyectoId, tipo);
-        const codigo = generateCodigo(tipo, count);
-        form.setValue('codigo', codigo);
-      } catch (error) {
-        console.error('Error generando código:', error);
-      }
+  // Generar código inicial para nuevo requerimiento (REQ-001, REQ-002, etc.)
+  const generateInitialCodigo = async () => {
+    try {
+      const count = await countRequerimientosByProyecto(proyectoId);
+      const codigo = generateCodigo(count);
+      form.setValue('codigo', codigo);
+    } catch (error) {
+      console.error('Error generando código:', error);
     }
   };
+
+  // Cargar datos del requerimiento al editar o generar código al crear
+  useEffect(() => {
+    if (isOpen) {
+      if (requerimiento) {
+        form.reset({
+          tipo: requerimiento.tipo,
+          codigo: requerimiento.codigo,
+          nombre: requerimiento.nombre,
+          descripcion: requerimiento.descripcion || '',
+          prioridad: requerimiento.prioridad,
+          observaciones: requerimiento.observaciones || '',
+        });
+        setCriterios(requerimiento.criteriosAceptacion || []);
+      } else {
+        // Al crear, resetear y generar código automático
+        form.reset({
+          tipo: 'Funcional',
+          codigo: '',
+          nombre: '',
+          descripcion: '',
+          prioridad: 'Media',
+          observaciones: '',
+        });
+        setCriterios([]);
+        // Generar código secuencial (REQ-001, REQ-002, etc.)
+        generateInitialCodigo();
+      }
+    }
+  }, [isOpen, requerimiento, form, proyectoId]);
 
   // Agregar criterio de aceptación
   const addCriterio = () => {
@@ -216,7 +217,7 @@ export function RequerimientoForm({
                   <FormLabel>Tipo de Requerimiento *</FormLabel>
                   <FormControl>
                     <RadioGroup
-                      onValueChange={(value) => handleTipoChange(value as RequerimientoTipo)}
+                      onValueChange={field.onChange}
                       value={field.value}
                       className="flex flex-wrap gap-4"
                       disabled={isEditing}
@@ -248,8 +249,9 @@ export function RequerimientoForm({
                       <Input
                         placeholder="RF-001"
                         {...field}
-                        disabled={isEditing}
-                        className="font-mono"
+                        disabled
+                        readOnly
+                        className="font-mono bg-muted"
                       />
                     </FormControl>
                     <FormDescription>Autogenerado</FormDescription>

@@ -200,6 +200,14 @@ export function ActaDailyForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        {/* Leyenda de campos requeridos */}
+        <div className="bg-muted/50 border rounded-lg p-3 text-sm">
+          <p className="text-muted-foreground">
+            <span className="text-red-500 font-medium">*</span> Los campos marcados con asterisco son obligatorios.
+            Debe agregar al menos un participante con las 3 preguntas Scrum completadas.
+          </p>
+        </div>
+
         {/* Datos basicos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
@@ -207,7 +215,9 @@ export function ActaDailyForm({
             name="nombre"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nombre del Acta</FormLabel>
+                <FormLabel>
+                  Nombre del Acta <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input {...field} placeholder="Daily Meeting - Sprint X" />
                 </FormControl>
@@ -221,7 +231,9 @@ export function ActaDailyForm({
             name="fecha"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Fecha</FormLabel>
+                <FormLabel>
+                  Fecha <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
@@ -319,7 +331,7 @@ export function ActaDailyForm({
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="h-5 w-5" />
-                Participantes del Daily
+                Participantes del Daily <span className="text-red-500">*</span>
               </CardTitle>
               <div className="flex items-center gap-2">
                 {equipo.length > 0 && (
@@ -363,9 +375,15 @@ export function ActaDailyForm({
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[150px]">Participante</TableHead>
-                      <TableHead>¿Que hiciste ayer?</TableHead>
-                      <TableHead>¿Que haras hoy?</TableHead>
+                      <TableHead className="w-[150px]">
+                        Participante <span className="text-red-500">*</span>
+                      </TableHead>
+                      <TableHead>
+                        ¿Que hiciste ayer? <span className="text-red-500">*</span>
+                      </TableHead>
+                      <TableHead>
+                        ¿Que haras hoy? <span className="text-red-500">*</span>
+                      </TableHead>
                       <TableHead>¿Tienes impedimentos?</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>

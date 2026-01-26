@@ -21,6 +21,12 @@ import {
   Image as ImageIcon,
   Video,
   FileAudio,
+  History,
+  Activity,
+  ArrowRight,
+  Edit,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import {
   Dialog,
@@ -48,13 +54,14 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
+import { cn, parseLocalDate } from '@/lib/utils';
 import {
   type Tarea,
   type TareaEstado,
   type TareaPrioridad,
   type TareaComentario,
   type TareaEvidencia,
+  type TareaHistorial,
   type CreateEvidenciaData,
   getTareaById,
   updateTarea,
@@ -64,6 +71,7 @@ import {
   getTareaEvidencias,
   agregarEvidencia,
   eliminarEvidencia,
+  getTareaHistorial,
 } from '@/features/proyectos/services/tareas.service';
 import {
   uploadFileDirect,
@@ -131,6 +139,10 @@ export function TareaDetailModal({
   // Estados de evidencias
   const [evidencias, setEvidencias] = useState<TareaEvidencia[]>([]);
   const [isLoadingEvidencias, setIsLoadingEvidencias] = useState(false);
+
+  // Estados de historial
+  const [historial, setHistorial] = useState<TareaHistorial[]>([]);
+  const [isLoadingHistorial, setIsLoadingHistorial] = useState(false);
   const [showEvidenciaForm, setShowEvidenciaForm] = useState(false);
   const [evidenciaMode, setEvidenciaMode] = useState<'archivo' | 'enlace'>('archivo');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -177,14 +189,16 @@ export function TareaDetailModal({
         setHistoria(historiaData);
       }
 
-      // Cargar comentarios y evidencias
-      const [comentariosData, evidenciasData] = await Promise.all([
+      // Cargar comentarios, evidencias e historial
+      const [comentariosData, evidenciasData, historialData] = await Promise.all([
         getTareaComentarios(tareaId).catch(() => []),
         getTareaEvidencias(tareaId).catch(() => []),
+        getTareaHistorial(tareaId).catch(() => []),
       ]);
 
       setComentarios(comentariosData || []);
       setEvidencias(evidenciasData || []);
+      setHistorial(historialData || []);
 
     } catch (error) {
       console.error('Error loading tarea details:', error);
@@ -511,9 +525,11 @@ export function TareaDetailModal({
   };
 
   // Formatear fecha
-  const formatDate = (dateString: string | null) => {
+  const formatTareaDate = (dateString: string | null) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('es-PE', {
+    const date = parseLocalDate(dateString);
+    if (!date) return '-';
+    return date.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
@@ -596,18 +612,25 @@ export function TareaDetailModal({
 
                 <Separator className="my-4" />
 
-                {/* Tabs: Comentarios y Evidencias */}
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="grid w-full grid-cols-2 h-10 mb-4">
-                    <TabsTrigger value="comentarios" className="gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Comentarios ({comentarios.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="evidencias" className="gap-2">
-                      <Upload className="h-4 w-4" />
-                      Evidencias ({evidencias.length})
-                    </TabsTrigger>
-                  </TabsList>
+                {/* Sección Actividad */}
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-black mb-3 flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    Actividad
+                  </h3>
+
+                  {/* Tabs: Comentarios e Historial */}
+                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                    <TabsList className="grid w-full grid-cols-2 h-10 mb-4">
+                      <TabsTrigger value="comentarios" className="gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Comentarios ({comentarios.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="historial" className="gap-2">
+                        <History className="h-4 w-4" />
+                        Historial ({historial.length})
+                      </TabsTrigger>
+                    </TabsList>
 
                   {/* Tab Comentarios */}
                   <TabsContent value="comentarios" className="mt-0">
@@ -634,7 +657,7 @@ export function TareaDetailModal({
                                   {comentario.usuario?.nombre || 'Usuario'}
                                 </span>
                                 <span className="text-xs text-gray-500">
-                                  {formatDate(comentario.createdAt)}
+                                  {formatTareaDate(comentario.createdAt)}
                                 </span>
                               </div>
                               <p className="text-sm text-gray-700">
@@ -669,218 +692,84 @@ export function TareaDetailModal({
                     </div>
                   </TabsContent>
 
-                  {/* Tab Evidencias */}
-                  <TabsContent value="evidencias" className="mt-0">
-                    {/* Lista de evidencias */}
-                    <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto">
-                      {evidencias.length === 0 ? (
-                        <p className="text-sm text-gray-500 text-center py-4">
-                          No hay evidencias registradas para esta tarea.
-                        </p>
-                      ) : (
-                        evidencias.map((evidencia) => (
-                          <div
-                            key={evidencia.id}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded bg-[#018CD1]/10 flex items-center justify-center">
-                                {evidencia.tipo === 'enlace' ? (
-                                  <LinkIcon className="h-4 w-4 text-[#018CD1]" />
-                                ) : (
-                                  <FileText className="h-4 w-4 text-[#018CD1]" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                  {evidencia.nombre}
-                                </p>
-                                {evidencia.descripcion && (
-                                  <p className="text-xs text-gray-500">
-                                    {evidencia.descripcion}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {/* Botón Ver/Preview */}
-                              <button
-                                onClick={() => handlePreviewEvidencia(evidencia)}
-                                className="p-1.5 hover:bg-blue-100 rounded text-blue-600 transition-colors"
-                                title="Ver evidencia"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              {/* Botón Descargar */}
-                              <button
-                                onClick={() => handleDownloadEvidencia(evidencia)}
-                                className="p-1.5 hover:bg-gray-200 rounded text-gray-600 transition-colors"
-                                title="Descargar"
-                              >
-                                <Download className="h-4 w-4" />
-                              </button>
-                              {/* Botón Eliminar */}
-                              <button
-                                onClick={() => handleEliminarEvidencia(evidencia.id)}
-                                className="p-1.5 hover:bg-red-100 rounded text-red-500 transition-colors"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    {/* Formulario nueva evidencia */}
-                    {showEvidenciaForm ? (
-                      <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
-                        <h4 className="text-sm font-medium text-gray-700">Nueva Evidencia</h4>
-
-                        {/* Selector de modo */}
-                        <div className="flex gap-2 p-1 bg-gray-200 rounded-lg">
-                          <button
-                            type="button"
-                            onClick={() => setEvidenciaMode('archivo')}
-                            className={cn(
-                              'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors',
-                              evidenciaMode === 'archivo'
-                                ? 'bg-white text-[#018CD1] shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
-                            )}
-                          >
-                            <Upload className="h-4 w-4" />
-                            Subir archivo
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEvidenciaMode('enlace')}
-                            className={cn(
-                              'flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-md text-sm font-medium transition-colors',
-                              evidenciaMode === 'enlace'
-                                ? 'bg-white text-[#018CD1] shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
-                            )}
-                          >
-                            <LinkIcon className="h-4 w-4" />
-                            Agregar enlace
-                          </button>
-                        </div>
-
-                        {evidenciaMode === 'archivo' ? (
-                          <>
-                            {/* Input de archivo */}
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#018CD1] transition-colors">
-                              <input
-                                type="file"
-                                id="file-upload"
-                                className="hidden"
-                                onChange={handleFileSelect}
-                                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
-                              />
-                              <label
-                                htmlFor="file-upload"
-                                className="cursor-pointer flex flex-col items-center gap-2"
-                              >
-                                <Upload className="h-8 w-8 text-gray-400" />
-                                <span className="text-sm text-gray-600">
-                                  {selectedFile
-                                    ? selectedFile.name
-                                    : 'Haz clic para seleccionar archivo'}
-                                </span>
-                                {selectedFile && (
-                                  <span className="text-xs text-gray-500">
-                                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                                  </span>
-                                )}
-                              </label>
-                            </div>
-                            {selectedFile && (
-                              <div className="flex items-center gap-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-                                <FileText className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm text-blue-800 flex-1 truncate">
-                                  {selectedFile.name}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedFile(null)}
-                                  className="p-1 hover:bg-blue-100 rounded"
-                                >
-                                  <X className="h-4 w-4 text-blue-600" />
-                                </button>
-                              </div>
-                            )}
-                          </>
+                  {/* Tab Historial */}
+                    <TabsContent value="historial" className="mt-0">
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                        {historial.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-4">
+                            No hay cambios registrados para esta tarea.
+                          </p>
                         ) : (
-                          <>
-                            {/* Formulario de enlace */}
-                            <Input
-                              placeholder="Nombre de la evidencia"
-                              value={nuevaEvidencia.nombre}
-                              onChange={(e) =>
-                                setNuevaEvidencia((prev) => ({ ...prev, nombre: e.target.value }))
-                              }
-                            />
-                            <Input
-                              placeholder="URL del enlace (https://...)"
-                              value={nuevaEvidencia.url}
-                              onChange={(e) =>
-                                setNuevaEvidencia((prev) => ({ ...prev, url: e.target.value }))
-                              }
-                            />
-                          </>
+                          historial.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex gap-3 p-3 bg-gray-50 rounded-lg border"
+                            >
+                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-[#018CD1]/10 flex items-center justify-center">
+                                {item.accion === 'CREACION' && <Plus className="h-4 w-4 text-green-600" />}
+                                {item.accion === 'ACTUALIZACION' && <Edit className="h-4 w-4 text-blue-600" />}
+                                {item.accion === 'CAMBIO_ESTADO' && <ArrowRight className="h-4 w-4 text-amber-600" />}
+                                {item.accion === 'ASIGNACION' && <User className="h-4 w-4 text-purple-600" />}
+                                {item.accion === 'REASIGNACION' && <User className="h-4 w-4 text-purple-600" />}
+                                {item.accion === 'ELIMINACION' && <Minus className="h-4 w-4 text-red-600" />}
+                                {item.accion === 'VALIDACION' && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                                {!['CREACION', 'ACTUALIZACION', 'CAMBIO_ESTADO', 'ASIGNACION', 'REASIGNACION', 'ELIMINACION', 'VALIDACION'].includes(item.accion) && (
+                                  <History className="h-4 w-4 text-gray-600" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {item.usuario?.nombre || 'Sistema'}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {formatTareaDate(item.createdAt)}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-700">
+                                  {item.accion === 'CREACION' && 'Creó la tarea'}
+                                  {item.accion === 'ACTUALIZACION' && item.campoModificado && (
+                                    <>
+                                      Actualizó <span className="font-medium">{item.campoModificado}</span>
+                                      {item.valorAnterior && item.valorNuevo && (
+                                        <>
+                                          {' de '}
+                                          <span className="text-gray-500 line-through">
+                                            {JSON.parse(item.valorAnterior)}
+                                          </span>
+                                          {' a '}
+                                          <span className="font-medium text-[#018CD1]">
+                                            {JSON.parse(item.valorNuevo)}
+                                          </span>
+                                        </>
+                                      )}
+                                    </>
+                                  )}
+                                  {item.accion === 'CAMBIO_ESTADO' && (
+                                    <>
+                                      Cambió el estado de{' '}
+                                      <span className="text-gray-500">
+                                        {item.valorAnterior ? JSON.parse(item.valorAnterior) : ''}
+                                      </span>
+                                      {' → '}
+                                      <span className="font-medium text-[#018CD1]">
+                                        {item.valorNuevo ? JSON.parse(item.valorNuevo) : ''}
+                                      </span>
+                                    </>
+                                  )}
+                                  {item.accion === 'ASIGNACION' && 'Asignó la tarea'}
+                                  {item.accion === 'REASIGNACION' && 'Reasignó la tarea'}
+                                  {item.accion === 'ELIMINACION' && 'Eliminó la tarea'}
+                                  {item.accion === 'VALIDACION' && 'Validó la tarea'}
+                                </p>
+                              </div>
+                            </div>
+                          ))
                         )}
-
-                        {/* Descripción opcional */}
-                        <Textarea
-                          placeholder="Descripción (opcional)"
-                          value={nuevaEvidencia.descripcion}
-                          onChange={(e) =>
-                            setNuevaEvidencia((prev) => ({ ...prev, descripcion: e.target.value }))
-                          }
-                          className="resize-none"
-                          rows={2}
-                        />
-
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setShowEvidenciaForm(false);
-                              setSelectedFile(null);
-                              setNuevaEvidencia({ nombre: '', descripcion: '', url: '', tipo: 'enlace' });
-                            }}
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleAgregarEvidencia}
-                            disabled={
-                              isSubmittingEvidencia ||
-                              (evidenciaMode === 'archivo' ? !selectedFile : (!nuevaEvidencia.nombre || !nuevaEvidencia.url))
-                            }
-                            className="bg-[#018CD1] hover:bg-[#0179b5]"
-                          >
-                            {isSubmittingEvidencia && <Loader2 className="h-4 w-4 animate-spin mr-1" />}
-                            {evidenciaMode === 'archivo' ? 'Subir' : 'Agregar'}
-                          </Button>
-                        </div>
                       </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        className="w-full border-dashed border-[#018CD1] text-[#018CD1] hover:bg-[#018CD1]/5"
-                        onClick={() => setShowEvidenciaForm(true)}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Agregar Evidencia
-                      </Button>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                    </TabsContent>
+                  </Tabs>
+                </div>
               </ScrollArea>
             </div>
 
@@ -1005,7 +894,7 @@ export function TareaDetailModal({
                     Fecha Inicio
                   </label>
                   <p className="text-sm text-gray-900 bg-white p-2 rounded border">
-                    {formatDate(tarea.fechaInicio)}
+                    {formatTareaDate(tarea.fechaInicio)}
                   </p>
                 </div>
                 <div>
@@ -1014,7 +903,7 @@ export function TareaDetailModal({
                     Fecha Fin
                   </label>
                   <p className="text-sm text-gray-900 bg-white p-2 rounded border">
-                    {formatDate(tarea.fechaFin)}
+                    {formatTareaDate(tarea.fechaFin)}
                   </p>
                 </div>
                 {tarea.fechaLimite && (
@@ -1024,7 +913,7 @@ export function TareaDetailModal({
                       Fecha Límite
                     </label>
                     <p className="text-sm text-gray-900 bg-white p-2 rounded border">
-                      {formatDate(tarea.fechaLimite)}
+                      {formatTareaDate(tarea.fechaLimite)}
                     </p>
                   </div>
                 )}
@@ -1056,8 +945,8 @@ export function TareaDetailModal({
 
               {/* Metadatos */}
               <div className="space-y-2 text-xs text-gray-500">
-                <p>Creado: {formatDate(tarea.createdAt)}</p>
-                <p>Actualizado: {formatDate(tarea.updatedAt)}</p>
+                <p>Creado: {formatTareaDate(tarea.createdAt)}</p>
+                <p>Actualizado: {formatTareaDate(tarea.updatedAt)}</p>
               </div>
             </div>
           </div>

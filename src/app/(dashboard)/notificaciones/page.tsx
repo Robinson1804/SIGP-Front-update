@@ -2,13 +2,20 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellRing, Folder, Loader2, RefreshCw } from 'lucide-react';
+import { BellRing, Folder, Loader2, RefreshCw, MessageSquare } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { MODULES, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
@@ -23,7 +30,7 @@ import {
 } from '@/lib/services/notificaciones.service';
 
 type NotificationStatus = 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado' | 'En revisión';
-type NotificationType = 'project' | 'sprint' | 'delay' | 'hu_revision' | 'hu_validated' | 'hu_rejected' | 'sistema';
+type NotificationType = 'project' | 'sprint' | 'delay' | 'hu_revision' | 'hu_validated' | 'hu_rejected' | 'validacion' | 'aprobacion' | 'sistema';
 
 // Local notification type that maps from backend
 type LocalNotification = {
@@ -32,12 +39,15 @@ type LocalNotification = {
   title: string;
   description?: string;
   projectName: string;
-  projectType: 'Proyecto' | 'Actividad';
+  projectCode?: string; // Código actual del proyecto
+  projectType: 'Proyecto' | 'Actividad' | 'Cronograma';
   status?: NotificationStatus;
   timestamp: Date;
   read: boolean;
   projectId: string;
   huId?: string;
+  urlAccion?: string; // URL para navegación directa
+  observacion?: string; // Observación/comentario de PMO o PATROCINADOR
 };
 
 const statusStyles: { [key: string]: { bg: string, text: string } } = {
@@ -49,27 +59,76 @@ const statusStyles: { [key: string]: { bg: string, text: string } } = {
 };
 
 // Map backend notification to local format
-function mapBackendNotification(n: Notificacion): LocalNotification {
+function mapBackendNotification(n: any): LocalNotification {
   let type: NotificationType = 'sistema';
-  if (n.tipo === 'proyecto' || n.tipo === 'tarea') type = 'project';
-  else if (n.tipo === 'sprint') type = 'sprint';
-  else if (n.tipo === 'retraso') type = 'delay';
-  else if (n.tipo === 'hu_revision') type = 'hu_revision';
-  else if (n.tipo === 'hu_validated') type = 'hu_validated';
-  else if (n.tipo === 'hu_rejected') type = 'hu_rejected';
+  const tipoLower = n.tipo?.toLowerCase() || '';
+
+  if (tipoLower === 'proyectos' || tipoLower === 'proyecto' || tipoLower === 'tareas' || tipoLower === 'tarea') {
+    type = 'project';
+  } else if (tipoLower === 'sprints' || tipoLower === 'sprint') {
+    type = 'sprint';
+  } else if (tipoLower === 'retrasos' || tipoLower === 'retraso') {
+    type = 'delay';
+  } else if (tipoLower === 'validaciones' || tipoLower === 'validacion') {
+    type = 'validacion';
+  } else if (tipoLower === 'aprobaciones' || tipoLower === 'aprobacion') {
+    type = 'aprobacion';
+  } else if (n.tipo === 'hu_revision') {
+    type = 'hu_revision';
+  } else if (n.tipo === 'hu_validated') {
+    type = 'hu_validated';
+  } else if (n.tipo === 'hu_rejected') {
+    type = 'hu_rejected';
+  }
+
+  // Determinar el tipo de entidad para mostrar
+  let projectType: 'Proyecto' | 'Actividad' | 'Cronograma' = 'Proyecto';
+  if (n.entidadTipo === 'actividad' || n.entidadTipo === 'Actividad') {
+    projectType = 'Actividad';
+  } else if (n.entidadTipo === 'Cronograma' || n.entidadTipo === 'cronograma') {
+    projectType = 'Cronograma';
+  }
+
+  // Construir título con código actual del proyecto si está disponible
+  let title = n.titulo;
+  const projectCode = n.proyectoCodigo;
+  const projectName = n.proyectoNombre || n.entidadNombre;
+
+  // Si tenemos datos actuales del proyecto, actualizar el título dinámicamente
+  if (projectCode && projectName) {
+    // Detectar tipo de notificación para reconstruir título con datos actuales
+    if (n.titulo?.includes('Nuevo proyecto asignado') || n.titulo?.includes('Asignado como')) {
+      if (n.titulo.includes('Scrum Master')) {
+        title = `Asignado como Scrum Master: ${projectCode}`;
+      } else if (n.titulo.includes('Coordinador')) {
+        title = `Asignado como Coordinador: ${projectCode}`;
+      } else {
+        title = `Nuevo proyecto asignado: ${projectCode}`;
+      }
+    } else if (n.titulo?.includes('Cronograma aprobado')) {
+      title = `Cronograma aprobado: ${projectName}`;
+    } else if (n.titulo?.includes('Cronograma rechazado')) {
+      title = `Cronograma rechazado: ${projectName}`;
+    } else if (n.titulo?.includes('Cronograma pendiente')) {
+      title = `Cronograma pendiente de aprobación: ${projectName}`;
+    }
+  }
 
   return {
     id: n.id.toString(),
     type,
-    title: n.titulo,
-    description: n.mensaje,
-    projectName: n.entidadNombre || 'Sin proyecto',
-    projectType: n.entidadTipo === 'actividad' ? 'Actividad' : 'Proyecto',
+    title,
+    description: n.descripcion || n.mensaje,
+    projectName: projectName || 'Sin proyecto',
+    projectCode,
+    projectType,
     status: n.metadata?.estado as NotificationStatus,
     timestamp: new Date(n.createdAt),
     read: n.leida,
-    projectId: n.entidadId?.toString() || '',
+    projectId: n.proyectoId?.toString() || n.entidadId?.toString() || '',
     huId: n.metadata?.huId?.toString(),
+    urlAccion: n.urlAccion,
+    observacion: n.observacion, // Observación/comentario de PMO o PATROCINADOR
   };
 }
 
@@ -93,12 +152,21 @@ const TimeAgo = ({ date }: { date: Date }) => {
 
 const NotificationCard = ({
   notification,
-  onClick
+  onClick,
+  onViewObservacion,
 }: {
   notification: LocalNotification,
-  onClick: (notification: LocalNotification) => void
+  onClick: (notification: LocalNotification) => void,
+  onViewObservacion?: (notification: LocalNotification) => void,
 }) => {
   const isUnread = !notification.read;
+
+  const handleViewObservacion = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar que se propague el click al card
+    if (onViewObservacion) {
+      onViewObservacion(notification);
+    }
+  };
 
   return (
     <div
@@ -132,6 +200,18 @@ const NotificationCard = ({
             {notification.projectType}: {notification.projectName}
           </Badge>
         )}
+        {/* Botón Ver Observaciones cuando existe observación */}
+        {notification.observacion && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-fit mt-1 text-xs"
+            onClick={handleViewObservacion}
+          >
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Ver Observaciones
+          </Button>
+        )}
       </div>
 
       <div className="shrink-0 ml-auto self-start">
@@ -146,9 +226,15 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<LocalNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewingObservacion, setViewingObservacion] = useState<LocalNotification | null>(null);
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Handler para ver observaciones
+  const handleViewObservacion = (notification: LocalNotification) => {
+    setViewingObservacion(notification);
+  };
 
   // Load notifications from backend
   const loadNotifications = useCallback(async () => {
@@ -190,7 +276,17 @@ export default function NotificationsPage() {
     }
 
     // Navigate based on notification type
-    if (clickedNotification.type === 'hu_revision' || clickedNotification.type === 'hu_validated' || clickedNotification.type === 'hu_rejected') {
+    // For validacion/aprobacion notifications, use urlAccion to navigate directly
+    if ((clickedNotification.type === 'validacion' || clickedNotification.type === 'aprobacion') && clickedNotification.urlAccion) {
+      // Transform old URL format to new format if needed
+      // Old: /poi/proyectos/58/cronograma -> New: /poi/proyecto/detalles?id=58&tab=Cronograma
+      let targetUrl = clickedNotification.urlAccion;
+      const oldUrlMatch = targetUrl.match(/^\/poi\/proyectos\/(\d+)\/cronograma$/);
+      if (oldUrlMatch) {
+        targetUrl = `/poi/proyecto/detalles?id=${oldUrlMatch[1]}&tab=Cronograma`;
+      }
+      router.push(targetUrl);
+    } else if (clickedNotification.type === 'hu_revision' || clickedNotification.type === 'hu_validated' || clickedNotification.type === 'hu_rejected') {
       const backlogRoute = clickedNotification.projectType === 'Proyecto'
         ? paths.poi.proyecto.backlog.base
         : paths.poi.actividad.lista;
@@ -200,9 +296,13 @@ export default function NotificationsPage() {
         ? paths.poi.proyecto.backlog.base
         : paths.poi.actividad.lista;
       router.push(`${backlogRoute}?tab=Backlog`);
+    } else if (clickedNotification.type === 'project' && clickedNotification.urlAccion) {
+      // Usar urlAccion directamente para notificaciones de proyectos
+      router.push(clickedNotification.urlAccion);
     } else if (clickedNotification.projectId) {
+      // Fallback: usar la ruta del módulo POI
       const route = clickedNotification.projectType === 'Proyecto'
-        ? paths.poi.proyectos.detalles(clickedNotification.projectId)
+        ? `/poi/proyecto/detalles?id=${clickedNotification.projectId}`
         : paths.poi.actividad.byId(clickedNotification.projectId);
       router.push(route);
     }
@@ -223,13 +323,19 @@ export default function NotificationsPage() {
     { name: 'Todos', type: 'all' },
     { name: 'Proyectos', type: 'project' },
     { name: 'Sprints', type: 'sprint' },
-    { name: 'Validaciones', type: ['hu_revision', 'hu_validated', 'hu_rejected'] },
+    { name: 'Validaciones', type: ['validacion', 'hu_revision', 'hu_validated', 'hu_rejected'] }, // Solicitudes pendientes de validar
+    { name: 'Aprobaciones', type: 'aprobacion' }, // Resultados de aprobación/rechazo
     { name: 'Retrasos', type: 'delay' },
   ];
 
-  // Filter tabs based on role
-  const TABS = user?.role === ROLES.PMO
-    ? ALL_TABS.filter(tab => tab.name !== 'Validaciones')
+  // Filter tabs based on role:
+  // - ADMIN: No ve Validaciones ni Aprobaciones (solo maneja RRHH)
+  // - PMO/PATROCINADOR: Ven Validaciones (solicitudes para aprobar)
+  // - SCRUM_MASTER: Ve Aprobaciones (resultados de aprobación/rechazo)
+  // - Todos los demás roles pueden ver ambos tabs
+  const isAdmin = user?.role === ROLES.ADMIN;
+  const TABS = isAdmin
+    ? ALL_TABS.filter(tab => !['Validaciones', 'Aprobaciones'].includes(tab.name))
     : ALL_TABS;
 
   const currentTabType = TABS.find(t => t.name === activeTab)?.type;
@@ -317,6 +423,7 @@ export default function NotificationsPage() {
                   key={notification.id}
                   notification={notification}
                   onClick={handleNotificationClick}
+                  onViewObservacion={handleViewObservacion}
                 />
               ))
             ) : (
@@ -327,6 +434,28 @@ export default function NotificationsPage() {
           </div>
         </div>
       </AppLayout>
+
+      {/* Dialog para ver observaciones */}
+      <Dialog open={!!viewingObservacion} onOpenChange={(open) => !open && setViewingObservacion(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-blue-600" />
+              Observaciones
+            </DialogTitle>
+            <DialogDescription>
+              {viewingObservacion?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {viewingObservacion?.observacion || 'Sin observaciones'}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </ProtectedRoute>
   );
 }

@@ -80,9 +80,9 @@ export function DivisionTable({
     return matchesSearch && matchesEstado;
   });
 
-  const getJefeNombre = (division: Division): string => {
-    if (!division.jefe) return '-';
-    return getNombreCompleto(division.jefe);
+  const getCoordinadorNombre = (division: Division): string => {
+    if (!division.coordinador) return '-';
+    return getNombreCompleto(division.coordinador);
   };
 
   const getDivisionPadreNombre = (division: Division): string => {
@@ -121,7 +121,7 @@ export function DivisionTable({
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="activo">Activo</SelectItem>
               <SelectItem value="inactivo">Inactivo</SelectItem>
@@ -137,7 +137,7 @@ export function DivisionTable({
                 <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Descripción</TableHead>
-                <TableHead>Jefe</TableHead>
+                <TableHead>Coordinador</TableHead>
                 <TableHead>División Padre</TableHead>
                 <TableHead className="text-center">Personal</TableHead>
                 <TableHead>Estado</TableHead>
@@ -173,7 +173,7 @@ export function DivisionTable({
                     <TableCell className="max-w-[200px] truncate">
                       {division.descripcion || '-'}
                     </TableCell>
-                    <TableCell>{getJefeNombre(division)}</TableCell>
+                    <TableCell>{getCoordinadorNombre(division)}</TableCell>
                     <TableCell>{getDivisionPadreNombre(division)}</TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -189,7 +189,7 @@ export function DivisionTable({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
+                      <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />

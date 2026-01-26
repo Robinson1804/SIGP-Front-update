@@ -415,7 +415,7 @@ export default function PGDDashboardPage() {
                     Actualizar
                   </Button>
 
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <Button
                         style={{ backgroundColor: "#018CD1", color: "white" }}

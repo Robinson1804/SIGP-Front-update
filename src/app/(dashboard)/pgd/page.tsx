@@ -14,6 +14,7 @@ import {
   AlertCircle,
   RefreshCw,
   Lightbulb,
+  AlertTriangle,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ import { paths } from "@/lib/paths";
 import { ProtectedRoute } from "@/features/auth";
 import { MODULES } from "@/lib/definitions";
 import { useToast } from "@/lib/hooks/use-toast";
+import { usePGD } from "@/stores";
 
 // Import from planning module
 import {
@@ -72,6 +74,7 @@ function PGDModal({
   const [endYear, setEndYear] = useState<number | undefined>(pgd?.anioFin);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (pgd) {
@@ -81,25 +84,46 @@ function PGDModal({
       setStartYear(undefined);
       setEndYear(undefined);
     }
+    // Limpiar error al abrir/cerrar modal
+    setErrorMessage(null);
   }, [pgd, isOpen]);
 
   const handleSave = async () => {
-    if (startYear && endYear) {
-      if (endYear - startYear !== 4) {
-        alert("El rango debe ser de 4 años.");
-        return;
-      }
-      if (endYear < startYear) {
-        alert("El año final no puede ser menor al año de inicio.");
-        return;
-      }
-      setSaving(true);
-      try {
-        await onSave({ anioInicio: startYear, anioFin: endYear });
-        onClose();
-      } finally {
-        setSaving(false);
-      }
+    // Limpiar error previo
+    setErrorMessage(null);
+
+    if (!startYear || !endYear) {
+      setErrorMessage("Debe seleccionar el año de inicio y fin.");
+      return;
+    }
+
+    if (endYear <= startYear) {
+      setErrorMessage("El año final debe ser mayor al año de inicio.");
+      return;
+    }
+
+    // Validar exactamente 4 años (ej: 2021-2024 = diferencia de 3)
+    if (endYear - startYear !== 3) {
+      setErrorMessage("El PGD debe tener exactamente 4 años (ejemplo: 2021-2024).");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await onSave({ anioInicio: startYear, anioFin: endYear });
+      onClose();
+    } catch (err: any) {
+      // Capturar el mensaje de error del backend (solapamiento, etc.)
+      // Estructura del backend: { success: false, error: { code, message, details } }
+      const message =
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.error?.details ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Error al guardar el PGD";
+      setErrorMessage(message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -133,13 +157,25 @@ function PGDModal({
             </DialogClose>
           </DialogHeader>
           <div className="p-6 space-y-4">
+            {/* Advertencia sobre el rango de 4 años */}
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700 font-medium">
+                El PGD debe tener exactamente 4 años (ejemplo: 2021-2024).
+                Los años no pueden solaparse con otros PGD existentes.
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="startYear" className="block text-sm font-medium text-gray-700 mb-1">
                   Año Inicio:
                 </label>
                 <Select
-                  onValueChange={(value) => setStartYear(Number(value))}
+                  onValueChange={(value) => {
+                    setStartYear(Number(value));
+                    setErrorMessage(null); // Limpiar error al cambiar
+                  }}
                   value={startYear?.toString()}
                 >
                   <SelectTrigger id="startYear">
@@ -159,7 +195,10 @@ function PGDModal({
                   Año Final:
                 </label>
                 <Select
-                  onValueChange={(value) => setEndYear(Number(value))}
+                  onValueChange={(value) => {
+                    setEndYear(Number(value));
+                    setErrorMessage(null); // Limpiar error al cambiar
+                  }}
                   value={endYear?.toString()}
                 >
                   <SelectTrigger id="endYear">
@@ -175,6 +214,31 @@ function PGDModal({
                 </Select>
               </div>
             </div>
+
+            {/* Mostrar el rango seleccionado si es válido */}
+            {startYear && endYear && (
+              <div className={`text-sm p-2 rounded ${
+                endYear - startYear === 3
+                  ? 'bg-green-50 text-green-700'
+                  : 'bg-red-50 text-red-700'
+              }`}>
+                {endYear - startYear === 3 ? (
+                  <span>✓ Rango válido: {startYear}, {startYear + 1}, {startYear + 2}, {endYear} (4 años)</span>
+                ) : endYear <= startYear ? (
+                  <span>✗ El año final debe ser mayor al año de inicio</span>
+                ) : (
+                  <span>✗ El rango debe ser exactamente 4 años (actualmente: {endYear - startYear + 1} años)</span>
+                )}
+              </div>
+            )}
+
+            {/* Mostrar mensaje de error del backend (solapamiento, etc.) */}
+            {errorMessage && (
+              <div className="flex items-start gap-2 p-3 bg-red-100 border border-red-300 rounded-lg">
+                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800 font-medium">{errorMessage}</p>
+              </div>
+            )}
           </div>
           <DialogFooter className="px-6 pb-6 flex justify-between">
             {pgd ? (
@@ -204,21 +268,45 @@ function PGDModal({
 
       {showDeleteConfirm && (
         <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Confirmar Eliminación</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-5 w-5" />
+                Confirmar Eliminación del PGD
+              </DialogTitle>
             </DialogHeader>
-            <p>
-              ¿Está seguro de que desea eliminar el plan {pgd?.anioInicio} - {pgd?.anioFin}? Esta acción
-              no se puede deshacer.
-            </p>
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)} disabled={saving}>
+            <div className="space-y-4">
+              <p className="text-gray-700">
+                ¿Está seguro de que desea eliminar el Plan de Gobierno Digital{" "}
+                <strong>{pgd?.anioInicio} - {pgd?.anioFin}</strong>?
+              </p>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Esta acción eliminará permanentemente:
+                </p>
+                <ul className="list-disc list-inside text-sm text-red-700 space-y-1 ml-2">
+                  <li>Todos los <strong>Objetivos Estratégicos Institucionales (OEI)</strong></li>
+                  <li>Todas las <strong>Acciones Estratégicas Institucionales (AEI)</strong></li>
+                  <li>Todos los <strong>Objetivos de Gobierno Digital (OGD)</strong></li>
+                  <li>Todos los <strong>Objetivos Específicos de Gobierno Digital (OEGD)</strong></li>
+                  <li>Todas las <strong>Acciones Estratégicas (AE)</strong></li>
+                  <li>Todos los <strong>Proyectos PGD</strong> asociados</li>
+                </ul>
+              </div>
+
+              <p className="text-sm text-gray-500 font-medium">
+                Esta acción NO se puede deshacer.
+              </p>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={saving}>
                 Cancelar
               </Button>
               <Button variant="destructive" onClick={handleDelete} disabled={saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Eliminar
+                Sí, eliminar todo
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -260,23 +348,39 @@ const CardItem = ({
 function PgdDashboardPageContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPgd, setEditingPgd] = useState<PGD | null>(null);
-  const [pgds, setPgds] = useState<PGD[]>([]);
-  const [selectedPgdId, setSelectedPgdId] = useState<string | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Usar el store global de PGD para mantener la selección entre páginas
+  const {
+    selectedPGD,
+    pgds,
+    isLoading,
+    setSelectedPGD,
+    initializePGD,
+    setLoading,
+    setPGDs,
+  } = usePGD();
+
+  // Derivar selectedPgdId del store global
+  const selectedPgdId = selectedPGD?.id?.toString();
+
+  // Función para cambiar el PGD seleccionado
+  const handleSelectPgd = (pgdId: string) => {
+    const pgd = pgds.find(p => p.id.toString() === pgdId);
+    if (pgd) {
+      setSelectedPGD(pgd);
+    }
+  };
+
   // Cargar PGDs desde el backend
   const loadPGDs = useCallback(async () => {
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
     try {
       const data = await getPGDs();
-      setPgds(data);
-      // Si hay PGDs y no hay uno seleccionado, seleccionar el primero
-      if (data.length > 0 && !selectedPgdId) {
-        setSelectedPgdId(data[0].id.toString());
-      }
+      // initializePGD guarda los PGDs y mantiene el seleccionado si existe
+      initializePGD(data);
     } catch (err: any) {
       console.error("Error loading PGDs:", err);
       setError(err.message || "Error al cargar los planes de gobierno digital");
@@ -285,10 +389,9 @@ function PgdDashboardPageContent() {
         description: "No se pudieron cargar los planes de gobierno digital",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [selectedPgdId, toast]);
+  }, [initializePGD, setLoading, toast]);
 
   useEffect(() => {
     loadPGDs();
@@ -316,7 +419,7 @@ function PgdDashboardPageContent() {
       } else {
         // Crear nuevo PGD
         const newPgd = await createPGD(data as CreatePGDInput);
-        setSelectedPgdId(newPgd.id.toString());
+        setSelectedPGD(newPgd);
         toast({
           title: "Éxito",
           description: "Plan de gobierno digital creado correctamente",
@@ -342,9 +445,9 @@ function PgdDashboardPageContent() {
         title: "Éxito",
         description: "Plan de gobierno digital eliminado correctamente",
       });
-      // Recargar lista y seleccionar otro PGD si es necesario
-      if (selectedPgdId === id.toString()) {
-        setSelectedPgdId(undefined);
+      // Recargar lista y limpiar selección si era el eliminado
+      if (selectedPGD?.id === id) {
+        setSelectedPGD(null);
       }
       await loadPGDs();
     } catch (err: any) {
@@ -358,7 +461,8 @@ function PgdDashboardPageContent() {
     }
   };
 
-  const selectedPgd = pgds.find((p) => p.id.toString() === selectedPgdId);
+  // Usar selectedPGD del store global
+  const selectedPgd = selectedPGD;
 
   const cardsData = [
     {
@@ -424,7 +528,7 @@ function PgdDashboardPageContent() {
                 </Button>
               ) : (
                 <>
-                  <Select value={selectedPgdId} onValueChange={setSelectedPgdId}>
+                  <Select value={selectedPgdId || ''} onValueChange={handleSelectPgd}>
                     <SelectTrigger className="w-[180px] bg-white border-[#484848]">
                       <SelectValue placeholder="Seleccionar PGD" />
                     </SelectTrigger>

@@ -114,6 +114,23 @@ export function AsignacionForm({
 
   const tipoAsignacion = form.watch('tipoAsignacion');
 
+  // Reset form when asignacion changes (fix for edit mode not loading values)
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        personalId: asignacion?.personalId || preselectedPersonalId || undefined,
+        tipoAsignacion: asignacion?.tipoAsignacion || TipoAsignacion.PROYECTO,
+        proyectoId: asignacion?.proyectoId || null,
+        actividadId: asignacion?.actividadId || null,
+        subproyectoId: asignacion?.subproyectoId || null,
+        rolEquipo: asignacion?.rolEquipo || '',
+        porcentajeDedicacion: asignacion?.porcentajeDedicacion || 50,
+        fechaInicio: asignacion?.fechaInicio?.split('T')[0] || new Date().toISOString().split('T')[0],
+        fechaFin: asignacion?.fechaFin?.split('T')[0] || '',
+      });
+    }
+  }, [asignacion, preselectedPersonalId, open, form]);
+
   // Reset entidad cuando cambia el tipo
   useEffect(() => {
     if (!isEditing) {
@@ -210,7 +227,7 @@ export function AsignacionForm({
                         <SelectValue placeholder="Seleccionar personal" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent position="item-aligned">
                       {personal
                         .filter((p) => p.activo)
                         .map((p) => (
@@ -242,7 +259,7 @@ export function AsignacionForm({
                           <SelectValue placeholder="Tipo de asignación" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="item-aligned">
                         {tipos.map((tipo) => (
                           <SelectItem key={tipo} value={tipo}>
                             {getTipoAsignacionLabel(tipo)}
@@ -271,7 +288,7 @@ export function AsignacionForm({
                           <SelectValue placeholder={`Seleccionar ${getTipoAsignacionLabel(tipoAsignacion).toLowerCase()}`} />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="item-aligned">
                         {getEntidades().map((ent) => (
                           <SelectItem key={ent.id} value={String(ent.id)}>
                             {ent.codigo} - {ent.nombre}

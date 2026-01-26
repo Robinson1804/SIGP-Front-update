@@ -150,7 +150,7 @@ export interface DashboardProyecto {
 export interface SprintResumen {
   id: number;
   nombre: string;
-  estado: 'Planificado' | 'Activo' | 'Completado';
+  estado: 'Por hacer' | 'En progreso' | 'Finalizado' | 'Planificado' | 'Activo' | 'Completado';
   fechaInicio: string;
   fechaFin: string;
   diasRestantes: number;
@@ -701,7 +701,7 @@ export interface SprintTimeline {
   proyectoCodigo: string;
   fechaInicio: string;
   fechaFin: string;
-  estado: 'Planificado' | 'Activo' | 'Completado';
+  estado: 'Por hacer' | 'En progreso' | 'Finalizado' | 'Planificado' | 'Activo' | 'Completado';
   progreso: number;
   storyPointsCompletados: number;
   storyPointsTotal: number;

@@ -154,7 +154,7 @@ const initialActas: Acta[] = [
         nombre: 'Acta de Constitución del Proyecto',
         tipo: 'Acta de Constitución',
         fecha: '10/01/2025',
-        estado: 'Pendiente'
+        estado: 'En revisión'
     },
     {
         id: 'ACTA-4',
@@ -694,9 +694,11 @@ function ActasProyectoContent() {
     const [successMessage, setSuccessMessage] = useState({ title: '', message: '' });
     const [errorMessage, setErrorMessage] = useState('');
 
-    // Permisos
+    // Permisos - ADMIN tiene acceso total
     const userRole = user?.role;
+    const isAdmin = userRole === ROLES.ADMIN;
     const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
+    const canManageActas = isAdmin || isScrumMaster;
 
     // Cargar proyecto y actas desde localStorage
     useEffect(() => {
@@ -737,21 +739,21 @@ function ActasProyectoContent() {
         }
     }, [router, searchParams]);
 
-    // Pestañas según rol
+    // Pestañas según rol - ADMIN ve todas las pestañas
     const getProjectTabs = () => {
-        if (userRole === ROLES.PMO) {
-            return [
-                { name: 'Detalles' },
-                { name: 'Documentos' },
-                { name: 'Backlog' },
-            ];
-        } else if (userRole === ROLES.SCRUM_MASTER) {
+        if (isAdmin || userRole === ROLES.SCRUM_MASTER) {
             return [
                 { name: 'Detalles' },
                 { name: 'Documentos' },
                 { name: 'Actas del proyecto' },
                 { name: 'Requerimientos' },
                 { name: 'Cronograma' },
+                { name: 'Backlog' },
+            ];
+        } else if (userRole === ROLES.PMO) {
+            return [
+                { name: 'Detalles' },
+                { name: 'Documentos' },
                 { name: 'Backlog' },
             ];
         }
@@ -907,8 +909,9 @@ function ActasProyectoContent() {
         );
     }
 
-    const projectCode = `PROY N° ${project.id}`;
-    const breadcrumbs = [{ label: "POI", href: paths.poi.base }, { label: 'Actas del proyecto' }];
+    const projectCode = project.code || `PROY N°${project.id}`;
+    // Breadcrumb simplificado: POI > Actas
+    const breadcrumbs = [{ label: "POI", href: paths.poi.base }, { label: 'Actas' }];
 
     const secondaryHeader = (
         <>
@@ -955,7 +958,7 @@ function ActasProyectoContent() {
                                 <FileText className="h-6 w-6 text-black" />
                                 <h3 className="text-xl font-bold">ACTAS DEL PROYECTO</h3>
                             </div>
-                            {isScrumMaster && (
+                            {canManageActas && (
                                 <Button
                                     className="bg-[#018CD1] hover:bg-[#018CD1]/90 text-white"
                                     onClick={() => setIsSelectTypeModalOpen(true)}

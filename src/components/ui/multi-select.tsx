@@ -74,7 +74,7 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
                       variant="secondary"
                       className="mr-1"
                     >
-                      {option?.label}
+                      {option?.label || `ID: ${value}`}
                       <span
                         role="button"
                         tabIndex={0}

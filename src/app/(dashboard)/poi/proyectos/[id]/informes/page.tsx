@@ -234,7 +234,7 @@ export default function InformesSprintPage() {
                         {new Date(informe.createdAt).toLocaleDateString('es-PE')}
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
                               <MoreHorizontal className="h-4 w-4" />

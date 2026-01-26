@@ -12,10 +12,16 @@ import { type HistoriaUsuario } from '@/features/proyectos/services/historias.se
 import { HistoriaTable } from './historia-table';
 import { cn } from '@/lib/utils';
 
+interface MiembroEquipo {
+  id: number;
+  nombre: string;
+}
+
 interface BacklogSectionProps {
   historias: HistoriaUsuario[];
+  equipo?: MiembroEquipo[];
   selectedIds: number[];
-  onSelectionChange: (ids: number[]) => void;
+  onSelectionChange?: (ids: number[]) => void;
   onCreateSprint?: () => void;
   onAssignToSprint?: () => void;
   onAddHistoria?: () => void;
@@ -23,11 +29,19 @@ interface BacklogSectionProps {
   onEditHistoria?: (historia: HistoriaUsuario) => void;
   onDeleteHistoria?: (historia: HistoriaUsuario) => void;
   onAssignHistoriaToSprint?: (historia: HistoriaUsuario) => void;
+  onCreateTarea?: (historiaId: number) => void;
+  tareasRefreshKey?: number;
   defaultOpen?: boolean;
+  // Acciones de validacion (solo para SCRUM_MASTER)
+  onVerDocumento?: (historia: HistoriaUsuario) => void;
+  onValidarHu?: (historia: HistoriaUsuario) => void;
+  /** Modo solo lectura */
+  isReadOnly?: boolean;
 }
 
 export function BacklogSection({
   historias,
+  equipo = [],
   selectedIds,
   onSelectionChange,
   onCreateSprint,
@@ -37,7 +51,12 @@ export function BacklogSection({
   onEditHistoria,
   onDeleteHistoria,
   onAssignHistoriaToSprint,
+  onCreateTarea,
+  tareasRefreshKey,
   defaultOpen = true,
+  onVerDocumento,
+  onValidarHu,
+  isReadOnly = false,
 }: BacklogSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -135,6 +154,7 @@ export function BacklogSection({
 
             <HistoriaTable
               historias={historias}
+              equipo={equipo}
               showCheckbox={true}
               selectedIds={selectedIds}
               onSelectionChange={onSelectionChange}
@@ -142,7 +162,11 @@ export function BacklogSection({
               onEdit={onEditHistoria}
               onDelete={onDeleteHistoria}
               onAssignToSprint={onAssignHistoriaToSprint}
+              onCreateTarea={onCreateTarea}
               showSprintAction={true}
+              tareasRefreshKey={tareasRefreshKey}
+              onVerDocumento={onVerDocumento}
+              onValidarHu={onValidarHu}
             />
 
             {historias.length === 0 && (

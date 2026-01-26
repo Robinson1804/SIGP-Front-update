@@ -6,30 +6,28 @@
 
 import { apiClient, del, ENDPOINTS } from '@/lib/api';
 import type { PaginatedResponse } from '@/types';
-import type { PrioridadMoSCoW } from './epicas.service';
-
-// Re-export para conveniencia
-export type { PrioridadMoSCoW } from './epicas.service';
 
 // ============================================
 // TIPOS
 // ============================================
 
 /**
+ * Prioridades para historias de usuario
+ */
+export type Prioridad = 'Alta' | 'Media' | 'Baja';
+
+/**
  * Estados posibles de una historia de usuario
  */
 export type HistoriaEstado =
-  | 'Pendiente'
-  | 'En analisis'
-  | 'Lista'
-  | 'En desarrollo'
-  | 'En pruebas'
+  | 'Por hacer'
+  | 'En progreso'
   | 'En revision'
-  | 'Terminada';
+  | 'Finalizado';
 
 /**
  * Interfaz de Historia de Usuario basada en el backend schema REAL
- * Campos del backend: rol, storyPoints, notas, ordenBacklog, estimacion
+ * Campos del backend: rol, storyPoints, ordenBacklog, estimacion
  */
 export interface HistoriaUsuario {
   id: number;
@@ -39,17 +37,17 @@ export interface HistoriaUsuario {
   rol: string | null;
   quiero: string | null;
   para: string | null;
-  // Backend usa 'notas' en lugar de descripcion
-  notas: string | null;
   proyectoId: number;
   epicaId: number | null;
   sprintId: number | null;
   estado: HistoriaEstado;
-  prioridad: PrioridadMoSCoW | null;
+  prioridad: Prioridad | null;
   // Backend usa 'storyPoints' en lugar de puntos
   storyPoints: number | null;
   estimacion: string | null;
-  asignadoA: number | null;
+  // asignadoA ahora es un array de IDs de responsables
+  // Nota: TypeORM simple-array puede devolver strings, convertir a números al usar
+  asignadoA: (number | string)[];
   // Backend usa 'ordenBacklog' en lugar de orden
   ordenBacklog: number | null;
   activo: boolean;
@@ -68,14 +66,35 @@ export interface HistoriaUsuario {
     nombre: string;
     numero?: number;
   } | null;
+  // @deprecated - La relación asignado fue removida, usar asignadoA[] con el equipo para obtener nombres
   asignado?: {
     id: number;
-    nombre: string;
-    apellido: string;
+    nombres: string;
+    apellidos: string;
+  } | null;
+  creador?: {
+    id: number;
+    nombres: string;
+    apellidoPaterno: string;
   } | null;
   tareas?: TareaResumen[];
   criteriosAceptacion?: CriterioAceptacion[];
   dependencias?: { id: number; codigo: string; titulo: string }[];
+  // Requerimiento vinculado (opcional)
+  requerimientoId?: number | null;
+  requerimiento?: {
+    id: number;
+    codigo: string;
+    nombre: string;
+    tipo?: string;
+  } | null;
+  // Fechas de la historia
+  fechaInicio?: string | null;
+  fechaFin?: string | null;
+  // Imagen adjunta
+  imagenUrl?: string | null;
+  // Documento de evidencias generado (PDF consolidado)
+  documentoEvidenciasUrl?: string | null;
 
   // Campos de compatibilidad (aliases)
   // Estos se mapean desde los campos reales del backend
@@ -83,8 +102,6 @@ export interface HistoriaUsuario {
   comoUsuario?: string | null;
   puntos?: number | null;
   orden?: number | null;
-  fechaInicio?: string | null;
-  fechaFin?: string | null;
 }
 
 /**
@@ -119,22 +136,27 @@ export interface CreateHistoriaData {
   para?: string;
   proyectoId: number;
   epicaId?: number;
-  sprintId?: number;
-  prioridad?: PrioridadMoSCoW;
+  sprintId?: number | null;
+  estado?: HistoriaEstado;
+  prioridad?: Prioridad;
   puntos?: number;
   valorNegocio?: number;
   orden?: number;
   fechaInicio?: string;
   fechaFin?: string;
+  requerimientoId?: number;
+  imagenUrl?: string;
   criteriosAceptacion?: Omit<CriterioAceptacion, 'id'>[];
+  // Array de IDs de responsables
+  asignadoA?: number[];
 }
 
 /**
  * Datos para actualizar una historia de usuario
  */
-export interface UpdateHistoriaData extends Partial<Omit<CreateHistoriaData, 'proyectoId' | 'sprintId'>> {
+export interface UpdateHistoriaData extends Partial<Omit<CreateHistoriaData, 'proyectoId'>> {
   estado?: HistoriaEstado;
-  sprintId?: number | null; // null para remover del sprint
+  asignadoA?: number[];
 }
 
 /**
@@ -142,7 +164,7 @@ export interface UpdateHistoriaData extends Partial<Omit<CreateHistoriaData, 'pr
  */
 export interface HistoriaQueryFilters {
   estado?: HistoriaEstado;
-  prioridad?: PrioridadMoSCoW;
+  prioridad?: Prioridad;
   epicaId?: number;
   sprintId?: number;
   sinSprint?: boolean;
@@ -170,6 +192,16 @@ export interface BacklogData {
 // ============================================
 // SERVICIOS
 // ============================================
+
+/**
+ * Obtener el siguiente código de HU para un proyecto (auto-generado)
+ */
+export async function getNextCodigo(proyectoId: number | string): Promise<string> {
+  const response = await apiClient.get<string>(
+    `${ENDPOINTS.HISTORIAS.BASE}/next-codigo/${proyectoId}`
+  );
+  return response.data;
+}
 
 /**
  * Obtener backlog de un proyecto (historias sin sprint asignado)
@@ -354,4 +386,56 @@ export async function eliminarCriterio(
   criterioId: number | string
 ): Promise<void> {
   await del(`${ENDPOINTS.HISTORIAS.CRITERIOS(historiaId)}/${criterioId}`);
+}
+
+// ============================================
+// VALIDACIÓN DE HISTORIA DE USUARIO
+// ============================================
+
+/**
+ * Datos para validar una historia de usuario
+ */
+export interface ValidarHuRequest {
+  aprobado: boolean;
+  observacion?: string;
+}
+
+/**
+ * Validar (aprobar o rechazar) una Historia de Usuario en estado "En revision"
+ * Solo puede ser ejecutado por SCRUM_MASTER
+ *
+ * Si aprueba: HU pasa a "Finalizado"
+ * Si rechaza: HU y todas sus tareas vuelven a "En progreso"
+ */
+export async function validarHistoria(
+  historiaId: number | string,
+  data: ValidarHuRequest
+): Promise<HistoriaUsuario> {
+  const response = await apiClient.patch<HistoriaUsuario>(
+    ENDPOINTS.HISTORIAS.VALIDAR(historiaId),
+    data
+  );
+  return response.data;
+}
+
+/**
+ * Respuesta al regenerar el PDF de evidencias
+ */
+export interface RegenerarPdfResponse {
+  url: string;
+  mensaje: string;
+}
+
+/**
+ * Regenerar el PDF de evidencias para una HU en estado "En revision"
+ * Útil para actualizar el formato del PDF con nuevas imágenes embebidas
+ * Solo puede ser ejecutado por roles ADMIN, PMO, o SCRUM_MASTER
+ */
+export async function regenerarPdfEvidencias(
+  historiaId: number | string
+): Promise<RegenerarPdfResponse> {
+  const response = await apiClient.post<RegenerarPdfResponse>(
+    ENDPOINTS.HISTORIAS.REGENERAR_PDF(historiaId)
+  );
+  return response.data;
 }

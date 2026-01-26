@@ -7,7 +7,7 @@
  * Incluye selector de vista, botones de accion y filtros
  */
 
-import { Plus, Download, RefreshCw, Calendar, Filter } from 'lucide-react';
+import { Plus, Download, RefreshCw, Calendar, CheckCircle, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -23,8 +23,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { PermissionGate } from '@/features/auth/components/permission-gate';
-import { MODULES, PERMISSIONS } from '@/lib/definitions';
 import type { ViewMode, FormatoExportacion } from '../types';
 import { VIEW_MODE_OPTIONS } from '../types';
 
@@ -39,6 +37,10 @@ interface GanttToolbarProps {
   onExport?: (formato: FormatoExportacion) => void;
   /** Callback para refrescar */
   onRefresh?: () => void;
+  /** Callback para validar cronograma */
+  onValidate?: () => void;
+  /** Callback para enviar a revisión */
+  onSendToReview?: () => void;
   /** Indica si esta cargando */
   isLoading?: boolean;
   /** Mostrar boton de agregar */
@@ -47,6 +49,16 @@ interface GanttToolbarProps {
   showExportButton?: boolean;
   /** Mostrar boton de refrescar */
   showRefreshButton?: boolean;
+  /** Mostrar boton de validar */
+  showValidateButton?: boolean;
+  /** Mostrar boton de enviar a revisión */
+  showSendToReviewButton?: boolean;
+  /** Puede agregar tareas (basado en rol) */
+  canAddTask?: boolean;
+  /** Puede validar (basado en rol) */
+  canValidate?: boolean;
+  /** Puede enviar a revisión (basado en rol) */
+  canSendToReview?: boolean;
   /** Deshabilitar todas las acciones */
   disabled?: boolean;
   /** Clase CSS adicional */
@@ -70,10 +82,17 @@ export function GanttToolbar({
   onAddTask,
   onExport,
   onRefresh,
+  onValidate,
+  onSendToReview,
   isLoading = false,
   showAddButton = true,
   showExportButton = true,
   showRefreshButton = true,
+  showValidateButton = false,
+  showSendToReviewButton = false,
+  canAddTask = true,
+  canValidate = false,
+  canSendToReview = false,
   disabled = false,
   className,
 }: GanttToolbarProps) {
@@ -106,64 +125,88 @@ export function GanttToolbar({
 
       {/* Acciones principales */}
       <div className="flex items-center gap-2">
-        {/* Boton Agregar Tarea */}
-        {showAddButton && (
-          <PermissionGate module={MODULES.POI} permission={PERMISSIONS.CREATE}>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={onAddTask}
-              disabled={disabled || isLoading || !onAddTask}
-              className="bg-[#004272] hover:bg-[#003156]"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Agregar Tarea
-            </Button>
-          </PermissionGate>
+        {/* Boton Agregar Tarea - Solo SCRUM_MASTER */}
+        {showAddButton && canAddTask && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onAddTask}
+            disabled={disabled || isLoading || !onAddTask}
+            className="bg-[#004272] hover:bg-[#003156]"
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Agregar Tarea
+          </Button>
         )}
 
-        {/* Boton Exportar */}
+        {/* Boton Exportar - Todos pueden exportar */}
         {showExportButton && onExport && (
-          <PermissionGate module={MODULES.POI} permission={PERMISSIONS.EXPORT}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={disabled || isLoading}
-                >
-                  <Download className="h-4 w-4 mr-1" />
-                  Exportar
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onExport('pdf')}>
-                  <span className="flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-red-600"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
-                    </svg>
-                    Exportar a PDF
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onExport('excel')}>
-                  <span className="flex items-center">
-                    <svg
-                      className="w-4 h-4 mr-2 text-green-600"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
-                    </svg>
-                    Exportar a Excel
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </PermissionGate>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={disabled || isLoading}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onExport('pdf')}>
+                <span className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2 text-red-600"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+                  </svg>
+                  Exportar a PDF
+                </span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExport('excel')}>
+                <span className="flex items-center">
+                  <svg
+                    className="w-4 h-4 mr-2 text-green-600"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z" />
+                  </svg>
+                  Exportar a Excel
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {/* Boton Enviar a Revisión - Solo SCRUM_MASTER cuando estado es Borrador */}
+        {showSendToReviewButton && canSendToReview && onSendToReview && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onSendToReview}
+            disabled={disabled || isLoading}
+            className="bg-amber-600 hover:bg-amber-700"
+          >
+            <Send className="h-4 w-4 mr-1" />
+            Enviar a Revisión
+          </Button>
+        )}
+
+        {/* Boton Validar - Solo PMO y PATROCINADOR cuando estado es En revisión */}
+        {showValidateButton && canValidate && onValidate && (
+          <Button
+            variant="default"
+            size="sm"
+            onClick={onValidate}
+            disabled={disabled || isLoading}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Validar
+          </Button>
         )}
 
         {/* Boton Refrescar */}
@@ -202,9 +245,10 @@ export function GanttToolbarCompact({
   onAddTask,
   disabled = false,
   isLoading = false,
+  canAddTask = true,
 }: Pick<
   GanttToolbarProps,
-  'viewMode' | 'onViewModeChange' | 'onAddTask' | 'disabled' | 'isLoading'
+  'viewMode' | 'onViewModeChange' | 'onAddTask' | 'disabled' | 'isLoading' | 'canAddTask'
 >) {
   return (
     <div className="flex items-center gap-2">
@@ -225,18 +269,16 @@ export function GanttToolbarCompact({
         </SelectContent>
       </Select>
 
-      {onAddTask && (
-        <PermissionGate module={MODULES.POI} permission={PERMISSIONS.CREATE}>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onAddTask}
-            disabled={disabled || isLoading}
-            className="h-8"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </PermissionGate>
+      {onAddTask && canAddTask && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onAddTask}
+          disabled={disabled || isLoading}
+          className="h-8"
+        >
+          <Plus className="h-3 w-3" />
+        </Button>
       )}
     </div>
   );

@@ -14,9 +14,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import {
   REQUERIMIENTO_PRIORIDADES,
-  REQUERIMIENTO_ESTADOS,
+  REQUERIMIENTO_TIPOS,
   type RequerimientoPrioridad,
-  type RequerimientoEstado,
+  type RequerimientoTipo,
   type RequerimientoFilters,
 } from '../types';
 
@@ -32,15 +32,15 @@ export function RequerimientoFiltersComponent({
   filteredTotal,
 }: RequerimientoFiltersProps) {
   const [search, setSearch] = useState('');
+  const [tipo, setTipo] = useState<RequerimientoTipo | ''>('');
   const [prioridad, setPrioridad] = useState<RequerimientoPrioridad | ''>('');
-  const [estado, setEstado] = useState<RequerimientoEstado | ''>('');
   const [showFilters, setShowFilters] = useState(false);
 
   const applyFilters = (newFilters: Partial<RequerimientoFilters>) => {
     const filters: RequerimientoFilters = {
       ...(search && { search }),
+      ...(tipo && { tipo }),
       ...(prioridad && { prioridad }),
-      ...(estado && { estado }),
       ...newFilters,
     };
 
@@ -59,27 +59,27 @@ export function RequerimientoFiltersComponent({
     applyFilters({ search: value || undefined });
   };
 
+  const handleTipoChange = (value: string) => {
+    const newTipo = value === 'todos' ? '' : (value as RequerimientoTipo);
+    setTipo(newTipo);
+    applyFilters({ tipo: newTipo || undefined });
+  };
+
   const handlePrioridadChange = (value: string) => {
     const newPrioridad = value === 'todos' ? '' : (value as RequerimientoPrioridad);
     setPrioridad(newPrioridad);
     applyFilters({ prioridad: newPrioridad || undefined });
   };
 
-  const handleEstadoChange = (value: string) => {
-    const newEstado = value === 'todos' ? '' : (value as RequerimientoEstado);
-    setEstado(newEstado);
-    applyFilters({ estado: newEstado || undefined });
-  };
-
   const clearFilters = () => {
     setSearch('');
+    setTipo('');
     setPrioridad('');
-    setEstado('');
     onFilter({});
   };
 
-  const hasActiveFilters = search || prioridad || estado;
-  const activeFilterCount = [search, prioridad, estado].filter(Boolean).length;
+  const hasActiveFilters = search || tipo || prioridad;
+  const activeFilterCount = [search, tipo, prioridad].filter(Boolean).length;
 
   return (
     <div className="space-y-4">
@@ -133,6 +133,24 @@ export function RequerimientoFiltersComponent({
       {/* Filtros avanzados */}
       {showFilters && (
         <div className="flex gap-4 p-4 bg-muted/50 rounded-lg flex-wrap">
+          {/* Filtro por tipo */}
+          <div className="min-w-[180px]">
+            <label className="text-sm font-medium mb-2 block">Tipo</label>
+            <Select value={tipo || 'todos'} onValueChange={handleTipoChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos los tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas</SelectItem>
+                {REQUERIMIENTO_TIPOS.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Filtro por prioridad */}
           <div className="min-w-[180px]">
             <label className="text-sm font-medium mb-2 block">Prioridad</label>
@@ -145,24 +163,6 @@ export function RequerimientoFiltersComponent({
                 {REQUERIMIENTO_PRIORIDADES.map((p) => (
                   <SelectItem key={p.value} value={p.value}>
                     {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Filtro por estado */}
-          <div className="min-w-[180px]">
-            <label className="text-sm font-medium mb-2 block">Estado</label>
-            <Select value={estado || 'todos'} onValueChange={handleEstadoChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todos los estados" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                {REQUERIMIENTO_ESTADOS.map((e) => (
-                  <SelectItem key={e.value} value={e.value}>
-                    {e.label}
                   </SelectItem>
                 ))}
               </SelectContent>

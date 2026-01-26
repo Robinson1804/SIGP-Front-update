@@ -23,9 +23,9 @@ const DOCUMENTOS_ENDPOINTS = {
   BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/documentos`,
   DOWNLOAD: (id: number | string) => `/documentos/${id}/download`,
   APROBAR: (id: number | string) => `/documentos/${id}/aprobar`,
-  UPLOAD_REQUEST: '/storage/upload/request-url',
-  UPLOAD_CONFIRM: '/storage/upload/confirm',
-  UPLOAD_DIRECT: '/storage/upload/direct',
+  UPLOAD_REQUEST: '/upload/request-url',
+  UPLOAD_CONFIRM: '/upload/confirm',
+  UPLOAD_DIRECT: '/upload/direct',
 };
 
 /**

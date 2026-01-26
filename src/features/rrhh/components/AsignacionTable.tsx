@@ -183,7 +183,7 @@ export function AsignacionTable({
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Tipo" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todos los tipos</SelectItem>
               {tipos.map((tipo) => (
                 <SelectItem key={tipo} value={tipo}>
@@ -197,7 +197,7 @@ export function AsignacionTable({
             <SelectTrigger className="w-[130px]">
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="item-aligned">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="activo">Activo</SelectItem>
               <SelectItem value="finalizado">Finalizado</SelectItem>
@@ -283,7 +283,7 @@ export function AsignacionTable({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
+                      <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
                             <MoreHorizontal className="h-4 w-4" />

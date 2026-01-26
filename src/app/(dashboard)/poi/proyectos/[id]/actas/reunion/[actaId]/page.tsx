@@ -227,7 +227,7 @@ export default function ActaReunionDetailPage() {
               Subir Firmado
             </Button>
           )}
-          {acta.estado === 'Pendiente' && (
+          {acta.estado === 'En revisión' && (
             <Button onClick={() => setShowAprobacionDialog(true)}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Aprobar

@@ -187,12 +187,13 @@ export const useRole = () => {
 
   return {
     role: user?.role ?? null,
-    isAdmin: user?.role === ROLES.ADMINISTRADOR,
+    isAdmin: user?.role === ROLES.ADMIN,
     isPmo: user?.role === ROLES.PMO,
     isScrumMaster: user?.role === ROLES.SCRUM_MASTER,
     isDesarrollador: user?.role === ROLES.DESARROLLADOR,
     isCoordinador: user?.role === ROLES.COORDINADOR,
     isUsuario: user?.role === ROLES.USUARIO,
+    isPatrocinador: user?.role === ROLES.PATROCINADOR,
     accessibleModules: user ? getAccessibleModules(user.role) : [],
   };
 };

@@ -11,9 +11,6 @@ import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,54 +39,106 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { Slider } from '@/components/ui/slider';
 import type {
   TareaCronograma,
-  TipoTarea,
-  FaseCronograma,
   CreateTareaCronogramaInput,
   UpdateTareaCronogramaInput,
+  AsignadoA,
 } from '../types';
-import { COLORES_POR_TIPO, FASES_CRONOGRAMA } from '../types';
+import { COLORES_POR_TIPO, FASES_CRONOGRAMA, ASIGNADO_A_OPTIONS } from '../types';
 
-// Schema de validacion
-const tareaFormSchema = z.object({
+// Helper para formatear fecha a YYYY-MM-DD (usando fecha local, no UTC)
+function formatDateToInput(date: Date | string): string {
+  if (typeof date === 'string') {
+    // Si ya es un string, extraer solo la parte de fecha sin conversión
+    // Puede venir como "2023-07-05" o "2023-07-05T12:00:00.000Z"
+    const dateOnly = date.split('T')[0];
+    // Verificar que tiene formato válido YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+      return dateOnly;
+    }
+  }
+  // Si es un Date object, usar métodos locales
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper para convertir fecha local YYYY-MM-DD a ISO string con hora al mediodía
+// Esto evita problemas de zona horaria al cruzar el límite de día
+function localDateToISO(dateStr: string): string {
+  // Agregar hora al mediodía para evitar desfase por timezone
+  return `${dateStr}T12:00:00.000Z`;
+}
+
+// Helper para mostrar fecha YYYY-MM-DD como DD/MM/YYYY sin problemas de timezone
+function formatDateDisplay(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  // Parsear directamente los componentes de la fecha para evitar problemas de timezone
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+}
+
+// Schema base de validacion
+const tareaFormSchemaBase = z.object({
   codigo: z.string().max(20, 'Maximo 20 caracteres').optional(),
   nombre: z
     .string()
     .min(3, 'El nombre debe tener al menos 3 caracteres')
     .max(200, 'Maximo 200 caracteres'),
   descripcion: z.string().max(1000, 'Maximo 1000 caracteres').optional(),
-  inicio: z.date({
-    required_error: 'La fecha de inicio es requerida',
-  }),
-  fin: z.date({
-    required_error: 'La fecha de fin es requerida',
-  }),
-  tipo: z.enum(['tarea', 'hito', 'proyecto'] as const, {
-    required_error: 'Seleccione un tipo',
-  }),
+  inicio: z.string().min(1, 'La fecha de inicio es requerida'),
+  fin: z.string().min(1, 'La fecha de fin es requerida'),
   fase: z.enum(['Analisis', 'Diseno', 'Desarrollo', 'Pruebas', 'Implementacion', 'Mantenimiento'] as const).optional().nullable(),
   padre: z.string().optional().nullable(),
-  responsableId: z.number().optional().nullable(),
+  asignadoA: z.enum(['Scrum Master', 'Desarrolladores', 'Todo el equipo'] as const).optional().nullable(),
   color: z.string().optional(),
   progreso: z.number().min(0).max(100).default(0),
-}).refine((data) => {
-  // Los hitos pueden tener la misma fecha de inicio y fin
-  if (data.tipo === 'hito') return true;
-  return data.fin >= data.inicio;
-}, {
-  message: 'La fecha de fin debe ser posterior a la fecha de inicio',
-  path: ['fin'],
 });
 
-type TareaFormValues = z.infer<typeof tareaFormSchema>;
+/**
+ * Crea el schema de validación con las fechas del proyecto
+ */
+function createTareaFormSchema(proyectoFechaInicio?: string | null, proyectoFechaFin?: string | null) {
+  return tareaFormSchemaBase
+    .refine((data) => {
+      return new Date(data.fin) >= new Date(data.inicio);
+    }, {
+      message: 'La fecha de fin debe ser posterior a la fecha de inicio',
+      path: ['fin'],
+    })
+    .refine((data) => {
+      // Si no hay fechas del proyecto, no validar
+      if (!proyectoFechaInicio) return true;
+      const tareaInicio = new Date(data.inicio);
+      const proyInicio = new Date(proyectoFechaInicio);
+      return tareaInicio >= proyInicio;
+    }, {
+      message: proyectoFechaInicio
+        ? `La fecha de inicio no puede ser anterior a la fecha de inicio del proyecto (${formatDateDisplay(proyectoFechaInicio)})`
+        : 'Fecha inválida',
+      path: ['inicio'],
+    })
+    .refine((data) => {
+      // Si no hay fechas del proyecto, no validar
+      if (!proyectoFechaFin) return true;
+      const tareaFin = new Date(data.fin);
+      const proyFin = new Date(proyectoFechaFin);
+      return tareaFin <= proyFin;
+    }, {
+      message: proyectoFechaFin
+        ? `La fecha de fin no puede ser posterior a la fecha de fin del proyecto (${formatDateDisplay(proyectoFechaFin)})`
+        : 'Fecha inválida',
+      path: ['fin'],
+    });
+}
+
+type TareaFormValues = z.infer<typeof tareaFormSchemaBase>;
 
 interface GanttTaskModalProps {
   /** Controla si el modal esta abierto */
@@ -100,33 +149,19 @@ interface GanttTaskModalProps {
   onSave: (data: CreateTareaCronogramaInput | UpdateTareaCronogramaInput) => Promise<void>;
   /** Tarea a editar (undefined para crear nueva) */
   tarea?: TareaCronograma;
-  /** Lista de responsables disponibles */
-  responsables?: { id: number; nombre: string }[];
   /** Lista de tareas padre disponibles (para anidamiento) */
   tareasPadre?: { id: string; nombre: string }[];
   /** Indica si esta guardando */
   isLoading?: boolean;
   /** Modo de operacion */
   mode?: 'create' | 'edit';
+  /** Códigos de tareas existentes (para generar codigo único) */
+  codigosExistentes?: string[];
+  /** Fecha de inicio del proyecto (para validación de rango) */
+  proyectoFechaInicio?: string | null;
+  /** Fecha de fin del proyecto (para validación de rango) */
+  proyectoFechaFin?: string | null;
 }
-
-const TIPO_OPTIONS: { value: TipoTarea; label: string; descripcion: string }[] = [
-  {
-    value: 'tarea',
-    label: 'Tarea',
-    descripcion: 'Actividad con duracion y progreso',
-  },
-  {
-    value: 'hito',
-    label: 'Hito',
-    descripcion: 'Punto de control sin duracion',
-  },
-  {
-    value: 'proyecto',
-    label: 'Fase/Proyecto',
-    descripcion: 'Agrupador de tareas hijo',
-  },
-];
 
 const COLORES_PRESETS = [
   { value: '#004272', label: 'Azul INEI' },
@@ -155,42 +190,68 @@ export function GanttTaskModal({
   onClose,
   onSave,
   tarea,
-  responsables = [],
   tareasPadre = [],
   isLoading = false,
   mode = tarea ? 'edit' : 'create',
+  codigosExistentes = [],
+  proyectoFechaInicio,
+  proyectoFechaFin,
 }: GanttTaskModalProps) {
+  // Generar codigo automaticamente basado en el código más alto existente
+  const generatedCodigo = useMemo(() => {
+    if (tarea?.codigo) return tarea.codigo;
+
+    // Buscar el número más alto de los códigos existentes con formato T-XXX
+    let maxNumber = 0;
+    codigosExistentes.forEach(codigo => {
+      const match = codigo?.match(/^T-(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) {
+          maxNumber = num;
+        }
+      }
+    });
+
+    const nextNumber = maxNumber + 1;
+    return `T-${String(nextNumber).padStart(3, '0')}`;
+  }, [tarea?.codigo, codigosExistentes]);
+
   // Valores por defecto
   const defaultValues = useMemo((): Partial<TareaFormValues> => {
     if (tarea) {
       return {
-        codigo: tarea.codigo || '',
+        codigo: tarea.codigo || generatedCodigo,
         nombre: tarea.nombre,
         descripcion: tarea.descripcion || '',
-        inicio: new Date(tarea.inicio),
-        fin: new Date(tarea.fin),
-        tipo: tarea.tipo,
+        inicio: formatDateToInput(tarea.inicio),
+        fin: formatDateToInput(tarea.fin),
         fase: tarea.fase || null,
         padre: tarea.padre || null,
-        responsableId: tarea.responsableId || null,
-        color: tarea.color || COLORES_POR_TIPO[tarea.tipo],
-        progreso: tarea.progreso || 0,
+        asignadoA: tarea.asignadoA || null,
+        color: tarea.color || COLORES_POR_TIPO.tarea,
+        progreso: Math.round(Number(tarea.progreso) || 0),
       };
     }
     return {
-      codigo: '',
+      codigo: generatedCodigo,
       nombre: '',
       descripcion: '',
-      inicio: new Date(),
-      fin: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // +7 dias
-      tipo: 'tarea',
+      inicio: formatDateToInput(new Date()),
+      fin: formatDateToInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // +7 dias
       fase: null,
       padre: null,
-      responsableId: null,
+      asignadoA: null,
       color: COLORES_POR_TIPO.tarea,
       progreso: 0,
     };
-  }, [tarea]);
+  }, [tarea, generatedCodigo]);
+
+  // Schema dinámico con validación de fechas del proyecto
+  const tareaFormSchema = useMemo(
+    () => createTareaFormSchema(proyectoFechaInicio, proyectoFechaFin),
+    [proyectoFechaInicio, proyectoFechaFin]
+  );
 
   // Formulario
   const form = useForm<TareaFormValues>({
@@ -205,38 +266,37 @@ export function GanttTaskModal({
     }
   }, [open, defaultValues, form]);
 
-  // Observar cambios en el tipo para actualizar color
-  const tipoActual = form.watch('tipo');
-  useEffect(() => {
-    const currentColor = form.getValues('color');
-    // Solo actualizar si no tiene color personalizado
-    if (!currentColor || Object.values(COLORES_POR_TIPO).includes(currentColor)) {
-      form.setValue('color', COLORES_POR_TIPO[tipoActual]);
-    }
-  }, [tipoActual, form]);
+  const isEditing = mode === 'edit';
 
   // Submit handler
   const handleSubmit = async (values: TareaFormValues) => {
-    const data = {
-      ...(mode === 'edit' ? {} : {}),
-      codigo: values.codigo || undefined,
+    // Datos comunes para crear y editar
+    // Usar localDateToISO para evitar desfase de timezone
+    const baseData = {
       nombre: values.nombre,
       descripcion: values.descripcion || undefined,
-      inicio: values.inicio.toISOString(),
-      fin: values.fin.toISOString(),
-      tipo: values.tipo,
+      inicio: localDateToISO(values.inicio),
+      fin: localDateToISO(values.fin),
       fase: values.fase || undefined,
-      padre: values.padre || undefined,
-      responsableId: values.responsableId || undefined,
+      // padre puede ser null (para quitar la asociación), no usar || undefined
+      padre: values.padre,
+      asignadoA: values.asignadoA || undefined,
       color: values.color || undefined,
       progreso: values.progreso,
     };
 
+    // Solo incluir codigo y tipo al crear (no permitidos en update DTO)
+    const data = isEditing
+      ? baseData
+      : {
+          ...baseData,
+          codigo: generatedCodigo,
+          tipo: 'tarea' as const,
+        };
+
     await onSave(data);
     onClose();
   };
-
-  const isEditing = mode === 'edit';
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
@@ -272,59 +332,32 @@ export function GanttTaskModal({
               )}
             />
 
-            {/* Codigo y Tipo en fila */}
+            {/* Codigo */}
+            <FormField
+              control={form.control}
+              name="codigo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      value={generatedCodigo}
+                      readOnly
+                      disabled
+                      className="bg-gray-100 cursor-not-allowed w-32"
+                    />
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    Generado automáticamente
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Fase y Padre */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="codigo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Codigo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="T-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar tipo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {TIPO_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div>
-                              <span className="font-medium">{option.label}</span>
-                              <span className="text-xs text-gray-500 ml-2">
-                                {option.descripcion}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Fase y Padre - Solo mostrar si no es tipo proyecto */}
-            {tipoActual !== 'proyecto' && (
-              <div className="grid grid-cols-2 gap-4">
                 {/* Fase */}
                 <FormField
                   control={form.control}
@@ -397,7 +430,6 @@ export function GanttTaskModal({
                   />
                 )}
               </div>
-            )}
 
             {/* Fechas */}
             <div className="grid grid-cols-2 gap-4">
@@ -405,38 +437,17 @@ export function GanttTaskModal({
                 control={form.control}
                 name="inicio"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Fecha Inicio *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'dd/MM/yyyy', { locale: es })
-                            ) : (
-                              <span>Seleccionar</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date('2020-01-01')}
-                          locale={es}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value || ''}
+                        min={proyectoFechaInicio || undefined}
+                        max={proyectoFechaFin || undefined}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -446,83 +457,69 @@ export function GanttTaskModal({
                 control={form.control}
                 name="fin"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
+                  <FormItem>
                     <FormLabel>Fecha Fin *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'dd/MM/yyyy', { locale: es })
-                            ) : (
-                              <span>Seleccionar</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => {
-                            const inicio = form.getValues('inicio');
-                            return (
-                              date < new Date('2020-01-01') ||
-                              (inicio && date < inicio && tipoActual !== 'hito')
-                            );
-                          }}
-                          locale={es}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value || ''}
+                        min={proyectoFechaInicio || undefined}
+                        max={proyectoFechaFin || undefined}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            {/* Responsable */}
-            {responsables.length > 0 && (
-              <FormField
-                control={form.control}
-                name="responsableId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Responsable</FormLabel>
-                    <Select
-                      onValueChange={(value) =>
-                        field.onChange(value === '__none__' ? null : parseInt(value, 10))
-                      }
-                      value={field.value?.toString() || '__none__'}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar responsable" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="__none__">Sin asignar</SelectItem>
-                        {responsables.map((resp) => (
-                          <SelectItem key={resp.id} value={resp.id.toString()}>
-                            {resp.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Mensaje informativo sobre rango de fechas del proyecto */}
+            {(proyectoFechaInicio || proyectoFechaFin) && (
+              <p className="text-xs text-muted-foreground">
+                Rango del proyecto:{' '}
+                {proyectoFechaInicio ? formatDateDisplay(proyectoFechaInicio) : 'Sin inicio'}{' '}
+                -{' '}
+                {proyectoFechaFin ? formatDateDisplay(proyectoFechaFin) : 'Sin fin'}
+              </p>
             )}
+
+            {/* Asignado A */}
+            <FormField
+              control={form.control}
+              name="asignadoA"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Asignado a</FormLabel>
+                  <Select
+                    onValueChange={(value) =>
+                      field.onChange(value === '__none__' ? null : value)
+                    }
+                    value={field.value || '__none__'}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar asignación" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">Sin asignar</SelectItem>
+                      {ASIGNADO_A_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex flex-col">
+                            <span>{option.label}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {option.description}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Color */}
             <FormField
@@ -560,33 +557,31 @@ export function GanttTaskModal({
               )}
             />
 
-            {/* Progreso (solo si no es hito) */}
-            {tipoActual !== 'hito' && (
-              <FormField
-                control={form.control}
-                name="progreso"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Progreso: {field.value}%
-                    </FormLabel>
-                    <FormControl>
-                      <Slider
-                        value={[field.value]}
-                        onValueChange={([value]) => field.onChange(value)}
-                        max={100}
-                        step={5}
-                        className="py-2"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Porcentaje de avance de la tarea
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+            {/* Progreso */}
+            <FormField
+              control={form.control}
+              name="progreso"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Progreso: {field.value}%
+                  </FormLabel>
+                  <FormControl>
+                    <Slider
+                      value={[field.value]}
+                      onValueChange={([value]) => field.onChange(value)}
+                      max={100}
+                      step={5}
+                      className="py-2"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Porcentaje de avance de la tarea
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Descripcion */}
             <FormField

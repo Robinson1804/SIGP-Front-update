@@ -2137,7 +2137,11 @@ function SubtaskModal({
 }
 
 // ==================== COMPONENTE PRINCIPAL ====================
-function ListaContent() {
+interface ListaContentProps {
+    embedded?: boolean; // When true, renders without AppLayout and tabs (used in detalles page)
+}
+
+export function ListaContent({ embedded = false }: ListaContentProps) {
     const { user } = useAuth();
     const [project, setProject] = useState<Project | null>(null);
     const [activeTab, setActiveTab] = useState('Lista');
@@ -2184,16 +2188,9 @@ function ListaContent() {
     }, [router]);
 
     const handleTabClick = (tabName: string) => {
-        let route = '';
-        if (tabName === 'Detalles') route = paths.poi.actividad.detalles;
-        else if (tabName === 'Tablero') route = paths.poi.actividad.tablero;
-        else if (tabName === 'Dashboard') route = paths.poi.actividad.dashboard;
-        else if (tabName === 'Informes') route = paths.poi.actividad.informes;
-
-        if (route) {
-            // State-driven Navigation: pass actividadId in query params
-            const queryParams = project ? `?actividadId=${project.id}` : '';
-            router.push(`${route}${queryParams}`);
+        // Navigate directly to detalles with only tab parameter (actividadId is in localStorage)
+        if (tabName !== 'Lista') {
+            router.push(`${paths.poi.actividad.detalles}?tab=${tabName}`);
         } else {
             setActiveTab(tabName);
         }
@@ -2319,26 +2316,9 @@ function ListaContent() {
         ? allActivityTabs.filter(tab => tab.name !== 'Detalles')
         : allActivityTabs;
 
-    return (
-        <AppLayout
-            breadcrumbs={breadcrumbs}
-            secondaryHeader={secondaryHeader}
-        >
-            {/* Tabs */}
-            <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
-                {activityTabs.map(tab => (
-                    <Button
-                        key={tab.name}
-                        size="sm"
-                        onClick={() => handleTabClick(tab.name)}
-                        className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')}
-                        variant={activeTab === tab.name ? 'default' : 'outline'}
-                    >
-                        {tab.name}
-                    </Button>
-                ))}
-            </div>
-
+    // Content portion (used both standalone and embedded)
+    const listaContent = (
+        <>
             <div className="flex-1 flex flex-col bg-[#F9F9F9] px-4 pb-4">
                 {/* Header con título y búsqueda */}
                 <div className="flex items-center justify-between mb-4">
@@ -2654,14 +2634,50 @@ function ListaContent() {
                 }}
                 task={taskForDocumentPreview}
             />
+        </>
+    );
+
+    // When embedded (used in detalles page), return just the content
+    if (embedded) {
+        return listaContent;
+    }
+
+    // Standalone mode: wrap with AppLayout and tabs
+    return (
+        <AppLayout
+            breadcrumbs={breadcrumbs}
+            secondaryHeader={secondaryHeader}
+        >
+            {/* Tabs */}
+            <div className="flex items-center gap-2 p-4 bg-[#F9F9F9]">
+                {activityTabs.map(tab => (
+                    <Button
+                        key={tab.name}
+                        size="sm"
+                        onClick={() => handleTabClick(tab.name)}
+                        className={cn(activeTab === tab.name ? 'bg-[#018CD1] text-white' : 'bg-white text-black border-gray-300')}
+                        variant={activeTab === tab.name ? 'default' : 'outline'}
+                    >
+                        {tab.name}
+                    </Button>
+                ))}
+            </div>
+            {listaContent}
         </AppLayout>
     );
 }
 
 export default function ListaPage() {
+    const router = useRouter();
+
+    React.useEffect(() => {
+        // Redirect to the unified details page with Lista tab
+        router.replace(`${paths.poi.actividad.detalles}?tab=Lista`);
+    }, [router]);
+
     return (
-        <React.Suspense fallback={<div>Cargando...</div>}>
-            <ListaContent />
-        </React.Suspense>
+        <div className="flex h-screen w-full items-center justify-center">
+            Cargando lista...
+        </div>
     );
 }

@@ -49,14 +49,38 @@ export interface DailyMeeting {
 }
 
 /**
+ * Tipo de Daily Meeting
+ * Debe coincidir con el enum del backend: 'Proyecto' | 'Actividad'
+ */
+export type DailyMeetingTipo = 'Proyecto' | 'Actividad';
+
+/**
+ * Datos de participante para crear daily
+ */
+export interface CreateParticipanteDto {
+  usuarioId: number;
+  asistio?: boolean;
+  queHiceAyer?: string;
+  queHareHoy?: string;
+  impedimentos?: string;
+}
+
+/**
  * Datos para crear una daily meeting
  */
 export interface CreateDailyMeetingDto {
-  sprintId: number;
+  tipo: DailyMeetingTipo;
+  proyectoId?: number;
+  actividadId?: number;
+  sprintId?: number;
+  nombre: string;
   fecha: string;
-  horaInicio: string;
-  participantes?: number[];
+  horaInicio?: string;
+  horaFin?: string;
+  facilitadorId?: number;
   notas?: string;
+  linkReunion?: string;
+  participantes?: CreateParticipanteDto[];
 }
 
 /**

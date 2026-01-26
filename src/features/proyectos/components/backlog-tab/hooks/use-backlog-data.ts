@@ -15,6 +15,13 @@ import {
   getEpicasByProyecto,
   type Epica,
 } from '@/features/proyectos/services/epicas.service';
+import { apiClient, ENDPOINTS } from '@/lib/api';
+
+export interface MiembroEquipo {
+  id: number;
+  usuarioId?: number;
+  nombre: string;
+}
 
 export interface SprintWithHistorias extends Sprint {
   historias: HistoriaUsuario[];
@@ -25,6 +32,7 @@ export interface UseBacklogDataReturn {
   sprints: SprintWithHistorias[];
   backlogHistorias: HistoriaUsuario[];
   epicas: Epica[];
+  equipo: MiembroEquipo[];
   backlogStats: {
     total: number;
     porPrioridad: Record<string, number>;
@@ -50,6 +58,7 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
   const [backlogHistorias, setBacklogHistorias] = useState<HistoriaUsuario[]>([]);
   const [backlogStats, setBacklogStats] = useState<UseBacklogDataReturn['backlogStats']>(null);
   const [epicas, setEpicas] = useState<Epica[]>([]);
+  const [equipo, setEquipo] = useState<MiembroEquipo[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSprints, setIsLoadingSprints] = useState(false);
@@ -62,6 +71,53 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
       setEpicas(data);
     } catch (err) {
       console.error('Error fetching epicas:', err);
+    }
+  }, [proyectoId]);
+
+  const fetchEquipo = useCallback(async () => {
+    try {
+      // Obtener asignaciones del proyecto para mapear personalId -> nombre
+      const response = await apiClient.get(ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId));
+      // El backend envuelve la respuesta en { data: [...] }, pero el interceptor puede ya haberlo desenvuelto
+      const responseData = response.data;
+      const asignaciones = Array.isArray(responseData) ? responseData : (responseData?.data || responseData || []);
+
+      const equipoMapeado: MiembroEquipo[] = asignaciones
+        .map((asignacion: {
+          id: number;
+          personalId: number;
+          personal?: {
+            id: number;
+            usuarioId?: number;
+            nombres?: string;
+            apellidos?: string;
+            usuario?: {
+              id: number;
+              nombre?: string;
+              apellido?: string;
+            };
+          };
+        }) => {
+          // Usar personalId como ID (es lo que se guarda en asignadoA)
+          const id = asignacion.personalId || asignacion.personal?.id;
+
+          if (!id) return null;
+
+          // Obtener usuarioId del personal (vinculación con tabla usuarios)
+          const usuarioId = asignacion.personal?.usuarioId || asignacion.personal?.usuario?.id;
+
+          // Mostrar nombres + apellidos del personal
+          const nombres = asignacion.personal?.nombres || '';
+          const apellidos = asignacion.personal?.apellidos || '';
+          const nombreCompleto = `${nombres} ${apellidos}`.trim() || `Personal ${id}`;
+
+          return { id, usuarioId, nombre: nombreCompleto };
+        })
+        .filter((item: MiembroEquipo | null): item is MiembroEquipo => item !== null);
+
+      setEquipo(equipoMapeado);
+    } catch (err) {
+      console.error('Error fetching equipo:', err);
     }
   }, [proyectoId]);
 
@@ -87,17 +143,17 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
     try {
       setIsLoadingSprints(true);
 
-      // Get all sprints for the project
+      // Get ALL sprints for the project (including completed ones)
       const sprintsData = await getSprintsByProyecto(proyectoId);
 
-      // Filter to non-completed sprints (Activo and Planificado)
-      const activeSprints = sprintsData.filter(
-        (s) => s.estado === 'Activo' || s.estado === 'Planificado'
-      );
+      // Helper para verificar estados (soporta ambos formatos)
+      const isEnProgreso = (estado: string) => estado === 'En progreso' || estado === 'Activo';
+      const isPorHacer = (estado: string) => estado === 'Por hacer' || estado === 'Planificado';
+      const isFinalizado = (estado: string) => estado === 'Finalizado' || estado === 'Completado';
 
-      // Fetch historias for each sprint
+      // Fetch historias for each sprint (ALL sprints, not just active)
       const sprintsWithHistorias = await Promise.all(
-        activeSprints.map(async (sprint) => {
+        sprintsData.map(async (sprint) => {
           try {
             const historias = await getHistoriasBySprint(sprint.id);
             return {
@@ -113,10 +169,15 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
         })
       );
 
-      // Sort: Activo first, then Planificado by number
+      // Sort: En progreso first, then Por hacer, then Finalizado - all by number
       sprintsWithHistorias.sort((a, b) => {
-        if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
-        if (a.estado !== 'Activo' && b.estado === 'Activo') return 1;
+        // En progreso tiene prioridad
+        if (isEnProgreso(a.estado) && !isEnProgreso(b.estado)) return -1;
+        if (!isEnProgreso(a.estado) && isEnProgreso(b.estado)) return 1;
+        // Luego Por hacer
+        if (isPorHacer(a.estado) && isFinalizado(b.estado)) return -1;
+        if (isFinalizado(a.estado) && isPorHacer(b.estado)) return 1;
+        // Finalmente por número
         return a.numero - b.numero;
       });
 
@@ -137,6 +198,7 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
         fetchSprintsWithHistorias(),
         fetchBacklog(),
         fetchEpicas(),
+        fetchEquipo(),
       ]);
     } catch (err) {
       console.error('Error refreshing data:', err);
@@ -144,7 +206,7 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [fetchSprintsWithHistorias, fetchBacklog, fetchEpicas]);
+  }, [fetchSprintsWithHistorias, fetchBacklog, fetchEpicas, fetchEquipo]);
 
   const refreshSprint = useCallback(async (sprintId: number) => {
     try {
@@ -174,6 +236,7 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
     sprints,
     backlogHistorias,
     epicas,
+    equipo,
     backlogStats,
     isLoading,
     isLoadingSprints,

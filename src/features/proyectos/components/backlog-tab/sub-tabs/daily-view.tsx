@@ -45,22 +45,46 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/lib/hooks/use-toast';
+import { useAuth } from '@/stores';
 import type { Sprint } from '@/features/proyectos/types';
 import { getSprintDailyMeetings } from '@/features/proyectos/services/sprints.service';
+import { parseLocalDate } from '@/lib/utils';
 import {
   DailyCalendar,
   CreateDailyModal,
+  EditDailyModal,
   ImpedimentosPanel,
 } from '@/features/daily-meetings/components';
 import type { Impedimento } from '@/features/daily-meetings/components';
 import {
   createDailyMeeting,
   registrarParticipacion,
+  updateDailyMeeting,
+  deleteDailyMeeting,
+  actualizarParticipacion,
 } from '@/features/daily-meetings/services/daily-meeting.service';
+import {
+  getImpedimentosBySprint,
+  createImpedimento,
+  updateImpedimento,
+  resolveImpedimento,
+  type Impedimento as ImpedimentoAPI,
+} from '@/features/daily-meetings/services/impedimento.service';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface DailyViewProps {
   proyectoId: number;
   sprints: Sprint[];
+  equipo?: { id: number; usuarioId?: number; nombre: string }[];
 }
 
 interface DailyMeeting {
@@ -91,7 +115,8 @@ interface TeamMember {
   rol?: string;
 }
 
-export function DailyView({ proyectoId, sprints }: DailyViewProps) {
+export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: DailyViewProps) {
+  const { user } = useAuth();
   const [selectedSprintId, setSelectedSprintId] = useState<string>('');
   const [dailyMeetings, setDailyMeetings] = useState<DailyMeeting[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,8 +126,15 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
   const [activeTab, setActiveTab] = useState<'calendar' | 'history'>('calendar');
   const [expandedDailyId, setExpandedDailyId] = useState<number | null>(null);
 
-  const sprintActivo = sprints.find((s) => s.estado === 'Activo');
-  const sprintsConMeetings = sprints.filter((s) => s.estado !== 'Planificado');
+  // Estados para editar y eliminar
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [dailyToEdit, setDailyToEdit] = useState<DailyMeeting | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [dailyToDelete, setDailyToDelete] = useState<DailyMeeting | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const sprintActivo = sprints.find((s) => s.estado === 'En progreso' || s.estado === 'Activo');
+  const sprintsConMeetings = sprints.filter((s) => s.estado !== 'Por hacer' && s.estado !== 'Planificado');
 
   // Equipo del sprint seleccionado (mock - reemplazar con datos reales)
   const [equipoSprint, setEquipoSprint] = useState<TeamMember[]>([]);
@@ -120,15 +152,59 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
     if (selectedSprintId) {
       loadDailyMeetings();
       loadEquipoSprint();
-      loadImpedimentos();
+      loadImpedimentos(); // Cargar impedimentos desde API
     }
-  }, [selectedSprintId]);
+  }, [selectedSprintId, equipoProyecto]);
+
+  // Auto-seleccionar el día de hoy y mostrar su daily si existe
+  useEffect(() => {
+    if (dailyMeetings.length > 0 && !selectedDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setSelectedDate(today);
+
+      // Buscar si hay daily para hoy
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      const todayKey = `${year}-${month}-${day}`;
+
+      const todaysDaily = dailyMeetings.find(
+        (d) => d.fecha.split('T')[0] === todayKey
+      );
+
+      if (todaysDaily) {
+        setSelectedDaily(todaysDaily);
+        setExpandedDailyId(todaysDaily.id);
+      }
+    }
+  }, [dailyMeetings]);
 
   const loadDailyMeetings = async () => {
     try {
       setIsLoading(true);
       const data = await getSprintDailyMeetings(selectedSprintId);
-      setDailyMeetings(data);
+
+      // Transformar datos del backend al formato del frontend
+      // Backend: participante.usuario.nombre, participante.queHiceAyer
+      // Frontend: participante.nombre, participante.ayer
+      const mappedData = data.map((daily: any) => ({
+        ...daily,
+        duracion: daily.duracionMinutos || daily.duracion || 15,
+        participantes: (daily.participantes || []).map((p: any) => ({
+          id: p.id,
+          usuarioId: p.usuarioId,
+          nombre: p.usuario
+            ? `${p.usuario.nombre || ''} ${p.usuario.apellido || ''}`.trim()
+            : p.nombre || 'Sin nombre',
+          asistio: p.asistio ?? false,
+          ayer: p.queHiceAyer || '',
+          hoy: p.queHareHoy || '',
+          impedimentos: p.impedimentos || null,
+        })),
+      }));
+
+      setDailyMeetings(mappedData);
     } catch (err) {
       console.error('Error loading daily meetings:', err);
       setDailyMeetings([]);
@@ -138,42 +214,75 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
   };
 
   const loadEquipoSprint = async () => {
-    // TODO: Cargar equipo real del sprint desde el backend
-    // Por ahora usamos datos de ejemplo
-    const selectedSprint = sprints.find((s) => s.id.toString() === selectedSprintId);
-    if (selectedSprint && (selectedSprint as any).equipo) {
-      setEquipoSprint((selectedSprint as any).equipo);
+    // Usar el equipo del proyecto (responsables asignados)
+    if (equipoProyecto && equipoProyecto.length > 0) {
+      // Solo incluir miembros que tengan usuarioId (vinculación con tabla usuarios)
+      // El backend requiere usuarioId para los participantes del daily
+      const equipoMapeado: TeamMember[] = equipoProyecto
+        .filter((miembro) => miembro.usuarioId) // Solo los que tienen usuario vinculado
+        .map((miembro) => ({
+          id: miembro.id,
+          usuarioId: miembro.usuarioId!, // Usar el usuarioId real
+          nombre: miembro.nombre,
+          email: '', // No disponible desde asignaciones
+          rol: 'Responsable',
+        }));
+      setEquipoSprint(equipoMapeado);
     } else {
-      // Datos de ejemplo
-      setEquipoSprint([
-        { id: 1, usuarioId: 1, nombre: 'Juan Pérez', email: 'juan@test.com', rol: 'Desarrollador' },
-        { id: 2, usuarioId: 2, nombre: 'María García', email: 'maria@test.com', rol: 'Desarrollador' },
-        { id: 3, usuarioId: 3, nombre: 'Carlos López', email: 'carlos@test.com', rol: 'QA' },
-      ]);
+      // Si no hay equipo, verificar si el sprint tiene equipo asignado
+      const selectedSprint = sprints.find((s) => s.id.toString() === selectedSprintId);
+      if (selectedSprint && (selectedSprint as any).equipo) {
+        setEquipoSprint((selectedSprint as any).equipo);
+      } else {
+        // Sin equipo disponible
+        setEquipoSprint([]);
+      }
     }
   };
 
   const loadImpedimentos = async () => {
-    // TODO: Cargar impedimentos reales del backend
-    // Por ahora extraemos de las dailies existentes
-    const impedimentosFromDailies: Impedimento[] = [];
-    dailyMeetings.forEach((daily) => {
-      daily.participantes.forEach((p) => {
-        if (p.impedimentos) {
-          impedimentosFromDailies.push({
-            id: Math.random(),
-            descripcion: p.impedimentos,
-            reportadoPor: { id: p.id, nombre: p.nombre },
-            prioridad: 'Media',
-            estado: 'Abierto',
-            fechaReporte: daily.fecha,
-            dailyMeetingId: daily.id,
-            fechaDaily: daily.fecha,
-          });
-        }
-      });
-    });
-    setImpedimentos(impedimentosFromDailies);
+    if (!selectedSprintId) return;
+
+    try {
+      // Cargar impedimentos del backend
+      const impedimentosData = await getImpedimentosBySprint(parseInt(selectedSprintId));
+
+      // Validar que sea un array antes de mapear
+      if (!Array.isArray(impedimentosData)) {
+        console.warn('impedimentosData no es un array:', impedimentosData);
+        setImpedimentos([]);
+        return;
+      }
+
+      // Mapear al formato del frontend
+      const mappedImpedimentos: Impedimento[] = impedimentosData.map((imp: ImpedimentoAPI) => ({
+        id: imp.id,
+        descripcion: imp.descripcion,
+        reportadoPor: {
+          id: imp.reportadoPor?.id || 0,
+          nombre: imp.reportadoPor
+            ? `${imp.reportadoPor.nombre || ''} ${imp.reportadoPor.apellido || ''}`.trim()
+            : 'Desconocido',
+        },
+        responsable: imp.responsable
+          ? {
+              id: imp.responsable.id,
+              nombre: `${imp.responsable.nombre || ''} ${imp.responsable.apellido || ''}`.trim(),
+            }
+          : undefined,
+        prioridad: imp.prioridad,
+        estado: imp.estado,
+        fechaReporte: imp.fechaReporte,
+        fechaLimite: imp.fechaLimite,
+        resolucion: imp.resolucion,
+        dailyMeetingId: imp.dailyMeetingId,
+      }));
+
+      setImpedimentos(mappedImpedimentos);
+    } catch (error) {
+      console.error('Error loading impedimentos:', error);
+      setImpedimentos([]);
+    }
   };
 
   // Preparar datos para el calendario
@@ -192,7 +301,12 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
   // Manejar selección de fecha en calendario
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
-    const dateKey = date.toISOString().split('T')[0];
+    // Usar formato local para evitar problemas de zona horaria
+    // toISOString() convierte a UTC, lo que puede cambiar el día
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateKey = `${year}-${month}-${day}`;
     const existingDaily = dailyMeetings.find(
       (d) => d.fecha.split('T')[0] === dateKey
     );
@@ -227,32 +341,80 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
     }[];
   }) => {
     try {
-      // Crear la daily meeting
+      // Obtener nombre del sprint para el título
+      const sprint = sprints.find((s) => s.id.toString() === selectedSprintId);
+      // Usar parseLocalDate para evitar problemas de zona horaria
+      // new Date("2026-01-20") interpreta como UTC, causando que muestre el día anterior
+      const fechaLocal = parseLocalDate(data.fecha);
+      const fechaFormateada = fechaLocal
+        ? fechaLocal.toLocaleDateString('es-PE', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          })
+        : data.fecha;
+
+      // Preparar participantes con el formato del backend
+      // Enviamos TODOS los participantes con su estado de asistencia
+      const participantesDto = data.participantes.map((p) => ({
+        usuarioId: p.usuarioId,
+        asistio: p.asistio,
+        // Solo incluir respuestas si asistió
+        queHiceAyer: p.asistio ? (p.queHiceAyer || undefined) : undefined,
+        queHareHoy: p.asistio ? (p.queHareHoy || undefined) : undefined,
+        impedimentos: p.asistio ? (p.impedimentos || undefined) : undefined,
+      }));
+
+      // Crear la daily meeting con todos los campos requeridos
+      // El sprintId es importante para asociar la daily al sprint correcto
       const newDaily = await createDailyMeeting({
-        sprintId: parseInt(selectedSprintId),
+        tipo: 'Proyecto', // Debe coincidir con el enum del backend
+        proyectoId: proyectoId,
+        sprintId: parseInt(selectedSprintId), // Asociar al sprint seleccionado
+        nombre: `Daily ${sprint?.nombre || 'Sprint'} - ${fechaFormateada}`,
         fecha: data.fecha,
         horaInicio: data.horaInicio,
         notas: data.notas,
+        participantes: participantesDto.length > 0 ? participantesDto : undefined,
       });
-
-      // Registrar participaciones
-      for (const p of data.participantes) {
-        await registrarParticipacion(selectedSprintId, newDaily.id, {
-          personalId: p.usuarioId,
-          asistio: p.asistio,
-          ayer: p.queHiceAyer,
-          hoy: p.queHareHoy,
-          impedimentos: p.impedimentos,
-          notas: p.ausenciMotivo,
-        });
-      }
 
       toast({
         title: 'Daily registrada',
         description: 'La daily meeting se registró correctamente',
       });
-      loadDailyMeetings();
-      loadImpedimentos();
+
+      // Recargar los datos del backend
+      const freshData = await getSprintDailyMeetings(selectedSprintId);
+
+      // Transformar datos del backend al formato del frontend
+      const mappedData = freshData.map((daily: any) => ({
+        ...daily,
+        duracion: daily.duracionMinutos || daily.duracion || 15,
+        participantes: (daily.participantes || []).map((p: any) => ({
+          id: p.id,
+          usuarioId: p.usuarioId,
+          nombre: p.usuario
+            ? `${p.usuario.nombre || ''} ${p.usuario.apellido || ''}`.trim()
+            : p.nombre || 'Sin nombre',
+          asistio: p.asistio ?? false,
+          ayer: p.queHiceAyer || '',
+          hoy: p.queHareHoy || '',
+          impedimentos: p.impedimentos || null,
+        })),
+      }));
+
+      // Actualizar el estado con los nuevos datos
+      setDailyMeetings(mappedData);
+
+      // Seleccionar el daily recién creado
+      if (newDaily?.id) {
+        const createdDaily = mappedData.find((d: DailyMeeting) => d.id === newDaily.id);
+        if (createdDaily) {
+          setSelectedDaily(createdDaily);
+          setExpandedDailyId(createdDaily.id);
+        }
+      }
+      // Los impedimentos se recargan automáticamente via useEffect cuando dailyMeetings cambia
     } catch (error) {
       console.error('Error creating daily:', error);
       toast({
@@ -260,6 +422,132 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
         description: 'No se pudo crear la daily meeting',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Editar daily meeting
+  const handleEditDaily = (daily: DailyMeeting) => {
+    setDailyToEdit(daily);
+    setIsEditModalOpen(true);
+  };
+
+  // Guardar cambios de edición
+  const handleSaveEdit = async (data: {
+    horaInicio?: string;
+    horaFin?: string;
+    notas?: string;
+    participantes?: {
+      id: number;
+      asistio: boolean;
+      ayer: string;
+      hoy: string;
+      impedimentos: string;
+    }[];
+  }) => {
+    if (!dailyToEdit) return;
+
+    try {
+      // Actualizar la daily meeting
+      await updateDailyMeeting(dailyToEdit.id, {
+        horaInicio: data.horaInicio,
+        horaFin: data.horaFin,
+        notas: data.notas,
+      });
+
+      // Actualizar cada participante si hay cambios
+      if (data.participantes) {
+        for (const p of data.participantes) {
+          await actualizarParticipacion(p.id, {
+            asistio: p.asistio,
+            queHiceAyer: p.ayer,
+            queHareHoy: p.hoy,
+            impedimentos: p.impedimentos,
+          });
+        }
+      }
+
+      toast({
+        title: 'Daily actualizada',
+        description: 'Los cambios se guardaron correctamente',
+      });
+
+      // Guardar el ID del daily que estamos editando para actualizarlo después
+      const editedDailyId = dailyToEdit.id;
+
+      setIsEditModalOpen(false);
+      setDailyToEdit(null);
+
+      // Recargar los datos del backend
+      const freshData = await getSprintDailyMeetings(selectedSprintId);
+
+      // Transformar datos del backend al formato del frontend
+      const mappedData = freshData.map((daily: any) => ({
+        ...daily,
+        duracion: daily.duracionMinutos || daily.duracion || 15,
+        participantes: (daily.participantes || []).map((p: any) => ({
+          id: p.id,
+          usuarioId: p.usuarioId,
+          nombre: p.usuario
+            ? `${p.usuario.nombre || ''} ${p.usuario.apellido || ''}`.trim()
+            : p.nombre || 'Sin nombre',
+          asistio: p.asistio ?? false,
+          ayer: p.queHiceAyer || '',
+          hoy: p.queHareHoy || '',
+          impedimentos: p.impedimentos || null,
+        })),
+      }));
+
+      // Actualizar el estado con los nuevos datos
+      setDailyMeetings(mappedData);
+
+      // Actualizar selectedDaily con los datos recargados
+      const updatedDaily = mappedData.find((d: DailyMeeting) => d.id === editedDailyId);
+      if (updatedDaily) {
+        setSelectedDaily(updatedDaily);
+      }
+      // Los impedimentos se recargan automáticamente via useEffect cuando dailyMeetings cambia
+    } catch (error) {
+      console.error('Error updating daily:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar la daily meeting',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Confirmar eliminación
+  const handleDeleteDaily = (daily: DailyMeeting) => {
+    setDailyToDelete(daily);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Ejecutar eliminación
+  const confirmDelete = async () => {
+    if (!dailyToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteDailyMeeting(dailyToDelete.id);
+
+      toast({
+        title: 'Daily eliminada',
+        description: 'La daily meeting fue eliminada correctamente',
+      });
+
+      setIsDeleteDialogOpen(false);
+      setDailyToDelete(null);
+      setSelectedDaily(null);
+      loadDailyMeetings();
+    } catch (error) {
+      console.error('Error deleting daily:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar la daily meeting',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -281,49 +569,85 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
 
   // Manejar impedimentos
   const handleCreateImpedimento = async (data: any) => {
-    // TODO: Implementar creación de impedimento en backend
-    const newImpedimento: Impedimento = {
-      id: Date.now(),
-      descripcion: data.descripcion,
-      reportadoPor: { id: 1, nombre: 'Usuario Actual' }, // TODO: Usuario real
-      responsable: data.responsableId
-        ? equipoSprint.find((m) => m.usuarioId === data.responsableId)
-          ? { id: data.responsableId, nombre: equipoSprint.find((m) => m.usuarioId === data.responsableId)!.nombre }
-          : undefined
-        : undefined,
-      prioridad: data.prioridad,
-      estado: 'Abierto',
-      fechaReporte: new Date().toISOString(),
-      fechaLimite: data.fechaLimite,
-    };
-    setImpedimentos((prev) => [...prev, newImpedimento]);
-    toast({
-      title: 'Impedimento registrado',
-      description: 'El impedimento fue creado correctamente',
-    });
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo identificar al usuario',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await createImpedimento({
+        descripcion: data.descripcion,
+        proyectoId: proyectoId,
+        sprintId: selectedSprintId ? parseInt(selectedSprintId) : undefined,
+        reportadoPorId: user.id,
+        responsableId: data.responsableId,
+        prioridad: data.prioridad,
+        fechaLimite: data.fechaLimite,
+      });
+
+      toast({
+        title: 'Impedimento registrado',
+        description: 'El impedimento fue creado correctamente',
+      });
+
+      // Recargar impedimentos
+      await loadImpedimentos();
+    } catch (error) {
+      console.error('Error creating impedimento:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo crear el impedimento',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleUpdateImpedimento = async (id: number, data: Partial<Impedimento>) => {
-    setImpedimentos((prev) =>
-      prev.map((imp) => (imp.id === id ? { ...imp, ...data } : imp))
-    );
+    try {
+      await updateImpedimento(id, {
+        descripcion: data.descripcion,
+        responsableId: data.responsable?.id,
+        prioridad: data.prioridad,
+        estado: data.estado,
+        fechaLimite: data.fechaLimite,
+      });
+      // Recargar impedimentos
+      await loadImpedimentos();
+    } catch (error) {
+      console.error('Error updating impedimento:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar el impedimento',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleResolveImpedimento = async (id: number, resolucion: string) => {
-    setImpedimentos((prev) =>
-      prev.map((imp) =>
-        imp.id === id
-          ? { ...imp, estado: 'Resuelto' as const, resolucion }
-          : imp
-      )
-    );
-    toast({
-      title: 'Impedimento resuelto',
-      description: 'El impedimento fue marcado como resuelto',
-    });
+    try {
+      await resolveImpedimento(id, resolucion);
+      // Recargar impedimentos
+      await loadImpedimentos();
+      toast({
+        title: 'Impedimento resuelto',
+        description: 'El impedimento fue marcado como resuelto',
+      });
+    } catch (error) {
+      console.error('Error resolving impedimento:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo resolver el impedimento',
+        variant: 'destructive',
+      });
+    }
   };
 
   const getInitials = (nombre: string) => {
+    if (!nombre) return '??';
     return nombre
       .split(' ')
       .map((n) => n[0])
@@ -381,8 +705,8 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
               {sprintsConMeetings.map((sprint) => (
                 <SelectItem key={sprint.id} value={sprint.id.toString()}>
                   {sprint.nombre}
-                  {sprint.estado === 'Activo' && (
-                    <Badge className="ml-2 bg-blue-100 text-blue-800">Activo</Badge>
+                  {(sprint.estado === 'En progreso' || sprint.estado === 'Activo') && (
+                    <Badge className="ml-2 bg-blue-100 text-blue-800">En progreso</Badge>
                   )}
                 </SelectItem>
               ))}
@@ -491,7 +815,7 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
                       {selectedSprint?.fechaInicio
                         ? Math.ceil(
                             (new Date().getTime() -
-                              new Date(selectedSprint.fechaInicio).getTime()) /
+                              (parseLocalDate(selectedSprint.fechaInicio)?.getTime() || 0)) /
                               (1000 * 60 * 60 * 24)
                           )
                         : 0}
@@ -534,7 +858,8 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
                   {selectedDaily ? (
                     <DailyDetailCard
                       daily={selectedDaily}
-                      onEdit={() => toast({ title: 'Edición', description: 'Funcionalidad en desarrollo' })}
+                      onEdit={() => handleEditDaily(selectedDaily)}
+                      onDelete={() => handleDeleteDaily(selectedDaily)}
                     />
                   ) : selectedDate ? (
                     <Card className="border-dashed">
@@ -629,6 +954,53 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
         fechaPreseleccionada={selectedDate || undefined}
         onSubmit={handleCreateDaily}
       />
+
+      {/* Modal de edición */}
+      {dailyToEdit && (
+        <EditDailyModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) setDailyToEdit(null);
+          }}
+          daily={dailyToEdit}
+          onSave={handleSaveEdit}
+        />
+      )}
+
+      {/* Diálogo de confirmación de eliminación */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar Daily Meeting?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente la
+              daily meeting del{' '}
+              {dailyToDelete &&
+                (parseLocalDate(dailyToDelete.fecha) || new Date(dailyToDelete.fecha)).toLocaleDateString(
+                  'es-PE',
+                  {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  }
+                )}
+              .
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -637,14 +1009,17 @@ export function DailyView({ proyectoId, sprints }: DailyViewProps) {
 interface DailyDetailCardProps {
   daily: DailyMeeting;
   onEdit: () => void;
+  onDelete?: () => void;
 }
 
-function DailyDetailCard({ daily, onEdit }: DailyDetailCardProps) {
-  const fecha = new Date(daily.fecha);
+function DailyDetailCard({ daily, onEdit, onDelete }: DailyDetailCardProps) {
+  // Usar parseLocalDate para evitar problemas de zona horaria
+  const fecha = parseLocalDate(daily.fecha) || new Date(daily.fecha);
   const hasImpediments = daily.participantes.some((p) => p.impedimentos);
   const asistentes = daily.participantes.filter((p) => p.asistio !== false);
 
   const getInitials = (nombre: string) => {
+    if (!nombre) return '??';
     return nombre
       .split(' ')
       .map((n) => n[0])
@@ -688,9 +1063,16 @@ function DailyDetailCard({ daily, onEdit }: DailyDetailCardProps) {
               </CardDescription>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            Editar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              Editar
+            </Button>
+            {onDelete && (
+              <Button variant="outline" size="sm" onClick={onDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                Eliminar
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -777,11 +1159,13 @@ interface DailyHistoryCardProps {
 }
 
 function DailyHistoryCard({ daily, isExpanded, onToggle }: DailyHistoryCardProps) {
-  const fecha = new Date(daily.fecha);
+  // Usar parseLocalDate para evitar problemas de zona horaria
+  const fecha = parseLocalDate(daily.fecha) || new Date(daily.fecha);
   const hasImpediments = daily.participantes.some((p) => p.impedimentos);
   const asistentes = daily.participantes.filter((p) => p.asistio !== false);
 
   const getInitials = (nombre: string) => {
+    if (!nombre) return '??';
     return nombre
       .split(' ')
       .map((n) => n[0])

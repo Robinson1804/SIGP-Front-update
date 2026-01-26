@@ -25,6 +25,7 @@ export const ENDPOINTS = {
   PROYECTOS: {
     BASE: '/proyectos',
     BY_ID: (id: number | string) => `/proyectos/${id}`,
+    NEXT_CODIGO: '/proyectos/next-codigo',
 
     // Backlog
     BACKLOG: (proyectoId: number | string) => `/proyectos/${proyectoId}/backlog`,
@@ -80,6 +81,7 @@ export const ENDPOINTS = {
   ACTIVIDADES: {
     BASE: '/actividades',
     BY_ID: (id: number | string) => `/actividades/${id}`,
+    NEXT_CODIGO: '/actividades/next-codigo',
 
     // Tareas
     TAREAS: (actividadId: number | string) => `/actividades/${actividadId}/tareas`,
@@ -119,6 +121,8 @@ export const ENDPOINTS = {
     TAREAS: (historiaId: number | string) => `/historias-usuario/${historiaId}/tareas`,
     CRITERIOS: (historiaId: number | string) => `/historias-usuario/${historiaId}/criterios-aceptacion`,
     MOVER_SPRINT: (historiaId: number | string) => `/historias-usuario/${historiaId}/mover-sprint`,
+    VALIDAR: (historiaId: number | string) => `/historias-usuario/${historiaId}/validar`,
+    REGENERAR_PDF: (historiaId: number | string) => `/historias-usuario/${historiaId}/regenerar-pdf`,
   },
 
   // ============================================
@@ -131,6 +135,9 @@ export const ENDPOINTS = {
     CAMBIAR_ESTADO: (tareaId: number | string) => `/tareas/${tareaId}/estado`,
     MOVER: (tareaId: number | string) => `/tareas/${tareaId}/mover`,
     COMENTARIOS: (tareaId: number | string) => `/tareas/${tareaId}/comentarios`,
+    EVIDENCIAS: (tareaId: number | string) => `/tareas/${tareaId}/evidencias`,
+    EVIDENCIA: (tareaId: number | string, evidenciaId: number | string) =>
+      `/tareas/${tareaId}/evidencias/${evidenciaId}`,
   },
 
   // ============================================
@@ -211,12 +218,18 @@ export const ENDPOINTS = {
     PERSONAL_HABILIDADES: (id: number | string) => `/personal/${id}/habilidades`,
     PERSONAL_HABILIDAD: (personalId: number | string, habilidadId: number | string) =>
       `/personal/${personalId}/habilidades/${habilidadId}`,
+    PERSONAL_DESARROLLADORES: '/personal/desarrolladores',
+    PERSONAL_IMPLEMENTADORES: '/personal/implementadores',
 
     // Divisiones
     DIVISIONES: '/divisiones',
     DIVISIONES_ARBOL: '/divisiones/arbol',
     DIVISION_BY_ID: (id: number | string) => `/divisiones/${id}`,
     DIVISION_PERSONAL: (id: number | string) => `/divisiones/${id}/personal`,
+    DIVISION_COORDINADOR: (id: number | string) => `/divisiones/${id}/coordinador`,
+    DIVISION_SCRUM_MASTERS: (id: number | string) => `/divisiones/${id}/scrum-masters`,
+    DIVISION_SCRUM_MASTER: (divisionId: number | string, personalId: number | string) =>
+      `/divisiones/${divisionId}/scrum-masters/${personalId}`,
 
     // Habilidades
     HABILIDADES: '/habilidades',
@@ -228,6 +241,7 @@ export const ENDPOINTS = {
     ASIGNACIONES_ALERTAS: '/asignaciones/alertas/sobrecarga',
     ASIGNACIONES_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/asignaciones`,
     ASIGNACIONES_ACTIVIDAD: (actividadId: number | string) => `/actividades/${actividadId}/asignaciones`,
+    ASIGNACIONES_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/asignaciones`,
   },
 
   // ============================================
@@ -279,10 +293,15 @@ export const ENDPOINTS = {
     PERFIL: '/usuarios/perfil',
     ACTUALIZAR_PERFIL: '/usuarios/perfil',
     CAMBIAR_PASSWORD: '/usuarios/cambiar-password',
+    RESETEAR_PASSWORD: (id: number | string) => `/usuarios/${id}/resetear-password`,
     ROLES: '/usuarios/roles',
+    AGREGAR_ROL: (id: number | string) => `/usuarios/${id}/roles/agregar`,
+    REMOVER_ROL: (id: number | string) => `/usuarios/${id}/roles/remover`,
+    CREAR_PARA_PERSONAL: (personalId: number | string) => `/usuarios/para-personal/${personalId}`,
     BY_ROL: (rol: string) => `/usuarios/by-rol/${rol}`,
     COORDINADORES: '/usuarios/coordinadores',
     SCRUM_MASTERS: '/usuarios/scrum-masters',
+    SCRUM_MASTERS_ELEGIBLES: '/usuarios/scrum-masters-elegibles',
     PATROCINADORES: '/usuarios/patrocinadores',
     DESARROLLADORES: '/usuarios/desarrolladores',
     IMPLEMENTADORES: '/usuarios/implementadores',
@@ -308,12 +327,30 @@ export const ENDPOINTS = {
   // DAILY MEETINGS - Reuniones Diarias
   // ============================================
   DAILY_MEETINGS: {
-    BASE: (sprintId: number | string) => `/sprints/${sprintId}/daily-meetings`,
-    BY_ID: (sprintId: number | string, meetingId: number | string) =>
-      `/sprints/${sprintId}/daily-meetings/${meetingId}`,
-    PARTICIPANTES: (sprintId: number | string, meetingId: number | string) =>
-      `/sprints/${sprintId}/daily-meetings/${meetingId}/participantes`,
+    // Endpoint principal para crear y listar todas
+    ROOT: '/daily-meetings',
+    ROOT_BY_ID: (meetingId: number | string) => `/daily-meetings/${meetingId}`,
+    // Endpoints anidados para consultas por sprint
+    BY_SPRINT: (sprintId: number | string) => `/sprints/${sprintId}/daily-meetings`,
+    BY_ID: (meetingId: number | string) => `/daily-meetings/${meetingId}`,
+    PARTICIPANTES: (meetingId: number | string) => `/daily-meetings/${meetingId}/participantes`,
+    PARTICIPANTE: (participanteId: number | string) => `/daily-meetings/participantes/${participanteId}`,
     HISTORIAL: (proyectoId: number | string) => `/proyectos/${proyectoId}/daily-meetings`,
+    // Legacy - mantener compatibilidad
+    BASE: (sprintId: number | string) => `/sprints/${sprintId}/daily-meetings`,
+  },
+
+  // ============================================
+  // IMPEDIMENTOS - Gestión de Impedimentos
+  // ============================================
+  IMPEDIMENTOS: {
+    BASE: '/impedimentos',
+    BY_ID: (id: number | string) => `/impedimentos/${id}`,
+    BY_PROYECTO: (proyectoId: number | string) => `/impedimentos/proyecto/${proyectoId}`,
+    BY_SPRINT: (sprintId: number | string) => `/impedimentos/sprint/${sprintId}`,
+    BY_ACTIVIDAD: (actividadId: number | string) => `/impedimentos/actividad/${actividadId}`,
+    RESOLVER: (id: number | string) => `/impedimentos/${id}/resolver`,
+    ESTADISTICAS: '/impedimentos/estadisticas',
   },
 
   // ============================================

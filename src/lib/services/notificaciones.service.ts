@@ -43,11 +43,17 @@ export async function getNotificaciones(
   filters?: NotificacionFilters
 ): Promise<NotificacionesResponse> {
   try {
-    const response = await apiClient.get<NotificacionesResponse>(
+    const response = await apiClient.get<Notificacion[]>(
       ENDPOINTS.NOTIFICACIONES.BASE,
       { params: filters }
     );
-    return response.data;
+    // Backend returns array directly in data, wrap it in expected format
+    const notificaciones = Array.isArray(response.data) ? response.data : [];
+    return {
+      notificaciones,
+      total: notificaciones.length,
+      noLeidas: notificaciones.filter(n => !n.leida).length,
+    };
   } catch (error) {
     console.error('Error fetching notificaciones:', error);
     // Return empty response if endpoint not available

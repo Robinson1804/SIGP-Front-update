@@ -77,7 +77,14 @@ export function DocumentoApprovalModal({
 
   const getCreadorName = () => {
     if (documento.creador) {
-      return `${documento.creador.nombres} ${documento.creador.apellidoPaterno}`;
+      // Preferir nombreCompleto si está disponible
+      if (documento.creador.nombreCompleto) {
+        return documento.creador.nombreCompleto;
+      }
+      // Fallback a nombres + apellido
+      if (documento.creador.nombres && documento.creador.apellidoPaterno) {
+        return `${documento.creador.nombres} ${documento.creador.apellidoPaterno}`;
+      }
     }
     return `Usuario ${documento.createdBy}`;
   };
