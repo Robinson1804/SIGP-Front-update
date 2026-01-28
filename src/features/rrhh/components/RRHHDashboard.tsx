@@ -78,8 +78,9 @@ export function RRHHDashboard({
       const asignacionesPersona = asignaciones.filter(
         (a) => a.personalId === p.id && a.activo
       );
+      // Convertir a número para evitar concatenación de strings
       const cargaTotal = asignacionesPersona.reduce(
-        (acc, a) => acc + a.porcentajeDedicacion,
+        (acc, a) => acc + Number(a.porcentajeDedicacion),
         0
       );
       return {

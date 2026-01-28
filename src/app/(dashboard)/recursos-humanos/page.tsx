@@ -39,16 +39,12 @@ import {
   CoordinadoresTable,
   ScrumMastersTable,
   UsuariosTable,
-  CrearAccesoModal,
 } from '@/features/rrhh/components';
 import type {
   Personal,
   Division,
   Habilidad,
   Asignacion,
-  RRHHStats,
-  Usuario,
-  Role,
 } from '@/features/rrhh/types';
 import type {
   CreatePersonalDto,
@@ -155,10 +151,6 @@ export default function RecursosHumanosPage() {
     item: Personal | Division | Habilidad | Asignacion;
   } | null>(null);
 
-  // Estado para modal de crear acceso
-  const [crearAccesoModalOpen, setCrearAccesoModalOpen] = useState(false);
-  const [personalParaAcceso, setPersonalParaAcceso] = useState<Personal | null>(null);
-
   // Estado para proyectos del POI (para asignaciones)
   const [proyectos, setProyectos] = useState<ProyectoBasico[]>([]);
 
@@ -228,47 +220,6 @@ export default function RecursosHumanosPage() {
       toast({ title: 'Personal creado correctamente' });
     }
     setPersonalFormOpen(false);
-  };
-
-  const handleCrearAcceso = (persona: Personal) => {
-    setPersonalParaAcceso(persona);
-    setCrearAccesoModalOpen(true);
-  };
-
-  const handleCrearAccesoSubmit = async (personalId: number, rol: Role) => {
-    const response = await apiClient.post(`/usuarios/para-personal/${personalId}`, { rol });
-    // Recargar ambos: personal y usuarios para mantener sincronizados
-    await Promise.all([loadPersonal(), loadUsuarios()]);
-    return response.data.data || response.data;
-  };
-
-  const handleCambiarRol = async (persona: Personal, nuevoRol: Role) => {
-    if (!persona.usuarioId) return;
-    try {
-      await apiClient.patch(`/usuarios/${persona.usuarioId}`, { rol: nuevoRol });
-      // Recargar ambos: personal y usuarios para mantener sincronizados
-      await Promise.all([loadPersonal(), loadUsuarios()]);
-      toast({ title: 'Rol actualizado correctamente' });
-    } catch (error) {
-      console.error('Error al cambiar rol:', error);
-      toast({ title: 'Error al cambiar rol', variant: 'destructive' });
-    }
-  };
-
-  const handleRevocarAcceso = async (persona: Personal) => {
-    if (!persona.usuarioId) return;
-    if (!confirm(`¿Está seguro de desactivar el acceso de ${persona.nombres} ${persona.apellidos}? El usuario será desactivado.`)) {
-      return;
-    }
-    try {
-      await apiClient.patch(`/usuarios/${persona.usuarioId}`, { activo: false });
-      // Recargar ambos: personal y usuarios para mantener sincronizados
-      await Promise.all([loadPersonal(), loadUsuarios()]);
-      toast({ title: 'Acceso revocado correctamente' });
-    } catch (error) {
-      console.error('Error al revocar acceso:', error);
-      toast({ title: 'Error al revocar acceso', variant: 'destructive' });
-    }
   };
 
   // Handlers División
@@ -529,9 +480,6 @@ export default function RecursosHumanosPage() {
                   onEdit={handleEditPersonal}
                   onDelete={(p) => handleDeleteConfirm('personal', p)}
                   onCreate={handleCreatePersonal}
-                  onCrearAcceso={handleCrearAcceso}
-                  onCambiarRol={handleCambiarRol}
-                  onRevocarAcceso={handleRevocarAcceso}
                   isLoading={isLoading}
                 />
               </TabsContent>
@@ -663,16 +611,6 @@ export default function RecursosHumanosPage() {
           actividades={[]} // TODO: Load from POI
           subproyectos={[]} // TODO: Load from POI
           isLoading={isLoading}
-        />
-
-        <CrearAccesoModal
-          open={crearAccesoModalOpen}
-          onClose={() => {
-            setCrearAccesoModalOpen(false);
-            setPersonalParaAcceso(null);
-          }}
-          personal={personalParaAcceso}
-          onCrearAcceso={handleCrearAccesoSubmit}
         />
 
         {/* Diálogo de confirmación de eliminación */}

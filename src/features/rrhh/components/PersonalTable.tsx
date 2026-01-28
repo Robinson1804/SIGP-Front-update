@@ -33,10 +33,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -47,19 +43,14 @@ import {
   Trash2,
   UserPlus,
   Users,
-  KeyRound,
   UserCheck,
   Shield,
-  UserX,
-  Check,
 } from 'lucide-react';
 import type { Personal, Division } from '../types';
 import {
   Modalidad,
-  Role,
   getModalidadLabel,
   getNombreCompleto,
-  getCargaColor,
   getRolLabel,
 } from '../types';
 
@@ -70,9 +61,6 @@ interface PersonalTableProps {
   onEdit: (persona: Personal) => void;
   onDelete: (persona: Personal) => void;
   onCreate: () => void;
-  onCrearAcceso?: (persona: Personal) => void;
-  onCambiarRol?: (persona: Personal, nuevoRol: Role) => void;
-  onRevocarAcceso?: (persona: Personal) => void;
   isLoading?: boolean;
 }
 
@@ -83,9 +71,6 @@ export function PersonalTable({
   onEdit,
   onDelete,
   onCreate,
-  onCrearAcceso,
-  onCambiarRol,
-  onRevocarAcceso,
   isLoading = false,
 }: PersonalTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -290,52 +275,13 @@ export function PersonalTable({
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
-                          {!persona.usuarioId && onCrearAcceso && (
-                            <DropdownMenuItem onClick={() => onCrearAcceso(persona)}>
-                              <KeyRound className="h-4 w-4 mr-2" />
-                              Crear acceso
+                          {persona.usuarioId && persona.usuario?.rol && (
+                            <DropdownMenuItem disabled>
+                              <Shield className="h-4 w-4 mr-2" />
+                              Rol: {getRolLabel(persona.usuario.rol)}
                             </DropdownMenuItem>
-                          )}
-                          {persona.usuarioId && persona.usuario?.rol && onCambiarRol && (
-                            <DropdownMenuSub>
-                              <DropdownMenuSubTrigger>
-                                <Shield className="h-4 w-4 mr-2" />
-                                Rol: {getRolLabel(persona.usuario.rol)}
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent>
-                                {Object.values(Role).map((rol) => (
-                                  <DropdownMenuItem
-                                    key={rol}
-                                    onClick={() => onCambiarRol(persona, rol)}
-                                    disabled={persona.usuario?.rol === rol}
-                                  >
-                                    {persona.usuario?.rol === rol && (
-                                      <Check className="h-4 w-4 mr-2" />
-                                    )}
-                                    {persona.usuario?.rol !== rol && (
-                                      <span className="w-4 mr-2" />
-                                    )}
-                                    {getRolLabel(rol)}
-                                  </DropdownMenuItem>
-                                ))}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => onRevocarAcceso?.(persona)}
-                                >
-                                  <UserX className="h-4 w-4 mr-2" />
-                                  Revocar acceso
-                                </DropdownMenuItem>
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
                           )}
                           {persona.usuarioId && !persona.usuario?.rol && (
-                            <DropdownMenuItem disabled>
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Tiene acceso
-                            </DropdownMenuItem>
-                          )}
-                          {persona.usuarioId && persona.usuario?.rol && !onCambiarRol && (
                             <DropdownMenuItem disabled>
                               <UserCheck className="h-4 w-4 mr-2" />
                               Tiene acceso

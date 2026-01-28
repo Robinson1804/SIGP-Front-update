@@ -406,11 +406,12 @@ export function isPersonalSobrecargado(porcentajeAsignado: number): boolean {
 
 /**
  * Helper para obtener el color según porcentaje de carga
+ * Retorna clases de Tailwind CSS para usar en Badge
  */
-export function getCargaColor(porcentaje: number): 'green' | 'yellow' | 'red' {
-  if (porcentaje <= 80) return 'green';
-  if (porcentaje <= 100) return 'yellow';
-  return 'red';
+export function getCargaColor(porcentaje: number): string {
+  if (porcentaje <= 80) return 'bg-green-100 text-green-800 hover:bg-green-100';
+  if (porcentaje <= 100) return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100';
+  return 'bg-red-100 text-red-800 hover:bg-red-100';
 }
 
 /**

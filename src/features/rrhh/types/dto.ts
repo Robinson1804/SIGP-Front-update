@@ -10,6 +10,7 @@ import {
   HabilidadCategoria,
   NivelHabilidad,
   TipoAsignacion,
+  Role,
 } from './index';
 
 // ============================================================================
@@ -33,6 +34,8 @@ export interface CreatePersonalDto {
   modalidad: Modalidad;
   horasSemanales?: number;
   usuarioId?: number;
+  /** Rol para crear automáticamente el usuario del sistema */
+  rol?: Role;
 }
 
 /**

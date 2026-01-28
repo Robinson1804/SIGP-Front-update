@@ -41,7 +41,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Loader2, User } from 'lucide-react';
 import type { Personal, Division } from '../types';
-import { Modalidad, getModalidadLabel } from '../types';
+import { Modalidad, getModalidadLabel, Role, getRolLabel } from '../types';
 import type { CreatePersonalDto, UpdatePersonalDto } from '../types/dto';
 import { VALIDATION_RULES } from '../types/dto';
 
@@ -87,6 +87,7 @@ const personalSchema = z.object({
     .max(VALIDATION_RULES.horasSemanales.max, 'Máximo 48 horas'),
   fechaIngreso: z.string().min(1, 'La fecha de ingreso es requerida'),
   activo: z.boolean().optional(),
+  rol: z.nativeEnum(Role).optional(),
 });
 
 type PersonalFormData = z.infer<typeof personalSchema>;
@@ -126,6 +127,7 @@ export function PersonalForm({
       horasSemanales: VALIDATION_RULES.horasSemanales.default,
       fechaIngreso: new Date().toISOString().split('T')[0],
       activo: true,
+      rol: undefined,
     },
   });
 
@@ -160,6 +162,8 @@ export function PersonalForm({
         horasSemanales: personal?.horasSemanales ? Number(personal.horasSemanales) : VALIDATION_RULES.horasSemanales.default,
         fechaIngreso: personal?.fechaIngreso?.split('T')[0] || new Date().toISOString().split('T')[0],
         activo: personal?.activo ?? true,
+        // For editing, show the current rol if they have a user, otherwise undefined
+        rol: personal?.usuario?.rol || undefined,
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,7 +173,7 @@ export function PersonalForm({
     try {
       // For updates, exclude codigoEmpleado as backend doesn't allow updating it
       // For creates, exclude activo as backend CreatePersonalDto doesn't accept it
-      const { codigoEmpleado, activo, ...baseFields } = data;
+      const { codigoEmpleado, activo, rol, ...baseFields } = data;
 
       const submitData = isEditing
         ? {
@@ -178,6 +182,7 @@ export function PersonalForm({
             dni: data.dni || undefined,
             telefono: data.telefono || undefined,
             cargo: data.cargo || undefined,
+            // Don't include rol for updates - rol changes are handled separately
           }
         : {
             // Solo incluir codigoEmpleado si tiene valor, sino el backend lo genera
@@ -187,6 +192,8 @@ export function PersonalForm({
             dni: data.dni || undefined,
             telefono: data.telefono || undefined,
             cargo: data.cargo || undefined,
+            // Include rol for creates - this will auto-create the user
+            ...(rol ? { rol } : {}),
           };
       await onSubmit(submitData as CreatePersonalDto | UpdatePersonalDto);
       form.reset();
@@ -426,6 +433,43 @@ export function PersonalForm({
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Rol del Sistema */}
+            <FormField
+              control={form.control}
+              name="rol"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rol en el Sistema {!isEditing && '*'}</FormLabel>
+                  <Select
+                    value={field.value || ''}
+                    onValueChange={(value) => field.onChange(value || undefined)}
+                    disabled={isEditing && !!personal?.usuarioId}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar rol" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="item-aligned">
+                      {Object.values(Role)
+                        .filter((rol) => rol !== Role.ADMIN) // Exclude ADMIN for security
+                        .map((rol) => (
+                          <SelectItem key={rol} value={rol}>
+                            {getRolLabel(rol)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {isEditing && personal?.usuarioId
+                      ? 'El rol no se puede cambiar desde aquí. Use la pestaña Usuarios.'
+                      : 'Al guardar se creará automáticamente el usuario con este rol'}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

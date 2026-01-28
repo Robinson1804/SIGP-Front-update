@@ -405,12 +405,22 @@ function POIModal({
                   </Select>
                   {errors.accionEstrategicaId && <p className="text-red-500 text-xs mt-1">{errors.accionEstrategicaId}</p>}
                 </div>
-                {selectedAE && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm">
-                    <p><strong>OEI:</strong> {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.oeis?.[0]?.nombre || 'Vinculado al PGD'}</p>
-                    <p><strong>OGD:</strong> {(selectedAE as any).oegd?.ogd?.codigo || 'N/A'} - {(selectedAE as any).oegd?.ogd?.nombre || 'Vinculado al PGD'}</p>
-                  </div>
-                )}
+                {selectedAE && (() => {
+                  const ae = selectedAE as any;
+                  const oegd = ae.oegd;
+                  const ogd = oegd?.ogd;
+                  const aei = oegd?.oegdAeis?.[0]?.aei;
+                  const oei = aei?.oei;
+
+                  return (
+                    <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm space-y-1">
+                      <p><strong>OEI:</strong> {oei?.codigo || 'N/A'} - {oei?.nombre || 'Sin OEI vinculado'}</p>
+                      <p><strong>AEI:</strong> {aei?.codigo || 'N/A'} - {aei?.nombre || 'Sin AEI vinculada'}</p>
+                      <p><strong>OGD:</strong> {ogd?.codigo || 'N/A'} - {ogd?.nombre || 'Sin OGD'}</p>
+                      <p><strong>OEGD:</strong> {oegd?.codigo || 'N/A'} - {oegd?.nombre || 'Sin OEGD'}</p>
+                    </div>
+                  );
+                })()}
               </>
             ) : (
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
