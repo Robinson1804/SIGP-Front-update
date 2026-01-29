@@ -405,7 +405,7 @@ export function POIFullModal({
             const [aes, coords, sms, personal, devs, impls, pgds] = await Promise.all([
                 aesPromise,
                 getCoordinadores().catch(() => []),
-                getScrumMastersElegibles().catch(() => []), // Incluye SCRUM_MASTER + COORDINADOR
+                getScrumMasters().catch(() => []), // Solo usuarios con rol SCRUM_MASTER
                 getPersonalDisponible().catch(() => []),
                 getPersonalDesarrolladores().catch(() => []), // Personal con rol Desarrollador
                 getPersonalImplementadores().catch(() => []), // Personal con rol Implementador
