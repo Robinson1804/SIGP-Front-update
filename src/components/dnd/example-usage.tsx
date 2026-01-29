@@ -221,7 +221,7 @@ export function CompleteKanbanExample() {
     async function loadTasks() {
       try {
         const token = localStorage.getItem('accessToken');
-        const response = await fetch('http://localhost:3010/api/v1/tareas', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3010/api/v1'}/tareas`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -256,7 +256,7 @@ export function CompleteKanbanExample() {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `http://localhost:3010/api/v1/tareas/${draggableId}/mover`,
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3010/api/v1'}/tareas/${draggableId}/mover`,
         {
           method: 'PATCH',
           headers: {
