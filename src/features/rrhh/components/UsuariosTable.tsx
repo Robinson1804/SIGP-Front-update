@@ -53,7 +53,7 @@ import {
   ShieldMinus,
 } from 'lucide-react';
 import type { Usuario, Role } from '../types';
-import { getRolLabel, getRolColor, getTodosLosRoles } from '../types';
+import { getRolLabel, getRolColor, getTodosLosRoles, normalizeRolesAdicionales } from '../types';
 
 interface UsuariosTableProps {
   usuarios: Usuario[];
@@ -197,7 +197,7 @@ export function UsuariosTable({
 
   // Roles que se pueden remover (adicionales, no el principal)
   const getRolesParaRemover = (usuario: Usuario) => {
-    return usuario.rolesAdicionales || [];
+    return normalizeRolesAdicionales(usuario.rolesAdicionales);
   };
 
   const getRolBadgeColor = (rol: Role): string => {
@@ -312,9 +312,9 @@ export function UsuariosTable({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {usuario.rolesAdicionales && usuario.rolesAdicionales.length > 0 ? (
+                        {normalizeRolesAdicionales(usuario.rolesAdicionales).length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {usuario.rolesAdicionales.map((rol) => (
+                            {normalizeRolesAdicionales(usuario.rolesAdicionales).map((rol) => (
                               <Badge
                                 key={rol}
                                 variant="outline"
@@ -347,7 +347,7 @@ export function UsuariosTable({
                               <ShieldPlus className="h-4 w-4 mr-2" />
                               Agregar rol
                             </DropdownMenuItem>
-                            {usuario.rolesAdicionales && usuario.rolesAdicionales.length > 0 && (
+                            {normalizeRolesAdicionales(usuario.rolesAdicionales).length > 0 && (
                               <DropdownMenuItem onClick={() => handleRemoverRolClick(usuario)}>
                                 <ShieldMinus className="h-4 w-4 mr-2" />
                                 Remover rol

@@ -447,15 +447,34 @@ export function getRolColor(rol: Role): string {
 }
 
 /**
+ * Helper para normalizar rolesAdicionales (puede llegar como string, null, o array)
+ */
+export function normalizeRolesAdicionales(rolesAdicionales: Role[] | string | null | undefined): Role[] {
+  if (!rolesAdicionales) return [];
+  if (Array.isArray(rolesAdicionales)) return rolesAdicionales;
+  if (typeof rolesAdicionales === 'string') {
+    try {
+      const parsed = JSON.parse(rolesAdicionales);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+/**
  * Helper para verificar si un usuario tiene un rol específico
  */
 export function tieneRol(usuario: Usuario, rol: Role): boolean {
-  return usuario.rol === rol || (usuario.rolesAdicionales || []).includes(rol);
+  const roles = normalizeRolesAdicionales(usuario.rolesAdicionales);
+  return usuario.rol === rol || roles.includes(rol);
 }
 
 /**
  * Helper para obtener todos los roles de un usuario
  */
 export function getTodosLosRoles(usuario: Usuario): Role[] {
-  return [usuario.rol, ...(usuario.rolesAdicionales || [])];
+  const roles = normalizeRolesAdicionales(usuario.rolesAdicionales);
+  return [usuario.rol, ...roles];
 }
