@@ -100,6 +100,16 @@ const financialAreaOptions: MultiSelectOption[] = [
     { label: 'OPP - Oficina de Planificación y Presupuesto', value: 'Oficina de Planificación y Presupuesto' },
 ];
 
+// Areas disponibles para Coordinación (sincronizado con Area Responsable de PGD)
+const AREAS_DISPONIBLES = [
+  "Oficina de Tecnologías de la Información (OTIN)",
+  "Oficina de Administración y Finanzas",
+  "Oficina de Planificación y Presupuesto",
+  "Oficina de Gestión Documental (OGD)",
+  "Oficina de Formación Ciudadana e Identidad",
+  "Oficina de Recursos Humanos",
+];
+
 /**
  * Genera opciones de años basadas en el rango del PGD
  */
@@ -1334,15 +1344,22 @@ export function POIFullModal({
                                         </div>
                                         <div>
                                            <label className="text-sm font-medium">Coordinación *</label>
-                                           <Input
-                                               placeholder="Ingresar coordinación"
+                                           <Select
                                                value={formData.coordination || ''}
-                                               onChange={e => {
-                                                   setFormData(p => ({...p, coordination: e.target.value}));
+                                               onValueChange={(value) => {
+                                                   setFormData(p => ({...p, coordination: value}));
                                                    if (errors.coordination) setErrors(prev => ({...prev, coordination: ''}));
                                                }}
-                                               className={errors.coordination ? 'border-red-500' : ''}
-                                           />
+                                           >
+                                               <SelectTrigger className={errors.coordination ? 'border-red-500' : ''}>
+                                                   <SelectValue placeholder="Seleccionar coordinación" />
+                                               </SelectTrigger>
+                                               <SelectContent>
+                                                   {AREAS_DISPONIBLES.map((area) => (
+                                                       <SelectItem key={area} value={area}>{area}</SelectItem>
+                                                   ))}
+                                               </SelectContent>
+                                           </Select>
                                            {errors.coordination && <p className="text-red-500 text-xs mt-1">{errors.coordination}</p>}
                                         </div>
                                     </div>
