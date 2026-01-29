@@ -81,6 +81,13 @@ export interface Personal {
   division?: Division;
   usuario?: { id: number; username: string; email: string; rol?: Role };
   habilidades?: PersonalHabilidad[];
+  // Credenciales del usuario creado (solo en respuesta de creación con rol)
+  credenciales?: {
+    username: string;
+    passwordTemporal: string;
+    email: string;
+    rol: string;
+  };
 }
 
 /**

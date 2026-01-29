@@ -231,6 +231,17 @@ export function useRRHH(): UseRRHHReturn {
         isLoading: false,
         error: null,
       }));
+
+      // Si se creó con rol, también se creó un usuario - recargar lista de usuarios
+      if (data.rol) {
+        try {
+          const usuarios = await usuariosService.getUsuarios();
+          setState((prev) => ({ ...prev, usuarios }));
+        } catch (err) {
+          console.error('Error reloading usuarios after personal creation:', err);
+        }
+      }
+
       return newPersonal;
     } catch (err) {
       setError('Error al crear el personal');

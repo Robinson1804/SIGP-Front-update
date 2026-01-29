@@ -151,6 +151,16 @@ export default function RecursosHumanosPage() {
     item: Personal | Division | Habilidad | Asignacion;
   } | null>(null);
 
+  // Estado para mostrar credenciales del usuario creado
+  const [credencialesDialogOpen, setCredencialesDialogOpen] = useState(false);
+  const [credencialesCreadas, setCredencialesCreadas] = useState<{
+    username: string;
+    passwordTemporal: string;
+    email: string;
+    rol: string;
+    nombrePersonal: string;
+  } | null>(null);
+
   // Estado para proyectos del POI (para asignaciones)
   const [proyectos, setProyectos] = useState<ProyectoBasico[]>([]);
 
@@ -216,8 +226,19 @@ export default function RecursosHumanosPage() {
       await updatePersonal(selectedPersonal.id, data as UpdatePersonalDto);
       toast({ title: 'Personal actualizado correctamente' });
     } else {
-      await createPersonal(data as CreatePersonalDto);
-      toast({ title: 'Personal creado correctamente' });
+      const createData = data as CreatePersonalDto;
+      const newPersonal = await createPersonal(createData);
+
+      // Si se creó con rol, mostrar credenciales
+      if (newPersonal.credenciales) {
+        setCredencialesCreadas({
+          ...newPersonal.credenciales,
+          nombrePersonal: `${createData.nombres} ${createData.apellidos}`,
+        });
+        setCredencialesDialogOpen(true);
+      } else {
+        toast({ title: 'Personal creado correctamente' });
+      }
     }
     setPersonalFormOpen(false);
   };
@@ -642,6 +663,53 @@ export default function RecursosHumanosPage() {
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 {itemToDelete?.type === 'division' ? 'Desactivar' : 'Eliminar'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Diálogo para mostrar credenciales del usuario creado */}
+        <AlertDialog open={credencialesDialogOpen} onOpenChange={setCredencialesDialogOpen}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-green-600">
+                <UserCheck className="h-5 w-5" />
+                Personal y Usuario Creados
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-4 pt-2">
+                  <p className="text-sm">
+                    Se ha creado el personal <strong>{credencialesCreadas?.nombrePersonal}</strong> y su cuenta de usuario del sistema.
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
+                    <h4 className="font-semibold text-sm text-gray-700">Credenciales de acceso:</h4>
+                    <div className="grid grid-cols-[100px_1fr] gap-2 text-sm">
+                      <span className="text-gray-500">Usuario:</span>
+                      <span className="font-mono font-medium">{credencialesCreadas?.username}</span>
+                      <span className="text-gray-500">Email:</span>
+                      <span className="font-mono font-medium">{credencialesCreadas?.email}</span>
+                      <span className="text-gray-500">Contraseña:</span>
+                      <span className="font-mono font-medium text-blue-600">{credencialesCreadas?.passwordTemporal}</span>
+                      <span className="text-gray-500">Rol:</span>
+                      <span className="font-medium">{credencialesCreadas?.rol}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    ⚠️ Guarde estas credenciales. La contraseña temporal debe ser cambiada en el primer inicio de sesión.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction
+                onClick={() => {
+                  setCredencialesDialogOpen(false);
+                  setCredencialesCreadas(null);
+                  toast({ title: 'Personal y usuario creados correctamente' });
+                }}
+                className="bg-[#004272] hover:bg-[#003560]"
+              >
+                Entendido
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
