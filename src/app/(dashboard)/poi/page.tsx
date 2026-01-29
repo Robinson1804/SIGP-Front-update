@@ -13,6 +13,8 @@ import {
   Plus,
   X,
   Loader2,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 
 import AppLayout from '@/components/layout/app-layout';
@@ -27,6 +29,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Pagination,
   PaginationContent,
@@ -280,6 +290,100 @@ const statusColors: { [key: string]: string } = {
     'Finalizado': 'bg-[#2FD573]',
 };
 
+// Componente para fila de la tabla en vista lista
+const ProjectListRow = ({
+    project,
+    userRole,
+}: {
+    project: Project;
+    userRole?: string;
+}) => {
+    const router = useRouter();
+    const isMissingData = project.missingData;
+    const isDeveloper = userRole === ROLES.DESARROLLADOR;
+    const isImplementador = userRole === ROLES.IMPLEMENTADOR;
+
+    // Formatear rango de fechas
+    const formatDateRange = (startDate?: string, endDate?: string) => {
+        if (!startDate || !endDate) return project.years?.join(', ') || '-';
+        const formatDate = (dateStr: string) => {
+            const [year, month] = dateStr.split('-');
+            return `${month}/${year}`;
+        };
+        return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    };
+
+    const handleRowClick = () => {
+        localStorage.setItem('selectedProject', JSON.stringify(project));
+        if (isDeveloper) {
+            router.push(paths.poi.proyecto.backlog.base);
+        } else if (isImplementador) {
+            router.push(paths.poi.actividad.lista);
+        } else {
+            const detailsUrl = project.type === 'Proyecto' ? paths.poi.proyecto.detalles : paths.poi.actividad.detalles;
+            router.push(detailsUrl);
+        }
+    };
+
+    return (
+        <TableRow
+            onClick={handleRowClick}
+            className={`cursor-pointer hover:bg-blue-50 transition-colors ${isMissingData ? 'bg-red-50' : ''}`}
+        >
+            <TableCell className="font-medium text-[#004272]">{project.code}</TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-[#008ED2] shrink-0" />
+                    <span className="font-medium text-[#272E35] line-clamp-1">{project.name}</span>
+                    {isMissingData && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                </TooltipTrigger>
+                                <TooltipContent className="bg-red-50 border-red-200">
+                                    <p className="text-red-600">Faltan datos</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                </div>
+            </TableCell>
+            <TableCell>
+                <span className="text-xs text-[#ADADAD] font-bold">{project.type}</span>
+            </TableCell>
+            <TableCell>
+                <Badge
+                    variant="outline"
+                    className={`text-xs font-normal ${
+                        project.classification === 'Al ciudadano'
+                            ? 'border-green-500 text-green-700 bg-green-50'
+                            : 'border-blue-500 text-blue-700 bg-blue-50'
+                    }`}
+                >
+                    {project.classification}
+                </Badge>
+            </TableCell>
+            <TableCell>
+                <Badge className={`${statusColors[project.status]} text-black text-xs font-normal`}>
+                    {project.status}
+                </Badge>
+            </TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-[#272E35] shrink-0" />
+                    <span className="text-sm text-[#272E35] truncate">{project.scrumMaster}</span>
+                </div>
+            </TableCell>
+            <TableCell>
+                <span className="text-sm text-[#272E35]">
+                    {formatDateRange(project.startDate, project.endDate)}
+                </span>
+            </TableCell>
+        </TableRow>
+    );
+};
+
 const ProjectCard = ({
     project,
     userRole,
@@ -472,6 +576,9 @@ function PmoPoiView() {
 
     // Generar lista de años disponibles basado en el PGD seleccionado (del store global)
     const availableYears = pgdAvailableYears.map(y => y.toString());
+
+    // Estado para modo de vista (cards o lista)
+    const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
 
     // Estados para modales
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -803,15 +910,38 @@ function PmoPoiView() {
                 </div>
             </div>
             <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
-                {/* Header de sección con ícono */}
-                <div className="flex items-center gap-2 text-[#004272] mb-4">
-                    <SectionIcon className="h-5 w-5" />
-                    <h3 className="font-bold text-lg">{sectionTitle}</h3>
-                    {activeFiltersCount > 0 && (
-                        <Badge className="bg-[#018CD1] text-white text-xs ml-2">
-                            {activeFiltersCount} filtro{activeFiltersCount > 1 ? 's' : ''} activo{activeFiltersCount > 1 ? 's' : ''}
-                        </Badge>
-                    )}
+                {/* Header de sección con ícono y toggle de vista */}
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2 text-[#004272]">
+                        <SectionIcon className="h-5 w-5" />
+                        <h3 className="font-bold text-lg">{sectionTitle}</h3>
+                        {activeFiltersCount > 0 && (
+                            <Badge className="bg-[#018CD1] text-white text-xs ml-2">
+                                {activeFiltersCount} filtro{activeFiltersCount > 1 ? 's' : ''} activo{activeFiltersCount > 1 ? 's' : ''}
+                            </Badge>
+                        )}
+                    </div>
+                    {/* Botones de toggle para vista cards/lista */}
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                        <Button
+                            variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('cards')}
+                            className={`h-8 px-3 ${viewMode === 'cards' ? 'bg-[#018CD1] text-white hover:bg-[#016ba1]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                            title="Vista en tarjetas"
+                        >
+                            <LayoutGrid className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant={viewMode === 'list' ? 'default' : 'ghost'}
+                            size="sm"
+                            onClick={() => setViewMode('list')}
+                            className={`h-8 px-3 ${viewMode === 'list' ? 'bg-[#018CD1] text-white hover:bg-[#016ba1]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                            title="Vista en lista"
+                        >
+                            <List className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Sección de filtros */}
@@ -941,8 +1071,8 @@ function PmoPoiView() {
                     </div>
                 )}
 
-                {/* Grid de proyectos */}
-                {!isLoading && !error && filteredProjects.length > 0 && (
+                {/* Grid de proyectos (vista cards) */}
+                {!isLoading && !error && filteredProjects.length > 0 && viewMode === 'cards' && (
                     <div className={`grid gap-6 mb-6 ${
                         sidebarOpen
                             ? "grid-cols-1 min-[800px]:grid-cols-2 lg:grid-cols-3 min-[1360px]:grid-cols-4"
@@ -955,6 +1085,36 @@ function PmoPoiView() {
                                 userRole={userRole}
                             />
                         ))}
+                    </div>
+                )}
+
+                {/* Vista lista/tabla */}
+                {!isLoading && !error && filteredProjects.length > 0 && viewMode === 'list' && (
+                    <div className="mb-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-gray-50 hover:bg-gray-50">
+                                    <TableHead className="w-[120px] font-bold text-[#004272]">Código</TableHead>
+                                    <TableHead className="font-bold text-[#004272]">Nombre</TableHead>
+                                    <TableHead className="w-[100px] font-bold text-[#004272]">Tipo</TableHead>
+                                    <TableHead className="w-[140px] font-bold text-[#004272]">Clasificación</TableHead>
+                                    <TableHead className="w-[130px] font-bold text-[#004272]">Estado</TableHead>
+                                    <TableHead className="w-[180px] font-bold text-[#004272]">
+                                        {effectiveType === 'Proyecto' ? 'Scrum Master' : 'Gestor'}
+                                    </TableHead>
+                                    <TableHead className="w-[140px] font-bold text-[#004272]">Fechas</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredProjects.map(p => (
+                                    <ProjectListRow
+                                        key={p.id}
+                                        project={p}
+                                        userRole={userRole}
+                                    />
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
                 )}
 
