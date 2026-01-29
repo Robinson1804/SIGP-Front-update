@@ -130,6 +130,22 @@ export async function getScrumMastersUsuarios(): Promise<Usuario[]> {
   return response.data;
 }
 
+/**
+ * Obtener scrum masters elegibles (incluye coordinadores)
+ */
+export async function getScrumMastersElegibles(): Promise<Usuario[]> {
+  const response = await apiClient.get<Usuario[]>(ENDPOINTS.USUARIOS.SCRUM_MASTERS_ELEGIBLES);
+  return response.data;
+}
+
+/**
+ * Obtener patrocinadores
+ */
+export async function getPatrocinadores(): Promise<Usuario[]> {
+  const response = await apiClient.get<Usuario[]>(ENDPOINTS.USUARIOS.PATROCINADORES);
+  return response.data;
+}
+
 // ============================================================================
 // EXPORTAR SERVICIO COMO OBJETO
 // ============================================================================
@@ -146,4 +162,6 @@ export const usuariosService = {
   toggleUsuarioActivo,
   getCoordinadores,
   getScrumMastersUsuarios,
+  getScrumMastersElegibles,
+  getPatrocinadores,
 };
