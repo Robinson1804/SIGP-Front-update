@@ -224,6 +224,7 @@ export const ENDPOINTS = {
     // Divisiones
     DIVISIONES: '/divisiones',
     DIVISIONES_ARBOL: '/divisiones/arbol',
+    DIVISIONES_SIGUIENTE_CODIGO: '/divisiones/siguiente-codigo',
     DIVISION_BY_ID: (id: number | string) => `/divisiones/${id}`,
     DIVISION_PERSONAL: (id: number | string) => `/divisiones/${id}/personal`,
     DIVISION_COORDINADOR: (id: number | string) => `/divisiones/${id}/coordinador`,

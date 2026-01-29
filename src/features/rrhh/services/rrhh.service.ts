@@ -167,6 +167,16 @@ export async function getDivisiones(filters?: DivisionFilters): Promise<Division
 }
 
 /**
+ * Obtener el siguiente código de división disponible
+ */
+export async function getDivisionSiguienteCodigo(): Promise<string> {
+  const response = await apiClient.get<{ codigo: string }>(
+    ENDPOINTS.RRHH.DIVISIONES_SIGUIENTE_CODIGO
+  );
+  return response.data.codigo;
+}
+
+/**
  * Obtener árbol jerárquico de divisiones
  */
 export async function getDivisionesArbol(): Promise<Division[]> {
@@ -500,6 +510,7 @@ export const rrhhService = {
   getDivisionesArbol,
   getDivisionById,
   getDivisionPersonal,
+  getDivisionSiguienteCodigo,
   createDivision,
   updateDivision,
   deleteDivision,
