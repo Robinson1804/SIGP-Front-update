@@ -580,6 +580,10 @@ function PmoPoiView() {
     // Estado para modo de vista (cards o lista)
     const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
 
+    // Paginación para vista de lista (10 items por página)
+    const [listCurrentPage, setListCurrentPage] = useState(1);
+    const listPageSize = 10;
+
     // Estados para modales
     const [isNewModalOpen, setIsNewModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -742,6 +746,7 @@ function PmoPoiView() {
     // Resetear página cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
+        setListCurrentPage(1);
     }, [effectiveType, searchQuery, selectedClassification, selectedYear]);
 
     // Filtrar proyectos localmente (filtros adicionales que no están en la API)
@@ -782,6 +787,39 @@ function PmoPoiView() {
 
         return true;
     });
+
+    // Paginación para vista de lista
+    const listTotalPages = Math.ceil(filteredProjects.length / listPageSize);
+    const paginatedListProjects = filteredProjects.slice(
+        (listCurrentPage - 1) * listPageSize,
+        listCurrentPage * listPageSize
+    );
+
+    // Handler para cambio de página en vista lista
+    const handleListPageChange = (page: number) => {
+        if (page >= 1 && page <= listTotalPages) {
+            setListCurrentPage(page);
+        }
+    };
+
+    // Generar array de páginas para paginación de lista
+    const getListPageNumbers = () => {
+        const pages: (number | 'ellipsis')[] = [];
+        if (listTotalPages <= 5) {
+            for (let i = 1; i <= listTotalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            if (listCurrentPage <= 3) {
+                pages.push(1, 2, 3, 'ellipsis', listTotalPages);
+            } else if (listCurrentPage >= listTotalPages - 2) {
+                pages.push(1, 'ellipsis', listTotalPages - 2, listTotalPages - 1, listTotalPages);
+            } else {
+                pages.push(1, 'ellipsis', listCurrentPage - 1, listCurrentPage, listCurrentPage + 1, 'ellipsis', listTotalPages);
+            }
+        }
+        return pages;
+    };
 
     // Contar filtros activos (el año ya no cuenta como filtro ya que siempre debe estar dentro del PGD)
     const activeFiltersCount = [
@@ -1090,36 +1128,89 @@ function PmoPoiView() {
 
                 {/* Vista lista/tabla */}
                 {!isLoading && !error && filteredProjects.length > 0 && viewMode === 'list' && (
-                    <div className="mb-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-gray-50 hover:bg-gray-50">
-                                    <TableHead className="w-[120px] font-bold text-[#004272]">Código</TableHead>
-                                    <TableHead className="font-bold text-[#004272]">Nombre</TableHead>
-                                    <TableHead className="w-[100px] font-bold text-[#004272]">Tipo</TableHead>
-                                    <TableHead className="w-[140px] font-bold text-[#004272]">Clasificación</TableHead>
-                                    <TableHead className="w-[130px] font-bold text-[#004272]">Estado</TableHead>
-                                    <TableHead className="w-[180px] font-bold text-[#004272]">
-                                        {effectiveType === 'Proyecto' ? 'Scrum Master' : 'Gestor'}
-                                    </TableHead>
-                                    <TableHead className="w-[140px] font-bold text-[#004272]">Fechas</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredProjects.map(p => (
-                                    <ProjectListRow
-                                        key={p.id}
-                                        project={p}
-                                        userRole={userRole}
-                                    />
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
+                    <>
+                        <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-gray-50 hover:bg-gray-50">
+                                        <TableHead className="w-[120px] font-bold text-[#004272]">Código</TableHead>
+                                        <TableHead className="font-bold text-[#004272]">Nombre</TableHead>
+                                        <TableHead className="w-[100px] font-bold text-[#004272]">Tipo</TableHead>
+                                        <TableHead className="w-[140px] font-bold text-[#004272]">Clasificación</TableHead>
+                                        <TableHead className="w-[130px] font-bold text-[#004272]">Estado</TableHead>
+                                        <TableHead className="w-[180px] font-bold text-[#004272]">
+                                            {effectiveType === 'Proyecto' ? 'Scrum Master' : 'Gestor'}
+                                        </TableHead>
+                                        <TableHead className="w-[140px] font-bold text-[#004272]">Fechas</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {paginatedListProjects.map(p => (
+                                        <ProjectListRow
+                                            key={p.id}
+                                            project={p}
+                                            userRole={userRole}
+                                        />
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        {/* Paginación para vista lista */}
+                        {listTotalPages > 1 && (
+                            <div className="flex items-center justify-between mb-6">
+                                <p className="text-sm text-gray-500">
+                                    Mostrando {((listCurrentPage - 1) * listPageSize) + 1} - {Math.min(listCurrentPage * listPageSize, filteredProjects.length)} de {filteredProjects.length} {effectiveType === "Proyecto" ? "proyectos" : "actividades"}
+                                </p>
+                                <Pagination>
+                                    <PaginationContent>
+                                        <PaginationItem>
+                                            <PaginationPrevious
+                                                href="#"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleListPageChange(listCurrentPage - 1);
+                                                }}
+                                                className={listCurrentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                            />
+                                        </PaginationItem>
+                                        {getListPageNumbers().map((page, index) => (
+                                            <PaginationItem key={index}>
+                                                {page === 'ellipsis' ? (
+                                                    <PaginationEllipsis />
+                                                ) : (
+                                                    <PaginationLink
+                                                        href="#"
+                                                        isActive={listCurrentPage === page}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleListPageChange(page);
+                                                        }}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        {page}
+                                                    </PaginationLink>
+                                                )}
+                                            </PaginationItem>
+                                        ))}
+                                        <PaginationItem>
+                                            <PaginationNext
+                                                href="#"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleListPageChange(listCurrentPage + 1);
+                                                }}
+                                                className={listCurrentPage === listTotalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                                            />
+                                        </PaginationItem>
+                                    </PaginationContent>
+                                </Pagination>
+                            </div>
+                        )}
+                    </>
                 )}
 
-                {/* Paginación funcional */}
-                {!isLoading && !error && totalPages > 1 && (
+                {/* Paginación para vista cards (paginación del servidor) */}
+                {!isLoading && !error && totalPages > 1 && viewMode === 'cards' && (
                     <div className="flex items-center justify-between mt-auto">
                         <p className="text-sm text-gray-500">
                             Mostrando {filteredProjects.length} de {totalItems} {effectiveType === "Proyecto" ? "proyectos" : "actividades"}
