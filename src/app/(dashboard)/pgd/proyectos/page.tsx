@@ -18,6 +18,9 @@ import {
   DollarSign,
   Link2,
   Link2Off,
+  LayoutGrid,
+  List,
+  User,
 } from "lucide-react";
 import AppLayout from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -41,6 +44,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -53,6 +70,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { MultiSelect, type MultiSelectOption } from "@/components/ui/multi-select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -1355,6 +1373,111 @@ const ProjectCard = ({
   );
 };
 
+// Componente para fila de la tabla en vista lista
+const ProjectListRow = ({
+  project,
+  onEdit,
+  onDelete,
+  onView,
+  accionEstrategica,
+  onAssociate,
+  showAssociateButton,
+}: {
+  project: Proyecto;
+  onEdit: () => void;
+  onDelete: () => void;
+  onView: () => void;
+  accionEstrategica?: AccionEstrategica;
+  onAssociate?: () => void;
+  showAssociateButton?: boolean;
+}) => {
+  const displayYears = project.anios?.join(', ') || '-';
+  const proyectoAny = project as any;
+  const montoTotal = (proyectoAny.costosAnuales || []).reduce(
+    (acc: number, c: { monto: number }) => acc + c.monto,
+    0
+  );
+
+  return (
+    <TableRow
+      onClick={onView}
+      className="cursor-pointer hover:bg-blue-50 transition-colors"
+    >
+      <TableCell className="font-medium text-[#004272]">{project.codigo}</TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <Folder className="w-4 h-4 text-[#008ED2] shrink-0" />
+          <span className="font-medium text-[#272E35] line-clamp-1">{project.nombre}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge className={`${statusColors[project.estado || 'Pendiente']} text-black text-xs font-normal`}>
+          {project.estado || 'Pendiente'}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        {project.clasificacion ? (
+          <Badge
+            variant="outline"
+            className={`text-xs font-normal ${
+              project.clasificacion === 'Al ciudadano'
+                ? 'border-green-500 text-green-700 bg-green-50'
+                : 'border-blue-500 text-blue-700 bg-blue-50'
+            }`}
+          >
+            {project.clasificacion}
+          </Badge>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
+      </TableCell>
+      <TableCell>
+        {accionEstrategica ? (
+          <span className="text-sm">{accionEstrategica.codigo}</span>
+        ) : (
+          <span className="text-orange-500 flex items-center gap-1 text-sm">
+            <Link2Off className="w-3 h-3" />
+            Sin vincular
+          </span>
+        )}
+      </TableCell>
+      <TableCell>
+        <span className="text-sm">{displayYears}</span>
+      </TableCell>
+      <TableCell>
+        {montoTotal > 0 ? (
+          <span className="text-sm font-medium text-[#004272]">S/ {montoTotal.toLocaleString()}</span>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
+      </TableCell>
+      <TableCell onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => setTimeout(() => onEdit(), 100)}>
+              Editar
+            </DropdownMenuItem>
+            {showAssociateButton && onAssociate && (
+              <DropdownMenuItem onSelect={() => setTimeout(() => onAssociate(), 100)}>
+                <Link2 className="w-4 h-4 mr-2" />
+                Asociar a PGD
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => setTimeout(() => onDelete(), 100)} className="text-red-600">
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+};
+
 export default function PgdProyectosPage() {
   const { toast } = useToast();
 
@@ -1407,6 +1530,13 @@ export default function PgdProyectosPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
+
+  // Vista (cards o lista)
+  const [viewMode, setViewMode] = useState<'cards' | 'list'>('cards');
+
+  // Paginación para vista de lista (10 items por página)
+  const [listCurrentPage, setListCurrentPage] = useState(1);
+  const listPageSize = 10;
 
   // Handle PGD selection change
   const handleSelectPgd = (pgdId: string) => {
@@ -1574,12 +1704,50 @@ export default function PgdProyectosPage() {
     setCurrentPage(1);
   }, [projects, unlinkedProjects, searchTerm, filterClasificacion, filterYear, filterVinculacion, selectedPgdForFilter]);
 
-  // Paginated projects
+  // Paginated projects (para vista cards)
   const paginatedProjects = filteredProjects.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
   const totalPages = Math.ceil(filteredProjects.length / pageSize);
+
+  // Paginación para vista de lista
+  const listTotalPages = Math.ceil(filteredProjects.length / listPageSize);
+  const paginatedListProjects = filteredProjects.slice(
+    (listCurrentPage - 1) * listPageSize,
+    listCurrentPage * listPageSize
+  );
+
+  // Resetear página de lista cuando cambian los filtros
+  useEffect(() => {
+    setListCurrentPage(1);
+  }, [searchTerm, filterClasificacion, filterYear, filterVinculacion]);
+
+  // Handler para cambio de página en vista lista
+  const handleListPageChange = (page: number) => {
+    if (page >= 1 && page <= listTotalPages) {
+      setListCurrentPage(page);
+    }
+  };
+
+  // Generar array de páginas para paginación de lista
+  const getListPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (listTotalPages <= 5) {
+      for (let i = 1; i <= listTotalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (listCurrentPage <= 3) {
+        pages.push(1, 2, 3, 'ellipsis', listTotalPages);
+      } else if (listCurrentPage >= listTotalPages - 2) {
+        pages.push(1, 'ellipsis', listTotalPages - 2, listTotalPages - 1, listTotalPages);
+      } else {
+        pages.push(1, 'ellipsis', listCurrentPage - 1, listCurrentPage, listCurrentPage + 1, 'ellipsis', listTotalPages);
+      }
+    }
+    return pages;
+  };
 
   const handleOpenPoiModal = (project: Proyecto | null = null) => {
     setEditingProject(project);
@@ -1801,9 +1969,32 @@ export default function PgdProyectosPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 text-[#004272] mb-4">
-            <Folder />
-            <h3 className="font-bold text-lg">Proyectos</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-[#004272]">
+              <Folder />
+              <h3 className="font-bold text-lg">Proyectos</h3>
+            </div>
+            {/* Botones de toggle para vista cards/lista */}
+            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <Button
+                variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+                className={`h-8 px-3 ${viewMode === 'cards' ? 'bg-[#018CD1] text-white hover:bg-[#016ba1]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                title="Vista en tarjetas"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={`h-8 px-3 ${viewMode === 'list' ? 'bg-[#018CD1] text-white hover:bg-[#016ba1]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                title="Vista en lista"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -1890,58 +2081,151 @@ export default function PgdProyectosPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-6">
-                {paginatedProjects.map(p => (
-                  <ProjectCard
-                    key={p.id}
-                    project={p}
-                    onEdit={() => handleOpenPoiModal(p)}
-                    onDelete={() => handleOpenDeleteModal(p)}
-                    onView={() => handleOpenViewModal(p)}
-                    accionEstrategica={getAeForProject(p)}
-                    onAssociate={() => handleOpenAssociateModal(p)}
-                    showAssociateButton={!p.accionEstrategicaId}
-                  />
-                ))}
-              </div>
-
-              {totalPages > 1 && (
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage > 1) setCurrentPage(currentPage - 1);
-                        }}
+              {/* Vista Cards */}
+              {viewMode === 'cards' && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 mb-6">
+                    {paginatedProjects.map(p => (
+                      <ProjectCard
+                        key={p.id}
+                        project={p}
+                        onEdit={() => handleOpenPoiModal(p)}
+                        onDelete={() => handleOpenDeleteModal(p)}
+                        onView={() => handleOpenViewModal(p)}
+                        accionEstrategica={getAeForProject(p)}
+                        onAssociate={() => handleOpenAssociateModal(p)}
+                        showAssociateButton={!p.accionEstrategicaId}
                       />
-                    </PaginationItem>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <PaginationItem key={page}>
-                        <PaginationLink
-                          href="#"
-                          isActive={currentPage === page}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setCurrentPage(page);
-                          }}
-                        >
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
                     ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                        }}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage > 1) setCurrentPage(currentPage - 1);
+                            }}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              isActive={currentPage === page}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(page);
+                              }}
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        ))}
+                        <PaginationItem>
+                          <PaginationNext
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                            }}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </>
+              )}
+
+              {/* Vista Lista/Tabla */}
+              {viewMode === 'list' && (
+                <>
+                  <div className="mb-4 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50 hover:bg-gray-50">
+                          <TableHead className="w-[120px] font-bold text-[#004272]">Código</TableHead>
+                          <TableHead className="font-bold text-[#004272]">Nombre</TableHead>
+                          <TableHead className="w-[130px] font-bold text-[#004272]">Estado</TableHead>
+                          <TableHead className="w-[140px] font-bold text-[#004272]">Clasificación</TableHead>
+                          <TableHead className="w-[120px] font-bold text-[#004272]">AE</TableHead>
+                          <TableHead className="w-[100px] font-bold text-[#004272]">Años</TableHead>
+                          <TableHead className="w-[130px] font-bold text-[#004272]">Monto Total</TableHead>
+                          <TableHead className="w-[60px] font-bold text-[#004272]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedListProjects.map(p => (
+                          <ProjectListRow
+                            key={p.id}
+                            project={p}
+                            onEdit={() => handleOpenPoiModal(p)}
+                            onDelete={() => handleOpenDeleteModal(p)}
+                            onView={() => handleOpenViewModal(p)}
+                            accionEstrategica={getAeForProject(p)}
+                            onAssociate={() => handleOpenAssociateModal(p)}
+                            showAssociateButton={!p.accionEstrategicaId}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Paginación para vista lista */}
+                  {listTotalPages > 1 && (
+                    <div className="flex items-center justify-between mb-6">
+                      <p className="text-sm text-gray-500">
+                        Mostrando {((listCurrentPage - 1) * listPageSize) + 1} - {Math.min(listCurrentPage * listPageSize, filteredProjects.length)} de {filteredProjects.length} proyectos
+                      </p>
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleListPageChange(listCurrentPage - 1);
+                              }}
+                              className={listCurrentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                          {getListPageNumbers().map((page, index) => (
+                            <PaginationItem key={index}>
+                              {page === 'ellipsis' ? (
+                                <PaginationEllipsis />
+                              ) : (
+                                <PaginationLink
+                                  href="#"
+                                  isActive={listCurrentPage === page}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleListPageChange(page);
+                                  }}
+                                  className="cursor-pointer"
+                                >
+                                  {page}
+                                </PaginationLink>
+                              )}
+                            </PaginationItem>
+                          ))}
+                          <PaginationItem>
+                            <PaginationNext
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleListPageChange(listCurrentPage + 1);
+                              }}
+                              className={listCurrentPage === listTotalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
