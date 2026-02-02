@@ -630,6 +630,8 @@ export default function RecursosHumanosPage() {
           miembros={
             viewDivision
               ? personal.filter((p) => {
+                  // Solo personal activo
+                  if (!p.activo) return false;
                   // Solo personal de esta división
                   if (p.divisionId !== viewDivision.id) return false;
                   // Excluir al coordinador

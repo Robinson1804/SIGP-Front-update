@@ -76,7 +76,7 @@ export function PersonalTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [divisionFilter, setDivisionFilter] = useState<string>('all');
   const [modalidadFilter, setModalidadFilter] = useState<string>('all');
-  const [estadoFilter, setEstadoFilter] = useState<string>('all');
+  const [estadoFilter, setEstadoFilter] = useState<string>('activo');
 
   const filteredPersonal = personal.filter((p) => {
     const nombreCompleto = getNombreCompleto(p);
