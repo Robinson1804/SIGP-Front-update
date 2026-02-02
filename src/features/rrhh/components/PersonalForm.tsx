@@ -182,7 +182,8 @@ export function PersonalForm({
             dni: data.dni || undefined,
             telefono: data.telefono || undefined,
             cargo: data.cargo || undefined,
-            // Don't include rol for updates - rol changes are handled separately
+            // Include rol for updates - backend will create/update user
+            ...(rol ? { rol } : {}),
           }
         : {
             // Solo incluir codigoEmpleado si tiene valor, sino el backend lo genera
@@ -444,11 +445,10 @@ export function PersonalForm({
               name="rol"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Rol en el Sistema {!isEditing && '*'}</FormLabel>
+                  <FormLabel>Rol en el Sistema</FormLabel>
                   <Select
-                    value={field.value || ''}
-                    onValueChange={(value) => field.onChange(value || undefined)}
-                    disabled={isEditing && !!personal?.usuarioId}
+                    value={field.value}
+                    onValueChange={field.onChange}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -467,7 +467,7 @@ export function PersonalForm({
                   </Select>
                   <FormDescription>
                     {isEditing && personal?.usuarioId
-                      ? 'El rol no se puede cambiar desde aquí. Use la pestaña Usuarios.'
+                      ? 'Al cambiar el rol se actualizará el usuario existente'
                       : 'Al guardar se creará automáticamente el usuario con este rol'}
                   </FormDescription>
                   <FormMessage />

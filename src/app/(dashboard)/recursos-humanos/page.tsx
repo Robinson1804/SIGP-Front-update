@@ -222,25 +222,45 @@ export default function RecursosHumanosPage() {
   };
 
   const handleSubmitPersonal = async (data: CreatePersonalDto | UpdatePersonalDto) => {
-    if (selectedPersonal) {
-      await updatePersonal(selectedPersonal.id, data as UpdatePersonalDto);
-      toast({ title: 'Personal actualizado correctamente' });
-    } else {
-      const createData = data as CreatePersonalDto;
-      const newPersonal = await createPersonal(createData);
-
-      // Si se creó con rol, mostrar credenciales
-      if (newPersonal.credenciales) {
-        setCredencialesCreadas({
-          ...newPersonal.credenciales,
-          nombrePersonal: `${createData.nombres} ${createData.apellidos}`,
-        });
-        setCredencialesDialogOpen(true);
+    try {
+      if (selectedPersonal) {
+        const updatedPersonal = await updatePersonal(selectedPersonal.id, data as UpdatePersonalDto);
+        // Si se creó usuario durante la actualización, mostrar credenciales
+        if (updatedPersonal.credenciales) {
+          setCredencialesCreadas({
+            ...updatedPersonal.credenciales,
+            nombrePersonal: `${selectedPersonal.nombres} ${selectedPersonal.apellidos}`,
+          });
+          setCredencialesDialogOpen(true);
+        } else {
+          toast({ title: 'Personal actualizado correctamente' });
+        }
       } else {
-        toast({ title: 'Personal creado correctamente' });
+        const createData = data as CreatePersonalDto;
+        console.log('Creating personal with data:', createData); // Debug log
+        const newPersonal = await createPersonal(createData);
+        console.log('Personal created:', newPersonal); // Debug log
+
+        // Si se creó con rol, mostrar credenciales
+        if (newPersonal.credenciales) {
+          setCredencialesCreadas({
+            ...newPersonal.credenciales,
+            nombrePersonal: `${createData.nombres} ${createData.apellidos}`,
+          });
+          setCredencialesDialogOpen(true);
+        } else {
+          toast({ title: 'Personal creado correctamente' });
+        }
       }
+      setPersonalFormOpen(false);
+    } catch (err) {
+      console.error('Error submitting personal:', err);
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Error al guardar el personal',
+        variant: 'destructive',
+      });
     }
-    setPersonalFormOpen(false);
   };
 
   // Handlers División
