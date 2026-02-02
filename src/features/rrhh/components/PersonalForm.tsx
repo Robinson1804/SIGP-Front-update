@@ -55,7 +55,9 @@ const personalSchema = z.object({
     .or(z.literal('')),
   dni: z
     .string()
-    .regex(VALIDATION_RULES.dni.pattern, VALIDATION_RULES.dni.message)
+    .refine((val) => val === '' || /^\d{8}$/.test(val), {
+      message: 'DNI debe tener exactamente 8 dígitos numéricos',
+    })
     .optional()
     .or(z.literal('')),
   nombres: z
@@ -69,7 +71,9 @@ const personalSchema = z.object({
   email: z.string().email('Email inválido'),
   telefono: z
     .string()
-    .max(VALIDATION_RULES.telefono.maxLength)
+    .refine((val) => val === '' || /^\d{9}$/.test(val), {
+      message: 'Teléfono debe tener exactamente 9 dígitos numéricos',
+    })
     .optional()
     .or(z.literal('')),
   divisionId: z.number({ required_error: 'Seleccione una división' }),
@@ -254,7 +258,20 @@ export function PersonalForm({
                   <FormItem>
                     <FormLabel>DNI</FormLabel>
                     <FormControl>
-                      <Input placeholder="12345678" maxLength={8} {...field} />
+                      <Input
+                        placeholder="12345678"
+                        inputMode="numeric"
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                          field.onChange(value);
+                        }}
+                        value={field.value}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -320,7 +337,20 @@ export function PersonalForm({
                   <FormItem>
                     <FormLabel>Teléfono</FormLabel>
                     <FormControl>
-                      <Input placeholder="+51 999 999 999" {...field} />
+                      <Input
+                        placeholder="987654321"
+                        inputMode="numeric"
+                        onKeyPress={(e) => {
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '').slice(0, 9);
+                          field.onChange(value);
+                        }}
+                        value={field.value}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

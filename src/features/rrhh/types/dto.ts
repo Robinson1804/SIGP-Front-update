@@ -271,8 +271,11 @@ export const VALIDATION_RULES = {
     pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
   telefono: {
-    maxLength: 20,
-    pattern: /^[0-9+\-\s()]+$/,
+    length: 9,
+    minLength: 9,
+    maxLength: 9,
+    pattern: /^\d{9}$/,
+    message: 'Teléfono debe tener exactamente 9 dígitos',
   },
   cargo: {
     maxLength: 100,
