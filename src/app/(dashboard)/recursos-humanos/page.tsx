@@ -232,8 +232,14 @@ export default function RecursosHumanosPage() {
             nombrePersonal: `${selectedPersonal.nombres} ${selectedPersonal.apellidos}`,
           });
           setCredencialesDialogOpen(true);
+          // Recargar usuarios porque se creó uno nuevo
+          loadUsuarios();
         } else {
           toast({ title: 'Personal actualizado correctamente' });
+        }
+        // Si se envió un rol, recargar usuarios para reflejar el cambio
+        if ('rol' in data && data.rol) {
+          loadUsuarios();
         }
       } else {
         const createData = data as CreatePersonalDto;
@@ -248,6 +254,8 @@ export default function RecursosHumanosPage() {
             nombrePersonal: `${createData.nombres} ${createData.apellidos}`,
           });
           setCredencialesDialogOpen(true);
+          // Recargar usuarios porque se creó uno nuevo
+          loadUsuarios();
         } else {
           toast({ title: 'Personal creado correctamente' });
         }
