@@ -233,19 +233,27 @@ export function GanttTaskModal({
         progreso: Math.round(Number(tarea.progreso) || 0),
       };
     }
+    // Usar fechas del proyecto como default si están disponibles
+    const defaultInicio = proyectoFechaInicio
+      ? proyectoFechaInicio
+      : formatDateToInput(new Date());
+    const defaultFin = proyectoFechaFin
+      ? proyectoFechaFin
+      : formatDateToInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
     return {
       codigo: generatedCodigo,
       nombre: '',
       descripcion: '',
-      inicio: formatDateToInput(new Date()),
-      fin: formatDateToInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)), // +7 dias
+      inicio: defaultInicio,
+      fin: defaultFin,
       fase: null,
       padre: null,
       asignadoA: null,
       color: COLORES_POR_TIPO.tarea,
       progreso: 0,
     };
-  }, [tarea, generatedCodigo]);
+  }, [tarea, generatedCodigo, proyectoFechaInicio, proyectoFechaFin]);
 
   // Schema dinámico con validación de fechas del proyecto
   const tareaFormSchema = useMemo(
