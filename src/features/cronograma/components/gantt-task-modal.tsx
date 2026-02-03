@@ -233,20 +233,12 @@ export function GanttTaskModal({
         progreso: Math.round(Number(tarea.progreso) || 0),
       };
     }
-    // Usar fechas del proyecto como default si están disponibles
-    const defaultInicio = proyectoFechaInicio
-      ? proyectoFechaInicio
-      : formatDateToInput(new Date());
-    const defaultFin = proyectoFechaFin
-      ? proyectoFechaFin
-      : formatDateToInput(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-
     return {
       codigo: generatedCodigo,
       nombre: '',
       descripcion: '',
-      inicio: defaultInicio,
-      fin: defaultFin,
+      inicio: '',
+      fin: '',
       fase: null,
       padre: null,
       asignadoA: null,
