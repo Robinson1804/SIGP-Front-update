@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ReactNode, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -30,6 +30,7 @@ import { MODULES, type Role, ROLES } from "@/lib/definitions";
 import { canAccessModule } from "@/lib/permissions";
 import { useAuth } from "@/stores";
 import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
+import { getNotificaciones } from "@/lib/services/notificaciones.service";
 
 
 // Mapeo de roles a nombres legibles
@@ -125,6 +126,25 @@ function AppLayoutContent({
   const hideSidebar = isDeveloper || isImplementador;
   const showSidebar = user && !hideSidebar && sidebarOpen;
 
+  // Conteo de notificaciones no leídas
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user) return;
+    try {
+      const response = await getNotificaciones({ leida: false });
+      setUnreadNotifCount(response.noLeidas);
+    } catch {
+      // silently ignore
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000); // Actualizar cada 60s
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
+
   return (
     <div className="flex h-screen w-full bg-[#F9F9F9] font-body flex-col">
       <header className="bg-[#004272] text-white p-2 flex items-center justify-between w-full z-30 h-16 shrink-0">
@@ -170,6 +190,11 @@ function AppLayoutContent({
                 >
                   <item.icon className={cn("h-5 w-5 mr-3", !isActive ? 'text-[#004272]' : '')} />
                   <span className="flex-1">{item.label}</span>
+                  {item.module === MODULES.NOTIFICACIONES && unreadNotifCount > 0 && (
+                    <span className="flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold">
+                      {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
+                    </span>
+                  )}
                 </Link>
               )})}
             </nav>
