@@ -99,6 +99,7 @@ export function CronogramaView({
   // PMO: crear, editar, eliminar, ver, exportar, validar
   // COORDINADOR: crear, editar, eliminar, ver, exportar
   // SCRUM_MASTER: crear, editar, eliminar, ver, exportar (gestión completa)
+  // PMO: solo ver, exportar, validar (aprobar/rechazar) — NO CRUD de tareas
   // PATROCINADOR: solo ver, exportar, validar (aprobar/rechazar)
   const isAdmin = user?.role === ROLES.ADMIN;
   const isPmo = user?.role === ROLES.PMO;
@@ -107,8 +108,8 @@ export function CronogramaView({
   const isPatrocinador = user?.role === ROLES.PATROCINADOR;
 
   // Roles que pueden crear, editar y eliminar tareas del cronograma
-  // (debe coincidir con @Roles en backend: ADMIN, PMO, COORDINADOR, SCRUM_MASTER)
-  const canManageByRole = isAdmin || isPmo || isCoordinador || isScrumMaster;
+  // PMO NO tiene CRUD — solo visualiza, exporta y aprueba/rechaza
+  const canManageByRole = isAdmin || isCoordinador || isScrumMaster;
   const canValidate = isAdmin || isPmo || isPatrocinador; // aprobar/rechazar
 
   // Estado del cronograma
