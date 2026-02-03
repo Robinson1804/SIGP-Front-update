@@ -4,11 +4,18 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Save, Loader2, X } from 'lucide-react';
+import { Save, Loader2, X, UserPlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Form,
   FormControl,
@@ -22,6 +29,7 @@ import { CollapsibleSection } from './CollapsibleSection';
 import { EditableList } from './EditableList';
 import { DynamicTable, ColumnDefinition } from './DynamicTable';
 import type { Acta, ActaEntregable, ActaRiesgo, ActaHito, ActaMiembroEquipo } from '@/features/documentos/types';
+import { getAsignacionesByProyecto, type Asignacion } from '@/lib/services/asignaciones.service';
 
 const formSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
@@ -64,6 +72,55 @@ export function ActaConstitucionForm({
   const [equipoProyecto, setEquipoProyecto] = useState<ActaMiembroEquipo[]>(
     acta?.equipoProyecto || []
   );
+
+  // Team members from project assignments
+  const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
+  const [loadingEquipo, setLoadingEquipo] = useState(false);
+
+  // Fetch project team members
+  useEffect(() => {
+    if (!proyectoId) return;
+    setLoadingEquipo(true);
+    getAsignacionesByProyecto(proyectoId)
+      .then((data) => setAsignaciones(data))
+      .catch((err) => console.error('Error fetching asignaciones:', err))
+      .finally(() => setLoadingEquipo(false));
+  }, [proyectoId]);
+
+  // Members already added (by personalId) to avoid duplicates
+  const personalIdsEnEquipo = equipoProyecto
+    .map((m) => m.personalId)
+    .filter(Boolean);
+
+  // Available members (not yet added)
+  const miembrosDisponibles = asignaciones.filter(
+    (a) => a.personal && !personalIdsEnEquipo.includes(a.personalId)
+  );
+
+  const agregarMiembro = (personalId: string) => {
+    const asignacion = asignaciones.find((a) => a.personalId === Number(personalId));
+    if (!asignacion?.personal) return;
+
+    const nuevoMiembro: ActaMiembroEquipo = {
+      id: String(Date.now()),
+      personalId: asignacion.personalId,
+      nombre: `${asignacion.personal.nombres} ${asignacion.personal.apellidos}`.trim(),
+      rol: asignacion.rolEquipo || 'Miembro',
+      responsabilidad: '',
+    };
+
+    setEquipoProyecto((prev) => [...prev, nuevoMiembro]);
+  };
+
+  const eliminarMiembro = (index: number) => {
+    setEquipoProyecto((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const actualizarResponsabilidad = (index: number, value: string) => {
+    setEquipoProyecto((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, responsabilidad: value } : m))
+    );
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -131,11 +188,6 @@ export function ActaConstitucionForm({
     { key: 'fechaEstimada', label: 'Fecha Estimada', type: 'date', width: '150px' },
   ];
 
-  const equipoColumns: ColumnDefinition<ActaMiembroEquipo>[] = [
-    { key: 'nombre', label: 'Nombre', type: 'text', placeholder: 'Nombre completo', required: true },
-    { key: 'rol', label: 'Rol', type: 'text', placeholder: 'Rol en el proyecto', required: true },
-    { key: 'responsabilidad', label: 'Responsabilidad', type: 'text', placeholder: 'Responsabilidad principal' },
-  ];
 
   return (
     <Form {...form}>
@@ -357,15 +409,87 @@ export function ActaConstitucionForm({
         {/* Equipo del Proyecto */}
         <CollapsibleSection
           title="Equipo del Proyecto"
-          description="Defina el equipo inicial del proyecto"
+          description="Seleccione los miembros asignados al proyecto"
         >
-          <DynamicTable
-            columns={equipoColumns}
-            data={equipoProyecto}
-            onChange={setEquipoProyecto}
-            emptyRowTemplate={{ id: '', nombre: '', rol: '', responsabilidad: '' }}
-            addLabel="Agregar miembro"
-          />
+          <div className="space-y-4">
+            {/* Selector de miembros */}
+            {miembrosDisponibles.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Select onValueChange={agregarMiembro}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Seleccionar miembro del equipo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {miembrosDisponibles.map((a) => (
+                      <SelectItem key={a.personalId} value={String(a.personalId)}>
+                        {a.personal?.nombres} {a.personal?.apellidos} — {a.rolEquipo || 'Sin rol'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <UserPlus className="h-4 w-4 text-muted-foreground shrink-0" />
+              </div>
+            )}
+
+            {loadingEquipo && (
+              <p className="text-sm text-muted-foreground">Cargando equipo del proyecto...</p>
+            )}
+
+            {!loadingEquipo && asignaciones.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No hay personal asignado a este proyecto. Asigne miembros desde el módulo de RRHH.
+              </p>
+            )}
+
+            {!loadingEquipo && asignaciones.length > 0 && miembrosDisponibles.length === 0 && equipoProyecto.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Todos los miembros del proyecto han sido agregados.
+              </p>
+            )}
+
+            {/* Tabla de miembros seleccionados */}
+            {equipoProyecto.length > 0 && (
+              <div className="border rounded-md overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left p-2 font-medium">Nombre</th>
+                      <th className="text-left p-2 font-medium w-[160px]">Rol</th>
+                      <th className="text-left p-2 font-medium">Responsabilidad</th>
+                      <th className="w-[40px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {equipoProyecto.map((miembro, index) => (
+                      <tr key={miembro.id || index} className="border-t">
+                        <td className="p-2">{miembro.nombre}</td>
+                        <td className="p-2 text-muted-foreground">{miembro.rol}</td>
+                        <td className="p-2">
+                          <Input
+                            value={miembro.responsabilidad || ''}
+                            onChange={(e) => actualizarResponsabilidad(index, e.target.value)}
+                            placeholder="Responsabilidad principal"
+                            className="h-8 text-sm"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => eliminarMiembro(index)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </CollapsibleSection>
 
         {/* Observaciones */}
