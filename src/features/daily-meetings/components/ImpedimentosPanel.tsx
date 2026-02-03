@@ -184,7 +184,7 @@ export function ImpedimentosPanel({
 
   return (
     <>
-      <Sheet>
+      <Sheet modal={false}>
         <SheetTrigger asChild>
           <Button
             variant="outline"

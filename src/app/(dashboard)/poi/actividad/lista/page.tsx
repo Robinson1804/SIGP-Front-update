@@ -2400,7 +2400,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                 <TableCell>{task.endDate}</TableCell>
                                                 <TableCell className="text-center">
                                                     {(canManageTasks || canManageSubtasks) && (
-                                                        <DropdownMenu>
+                                                        <DropdownMenu modal={false}>
                                                             <DropdownMenuTrigger asChild>
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8">
                                                                     <MoreHorizontal className="h-5 w-5 text-gray-400" />
@@ -2513,7 +2513,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                     <TableCell className="text-center">
                                                         {/* Menú de subtareas - disponible para Scrum Master e Implementador */}
                                                         {canManageSubtasks && (
-                                                            <DropdownMenu>
+                                                            <DropdownMenu modal={false}>
                                                                 <DropdownMenuTrigger asChild>
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8">
                                                                         <MoreHorizontal className="h-5 w-5 text-gray-400" />
