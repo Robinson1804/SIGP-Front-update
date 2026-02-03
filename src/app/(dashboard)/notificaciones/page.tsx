@@ -364,7 +364,7 @@ export default function NotificationsPage() {
     return n.type === currentTabType;
   });
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = filteredNotifications.filter(n => !n.read).length;
 
   return (
     <ProtectedRoute module={MODULES.NOTIFICACIONES}>
