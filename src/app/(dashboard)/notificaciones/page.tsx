@@ -222,7 +222,7 @@ const NotificationCard = ({
 };
 
 export default function NotificationsPage() {
-  const [activeTab, setActiveTab] = useState('Todos');
+  const [activeTab, setActiveTab] = useState('Proyectos');
   const [notifications, setNotifications] = useState<LocalNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -319,28 +319,45 @@ export default function NotificationsPage() {
     }
   };
 
-  const ALL_TABS: { name: string, type: NotificationType | NotificationType[] | 'all' }[] = [
-    { name: 'Todos', type: 'all' },
+  // Pestañas disponibles según rol:
+  // - SCRUM_MASTER / COORDINADOR: Proyectos, Sprints, Aprobaciones, Validaciones
+  // - PMO: Proyectos, Sprints, Validaciones
+  // - PATROCINADOR: Proyectos, Validaciones
+  // - ADMIN: Solo Proyectos (maneja RRHH)
+  const TAB_DEFINITIONS: { name: string, type: NotificationType | NotificationType[] | 'all' }[] = [
     { name: 'Proyectos', type: 'project' },
     { name: 'Sprints', type: 'sprint' },
-    { name: 'Validaciones', type: ['validacion', 'hu_revision', 'hu_validated', 'hu_rejected'] }, // Solicitudes pendientes de validar
-    { name: 'Aprobaciones', type: 'aprobacion' }, // Resultados de aprobación/rechazo
-    { name: 'Retrasos', type: 'delay' },
+    { name: 'Aprobaciones', type: 'aprobacion' }, // Resultados de aprobación/rechazo de PMO/PATROCINADOR
+    { name: 'Validaciones', type: ['validacion', 'hu_revision', 'hu_validated', 'hu_rejected'] }, // Solicitudes pendientes de validar/aprobar
   ];
 
-  // Filter tabs based on role:
-  // - ADMIN: No ve Validaciones ni Aprobaciones (solo maneja RRHH)
-  // - PMO/PATROCINADOR: Ven Validaciones (solicitudes para aprobar)
-  // - SCRUM_MASTER: Ve Aprobaciones (resultados de aprobación/rechazo)
-  // - Todos los demás roles pueden ver ambos tabs
-  const isAdmin = user?.role === ROLES.ADMIN;
-  const TABS = isAdmin
-    ? ALL_TABS.filter(tab => !['Validaciones', 'Aprobaciones'].includes(tab.name))
-    : ALL_TABS;
+  const getTabsForRole = (): typeof TAB_DEFINITIONS => {
+    const role = user?.role;
+
+    if (role === ROLES.SCRUM_MASTER || role === ROLES.COORDINADOR) {
+      // Proyectos, Sprints, Aprobaciones, Validaciones
+      return TAB_DEFINITIONS;
+    }
+
+    if (role === ROLES.PMO) {
+      // Proyectos, Sprints, Validaciones (sin Aprobaciones)
+      return TAB_DEFINITIONS.filter(tab => tab.name !== 'Aprobaciones');
+    }
+
+    if (role === ROLES.PATROCINADOR) {
+      // Proyectos, Validaciones (sin Sprints ni Aprobaciones)
+      return TAB_DEFINITIONS.filter(tab => !['Sprints', 'Aprobaciones'].includes(tab.name));
+    }
+
+    // ADMIN y otros roles: solo Proyectos
+    return TAB_DEFINITIONS.filter(tab => tab.name === 'Proyectos');
+  };
+
+  const TABS = getTabsForRole();
 
   const currentTabType = TABS.find(t => t.name === activeTab)?.type;
   const filteredNotifications = notifications.filter(n => {
-    if (!currentTabType || currentTabType === 'all') return true;
+    if (!currentTabType) return true;
     if (Array.isArray(currentTabType)) {
       return currentTabType.includes(n.type);
     }
