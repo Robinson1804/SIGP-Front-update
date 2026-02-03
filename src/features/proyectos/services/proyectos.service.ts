@@ -213,62 +213,11 @@ export async function getProyectoActas(proyectoId: number | string) {
  */
 export async function getProyectoEquipo(proyectoId: number | string): Promise<{ id: number; nombre: string }[]> {
   try {
-    // Primero intentar el endpoint de equipo
     const response = await apiClient.get(
-      ENDPOINTS.PROYECTOS.EQUIPO(proyectoId)
-    );
-    if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-      // El endpoint /proyectos/:id/equipo devuelve:
-      // { id: asignacionId, personal: { id: personalId, usuarioId: number, ... }, ... }
-      // IMPORTANTE: Necesitamos usar usuarioId (no personalId) porque asignadoA referencia usuarios
-      const result = response.data
-        .map((item: {
-          id: number;
-          personalId?: number;
-          personal?: {
-            id: number;
-            usuarioId?: number;
-            nombres?: string;
-            apellidos?: string;
-            apellidoPaterno?: string;
-            apellidoMaterno?: string;
-            usuario?: { id: number; nombre: string };
-          };
-          rol?: string;
-        }) => {
-          // Obtener el usuarioId del personal
-          const usuarioId = item.personal?.usuarioId || item.personal?.usuario?.id;
-
-          if (!usuarioId) {
-            console.warn('Personal sin usuarioId:', item.personal?.id);
-            return null; // Filtrar personal sin usuario vinculado
-          }
-
-          // Priorizar nombres + apellidos para mostrar nombre completo
-          const nombreCompleto = `${item.personal?.nombres || ''} ${item.personal?.apellidos || item.personal?.apellidoPaterno || ''}`.trim();
-          const nombre = nombreCompleto
-            || item.personal?.usuario?.nombre
-            || `Usuario ${usuarioId}`;
-
-          return { id: usuarioId, nombre };
-        })
-        .filter((item): item is { id: number; nombre: string } => item !== null);
-
-      console.log('=== EQUIPO MAPEADO (usuarioIds) ===', result);
-      return result;
-    }
-  } catch (error) {
-    console.error('Error fetching equipo:', error);
-  }
-
-  // Fallback: obtener desde asignaciones
-  try {
-    const asignacionesResponse = await apiClient.get(
       ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId)
     );
-    const asignaciones = asignacionesResponse.data || [];
+    const asignaciones = response.data || [];
 
-    // Mapear asignaciones - usar usuarioId del personal
     const result = asignaciones
       .map((a: {
         id: number;
@@ -285,11 +234,9 @@ export async function getProyectoEquipo(proyectoId: number | string): Promise<{ 
         const usuarioId = a.personal?.usuarioId || a.personal?.usuario?.id;
 
         if (!usuarioId) {
-          console.warn('Personal sin usuarioId en asignación:', a.personalId);
           return null;
         }
 
-        // Priorizar nombres + apellidos para mostrar nombre completo
         const nombreCompleto = `${a.personal?.nombres || ''} ${a.personal?.apellidos || a.personal?.apellidoPaterno || ''}`.trim();
         const nombre = nombreCompleto
           || a.personal?.usuario?.nombre
@@ -299,7 +246,6 @@ export async function getProyectoEquipo(proyectoId: number | string): Promise<{ 
       })
       .filter((item): item is { id: number; nombre: string } => item !== null);
 
-    console.log('=== EQUIPO FALLBACK (usuarioIds) ===', result);
     return result;
   } catch {
     return [];

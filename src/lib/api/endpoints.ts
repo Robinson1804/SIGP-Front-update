@@ -49,10 +49,6 @@ export const ENDPOINTS = {
     HISTORIA_BY_ID: (proyectoId: number | string, historiaId: number | string) =>
       `/proyectos/${proyectoId}/historias-usuario/${historiaId}`,
 
-    // Equipo
-    EQUIPO: (proyectoId: number | string) => `/proyectos/${proyectoId}/equipo`,
-    EQUIPO_ASIGNAR: (proyectoId: number | string) => `/proyectos/${proyectoId}/equipo/asignar`,
-
     // Documentos
     DOCUMENTOS: (proyectoId: number | string) => `/proyectos/${proyectoId}/documentos`,
     DOCUMENTO_BY_ID: (proyectoId: number | string, documentoId: number | string) =>
