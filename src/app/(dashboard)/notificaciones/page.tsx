@@ -321,8 +321,8 @@ export default function NotificationsPage() {
 
   // Pestañas disponibles según rol:
   // - SCRUM_MASTER / COORDINADOR: Proyectos, Sprints, Aprobaciones, Validaciones
-  // - PMO: Proyectos, Sprints, Validaciones
-  // - PATROCINADOR: Proyectos, Validaciones
+  // - PMO: Proyectos, Sprints, Aprobaciones, Validaciones
+  // - PATROCINADOR: Proyectos, Aprobaciones, Validaciones
   // - ADMIN: Solo Proyectos (maneja RRHH)
   const TAB_DEFINITIONS: { name: string, type: NotificationType | NotificationType[] | 'all' }[] = [
     { name: 'Proyectos', type: 'project' },
@@ -340,13 +340,13 @@ export default function NotificationsPage() {
     }
 
     if (role === ROLES.PMO) {
-      // Proyectos, Sprints, Validaciones (sin Aprobaciones)
-      return TAB_DEFINITIONS.filter(tab => tab.name !== 'Aprobaciones');
+      // Proyectos, Sprints, Aprobaciones, Validaciones
+      return TAB_DEFINITIONS;
     }
 
     if (role === ROLES.PATROCINADOR) {
-      // Proyectos, Validaciones (sin Sprints ni Aprobaciones)
-      return TAB_DEFINITIONS.filter(tab => !['Sprints', 'Aprobaciones'].includes(tab.name));
+      // Proyectos, Aprobaciones, Validaciones (sin Sprints)
+      return TAB_DEFINITIONS.filter(tab => tab.name !== 'Sprints');
     }
 
     // ADMIN y otros roles: solo Proyectos
