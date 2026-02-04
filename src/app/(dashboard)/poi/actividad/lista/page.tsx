@@ -126,7 +126,6 @@ type Task = {
     startDate: string;
     endDate: string;
     informer: string;
-    attachments: TaskAttachment[];
     subtasks: Subtask[];
     comments: TaskComment[];
     history: TaskHistoryItem[];
@@ -653,7 +652,6 @@ function TaskModal({
     actividadEndDate?: string;
 }) {
     const isEditing = task !== null;
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [formData, setFormData] = useState<Omit<Task, 'id' | 'subtasks' | 'comments' | 'history'>>({
         title: '',
@@ -664,7 +662,6 @@ function TaskModal({
         startDate: '',
         endDate: '',
         informer: currentUser,
-        attachments: [],
     });
 
     const [subtasks, setSubtasks] = useState<Subtask[]>([]);
@@ -684,10 +681,6 @@ function TaskModal({
     const [errorMessage, setErrorMessage] = useState('');
     const [isFinalizadoWarningOpen, setIsFinalizadoWarningOpen] = useState(false);
 
-    const [previewFile, setPreviewFile] = useState<TaskAttachment | null>(null);
-    const [previewIndex, setPreviewIndex] = useState(0);
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-
     // Cargar datos al abrir
     React.useEffect(() => {
         if (task) {
@@ -700,7 +693,6 @@ function TaskModal({
                 startDate: task.startDate,
                 endDate: task.endDate,
                 informer: task.informer,
-                attachments: task.attachments,
             });
             setSubtasks(task.subtasks);
             setComments(task.comments);
@@ -715,7 +707,6 @@ function TaskModal({
                 startDate: '',
                 endDate: '',
                 informer: currentUser,
-                attachments: [],
             });
             setSubtasks([]);
             setComments([]);
@@ -735,50 +726,7 @@ function TaskModal({
         setFormData(prev => ({ ...prev, responsibles: prev.responsibles.filter(r => r !== name) }));
     };
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
 
-        const newAttachments: TaskAttachment[] = [];
-        for (let i = 0; i < files.length && formData.attachments.length + newAttachments.length < 5; i++) {
-            const file = files[i];
-            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-            if (validTypes.includes(file.type) && file.size <= 50 * 1024 * 1024) {
-                newAttachments.push({
-                    id: `att-${Date.now()}-${i}`,
-                    name: file.name,
-                    size: file.size,
-                    type: file.type,
-                });
-            }
-        }
-        setFormData(prev => ({ ...prev, attachments: [...prev.attachments, ...newAttachments] }));
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    const removeAttachment = (id: string) => {
-        setFormData(prev => ({ ...prev, attachments: prev.attachments.filter(a => a.id !== id) }));
-    };
-
-    const openPreview = (file: TaskAttachment, index: number) => {
-        setPreviewFile(file);
-        setPreviewIndex(index);
-        setIsPreviewOpen(true);
-    };
-
-    const navigatePreview = (direction: 'prev' | 'next') => {
-        const newIndex = direction === 'prev' ? previewIndex - 1 : previewIndex + 1;
-        if (newIndex >= 0 && newIndex < formData.attachments.length) {
-            setPreviewIndex(newIndex);
-            setPreviewFile(formData.attachments[newIndex]);
-        }
-    };
-
-    const formatFileSize = (bytes: number): string => {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    };
 
     const getInitials = (name: string) => {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -850,10 +798,6 @@ function TaskModal({
             if (pendingSubtasks.length > 0) {
                 newErrors.state = 'No puede finalizar la tarea hasta que todas las subtareas estén finalizadas';
             }
-            // Verificar que tenga adjuntos
-            if (formData.attachments.length === 0) {
-                newErrors.attachments = 'Debe adjuntar evidencia para marcar como finalizado';
-            }
         }
 
         setErrors(newErrors);
@@ -864,9 +808,6 @@ function TaskModal({
         if (!validate()) {
             if (errors.state) {
                 setErrorMessage(errors.state);
-                setIsErrorModalOpen(true);
-            } else if (errors.attachments) {
-                setErrorMessage(errors.attachments);
                 setIsErrorModalOpen(true);
             }
             return;
@@ -890,17 +831,34 @@ function TaskModal({
     };
 
     const handleSaveSubtask = (subtask: Subtask, isEdit: boolean) => {
+        let updatedSubtasks: Subtask[];
         if (isEdit) {
-            setSubtasks(prev => prev.map(s => s.id === subtask.id ? subtask : s));
+            updatedSubtasks = subtasks.map(s => s.id === subtask.id ? subtask : s);
         } else {
-            setSubtasks(prev => [...prev, subtask]);
+            updatedSubtasks = [...subtasks, subtask];
         }
+        setSubtasks(updatedSubtasks);
+
+        // Auto-finalizar la tarea si todas las subtareas están finalizadas
+        const allFinalized = updatedSubtasks.length > 0 && updatedSubtasks.every(s => s.state === 'Finalizado');
+        if (allFinalized) {
+            setFormData(prev => ({ ...prev, state: 'Finalizado' }));
+        } else if (formData.state === 'Finalizado') {
+            // Si la tarea estaba finalizada pero una subtarea ya no lo está, revertir
+            setFormData(prev => ({ ...prev, state: 'En progreso' }));
+        }
+
         setIsSubtaskModalOpen(false);
         setEditingSubtask(null);
     };
 
     const handleDeleteSubtask = (subtaskId: string) => {
-        setSubtasks(prev => prev.filter(s => s.id !== subtaskId));
+        const updatedSubtasks = subtasks.filter(s => s.id !== subtaskId);
+        setSubtasks(updatedSubtasks);
+        // Si la tarea estaba finalizada y se elimina una subtarea, revertir estado
+        if (formData.state === 'Finalizado') {
+            setFormData(prev => ({ ...prev, state: 'En progreso' }));
+        }
     };
 
     if (!isOpen) return null;
@@ -1253,58 +1211,6 @@ function TaskModal({
                                         <Input value={formData.informer} disabled className="mt-1 h-8 text-sm bg-gray-50" />
                                     </div>
 
-                                    {/* Adjuntar archivos */}
-                                    <div>
-                                        <Label className="text-sm font-medium">
-                                            Adjuntar {formData.state === 'Finalizado' && <span className="text-red-500">*</span>}
-                                        </Label>
-                                        <div className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-3">
-                                            <input
-                                                ref={fileInputRef}
-                                                type="file"
-                                                multiple
-                                                accept=".jpg,.jpeg,.png,.pdf"
-                                                onChange={handleFileUpload}
-                                                className="hidden"
-                                                id="task-file-upload"
-                                            />
-                                            <label
-                                                htmlFor="task-file-upload"
-                                                className="flex flex-col items-center cursor-pointer"
-                                            >
-                                                <Upload className="h-6 w-6 text-gray-400 mb-1" />
-                                                <span className="text-xs text-gray-600">Click para subir archivos</span>
-                                                <span className="text-xs text-gray-400">JPG, PNG, PDF (máx. 50MB, hasta 5)</span>
-                                            </label>
-                                        </div>
-                                        {errors.attachments && <p className="text-red-500 text-xs mt-1">{errors.attachments}</p>}
-
-                                        {formData.attachments.length > 0 && (
-                                            <div className="mt-2 space-y-1 max-h-24 overflow-y-auto">
-                                                {formData.attachments.map((file, idx) => (
-                                                    <div key={file.id} className="flex items-center justify-between p-1.5 bg-gray-50 rounded text-sm">
-                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                            {file.type === 'application/pdf' ? (
-                                                                <FileText className="h-4 w-4 text-red-500 flex-shrink-0" />
-                                                            ) : (
-                                                                <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                                            )}
-                                                            <span className="text-xs text-blue-600 hover:underline cursor-pointer truncate">{file.name}</span>
-                                                            <span className="text-xs text-gray-400 flex-shrink-0">({formatFileSize(file.size)})</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => openPreview(file, idx)}>
-                                                                <Eye className="h-3 w-3" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-5 w-5 text-red-500" onClick={() => removeAttachment(file.id)}>
-                                                                <X className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1369,16 +1275,6 @@ function TaskModal({
                 isOpen={isErrorModalOpen}
                 onClose={() => setIsErrorModalOpen(false)}
                 message={errorMessage}
-            />
-
-            {/* Modal de preview */}
-            <FilePreviewModal
-                isOpen={isPreviewOpen}
-                onClose={() => setIsPreviewOpen(false)}
-                file={previewFile}
-                files={formData.attachments}
-                currentIndex={previewIndex}
-                onNavigate={navigatePreview}
             />
 
             {/* Modal de advertencia para estado Finalizado */}
@@ -2212,23 +2108,11 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                     const allSubtasksFinalized = updatedSubtasks.length > 0 &&
                         updatedSubtasks.every(s => s.state === 'Finalizado');
 
-                    // Recopilar todos los adjuntos de las subtareas finalizadas
-                    const allAttachments: TaskAttachment[] = [];
-                    if (allSubtasksFinalized) {
-                        updatedSubtasks.forEach(s => {
-                            if (s.attachments && s.attachments.length > 0) {
-                                allAttachments.push(...s.attachments);
-                            }
-                        });
-                    }
-
                     return {
                         ...t,
                         subtasks: updatedSubtasks,
-                        // Actualizar estado de la tarea a "Finalizado" si todas las subtareas están finalizadas
-                        state: allSubtasksFinalized ? 'Finalizado' : t.state,
-                        // Agregar los adjuntos de las subtareas al campo attachments de la tarea
-                        attachments: allSubtasksFinalized ? allAttachments : t.attachments
+                        // Auto-finalizar la tarea si todas las subtareas están finalizadas
+                        state: allSubtasksFinalized ? 'Finalizado' : (t.state === 'Finalizado' ? 'En progreso' : t.state),
                     };
                 }
                 return t;
@@ -2242,7 +2126,13 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
     const handleDeleteSubtaskFromTable = (taskId: string, subtaskId: string) => {
         setTasks(prev => prev.map(t => {
             if (t.id === taskId) {
-                return { ...t, subtasks: t.subtasks.filter(s => s.id !== subtaskId) };
+                const updatedSubtasks = t.subtasks.filter(s => s.id !== subtaskId);
+                return {
+                    ...t,
+                    subtasks: updatedSubtasks,
+                    // Si la tarea estaba finalizada y se elimina una subtarea, revertir estado
+                    state: t.state === 'Finalizado' ? 'En progreso' : t.state,
+                };
             }
             return t;
         }));
