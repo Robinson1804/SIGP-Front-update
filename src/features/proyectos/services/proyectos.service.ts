@@ -21,6 +21,7 @@ export interface ProyectoQueryFilters {
   accionEstrategicaId?: number;
   scrumMasterId?: number;
   coordinadorId?: number;
+  responsableUsuarioId?: number;
   activo?: boolean;
   pgdId?: number;
   page?: number;

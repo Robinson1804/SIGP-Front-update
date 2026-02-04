@@ -315,14 +315,8 @@ const ProjectListRow = ({
 
     const handleRowClick = () => {
         localStorage.setItem('selectedProject', JSON.stringify(project));
-        if (isDeveloper) {
-            router.push(paths.poi.proyecto.backlog.base);
-        } else if (isImplementador) {
-            router.push(paths.poi.actividad.lista);
-        } else {
-            const detailsUrl = project.type === 'Proyecto' ? paths.poi.proyecto.detalles : paths.poi.actividad.detalles;
-            router.push(detailsUrl);
-        }
+        const detailsUrl = project.type === 'Proyecto' ? paths.poi.proyecto.detalles : paths.poi.actividad.detalles;
+        router.push(detailsUrl);
     };
 
     return (
@@ -412,20 +406,6 @@ const ProjectCard = ({
 
     const handleGoToDetails = () => {
         localStorage.setItem('selectedProject', JSON.stringify(project));
-
-        // DESARROLLADOR solo puede ir a Backlog (Proyecto), no a Detalles ni Documentos
-        if (isDeveloper) {
-            router.push(paths.poi.proyecto.backlog.base);
-            return;
-        }
-
-        // IMPLEMENTADOR solo puede ir a Lista (Actividad), no a Detalles ni Documentos
-        if (isImplementador) {
-            router.push(paths.poi.actividad.lista);
-            return;
-        }
-
-        // Otros roles van a Detalles
         const detailsUrl = project.type === 'Proyecto' ? paths.poi.proyecto.detalles : paths.poi.actividad.detalles;
         router.push(detailsUrl);
     };
@@ -634,11 +614,19 @@ function PmoPoiView() {
             if (effectiveType === 'Actividad') {
                 // Cargar Actividades desde el endpoint /actividades
                 // IMPORTANTE: Filtrar por PGD actual y solo mostrar actividades activas (no eliminadas)
-                const actividadesData = await getAllActividades({
+                const actividadFilters: Parameters<typeof getAllActividades>[0] = {
                     search: searchQuery.trim() || undefined,
                     pgdId: currentPGD?.id,
                     activo: true, // Solo mostrar actividades no eliminadas
-                });
+                };
+
+                // IMPLEMENTADOR: solo ve actividades donde es responsable (server-side filter)
+                if (isImplementador && user?.id) {
+                    const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+                    actividadFilters.responsableUsuarioId = userId;
+                }
+
+                const actividadesData = await getAllActividades(actividadFilters);
 
                 // Filtrar por año (siempre dentro del rango del PGD)
                 let filteredActividades = actividadesData;
@@ -655,6 +643,10 @@ function PmoPoiView() {
                     const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
                     filteredActividades = filteredActividades.filter(a => a.coordinadorId === userId);
                 }
+
+                // IMPLEMENTADOR: solo ve actividades donde es responsable (asignado en rrhh.asignaciones)
+                // Este filtro NO se puede hacer local porque la info de asignaciones no viene en el response
+                // Se debe pasar como query param para que el backend filtre
 
                 mappedProjects = filteredActividades.map(mapActividadToProject);
                 setTotalPages(1);
@@ -692,7 +684,11 @@ function PmoPoiView() {
                 else if (!isAdmin && !isPmo && userRole === ROLES.COORDINADOR && user?.id) {
                     filters.coordinadorId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
                 }
-                // ADMIN y PMO ven todos los proyectos (sin filtro adicional)
+                // DESARROLLADOR: solo ve proyectos donde es responsable (asignado en rrhh.asignaciones)
+                else if (isDeveloper && user?.id) {
+                    const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+                    filters.responsableUsuarioId = userId;
+                }
 
                 const response = await getProyectos(filters);
 
@@ -761,13 +757,10 @@ function PmoPoiView() {
         // NOTA: La API ya debería filtrar por scrumMasterId para SCRUM_MASTER,
         // así que este filtro local es solo una validación adicional
         if (!isAdmin && !isPmo && user) {
-            // DESARROLLADOR e IMPLEMENTADOR: ven donde están como responsables
-            if (isDeveloper || isImplementador) {
-                const isResponsible = p.responsibles?.some(r => r === userName);
-                if (!isResponsible) return false;
-            }
+            // DESARROLLADOR e IMPLEMENTADOR: filtro server-side via responsableUsuarioId
+            // No necesitan filtro local — el backend ya filtra por asignaciones
             // SCRUM_MASTER: ve donde está como scrumMaster (comparar por ID, no por nombre)
-            else if (isScrumMaster) {
+            if (isScrumMaster) {
                 // Comparar por scrumMasterId (que guardamos al mapear el proyecto)
                 const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
                 const isScrumMasterAssigned = p.scrumMasterId === userId;

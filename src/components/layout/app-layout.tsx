@@ -119,12 +119,8 @@ function AppLayoutContent({
   // Obtener items de navegación según el rol del usuario
   const navItems = user ? getNavItemsForRole(user.role) : [];
 
-  // DESARROLLADOR e IMPLEMENTADOR no tienen sidebar (solo tienen acceso a POI)
-  // También ocultar sidebar si no hay usuario (durante logout)
-  const isDeveloper = user?.role === ROLES.DESARROLLADOR;
-  const isImplementador = user?.role === ROLES.IMPLEMENTADOR;
-  const hideSidebar = isDeveloper || isImplementador;
-  const showSidebar = user && !hideSidebar && sidebarOpen;
+  // Mostrar sidebar para todos los roles que tengan módulos asignados
+  const showSidebar = user && sidebarOpen;
 
   // Conteo de notificaciones no leídas
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
@@ -159,8 +155,8 @@ function AppLayoutContent({
         </div>
       </header>
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - No se muestra para DESARROLLADOR, IMPLEMENTADOR ni cuando no hay usuario */}
-        {user && !hideSidebar && (
+        {/* Sidebar - Se muestra para todos los roles con módulos asignados */}
+        {user && (
           <aside
             className={`bg-[#EEEEEE] text-black transition-all duration-300 ${
               showSidebar ? "w-64" : "w-0"
@@ -213,8 +209,8 @@ function AppLayoutContent({
           <div className="sticky top-0 z-10 bg-background">
             <div className="bg-[#D5D5D5]">
               <div className="p-2 flex items-center gap-2 w-full">
-                {/* Botón de menú - No se muestra para DESARROLLADOR, IMPLEMENTADOR ni cuando no hay usuario */}
-                {user && !hideSidebar && !showSidebar && (
+                {/* Botón de menú */}
+                {user && !showSidebar && (
                   <button
                     onClick={() => setSidebarOpen(true)}
                     className="p-1 rounded hover:bg-gray-700/20"

@@ -152,12 +152,14 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
   // Solo POI con permisos limitados (tipo Proyecto)
   // ============================================
   [ROLES.DESARROLLADOR]: {
-    modules: [MODULES.POI],
+    modules: [MODULES.POI, MODULES.NOTIFICACIONES],
     permissions: {
       [MODULES.POI]: [
         PERMISSIONS.VIEW,
-        PERMISSIONS.UPDATE_TASK_STATUS, // Solo actualizar estado de sus tareas
+        PERMISSIONS.UPDATE_TASK_STATUS,
+        PERMISSIONS.MANAGE_BACKLOG,
       ],
+      [MODULES.NOTIFICACIONES]: [PERMISSIONS.VIEW],
     },
   },
 
@@ -166,12 +168,14 @@ export const ROLE_PERMISSIONS: RolePermissionConfig = {
   // Solo POI con permisos limitados (tipo Actividad)
   // ============================================
   [ROLES.IMPLEMENTADOR]: {
-    modules: [MODULES.POI],
+    modules: [MODULES.POI, MODULES.NOTIFICACIONES],
     permissions: {
       [MODULES.POI]: [
         PERMISSIONS.VIEW,
-        PERMISSIONS.UPDATE_TASK_STATUS, // Solo actualizar estado de sus tareas
+        PERMISSIONS.UPDATE_TASK_STATUS,
+        PERMISSIONS.MANAGE_BACKLOG,
       ],
+      [MODULES.NOTIFICACIONES]: [PERMISSIONS.VIEW],
     },
   },
 

@@ -297,13 +297,14 @@ export default function NotificationsPage() {
         : paths.poi.actividad.lista;
       router.push(`${backlogRoute}?tab=Backlog`);
     } else if (clickedNotification.type === 'project' && clickedNotification.urlAccion) {
-      // Usar urlAccion directamente para notificaciones de proyectos
+      // La URL ya incluye ?id=X&tab=Backlog o ?id=X&tab=Lista
+      // Las páginas de detalles cargan los datos desde la API usando el ID del query param
       router.push(clickedNotification.urlAccion);
     } else if (clickedNotification.projectId) {
-      // Fallback: usar la ruta del módulo POI
+      // Fallback: usar la ruta de detalles con query param
       const route = clickedNotification.projectType === 'Proyecto'
         ? `/poi/proyecto/detalles?id=${clickedNotification.projectId}`
-        : paths.poi.actividad.byId(clickedNotification.projectId);
+        : `/poi/actividad/detalles?id=${clickedNotification.projectId}`;
       router.push(route);
     }
   };

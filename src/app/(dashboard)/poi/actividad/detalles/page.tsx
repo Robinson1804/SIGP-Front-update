@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { paths } from '@/lib/paths';
 import { useAuth, usePGD } from '@/stores';
 import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
-import { deleteActividad } from '@/features/actividades/services/actividades.service';
+import { deleteActividad, getActividadById } from '@/features/actividades/services/actividades.service';
 import { useToast } from '@/lib/hooks/use-toast';
 import {
   DashboardTabContent,
@@ -120,28 +120,68 @@ function ActividadDetailsContent() {
     const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
     const isImplementador = userRole === ROLES.IMPLEMENTADOR;
 
-    // ADMIN puede todo, SCRUM MASTER solo puede ver, no editar ni eliminar
-    const canEdit = isAdmin || !isScrumMaster;
-    const canDelete = isAdmin || !isScrumMaster;
+    // ADMIN puede todo; SCRUM MASTER e IMPLEMENTADOR solo pueden ver, no editar ni eliminar la actividad
+    const canEdit = isAdmin || (!isScrumMaster && !isImplementador);
+    const canDelete = isAdmin || (!isScrumMaster && !isImplementador);
 
     React.useEffect(() => {
-        // IMPLEMENTADOR no tiene acceso a Detalles (excepto ADMIN), redirigir a Lista
-        if (!isAdmin && isImplementador && activeTab === 'Detalles') {
-            setActiveTab('Lista');
-            return;
+        const idFromParams = searchParams.get('id');
+        const tabParam = searchParams.get('tab');
+
+        if (tabParam) {
+            setActiveTab(tabParam as ActivityTab);
         }
 
-        const savedProjectData = localStorage.getItem('selectedProject');
-        if (savedProjectData) {
-            const projectData = JSON.parse(savedProjectData);
-            setProject(projectData);
-            if(projectData.type !== 'Actividad') {
+        if (idFromParams) {
+            // Cargar actividad desde la API usando el ID del query param
+            getActividadById(idFromParams).then(actividad => {
+                if (actividad.tipo !== 'Actividad') {
+                    router.push(paths.poi.base);
+                    return;
+                }
+                const mapped: Project = {
+                    id: actividad.id.toString(),
+                    code: actividad.codigo,
+                    name: actividad.nombre,
+                    type: 'Actividad',
+                    description: actividad.descripcion || '',
+                    status: actividad.estado || 'Pendiente',
+                    classification: actividad.clasificacion || 'Gestion interna',
+                    scrumMaster: '',
+                    gestor: actividad.gestor ? `${actividad.gestor.nombre} ${actividad.gestor.apellido}`.trim() : '',
+                    coordinator: actividad.coordinador ? `${actividad.coordinador.nombre} ${actividad.coordinador.apellido}`.trim() : '',
+                    coordination: actividad.coordinacion || '',
+                    annualAmount: actividad.montoAnual || 0,
+                    strategicAction: actividad.accionEstrategica?.nombre || '',
+                    years: actividad.anios?.map((a: number) => a.toString()) || [],
+                    responsibles: [],
+                    financialArea: actividad.areasFinancieras || [],
+                    managementMethod: 'Kanban',
+                    subProjects: [],
+                    startDate: actividad.fechaInicio,
+                    endDate: actividad.fechaFin,
+                };
+                setProject(mapped);
+                // Sincronizar localStorage para que tabs internos funcionen
+                localStorage.setItem('selectedProject', JSON.stringify(mapped));
+            }).catch(() => {
+                router.push(paths.poi.base);
+            });
+        } else {
+            // Fallback: intentar obtener del localStorage
+            const savedProjectData = localStorage.getItem('selectedProject');
+            if (savedProjectData) {
+                const projectData = JSON.parse(savedProjectData);
+                if (projectData.type !== 'Actividad') {
+                    router.push(paths.poi.base);
+                } else {
+                    setProject(projectData);
+                }
+            } else {
                 router.push(paths.poi.base);
             }
-        } else {
-            router.push(paths.poi.base);
         }
-    }, [router, isImplementador, isAdmin, activeTab]);
+    }, [searchParams, router]);
 
     // Efecto para cargar los responsables desde las asignaciones de la actividad
     React.useEffect(() => {
@@ -232,8 +272,10 @@ function ActividadDetailsContent() {
 
     // State-driven tab navigation (like Projects)
     const handleTabClick = (tabName: ActivityTab) => {
-        // Update URL with only tab parameter (actividadId is stored in localStorage)
         const newUrl = new URL(window.location.origin + window.location.pathname);
+        if (project?.id) {
+            newUrl.searchParams.set('id', project.id.toString());
+        }
         newUrl.searchParams.set('tab', tabName);
         window.history.pushState({}, '', newUrl.href);
 
@@ -263,10 +305,8 @@ function ActividadDetailsContent() {
         { name: 'Informes' }
     ];
 
-    // IMPLEMENTADOR no tiene acceso a Detalles, Dashboard, Informes (excepto ADMIN)
-    const activityTabs = (!isAdmin && isImplementador)
-        ? allActivityTabs.filter(tab => !['Detalles', 'Dashboard', 'Informes'].includes(tab.name))
-        : allActivityTabs;
+    // Todos los roles ven todas las pestañas (IMPLEMENTADOR en modo visualización excepto Lista)
+    const activityTabs = allActivityTabs;
 
     const secondaryHeader = (
       <>

@@ -129,6 +129,7 @@ export interface ActividadQueryFilters {
   search?: string;
   estado?: ActividadEstado;
   coordinadorId?: number;
+  responsableUsuarioId?: number;
   accionEstrategicaId?: number;
   pgdId?: number;
   anno?: number;
