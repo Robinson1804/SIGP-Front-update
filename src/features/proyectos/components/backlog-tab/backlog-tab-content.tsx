@@ -523,8 +523,8 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           onEditSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleEditSprint}
           onDeleteSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleDeleteSprint}
           onCreateTarea={isProyectoFinalizado ? undefined : handleCreateTarea}
-          onEditTarea={isProyectoFinalizado || isDeveloperOnly ? undefined : handleEditTarea}
-          onDeleteTarea={isProyectoFinalizado || isDeveloperOnly ? undefined : handleDeleteTarea}
+          onEditTarea={isProyectoFinalizado ? undefined : handleEditTarea}
+          onDeleteTarea={isProyectoFinalizado ? undefined : handleDeleteTarea}
           tareasRefreshKey={tareasRefreshKey}
           onVerDocumento={handleVerDocumento}
           onValidarHu={isProyectoFinalizado || isDeveloperOnly ? undefined : handleValidarHu}
