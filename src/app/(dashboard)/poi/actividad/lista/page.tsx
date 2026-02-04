@@ -639,6 +639,8 @@ function TaskModal({
     onDelete,
     currentUser,
     availableResponsibles = [],
+    actividadStartDate,
+    actividadEndDate,
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -647,6 +649,8 @@ function TaskModal({
     onDelete: (taskId: string) => void;
     currentUser: string;
     availableResponsibles?: string[];
+    actividadStartDate?: string;
+    actividadEndDate?: string;
 }) {
     const isEditing = task !== null;
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -821,6 +825,22 @@ function TaskModal({
         // Validar que fecha fin no sea menor a fecha inicio
         if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
             newErrors.endDate = 'La fecha de fin no puede ser menor a la fecha de inicio';
+        }
+
+        // Validar que las fechas estén dentro del rango de la actividad
+        // formData usa DD/MM/YYYY, actividad usa YYYY-MM-DD; normalizamos a YYYY-MM-DD
+        const toISO = (d: string) => d.includes('/') ? d.split('/').reverse().join('-') : d.split('T')[0];
+        if (formData.startDate && actividadStartDate) {
+            if (toISO(formData.startDate) < toISO(actividadStartDate)) {
+                const formatted = toISO(actividadStartDate).split('-').reverse().join('/');
+                newErrors.startDate = `La fecha de inicio no puede ser anterior al inicio de la actividad (${formatted})`;
+            }
+        }
+        if (formData.endDate && actividadEndDate) {
+            if (toISO(formData.endDate) > toISO(actividadEndDate)) {
+                const formatted = toISO(actividadEndDate).split('-').reverse().join('/');
+                newErrors.endDate = `La fecha de fin no puede ser posterior al fin de la actividad (${formatted})`;
+            }
         }
 
         // Validar estado Finalizado
@@ -1198,6 +1218,8 @@ function TaskModal({
                                                     const [y, m, d] = e.target.value.split('-');
                                                     setFormData(prev => ({ ...prev, startDate: `${d}/${m}/${y}` }));
                                                 }}
+                                                min={actividadStartDate ? actividadStartDate.split('T')[0] : undefined}
+                                                max={actividadEndDate ? actividadEndDate.split('T')[0] : undefined}
                                                 className={cn("mt-1 h-8 text-sm", errors.startDate && "border-red-500")}
                                             />
                                             {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
@@ -1212,6 +1234,8 @@ function TaskModal({
                                                     const [y, m, d] = e.target.value.split('-');
                                                     setFormData(prev => ({ ...prev, endDate: `${d}/${m}/${y}` }));
                                                 }}
+                                                min={actividadStartDate ? actividadStartDate.split('T')[0] : undefined}
+                                                max={actividadEndDate ? actividadEndDate.split('T')[0] : undefined}
                                                 className={cn("mt-1 h-8 text-sm", errors.endDate && "border-red-500")}
                                             />
                                             {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
@@ -2525,6 +2549,8 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 onDelete={handleDeleteTask}
                 currentUser={currentUser}
                 availableResponsibles={implementadores}
+                actividadStartDate={project?.startDate}
+                actividadEndDate={project?.endDate}
             />
 
             {/* Modal de Subtarea desde menú de acciones */}
