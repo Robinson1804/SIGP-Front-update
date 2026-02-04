@@ -106,6 +106,7 @@ import {
     type HistoriaUsuario,
 } from '@/features/proyectos/services/historias.service';
 import { getPersonal } from '@/features/rrhh/services/rrhh.service';
+import { deleteTarea } from '@/features/proyectos/services/tareas.service';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 
@@ -2257,6 +2258,7 @@ function TaskModal({
     parentHU,
     currentUser = 'Scrum Master',
     availableResponsibles = [],
+    canEdit = true,
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -2265,6 +2267,7 @@ function TaskModal({
     parentHU?: { id: string; title: string; startDate: string; endDate: string; responsibles?: string[] };
     currentUser?: string;
     availableResponsibles?: string[];
+    canEdit?: boolean; // false para PMO y DESARROLLADOR: solo visualización
 }) {
     const isEditing = task !== null;
     const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -2674,6 +2677,7 @@ function TaskModal({
                                             value={formData.title}
                                             onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                                             className={cn("mt-1", errors.title && "border-red-500")}
+                                            disabled={!canEdit}
                                         />
                                         {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
                                     </div>
@@ -2688,6 +2692,7 @@ function TaskModal({
                                             value={formData.description}
                                             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                             className={cn("mt-1 min-h-[80px]", errors.description && "border-red-500")}
+                                            disabled={!canEdit}
                                         />
                                         {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                                     </div>
@@ -2948,13 +2953,15 @@ function TaskModal({
                                                         {getInitials(formData.responsible)}
                                                     </div>
                                                     <span className="flex-1 text-sm">{formData.responsible}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData(prev => ({ ...prev, responsible: '' }))}
-                                                        className="text-gray-400 hover:text-red-500"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </button>
+                                                    {canEdit && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setFormData(prev => ({ ...prev, responsible: '' }))}
+                                                            className="text-gray-400 hover:text-red-500"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <>
@@ -2964,6 +2971,7 @@ function TaskModal({
                                                         onChange={(e) => { setResponsibleSearch(e.target.value); setShowResponsibleDropdown(true); }}
                                                         onFocus={() => setShowResponsibleDropdown(true)}
                                                         className={cn(errors.responsible && "border-red-500")}
+                                                        disabled={!canEdit}
                                                     />
                                                     {showResponsibleDropdown && filteredResponsibles.length > 0 && (
                                                         <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-40 overflow-y-auto">
@@ -2998,6 +3006,7 @@ function TaskModal({
                                             <Select
                                                 value={formData.state}
                                                 onValueChange={handleStateChange}
+                                                disabled={!canEdit}
                                             >
                                                 <SelectTrigger className="mt-1">
                                                     <SelectValue placeholder="Seleccionar Estado" />
@@ -3018,6 +3027,7 @@ function TaskModal({
                                             <Select
                                                 value={formData.priority}
                                                 onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as Priority }))}
+                                                disabled={!canEdit}
                                             >
                                                 <SelectTrigger className="mt-1">
                                                     <SelectValue placeholder="Seleccionar Prioridad" />
@@ -3043,6 +3053,7 @@ function TaskModal({
                                                 value={toInputDateFormat(formData.startDate)}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, startDate: toDisplayDateFormat(e.target.value) }))}
                                                 className={cn("mt-1", errors.startDate && "border-red-500")}
+                                                disabled={!canEdit}
                                             />
                                             {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
                                         </div>
@@ -3057,6 +3068,7 @@ function TaskModal({
                                                 value={toInputDateFormat(formData.endDate)}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, endDate: toDisplayDateFormat(e.target.value) }))}
                                                 className={cn("mt-1", errors.endDate && "border-red-500")}
+                                                disabled={!canEdit}
                                             />
                                             {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
                                         </div>
@@ -3071,6 +3083,7 @@ function TaskModal({
                                             onChange={(e) => setFormData(prev => ({ ...prev, informer: e.target.value }))}
                                             className="mt-1"
                                             placeholder="Nombre del informador"
+                                            disabled={!canEdit}
                                         />
                                     </div>
 
@@ -3156,8 +3169,14 @@ function TaskModal({
                     </ScrollArea>
 
                     <DialogFooter className="p-4 border-t bg-gray-50 flex gap-2">
-                        <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button onClick={handleSave} className="bg-[#018CD1] hover:bg-[#018CD1]/90">Guardar</Button>
+                        {canEdit ? (
+                            <>
+                                <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                                <Button onClick={handleSave} className="bg-[#018CD1] hover:bg-[#018CD1]/90">Guardar</Button>
+                            </>
+                        ) : (
+                            <Button variant="outline" onClick={onClose}>Cerrar</Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -3213,6 +3232,7 @@ function UserStoryModal({
     allStories,
     targetSprint,
     availableResponsibles,
+    canEdit = true,
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -3223,6 +3243,7 @@ function UserStoryModal({
     allStories: UserStory[];
     targetSprint?: Sprint | null;
     availableResponsibles: string[];
+    canEdit?: boolean; // false para DESARROLLADOR: solo puede ver, no editar
 }) {
     const isEditing = story !== null;
     const isAIGenerated = story?.isAIGenerated || false;
@@ -3488,7 +3509,7 @@ function UserStoryModal({
                 <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden" showCloseButton={false}>
                     <DialogHeader className="p-4 bg-[#004272] text-white flex flex-row items-center justify-between">
                         <DialogTitle className="text-lg font-bold">
-                            {isEditing ? 'Editar Historia de Usuario' : 'Agregar Historia de Usuario'}
+                            {!canEdit ? 'Ver Historia de Usuario' : isEditing ? 'Editar Historia de Usuario' : 'Agregar Historia de Usuario'}
                         </DialogTitle>
                         <DialogClose asChild>
                             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white h-8 w-8">
@@ -3505,24 +3526,26 @@ function UserStoryModal({
                                 <div className="space-y-5">
                                     {/* Título */}
                                     <div>
-                                        <Label className="text-sm font-medium">Título <span className="text-red-500">*</span></Label>
+                                        <Label className="text-sm font-medium">Título {canEdit && <span className="text-red-500">*</span>}</Label>
                                         <Input
                                             placeholder="Implementación del módulo de reclutamiento en el sistema ENDES"
                                             value={formData.title}
                                             onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                                             className={cn("mt-1", errors.title && "border-red-500")}
+                                            disabled={!canEdit}
                                         />
                                         {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
                                     </div>
 
                                     {/* Descripción */}
                                     <div>
-                                        <Label className="text-sm font-medium">Descripción <span className="text-red-500">*</span></Label>
+                                        <Label className="text-sm font-medium">Descripción {canEdit && <span className="text-red-500">*</span>}</Label>
                                         <Textarea
                                             placeholder="Como Usuario ENDES, Quiero Desarrollo e implementación del módulo de reclutamiento en el Sistema de Monitoreo del ENDES"
                                             value={formData.description}
                                             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                             className={cn("mt-1 min-h-[80px]", errors.description && "border-red-500")}
+                                            disabled={!canEdit}
                                         />
                                         {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                                     </div>
@@ -3530,15 +3553,17 @@ function UserStoryModal({
                                     {/* Agregar Tareas */}
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between border-b pb-2">
-                                            <h3 className="font-semibold text-sm text-gray-700">Agregar Tareas</h3>
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                onClick={handleAddTask}
-                                                className="bg-[#018CD1] hover:bg-[#0179b5] h-7 w-7 p-0"
-                                            >
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
+                                            <h3 className="font-semibold text-sm text-gray-700">{canEdit ? 'Agregar Tareas' : 'Tareas'}</h3>
+                                            {canEdit && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={handleAddTask}
+                                                    className="bg-[#018CD1] hover:bg-[#0179b5] h-7 w-7 p-0"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
 
                                         {formData.tasks && formData.tasks.length > 0 ? (
@@ -3552,14 +3577,16 @@ function UserStoryModal({
                                                                 <span className="text-xs text-gray-500 truncate">{task.responsible}</span>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1 ml-2">
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-[#018CD1]" onClick={() => handleEditTask(task, index)}>
-                                                                <Pencil className="h-3 w-3" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-red-600" onClick={() => handleDeleteTask(index)}>
-                                                                <Trash2 className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
+                                                        {canEdit && (
+                                                            <div className="flex items-center gap-1 ml-2">
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-[#018CD1]" onClick={() => handleEditTask(task, index)}>
+                                                                    <Pencil className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-red-600" onClick={() => handleDeleteTask(index)}>
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -3771,8 +3798,9 @@ function UserStoryModal({
                                                         value={criteria}
                                                         onChange={(e) => updateCriteria(index, e.target.value)}
                                                         className="flex-1 h-8 text-sm"
+                                                        disabled={!canEdit}
                                                     />
-                                                    {formData.acceptanceCriteria.length > 1 && (
+                                                    {canEdit && formData.acceptanceCriteria.length > 1 && (
                                                         <Button type="button" variant="ghost" size="icon" onClick={() => removeCriteria(index)} className="h-7 w-7 text-red-500 hover:text-red-700">
                                                             <X className="h-4 w-4" />
                                                         </Button>
@@ -3780,9 +3808,11 @@ function UserStoryModal({
                                                 </div>
                                             ))}
                                         </div>
-                                        <Button type="button" variant="outline" size="sm" onClick={addCriteria} className="h-7 text-xs">
-                                            <Plus className="h-3 w-3 mr-1" /> Agregar criterio
-                                        </Button>
+                                        {canEdit && (
+                                            <Button type="button" variant="outline" size="sm" onClick={addCriteria} className="h-7 text-xs">
+                                                <Plus className="h-3 w-3 mr-1" /> Agregar criterio
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -3791,7 +3821,7 @@ function UserStoryModal({
                                     {/* Épica */}
                                     <div>
                                         <Label className="text-sm font-medium">Épica</Label>
-                                        <Select value={formData.epic} onValueChange={(value) => setFormData(prev => ({ ...prev, epic: value }))}>
+                                        <Select value={formData.epic} onValueChange={(value) => setFormData(prev => ({ ...prev, epic: value }))} disabled={!canEdit}>
                                             <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                                             <SelectContent>
                                                 {epics.map(epic => (
@@ -3803,38 +3833,42 @@ function UserStoryModal({
 
                                     {/* Responsables */}
                                     <div>
-                                        <Label className="text-sm font-medium">Responsable <span className="text-red-500">*</span></Label>
+                                        <Label className="text-sm font-medium">Responsable {canEdit && <span className="text-red-500">*</span>}</Label>
                                         <div className="mt-1 space-y-2">
                                             {formData.responsibles.length > 0 && (
                                                 <div className="flex flex-wrap gap-1">
                                                     {formData.responsibles.map(name => (
                                                         <Badge key={name} variant="secondary" className="flex items-center gap-1 pr-1 text-xs">
                                                             {name}
-                                                            <button type="button" onClick={() => removeResponsible(name)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
-                                                                <X className="h-3 w-3" />
-                                                            </button>
+                                                            {canEdit && (
+                                                                <button type="button" onClick={() => removeResponsible(name)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                                                                    <X className="h-3 w-3" />
+                                                                </button>
+                                                            )}
                                                         </Badge>
                                                     ))}
                                                 </div>
                                             )}
-                                            <div className="relative">
-                                                <Input
-                                                    placeholder="Buscar responsable..."
-                                                    value={responsibleSearch}
-                                                    onChange={(e) => { setResponsibleSearch(e.target.value); setShowResponsibleDropdown(true); }}
-                                                    onFocus={() => setShowResponsibleDropdown(true)}
-                                                    className={cn("h-8 text-sm", errors.responsibles && "border-red-500")}
-                                                />
-                                                {showResponsibleDropdown && responsibleSearch && filteredResponsibles.length > 0 && (
-                                                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-32 overflow-y-auto">
-                                                        {filteredResponsibles.map(name => (
-                                                            <button key={name} type="button" onClick={() => addResponsible(name)} className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100">
-                                                                {name}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            {canEdit && (
+                                                <div className="relative">
+                                                    <Input
+                                                        placeholder="Buscar responsable..."
+                                                        value={responsibleSearch}
+                                                        onChange={(e) => { setResponsibleSearch(e.target.value); setShowResponsibleDropdown(true); }}
+                                                        onFocus={() => setShowResponsibleDropdown(true)}
+                                                        className={cn("h-8 text-sm", errors.responsibles && "border-red-500")}
+                                                    />
+                                                    {showResponsibleDropdown && responsibleSearch && filteredResponsibles.length > 0 && (
+                                                        <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-32 overflow-y-auto">
+                                                            {filteredResponsibles.map(name => (
+                                                                <button key={name} type="button" onClick={() => addResponsible(name)} className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100">
+                                                                    {name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                             {errors.responsibles && <p className="text-red-500 text-xs">{errors.responsibles}</p>}
                                         </div>
                                     </div>
@@ -3843,7 +3877,7 @@ function UserStoryModal({
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <Label className="text-sm font-medium">Estado</Label>
-                                            <Select value={formData.state} onValueChange={(value) => setFormData(prev => ({ ...prev, state: value as UserStoryStatus }))} disabled={!isEditing}>
+                                            <Select value={formData.state} onValueChange={(value) => setFormData(prev => ({ ...prev, state: value as UserStoryStatus }))} disabled={!isEditing || !canEdit}>
                                                 <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="Por hacer">Por hacer</SelectItem>
@@ -3861,7 +3895,7 @@ function UserStoryModal({
 
                                         <div>
                                             <Label className="text-sm font-medium">Prioridad</Label>
-                                            <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as Priority }))}>
+                                            <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as Priority }))} disabled={!canEdit}>
                                                 <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="Alta">Alta</SelectItem>
@@ -3881,14 +3915,14 @@ function UserStoryModal({
                                                 value={toInputDateFormat(formData.startDate)}
                                                 onChange={(e) => setFormData(prev => ({ ...prev, startDate: toDisplayDateFormat(e.target.value) }))}
                                                 className="mt-1 h-8 text-sm"
-                                                disabled={isAIGenerated}
+                                                disabled={isAIGenerated || !canEdit}
                                             />
                                             {isAIGenerated && <p className="text-xs text-gray-400 mt-1">No editable (IA)</p>}
                                         </div>
 
                                         <div>
                                             <Label className="text-sm font-medium">Fecha Fin</Label>
-                                            <Input type="date" value={toInputDateFormat(formData.endDate)} onChange={(e) => setFormData(prev => ({ ...prev, endDate: toDisplayDateFormat(e.target.value) }))} className="mt-1 h-8 text-sm" />
+                                            <Input type="date" value={toInputDateFormat(formData.endDate)} onChange={(e) => setFormData(prev => ({ ...prev, endDate: toDisplayDateFormat(e.target.value) }))} className="mt-1 h-8 text-sm" disabled={!canEdit} />
                                             {errors.dates && <p className="text-red-500 text-xs mt-1">{errors.dates}</p>}
                                         </div>
                                     </div>
@@ -3911,7 +3945,7 @@ function UserStoryModal({
                                     {/* Puntos HU */}
                                     <div>
                                         <Label className="text-sm font-medium">Puntos HU</Label>
-                                        <Input type="number" min="0" value={formData.points} onChange={(e) => setFormData(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))} className="mt-1 h-8 text-sm" />
+                                        <Input type="number" min="0" value={formData.points} onChange={(e) => setFormData(prev => ({ ...prev, points: parseInt(e.target.value) || 0 }))} className="mt-1 h-8 text-sm" disabled={!canEdit} />
                                     </div>
                                 </div>
                             </div>
@@ -3919,8 +3953,14 @@ function UserStoryModal({
                     </ScrollArea>
 
                     <DialogFooter className="p-4 border-t bg-gray-50">
-                        <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button onClick={handleSave} className="bg-[#018CD1] hover:bg-[#018CD1]/90">Guardar</Button>
+                        {canEdit ? (
+                            <>
+                                <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                                <Button onClick={handleSave} className="bg-[#018CD1] hover:bg-[#018CD1]/90">Guardar</Button>
+                            </>
+                        ) : (
+                            <Button variant="outline" onClick={onClose}>Cerrar</Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -3934,6 +3974,7 @@ function UserStoryModal({
                 parentHU={{ id: story?.id || 'Nueva HU', title: formData.title, startDate: formData.startDate, endDate: formData.endDate, responsibles: formData.responsibles }}
                 currentUser={currentUser}
                 availableResponsibles={availableResponsibles}
+                canEdit={canEdit}
             />
         </>
     );
@@ -3957,6 +3998,8 @@ function StoryRow({
     showCheckbox = false,
     canManage = true,
     canManageTasks = false,
+    canEditTasks = true,
+    isViewOnly = false,
 }: {
     story: UserStory;
     allStories: UserStory[];
@@ -3973,14 +4016,16 @@ function StoryRow({
     onSelectChange?: (checked: boolean) => void;
     showCheckbox?: boolean;
     canManage?: boolean; // false para PMO, true para Scrum Master
-    canManageTasks?: boolean; // Para DESARROLLADOR: puede crear/editar/eliminar tareas
+    canManageTasks?: boolean; // Para DESARROLLADOR: puede crear/eliminar tareas
+    canEditTasks?: boolean; // Solo SCRUM MASTER puede editar tareas (DESARROLLADOR solo ve)
+    isViewOnly?: boolean; // PMO: solo Ver Detalles y Ver documento
 }) {
     const [isExpanded, setIsExpanded] = useState(false);
     // Calcular tareas dinámicamente desde allStories
     const tasks = allStories.filter(item => item.type === 'Tarea' && item.parentId === story.id);
 
-    // Mostrar menú si puede gestionar HU O si puede gestionar tareas
-    const showActionsMenu = canManage || canManageTasks;
+    // Mostrar menú si puede gestionar HU, gestionar tareas, O es solo visualización (PMO: Ver Detalles/Ver documento)
+    const showActionsMenu = canManage || canManageTasks || isViewOnly;
     const hasTasks = tasks.length > 0;
 
     // Indicadores visuales para estados
@@ -4055,44 +4100,68 @@ function StoryRow({
                                 <button className="p-1 hover:bg-gray-100 rounded"><MoreHorizontal className="h-5 w-5 text-gray-400" /></button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                {/* Validar HU - solo canManage (Scrum Master) */}
-                                {canManage && isInReview && onValidate && (
+                                {/* PMO (isViewOnly): Solo Ver Detalles y Ver documento */}
+                                {isViewOnly ? (
                                     <>
-                                        <DropdownMenuItem onClick={() => setTimeout(() => onValidate(story), 0)} className="text-green-600">
-                                            <CheckCircle className="h-4 w-4 mr-2" /> Validar HU
+                                        {/* Ver Detalles - PMO solo visualización */}
+                                        <DropdownMenuItem onClick={() => setTimeout(() => onEdit(story), 0)}>
+                                            <Eye className="h-4 w-4 mr-2" /> Ver Detalles
                                         </DropdownMenuItem>
-                                        <Separator className="my-1" />
+                                        {/* Ver documento - disponible para PMO */}
+                                        {(hasDocument || isInReview || isFinalized) && onViewDocument && (
+                                            <DropdownMenuItem onClick={() => setTimeout(() => onViewDocument(story.id), 0)} className="text-blue-600">
+                                                <FileText className="h-4 w-4 mr-2" /> Ver documento
+                                            </DropdownMenuItem>
+                                        )}
                                     </>
-                                )}
-                                {/* Editar - solo canManage, no cuando está en revisión ni finalizada */}
-                                {canManage && !isInReview && !isFinalized && (
-                                    <DropdownMenuItem onClick={() => setTimeout(() => onEdit(story), 0)}>
-                                        <Pencil className="h-4 w-4 mr-2" /> Editar
-                                    </DropdownMenuItem>
-                                )}
-                                {/* Reasignar - solo canManage, no en revisión ni finalizado */}
-                                {canManage && onReassign && !isFinalized && !isInReview && (
-                                    <DropdownMenuItem onClick={() => setTimeout(() => onReassign(story), 0)} className="text-orange-600">
-                                        <RefreshCw className="h-4 w-4 mr-2" /> Reasignar
-                                    </DropdownMenuItem>
-                                )}
-                                {/* Crear tarea - disponible si canManageTasks (SCRUM MASTER o DESARROLLADOR), no en revisión ni finalizado */}
-                                {onCreateTask && !isFinalized && !isInReview && (
-                                    <DropdownMenuItem onClick={() => setTimeout(() => onCreateTask(story), 0)} className="text-[#018CD1]">
-                                        <Plus className="h-4 w-4 mr-2" /> Crear tarea
-                                    </DropdownMenuItem>
-                                )}
-                                {/* Ver documento - disponible para todos con acceso al menú */}
-                                {(hasDocument || isInReview || isFinalized) && onViewDocument && (
-                                    <DropdownMenuItem onClick={() => setTimeout(() => onViewDocument(story.id), 0)} className="text-blue-600">
-                                        <FileText className="h-4 w-4 mr-2" /> Ver documento
-                                    </DropdownMenuItem>
-                                )}
-                                {/* Eliminar - solo canManage, no cuando está en revisión ni finalizada */}
-                                {canManage && !isInReview && !isFinalized && (
-                                    <DropdownMenuItem onClick={() => setTimeout(() => onDelete(story), 0)} className="text-red-600 focus:text-red-600">
-                                        <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-                                    </DropdownMenuItem>
+                                ) : (
+                                    <>
+                                        {/* Validar HU - solo canManage (Scrum Master) */}
+                                        {canManage && isInReview && onValidate && (
+                                            <>
+                                                <DropdownMenuItem onClick={() => setTimeout(() => onValidate(story), 0)} className="text-green-600">
+                                                    <CheckCircle className="h-4 w-4 mr-2" /> Validar HU
+                                                </DropdownMenuItem>
+                                                <Separator className="my-1" />
+                                            </>
+                                        )}
+                                        {/* Editar - solo canManage, no cuando está en revisión ni finalizada */}
+                                        {canManage && !isInReview && !isFinalized && (
+                                            <DropdownMenuItem onClick={() => setTimeout(() => onEdit(story), 0)}>
+                                                <Pencil className="h-4 w-4 mr-2" /> Editar
+                                            </DropdownMenuItem>
+                                        )}
+                                        {/* DESARROLLADOR: Ver Detalles (solo lectura) cuando no puede editar */}
+                                        {!canManage && !canEditTasks && (
+                                            <DropdownMenuItem onClick={() => setTimeout(() => onEdit(story), 0)}>
+                                                <Eye className="h-4 w-4 mr-2" /> Ver Detalles
+                                            </DropdownMenuItem>
+                                        )}
+                                        {/* Reasignar - solo canManage, no en revisión ni finalizado */}
+                                        {canManage && onReassign && !isFinalized && !isInReview && (
+                                            <DropdownMenuItem onClick={() => setTimeout(() => onReassign(story), 0)} className="text-orange-600">
+                                                <RefreshCw className="h-4 w-4 mr-2" /> Reasignar
+                                            </DropdownMenuItem>
+                                        )}
+                                        {/* Crear tarea - disponible si canManageTasks (SCRUM MASTER o DESARROLLADOR), no en revisión ni finalizado */}
+                                        {onCreateTask && !isFinalized && !isInReview && (
+                                            <DropdownMenuItem onClick={() => setTimeout(() => onCreateTask(story), 0)} className="text-[#018CD1]">
+                                                <Plus className="h-4 w-4 mr-2" /> Crear tarea
+                                            </DropdownMenuItem>
+                                        )}
+                                        {/* Ver documento - disponible para todos con acceso al menú */}
+                                        {(hasDocument || isInReview || isFinalized) && onViewDocument && (
+                                            <DropdownMenuItem onClick={() => setTimeout(() => onViewDocument(story.id), 0)} className="text-blue-600">
+                                                <FileText className="h-4 w-4 mr-2" /> Ver documento
+                                            </DropdownMenuItem>
+                                        )}
+                                        {/* Eliminar - solo canManage, no cuando está en revisión ni finalizada */}
+                                        {canManage && !isInReview && !isFinalized && (
+                                            <DropdownMenuItem onClick={() => setTimeout(() => onDelete(story), 0)} className="text-red-600 focus:text-red-600">
+                                                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                            </DropdownMenuItem>
+                                        )}
+                                    </>
                                 )}
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -4134,26 +4203,44 @@ function StoryRow({
                                     </p>
                                 </PopoverContent>
                             </Popover>
-                        ) : canManageTasks ? (
+                        ) : (canManageTasks || isViewOnly) ? (
                             <DropdownMenu modal={false}>
                                 <DropdownMenuTrigger asChild>
                                     <button className="p-1 hover:bg-gray-100 rounded"><MoreHorizontal className="h-5 w-5 text-gray-400" /></button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    {/* Bloquear Editar/Eliminar tareas cuando la HU padre está en revisión */}
-                                    {!isInReview ? (
-                                        <>
-                                            <DropdownMenuItem onClick={() => setTimeout(() => onEditTask?.(task, story), 0)}>
-                                                <Pencil className="h-4 w-4 mr-2" /> Editar
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setTimeout(() => onDeleteTask?.(task, story), 0)} className="text-red-600 focus:text-red-600">
-                                                <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-                                            </DropdownMenuItem>
-                                        </>
-                                    ) : (
-                                        <DropdownMenuItem disabled className="text-gray-400">
-                                            <Info className="h-4 w-4 mr-2" /> HU en revisión
+                                    {/* PMO (isViewOnly): Solo Ver Detalles */}
+                                    {isViewOnly ? (
+                                        <DropdownMenuItem onClick={() => setTimeout(() => onEditTask?.(task, story), 0)}>
+                                            <Eye className="h-4 w-4 mr-2" /> Ver Detalles
                                         </DropdownMenuItem>
+                                    ) : (
+                                        <>
+                                            {/* Bloquear Editar/Eliminar tareas cuando la HU padre está en revisión */}
+                                            {!isInReview ? (
+                                                <>
+                                                    {/* DESARROLLADOR: Ver Detalles (solo lectura) */}
+                                                    {!canEditTasks && (
+                                                        <DropdownMenuItem onClick={() => setTimeout(() => onEditTask?.(task, story), 0)}>
+                                                            <Eye className="h-4 w-4 mr-2" /> Ver Detalles
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {/* SCRUM MASTER: Editar (con permisos de edición) */}
+                                                    {canEditTasks && (
+                                                        <DropdownMenuItem onClick={() => setTimeout(() => onEditTask?.(task, story), 0)}>
+                                                            <Pencil className="h-4 w-4 mr-2" /> Editar
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    <DropdownMenuItem onClick={() => setTimeout(() => onDeleteTask?.(task, story), 0)} className="text-red-600 focus:text-red-600">
+                                                        <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                    </DropdownMenuItem>
+                                                </>
+                                            ) : (
+                                                <DropdownMenuItem disabled className="text-gray-400">
+                                                    <Info className="h-4 w-4 mr-2" /> HU en revisión
+                                                </DropdownMenuItem>
+                                            )}
+                                        </>
                                     )}
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -4183,6 +4270,8 @@ function SprintTable({
     documentsIds,
     canManage = true,
     canManageTasks = false,
+    canEditTasks = true,
+    isViewOnly = false,
 }: {
     stories: UserStory[];
     allStories: UserStory[];
@@ -4198,6 +4287,8 @@ function SprintTable({
     documentsIds?: string[];
     canManage?: boolean;
     canManageTasks?: boolean;
+    canEditTasks?: boolean;
+    isViewOnly?: boolean; // PMO: solo Ver Detalles y Ver documento
 }) {
     return (
         <div className="rounded-lg border overflow-hidden">
@@ -4232,10 +4323,12 @@ function SprintTable({
                             hasDocument={documentsIds?.includes(story.id)}
                             canManage={canManage}
                             canManageTasks={canManageTasks}
+                            canEditTasks={canEditTasks}
+                            isViewOnly={isViewOnly}
                         />
                     ))}
                     {/* Fila para agregar nueva historia de usuario */}
-                    {onAddStory && canManage && (
+                    {onAddStory && canManage && !isViewOnly && (
                         <TableRow
                             className="hover:bg-blue-50 cursor-pointer border-t-2 border-dashed border-gray-300"
                             onClick={onAddStory}
@@ -4272,6 +4365,8 @@ function BacklogTable({
     onSelectionChange,
     canManage = true,
     canManageTasks = false,
+    canEditTasks = true,
+    isViewOnly = false,
 }: {
     stories: UserStory[];
     allStories: UserStory[];
@@ -4288,7 +4383,9 @@ function BacklogTable({
     selectedIds: string[];
     onSelectionChange: (ids: string[]) => void;
     canManage?: boolean;
-    canManageTasks?: boolean; // Para DESARROLLADOR: puede crear/editar/eliminar tareas
+    canManageTasks?: boolean; // Para DESARROLLADOR: puede crear/eliminar tareas
+    canEditTasks?: boolean; // Solo SCRUM MASTER puede editar tareas
+    isViewOnly?: boolean; // PMO: solo Ver Detalles y Ver documento
 }) {
     const allSelected = stories.length > 0 && stories.every(s => selectedIds.includes(s.id));
 
@@ -4344,15 +4441,17 @@ function BacklogTable({
                             onViewDocument={onViewDocument}
                             onReassign={onReassign}
                             hasDocument={documentsIds?.includes(story.id)}
-                            showCheckbox={canManage}
+                            showCheckbox={canManage && !isViewOnly}
                             isSelected={selectedIds.includes(story.id)}
                             onSelectChange={(checked) => handleSelectOne(story.id, checked)}
                             canManage={canManage}
                             canManageTasks={canManageTasks}
+                            canEditTasks={canEditTasks}
+                            isViewOnly={isViewOnly}
                         />
                     ))}
                     {/* Fila para agregar nueva historia de usuario */}
-                    {onAddStory && canManage && (
+                    {onAddStory && canManage && !isViewOnly && (
                         <TableRow
                             className="hover:bg-blue-50 cursor-pointer border-t-2 border-dashed border-gray-300"
                             onClick={onAddStory}
@@ -4430,7 +4529,7 @@ function BacklogContent() {
     const currentUser = user?.name || 'Scrum Master';
 
     // Determinar rol del usuario
-    // PMO: solo puede filtrar e iniciar sprint
+    // PMO: SOLO VISUALIZACIÓN - Ver Detalles y Ver documento únicamente
     // Scrum Master: puede gestionar sprints, HUs y tareas
     // Desarrollador: crear tareas, filtrar épicas, iniciar sprint, filtro de búsqueda
     const userRole = user?.role || 'SCRUM_MASTER';
@@ -4438,14 +4537,21 @@ function BacklogContent() {
     const isPMO = userRole === ROLES.PMO;
     const isDeveloper = userRole === ROLES.DESARROLLADOR;
 
+    // PMO es solo visualización (no hace CRUD, solo Ver Detalles y Ver documento)
+    const isViewOnly = isPMO;
+
     // Permisos específicos por rol
-    const canManageTasks = isScrumMaster || isDeveloper; // Crear/Editar/Eliminar tareas para HU (en Sprints)
-    const canManageTasksInBacklog = isDeveloper; // Solo DESARROLLADOR puede crear tareas en Backlog
-    const canManageHU = isScrumMaster; // SCRUM MASTER: Editar/Eliminar HU, Crear HU
+    const canManageTasks = (isScrumMaster || isDeveloper) && !isViewOnly; // Crear/Eliminar tareas para HU (en Sprints)
+    const canEditTasks = isScrumMaster && !isViewOnly; // Solo SCRUM MASTER puede editar tareas (DESARROLLADOR solo ve detalles)
+    const canManageTasksInBacklog = isDeveloper && !isViewOnly; // Solo DESARROLLADOR puede crear tareas en Backlog
+    const canEditTasksInBacklog = false; // DESARROLLADOR no puede editar tareas en Backlog
+    const canManageHU = isScrumMaster && !isViewOnly; // SCRUM MASTER: Editar/Eliminar HU, Crear HU
     const canReassignHUInBacklog = false; // Reasignar HU deshabilitado en Backlog para SCRUM MASTER
-    const canManageSprints = isScrumMaster; // Crear/Editar/Eliminar Sprint, Asignar Sprint
-    const canManageEpics = isScrumMaster; // Crear/Editar/Eliminar Épicas
+    const canManageSprints = isScrumMaster && !isViewOnly; // Crear/Editar/Eliminar Sprint, Asignar Sprint
+    const canManageEpics = isScrumMaster && !isViewOnly; // Crear/Editar/Eliminar Épicas
     const canInitiateSprint = isScrumMaster || isDeveloper || isPMO; // Iniciar Sprint (ir al tablero)
+    const canViewDetails = true; // Todos pueden ver detalles
+    const canViewDocuments = true; // Todos pueden ver documentos
 
     // ==================== FUNCIONES DE VALIDACIÓN Y TRANSICIONES AUTOMÁTICAS ====================
 
@@ -5101,12 +5207,24 @@ function BacklogContent() {
         setIsDeleteTaskModalOpen(true);
     };
 
-    // Confirmar eliminación de tarea
-    const confirmDeleteTask = () => {
+    // Confirmar eliminación de tarea (hard delete)
+    const confirmDeleteTask = async () => {
         if (taskToDelete) {
-            setAllStories(prev => prev.filter(s => s.id !== taskToDelete.task.id));
-            setTaskToDelete(null);
-            setIsDeleteTaskModalOpen(false);
+            try {
+                // Si la tarea tiene ID del backend, eliminar del API
+                if (taskToDelete.task.backendId) {
+                    await deleteTarea(taskToDelete.task.backendId);
+                }
+                // Eliminar del estado local
+                setAllStories(prev => prev.filter(s => s.id !== taskToDelete.task.id));
+                setTaskToDelete(null);
+                setIsDeleteTaskModalOpen(false);
+            } catch (error) {
+                console.error('Error al eliminar tarea:', error);
+                // Aún así cerrar el modal pero mantener la tarea en el estado
+                setTaskToDelete(null);
+                setIsDeleteTaskModalOpen(false);
+            }
         }
     };
 
@@ -5471,7 +5589,7 @@ function BacklogContent() {
                                                                 allStories={allStories}
                                                                 onEditStory={handleEditStory}
                                                                 onDeleteStory={handleDeleteStory}
-                                                                onEditTask={canManageTasks ? handleEditTaskFromTable : undefined}
+                                                                onEditTask={canManageTasks || isViewOnly ? handleEditTaskFromTable : undefined}
                                                                 onDeleteTask={canManageTasks ? handleDeleteTaskFromTable : undefined}
                                                                 onCreateTask={canManageTasks ? handleCreateTaskFromTable : undefined}
                                                                 onValidate={canManageHU ? handleOpenValidateHU : undefined}
@@ -5481,6 +5599,8 @@ function BacklogContent() {
                                                                 documentsIds={generatedDocuments.map(d => d.huId)}
                                                                 canManage={canManageHU}
                                                                 canManageTasks={canManageTasks}
+                                                                canEditTasks={canEditTasks}
+                                                                isViewOnly={isViewOnly}
                                                             />
                                                         ) : (
                                                             <div className="text-center text-gray-500 py-8 border rounded-lg bg-gray-50">
@@ -5555,7 +5675,7 @@ function BacklogContent() {
                                                         allStories={allStories}
                                                         onEditStory={handleEditStory}
                                                         onDeleteStory={handleDeleteStory}
-                                                        onEditTask={canManageTasksInBacklog ? handleEditTaskFromTable : undefined}
+                                                        onEditTask={canManageTasksInBacklog || isViewOnly ? handleEditTaskFromTable : undefined}
                                                         onDeleteTask={canManageTasksInBacklog ? handleDeleteTaskFromTable : undefined}
                                                         onCreateTask={canManageTasksInBacklog ? handleCreateTaskFromTable : undefined}
                                                         onValidate={canManageHU ? handleOpenValidateHU : undefined}
@@ -5567,6 +5687,8 @@ function BacklogContent() {
                                                         onSelectionChange={setSelectedBacklogIds}
                                                         canManage={canManageHU}
                                                         canManageTasks={canManageTasksInBacklog}
+                                                        canEditTasks={canEditTasksInBacklog}
+                                                        isViewOnly={isViewOnly}
                                                     />
                                                 ) : (
                                                     <div className="text-center text-gray-500 py-12 border rounded-lg bg-gray-50">
@@ -5634,6 +5756,7 @@ function BacklogContent() {
                 allStories={allStories}
                 targetSprint={targetSprintForNewHU}
                 availableResponsibles={availableResponsibles}
+                canEdit={canManageHU}
             />
 
             <AssignSprintModal
@@ -5694,6 +5817,7 @@ function BacklogContent() {
                 } : undefined}
                 currentUser={currentUser}
                 availableResponsibles={availableResponsibles}
+                canEdit={canEditTasks && !isViewOnly}
             />
 
             {/* Modal de Confirmación para Eliminar Tarea */}
