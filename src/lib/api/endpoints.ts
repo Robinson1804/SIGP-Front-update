@@ -289,7 +289,7 @@ export const ENDPOINTS = {
     BY_ID: (id: number | string) => `/usuarios/${id}`,
     PERFIL: '/usuarios/perfil',
     ACTUALIZAR_PERFIL: '/usuarios/perfil',
-    CAMBIAR_PASSWORD: '/usuarios/cambiar-password',
+    CAMBIAR_PASSWORD: '/auth/change-password',
     RESETEAR_PASSWORD: (id: number | string) => `/usuarios/${id}/resetear-password`,
     ROLES: '/usuarios/roles',
     AGREGAR_ROL: (id: number | string) => `/usuarios/${id}/roles/agregar`,

@@ -24,6 +24,7 @@ interface AuthState {
   logout: () => void;
   setLoading: (loading: boolean) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
+  clearMustChangePassword: () => void;
 }
 
 /**
@@ -97,6 +98,22 @@ export const useAuthStore = create<AuthState>()(
       // Marcar que la rehidratación terminó
       setHasHydrated: (hasHydrated: boolean) => {
         set({ _hasHydrated: hasHydrated });
+      },
+
+      // Limpiar flag de cambio obligatorio de contraseña
+      clearMustChangePassword: () => {
+        set((state) => ({
+          user: state.user ? { ...state.user, mustChangePassword: false } : null,
+        }));
+        // Sincronizar con localStorage
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('auth-user');
+          if (stored) {
+            const user = JSON.parse(stored);
+            user.mustChangePassword = false;
+            localStorage.setItem('auth-user', JSON.stringify(user));
+          }
+        }
       },
     }),
     {

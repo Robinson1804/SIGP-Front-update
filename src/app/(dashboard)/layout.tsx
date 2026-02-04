@@ -40,6 +40,12 @@ export default function DashboardLayout({
       return;
     }
 
+    // Si debe cambiar contraseña, bloquear navegación a cualquier otra ruta
+    if (user.mustChangePassword && pathname !== '/cambiar-password') {
+      router.push('/cambiar-password');
+      return;
+    }
+
     // TODO: Verificar permisos de acceso a la ruta específica
     // Esto se puede implementar con una función canAccessRoute(user.role, pathname)
     // if (!canAccessRoute(user.role, pathname)) {

@@ -89,6 +89,7 @@ export type AuthUser = {
   email: string;
   role: Role;
   avatar?: string;
+  mustChangePassword?: boolean;
 };
 
 // ============================================

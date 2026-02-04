@@ -27,6 +27,7 @@ export interface LoginResponse {
     rol: string;
     avatarUrl?: string | null;
   };
+  requiereCambioPassword: boolean;
 }
 
 /**

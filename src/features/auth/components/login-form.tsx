@@ -80,10 +80,17 @@ export function LoginForm() {
         name: `${response.user.nombre} ${response.user.apellido}`.trim(),
         email: response.user.email,
         role: mappedRole,
+        mustChangePassword: response.requiereCambioPassword,
       };
 
       // Guardar en el store
       setAuth(authUser, response.accessToken);
+
+      // Si debe cambiar contraseña, redirigir a la página de cambio
+      if (response.requiereCambioPassword) {
+        router.push('/cambiar-password');
+        return;
+      }
 
       // Redirigir según el rol
       const defaultRoute = getDefaultRouteForRole(authUser.role);
