@@ -300,6 +300,24 @@ export interface DashboardActividad {
 
   // Historial de throughput
   throughputHistorico: ThroughputPeriodo[];
+
+  // Actividad reciente (feed)
+  actividadReciente?: ActividadRecienteItem[];
+}
+
+/**
+ * Item de actividad reciente en una actividad Kanban
+ */
+export interface ActividadRecienteItem {
+  id: number;
+  tipo: 'tarea_creada' | 'subtarea_creada' | 'cambio_estado' | 'asignacion';
+  descripcion: string;
+  fecha: string;
+  usuarioNombre?: string;
+  entidadId: number;
+  entidadTipo: 'tarea' | 'subtarea';
+  entidadNombre: string;
+  detalles?: Record<string, unknown>;
 }
 
 /**

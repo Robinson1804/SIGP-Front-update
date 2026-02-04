@@ -118,11 +118,14 @@ export function DashboardTabContent({ actividadId }: DashboardTabContentProps) {
     { estado: 'Por hacer', cantidad: 0, color: '#BFDBFE' },
   ];
 
-  // Priority chart data
-  const priorityChartData = dashboardData?.tareasPorPrioridad ?? [
+  // Priority chart data - map from backend format
+  const priorityChartData = dashboardData?.tareasPorPrioridad?.map(p => ({
+    name: p.prioridad,
+    value: p.cantidad,
+  })) ?? [
     { name: 'Baja', value: 0 },
-    { name: 'Medio', value: 0 },
-    { name: 'Alto', value: 0 },
+    { name: 'Media', value: 0 },
+    { name: 'Alta', value: 0 },
   ];
 
   // Work types data
@@ -359,8 +362,7 @@ export function DashboardTabContent({ actividadId }: DashboardTabContentProps) {
           <Card className="h-full lg:row-span-2">
             <CardHeader><CardTitle className="text-base">ACTIVIDAD RECIENTE</CardTitle></CardHeader>
             <CardContent className="h-[calc(100%-4rem)] overflow-y-auto custom-scrollbar">
-              <p className="text-sm text-muted-foreground mb-2">Mantente al día de lo que sucede en toda la actividad</p>
-              <p className="font-semibold text-sm mb-2">Hoy</p>
+              <p className="text-sm text-muted-foreground mb-4">Mantente al día de lo que sucede en la actividad</p>
               <div className="space-y-4">
                 {loading ? (
                   [1, 2, 3].map((i) => (
@@ -372,10 +374,36 @@ export function DashboardTabContent({ actividadId }: DashboardTabContentProps) {
                       </div>
                     </div>
                   ))
-                ) : dashboardData?.throughputHistorico && dashboardData.throughputHistorico.length > 0 ? (
-                  <p className="text-sm text-gray-500">
-                    {dashboardData.throughputHistorico.length} registros de actividad
-                  </p>
+                ) : dashboardData?.actividadReciente && dashboardData.actividadReciente.length > 0 ? (
+                  dashboardData.actividadReciente.map((evento) => (
+                    <div key={evento.id} className="flex items-start gap-3">
+                      <div className={cn(
+                        "w-7 h-7 rounded-full flex items-center justify-center text-white text-xs",
+                        evento.tipo === 'tarea_creada' && "bg-blue-500",
+                        evento.tipo === 'subtarea_creada' && "bg-purple-500",
+                        evento.tipo === 'cambio_estado' && "bg-green-500",
+                        evento.tipo === 'asignacion' && "bg-orange-500",
+                      )}>
+                        {evento.tipo === 'tarea_creada' && <PlusCircle className="w-4 h-4" />}
+                        {evento.tipo === 'subtarea_creada' && <ChevronsRight className="w-4 h-4" />}
+                        {evento.tipo === 'cambio_estado' && <CheckCircle className="w-4 h-4" />}
+                        {evento.tipo === 'asignacion' && <User className="w-4 h-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{evento.descripcion}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          {evento.usuarioNombre && <span>{evento.usuarioNombre}</span>}
+                          <span>•</span>
+                          <span>{new Date(evento.fecha).toLocaleDateString('es-PE', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
                 ) : (
                   <p className="text-sm text-gray-500">
                     No hay actividad reciente registrada

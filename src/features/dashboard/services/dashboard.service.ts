@@ -63,6 +63,28 @@ function mapBackendToFrontend(backendData: any): DashboardActividad {
   const total = porHacer + enProgreso + enRevision + finalizadas;
 
   const metricasKanban = backendData.metricasKanban || {};
+  const tiposTrabajo = backendData.tiposTrabajo || {};
+  const resumenPrioridad = backendData.resumenPrioridad || {};
+
+  // Mapear prioridades al formato esperado
+  const tareasPorPrioridad = [
+    { prioridad: 'Alta', cantidad: resumenPrioridad.alta || 0, color: '#EF4444' },
+    { prioridad: 'Media', cantidad: resumenPrioridad.media || 0, color: '#F59E0B' },
+    { prioridad: 'Baja', cantidad: resumenPrioridad.baja || 0, color: '#10B981' },
+  ];
+
+  // Mapear actividad reciente
+  const actividadReciente = (backendData.actividadReciente || []).map((item: any) => ({
+    id: item.id,
+    tipo: item.tipo,
+    descripcion: item.descripcion,
+    fecha: item.fecha,
+    usuarioNombre: item.usuarioNombre,
+    entidadId: item.entidadId,
+    entidadTipo: item.entidadTipo,
+    entidadNombre: item.entidadNombre,
+    detalles: item.detalles,
+  }));
 
   return {
     actividadId: backendData.actividad?.id || 0,
@@ -80,7 +102,7 @@ function mapBackendToFrontend(backendData: any): DashboardActividad {
       finalizadas,
     },
     subtareas: {
-      total: 0,
+      total: tiposTrabajo.totalSubtareas || 0,
       completadas: 0,
     },
     metricas: {
@@ -90,9 +112,9 @@ function mapBackendToFrontend(backendData: any): DashboardActividad {
       wipActual: enProgreso + enRevision,
       wipLimite: 5, // Default WIP limit
     },
-    tareasPorPrioridad: [],
+    tareasPorPrioridad,
     responsables: (backendData.equipo || []).map((m: any) => ({
-      id: m.id,
+      id: m.personalId || m.id,
       nombre: m.nombre,
       tareasAsignadas: m.tareasAsignadas || 0,
       tareasCompletadas: m.tareasCompletadas || 0,
@@ -103,6 +125,7 @@ function mapBackendToFrontend(backendData: any): DashboardActividad {
       tareasCompletadas: t.completadas || 0,
       subtareasCompletadas: 0,
     })),
+    actividadReciente,
   };
 }
 
