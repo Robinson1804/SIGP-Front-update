@@ -1241,6 +1241,11 @@ function TaskModal({
                                             {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
                                         </div>
                                     </div>
+                                    {(actividadStartDate || actividadEndDate) && (
+                                        <p className="text-xs text-gray-400 -mt-1">
+                                            Rango de la actividad: {actividadStartDate ? actividadStartDate.split('T')[0].split('-').reverse().join('/') : '—'} - {actividadEndDate ? actividadEndDate.split('T')[0].split('-').reverse().join('/') : '—'}
+                                        </p>
+                                    )}
 
                                     {/* Informador */}
                                     <div>
