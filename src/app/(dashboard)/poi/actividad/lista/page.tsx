@@ -68,6 +68,9 @@ import { Project, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
 import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
+import { getTareasByActividad, createTarea, updateTarea, deleteTarea } from '@/features/actividades/services/tareas-kanban.service';
+import { getSubtareasByTarea, createSubtarea, updateSubtarea, deleteSubtarea } from '@/features/actividades/services/subtareas.service';
+import type { TareaKanban, Subtarea as SubtareaBackend } from '@/features/actividades/types';
 import { jsPDF } from 'jspdf';
 
 // ==================== TIPOS ====================
@@ -102,6 +105,7 @@ type TaskHistoryItem = {
 
 type Subtask = {
     id: string;
+    backendId?: number;
     title: string;
     description?: string;
     state: TaskStatus;
@@ -118,6 +122,7 @@ type Subtask = {
 
 type Task = {
     id: string;
+    backendId?: number;
     title: string;
     description?: string;
     state: TaskStatus;
@@ -285,11 +290,14 @@ function TaskDocumentPreviewModal({
         };
     }, [isOpen, task]);
 
-    // Función auxiliar para cargar imagen como base64
-    const loadImageAsBase64 = (url: string): Promise<string | null> => {
+    // Función auxiliar para cargar imagen como base64 con sus dimensiones
+    const loadImageWithDimensions = (url: string): Promise<{ data: string; width: number; height: number } | null> => {
         return new Promise((resolve) => {
             const img = new window.Image();
-            img.crossOrigin = 'anonymous';
+            // Solo usar crossOrigin para URLs remotas, no para blob:
+            if (!url.startsWith('blob:')) {
+                img.crossOrigin = 'anonymous';
+            }
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 canvas.width = img.width;
@@ -297,7 +305,12 @@ function TaskDocumentPreviewModal({
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                     ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    try {
+                        const data = canvas.toDataURL('image/jpeg', 0.8);
+                        resolve({ data, width: img.width, height: img.height });
+                    } catch {
+                        resolve(null);
+                    }
                 } else {
                     resolve(null);
                 }
@@ -317,160 +330,42 @@ function TaskDocumentPreviewModal({
             const margin = 20;
             const contentWidth = pageWidth - 2 * margin;
             const maxImageWidth = contentWidth;
-            const maxImageHeight = 80; // Altura máxima para imágenes
+            const maxImageHeight = 120;
+            let isFirstImage = true;
 
-            // Título del documento
-            doc.setFontSize(18);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`Documento de Evidencias`, pageWidth / 2, yPosition, { align: 'center' });
-            yPosition += 12;
-
-            // Información de la tarea
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`Tarea: ${taskData.id} - ${taskData.title}`, margin, yPosition);
-            yPosition += 8;
-
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.text(`Estado: ${taskData.state}`, margin, yPosition);
-            yPosition += 5;
-            doc.text(`Fecha de inicio: ${taskData.startDate}`, margin, yPosition);
-            yPosition += 5;
-            doc.text(`Fecha de fin: ${taskData.endDate}`, margin, yPosition);
-            yPosition += 5;
-            doc.text(`Responsables: ${taskData.responsibles.join(', ')}`, margin, yPosition);
-            yPosition += 15;
-
-            // Línea separadora
-            doc.setDrawColor(200, 200, 200);
-            doc.line(margin, yPosition, pageWidth - margin, yPosition);
-            yPosition += 10;
-
-            // Sección de subtareas con evidencias
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Evidencias de Subtareas', margin, yPosition);
-            yPosition += 12;
-
+            // Recopilar solo imágenes de todas las subtareas
             for (const subtask of taskData.subtasks) {
-                if (subtask.attachments.length > 0) {
-                    // Verificar si necesitamos nueva página para el encabezado de subtarea
-                    if (yPosition > pageHeight - 60) {
-                        doc.addPage();
-                        yPosition = 20;
-                    }
+                const imageAttachments = subtask.attachments.filter(a => a.type.startsWith('image/'));
+                for (const attachment of imageAttachments) {
+                    if (!attachment.url) continue;
 
-                    // Encabezado de subtarea
-                    doc.setFontSize(12);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(`${subtask.id}: ${subtask.title}`, margin, yPosition);
-                    yPosition += 6;
+                    try {
+                        const result = await loadImageWithDimensions(attachment.url);
+                        if (!result) continue;
 
-                    doc.setFontSize(9);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(`Responsable: ${subtask.responsible} | Estado: ${subtask.state}`, margin, yPosition);
-                    yPosition += 10;
+                        let imgWidth = maxImageWidth;
+                        let imgHeight = maxImageHeight;
 
-                    // Procesar cada archivo adjunto
-                    for (const attachment of subtask.attachments) {
-                        const isImage = attachment.type.startsWith('image/');
-                        const isPdf = attachment.type === 'application/pdf';
+                        const aspectRatio = result.width / result.height;
+                        if (aspectRatio > maxImageWidth / maxImageHeight) {
+                            imgHeight = maxImageWidth / aspectRatio;
+                        } else {
+                            imgWidth = maxImageHeight * aspectRatio;
+                        }
 
-                        // Verificar espacio para el archivo
-                        if (yPosition > pageHeight - (isImage ? maxImageHeight + 30 : 40)) {
+                        // Nueva página si no cabe
+                        if (!isFirstImage && yPosition + imgHeight > pageHeight - 20) {
                             doc.addPage();
                             yPosition = 20;
                         }
+                        isFirstImage = false;
 
-                        // Nombre del archivo
-                        doc.setFontSize(10);
-                        doc.setFont('helvetica', 'bold');
-                        const fileLabel = isImage ? 'Imagen:' : 'Archivo:';
-                        doc.text(`${fileLabel} ${attachment.name}`, margin, yPosition);
-                        yPosition += 5;
-
-                        if (isImage && attachment.url) {
-                            // Intentar cargar e insertar la imagen
-                            try {
-                                const imageData = await loadImageAsBase64(attachment.url);
-                                if (imageData) {
-                                    // Calcular dimensiones manteniendo proporción
-                                    const img = new window.Image();
-                                    img.src = imageData;
-
-                                    let imgWidth = maxImageWidth;
-                                    let imgHeight = maxImageHeight;
-
-                                    // Ajustar proporcionalmente
-                                    const aspectRatio = img.width / img.height;
-                                    if (aspectRatio > maxImageWidth / maxImageHeight) {
-                                        imgHeight = maxImageWidth / aspectRatio;
-                                    } else {
-                                        imgWidth = maxImageHeight * aspectRatio;
-                                    }
-
-                                    // Verificar si cabe en la página
-                                    if (yPosition + imgHeight > pageHeight - 20) {
-                                        doc.addPage();
-                                        yPosition = 20;
-                                    }
-
-                                    doc.addImage(imageData, 'JPEG', margin, yPosition, imgWidth, imgHeight);
-                                    yPosition += imgHeight + 10;
-                                } else {
-                                    // Si no se pudo cargar, mostrar placeholder
-                                    doc.setFontSize(9);
-                                    doc.setFont('helvetica', 'italic');
-                                    doc.text(`[Imagen: ${attachment.name} - ${(attachment.size / 1024).toFixed(1)} KB]`, margin + 5, yPosition);
-                                    yPosition += 8;
-                                }
-                            } catch {
-                                // Error al cargar imagen, mostrar placeholder
-                                doc.setFontSize(9);
-                                doc.setFont('helvetica', 'italic');
-                                doc.text(`[Imagen: ${attachment.name} - ${(attachment.size / 1024).toFixed(1)} KB]`, margin + 5, yPosition);
-                                yPosition += 8;
-                            }
-                        } else if (isPdf) {
-                            // Para PDFs adjuntos, mostrar información
-                            doc.setFontSize(9);
-                            doc.setFont('helvetica', 'normal');
-                            doc.setFillColor(240, 240, 240);
-                            doc.rect(margin, yPosition, contentWidth, 15, 'F');
-                            doc.setDrawColor(200, 200, 200);
-                            doc.rect(margin, yPosition, contentWidth, 15, 'S');
-                            doc.text(`PDF Adjunto: ${attachment.name} (${(attachment.size / 1024).toFixed(1)} KB)`, margin + 5, yPosition + 10);
-                            yPosition += 20;
-                        } else {
-                            // Otros tipos de archivo
-                            doc.setFontSize(9);
-                            doc.setFont('helvetica', 'normal');
-                            doc.text(`Archivo: ${attachment.name} (${(attachment.size / 1024).toFixed(1)} KB)`, margin + 5, yPosition);
-                            yPosition += 8;
-                        }
+                        doc.addImage(result.data, 'JPEG', margin, yPosition, imgWidth, imgHeight);
+                        yPosition += imgHeight + 10;
+                    } catch {
+                        // Skip images that fail to load
                     }
-                    yPosition += 10; // Espacio entre subtareas
                 }
-            }
-
-            // Pie de página en todas las páginas
-            const totalPages = doc.getNumberOfPages();
-            for (let i = 1; i <= totalPages; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.text(
-                    `Generado el: ${new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
-                    margin,
-                    pageHeight - 10
-                );
-                doc.text(
-                    `Página ${i} de ${totalPages}`,
-                    pageWidth - margin,
-                    pageHeight - 10,
-                    { align: 'right' }
-                );
             }
 
             // Generar blob URL para previsualización
@@ -640,6 +535,7 @@ function TaskModal({
     availableResponsibles = [],
     actividadStartDate,
     actividadEndDate,
+    isReadOnly = false,
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -650,8 +546,11 @@ function TaskModal({
     availableResponsibles?: string[];
     actividadStartDate?: string;
     actividadEndDate?: string;
+    isReadOnly?: boolean;
 }) {
     const isEditing = task !== null;
+    // Si la tarea está Finalizada, es de solo lectura
+    const readOnly = isReadOnly || (task?.state === 'Finalizado');
 
     const [formData, setFormData] = useState<Omit<Task, 'id' | 'subtasks' | 'comments' | 'history'>>({
         title: '',
@@ -770,14 +669,14 @@ function TaskModal({
         if (!formData.startDate) newErrors.startDate = 'La fecha de inicio es obligatoria';
         if (!formData.endDate) newErrors.endDate = 'La fecha de fin es obligatoria';
 
-        // Validar que fecha fin no sea menor a fecha inicio
-        if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
-            newErrors.endDate = 'La fecha de fin no puede ser menor a la fecha de inicio';
-        }
-
         // Validar que las fechas estén dentro del rango de la actividad
         // formData usa DD/MM/YYYY, actividad usa YYYY-MM-DD; normalizamos a YYYY-MM-DD
         const toISO = (d: string) => d.includes('/') ? d.split('/').reverse().join('-') : d.split('T')[0];
+
+        // Validar que fecha fin no sea menor a fecha inicio (usar formato ISO para comparación correcta)
+        if (formData.startDate && formData.endDate && toISO(formData.endDate) < toISO(formData.startDate)) {
+            newErrors.endDate = 'La fecha de fin no puede ser menor a la fecha de inicio';
+        }
         if (formData.startDate && actividadStartDate) {
             if (toISO(formData.startDate) < toISO(actividadStartDate)) {
                 const formatted = toISO(actividadStartDate).split('-').reverse().join('/');
@@ -815,6 +714,7 @@ function TaskModal({
 
         const taskData: Task = {
             id: task?.id || `TAR-${Date.now()}`,
+            backendId: task?.backendId,
             ...formData,
             subtasks,
             comments,
@@ -891,6 +791,7 @@ function TaskModal({
                                             placeholder="Ingrese el título de la tarea"
                                             className={cn("mt-1 h-8 text-sm", errors.title && "border-red-500")}
                                             maxLength={255}
+                                            disabled={readOnly}
                                         />
                                         {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
                                     </div>
@@ -903,6 +804,7 @@ function TaskModal({
                                             onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                                             placeholder="Ingrese una descripción (opcional)"
                                             className="mt-1 min-h-[60px] text-sm"
+                                            disabled={readOnly}
                                         />
                                     </div>
 
@@ -910,14 +812,16 @@ function TaskModal({
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between border-b pb-2">
                                             <h3 className="font-semibold text-sm text-gray-700">Agregar Subtareas</h3>
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                onClick={() => { setEditingSubtask(null); setIsSubtaskModalOpen(true); }}
-                                                className="bg-[#018CD1] hover:bg-[#0179b5] h-7 w-7 p-0"
-                                            >
-                                                <Plus className="h-4 w-4" />
-                                            </Button>
+                                            {!readOnly && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={() => { setEditingSubtask(null); setIsSubtaskModalOpen(true); }}
+                                                    className="bg-[#018CD1] hover:bg-[#0179b5] h-7 w-7 p-0"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
 
                                         {subtasks.length > 0 ? (
@@ -931,14 +835,16 @@ function TaskModal({
                                                                 <span className="text-xs text-gray-500 truncate">{subtask.responsible}</span>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1 ml-2">
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-[#018CD1]" onClick={() => { setEditingSubtask(subtask); setIsSubtaskModalOpen(true); }}>
-                                                                <Pencil className="h-3 w-3" />
-                                                            </Button>
-                                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-red-600" onClick={() => handleDeleteSubtask(subtask.id)}>
-                                                                <Trash2 className="h-3 w-3" />
-                                                            </Button>
-                                                        </div>
+                                                        {!readOnly && (
+                                                            <div className="flex items-center gap-1 ml-2">
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-[#018CD1]" onClick={() => { setEditingSubtask(subtask); setIsSubtaskModalOpen(true); }}>
+                                                                    <Pencil className="h-3 w-3" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-500 hover:text-red-600" onClick={() => handleDeleteSubtask(subtask.id)}>
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -1089,9 +995,11 @@ function TaskModal({
                                                     {formData.responsibles.map(name => (
                                                         <Badge key={name} variant="secondary" className="flex items-center gap-1 pr-1 text-xs">
                                                             {name}
-                                                            <button type="button" onClick={() => removeResponsible(name)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
-                                                                <X className="h-3 w-3" />
-                                                            </button>
+                                                            {!readOnly && (
+                                                                <button type="button" onClick={() => removeResponsible(name)} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                                                                    <X className="h-3 w-3" />
+                                                                </button>
+                                                            )}
                                                         </Badge>
                                                     ))}
                                                 </div>
@@ -1099,8 +1007,9 @@ function TaskModal({
                                             <Select
                                                 value=""
                                                 onValueChange={v => addResponsible(v)}
+                                                disabled={readOnly}
                                             >
-                                                <SelectTrigger className={cn("h-8 text-sm", errors.responsibles && "border-red-500")} disabled={formData.responsibles.length >= 5}>
+                                                <SelectTrigger className={cn("h-8 text-sm", errors.responsibles && "border-red-500")} disabled={readOnly || formData.responsibles.length >= 5}>
                                                     <SelectValue placeholder="Seleccionar responsable" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -1152,8 +1061,8 @@ function TaskModal({
 
                                         <div>
                                             <Label className="text-sm font-medium">Prioridad <span className="text-red-500">*</span></Label>
-                                            <Select value={formData.priority} onValueChange={v => setFormData(prev => ({ ...prev, priority: v as Priority }))}>
-                                                <SelectTrigger className="mt-1 h-8 text-sm">
+                                            <Select value={formData.priority} onValueChange={v => setFormData(prev => ({ ...prev, priority: v as Priority }))} disabled={readOnly}>
+                                                <SelectTrigger className={cn("mt-1 h-8 text-sm", readOnly && "bg-gray-100")}>
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -1179,6 +1088,7 @@ function TaskModal({
                                                 min={actividadStartDate ? actividadStartDate.split('T')[0] : undefined}
                                                 max={actividadEndDate ? actividadEndDate.split('T')[0] : undefined}
                                                 className={cn("mt-1 h-8 text-sm", errors.startDate && "border-red-500")}
+                                                disabled={readOnly}
                                             />
                                             {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
                                         </div>
@@ -1195,6 +1105,7 @@ function TaskModal({
                                                 min={actividadStartDate ? actividadStartDate.split('T')[0] : undefined}
                                                 max={actividadEndDate ? actividadEndDate.split('T')[0] : undefined}
                                                 className={cn("mt-1 h-8 text-sm", errors.endDate && "border-red-500")}
+                                                disabled={readOnly}
                                             />
                                             {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
                                         </div>
@@ -1218,7 +1129,7 @@ function TaskModal({
 
                     <DialogFooter className="p-4 border-t flex justify-between">
                         <div>
-                            {isEditing && (
+                            {isEditing && !readOnly && (
                                 <Button
                                     variant="destructive"
                                     onClick={() => setIsDeleteModalOpen(true)}
@@ -1230,10 +1141,12 @@ function TaskModal({
                             )}
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                            <Button onClick={handleSave} className="bg-[#018CD1] hover:bg-[#018CD1]/90">
-                                {isEditing ? 'Guardar cambios' : 'Crear tarea'}
-                            </Button>
+                            <Button variant="outline" onClick={onClose}>{readOnly ? 'Cerrar' : 'Cancelar'}</Button>
+                            {!readOnly && (
+                                <Button onClick={handleSave} className="bg-[#018CD1] hover:bg-[#018CD1]/90">
+                                    {isEditing ? 'Guardar cambios' : 'Crear tarea'}
+                                </Button>
+                            )}
                         </div>
                     </DialogFooter>
                 </DialogContent>
@@ -1398,13 +1311,14 @@ function SubtaskModal({
         const newAttachments: TaskAttachment[] = [];
         for (let i = 0; i < files.length && formData.attachments.length + newAttachments.length < 5; i++) {
             const file = files[i];
-            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            const validTypes = ['image/jpeg', 'image/png'];
             if (validTypes.includes(file.type) && file.size <= 50 * 1024 * 1024) {
                 newAttachments.push({
                     id: `att-${Date.now()}-${i}`,
                     name: file.name,
                     size: file.size,
                     type: file.type,
+                    url: URL.createObjectURL(file),
                 });
             }
         }
@@ -1504,13 +1418,14 @@ function SubtaskModal({
         if (!formData.startDate) newErrors.startDate = 'La fecha de inicio es obligatoria';
         if (!formData.endDate) newErrors.endDate = 'La fecha de fin es obligatoria';
 
-        // Validar que fecha fin no sea menor a fecha inicio
-        if (formData.startDate && formData.endDate && formData.endDate < formData.startDate) {
+        // Validar que las fechas estén dentro del rango de la tarea padre
+        const toISO = (d: string) => d.includes('/') ? d.split('/').reverse().join('-') : d.split('T')[0];
+
+        // Validar que fecha fin no sea menor a fecha inicio (usar formato ISO para comparación correcta)
+        if (formData.startDate && formData.endDate && toISO(formData.endDate) < toISO(formData.startDate)) {
             newErrors.endDate = 'La fecha de fin no puede ser menor a la fecha de inicio';
         }
 
-        // Validar que las fechas estén dentro del rango de la tarea padre
-        const toISO = (d: string) => d.includes('/') ? d.split('/').reverse().join('-') : d.split('T')[0];
         if (formData.startDate && parentTask.startDate) {
             if (toISO(formData.startDate) < toISO(parentTask.startDate)) {
                 const formatted = toISO(parentTask.startDate).split('-').reverse().join('/');
@@ -1554,6 +1469,7 @@ function SubtaskModal({
 
         const subtaskData: Subtask = {
             id: subtask?.id || generateSubtaskId(),
+            backendId: subtask?.backendId,
             ...formData,
             comments,
             history: isEditing ? [
@@ -1936,7 +1852,7 @@ function SubtaskModal({
                                                 ref={fileInputRef}
                                                 type="file"
                                                 multiple
-                                                accept=".jpg,.jpeg,.png,.pdf"
+                                                accept=".jpg,.jpeg,.png"
                                                 onChange={handleFileUpload}
                                                 className="hidden"
                                                 id="subtask-file-upload"
@@ -1947,7 +1863,7 @@ function SubtaskModal({
                                             >
                                                 <Upload className="h-6 w-6 text-gray-400 mb-1" />
                                                 <span className="text-xs text-gray-600">Click para subir archivos</span>
-                                                <span className="text-xs text-gray-400">JPG, PNG, PDF (máx. 50MB)</span>
+                                                <span className="text-xs text-gray-400">Solo imágenes JPG, PNG (máx. 50MB)</span>
                                             </label>
                                         </div>
                                         {errors.attachments && <p className="text-red-500 text-xs mt-1">{errors.attachments}</p>}
@@ -1957,11 +1873,7 @@ function SubtaskModal({
                                                 {formData.attachments.map(file => (
                                                     <div key={file.id} className="flex items-center justify-between p-1.5 bg-gray-50 rounded text-sm">
                                                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                            {file.type === 'application/pdf' ? (
-                                                                <FileText className="h-4 w-4 text-red-500 flex-shrink-0" />
-                                                            ) : (
-                                                                <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                                                            )}
+                                                            <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
                                                             <span className="text-xs text-blue-600 hover:underline cursor-pointer truncate">{file.name}</span>
                                                             <span className="text-xs text-gray-400 flex-shrink-0">({formatFileSize(file.size)})</span>
                                                         </div>
@@ -2026,7 +1938,9 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
     const [taskForDocumentPreview, setTaskForDocumentPreview] = useState<Task | null>(null);
 
     // Implementadores (responsables disponibles) cargados desde asignaciones de la actividad
-    const [implementadores, setImplementadores] = useState<string[]>([]);
+    type Implementador = { usuarioId: number; nombre: string };
+    const [implementadores, setImplementadores] = useState<Implementador[]>([]);
+    const [loadingTasks, setLoadingTasks] = useState(false);
 
     const userRole = user?.role;
     const isAdmin = userRole === ROLES.ADMIN;
@@ -2057,21 +1971,93 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
             if (!project?.id) return;
             try {
                 const asignaciones = await getAsignacionesActividad(project.id);
-                const nombres = asignaciones
+                const impls: Implementador[] = asignaciones
                     .filter((a: any) => a.activo && a.personal)
                     .map((a: any) => {
                         const p = a.personal;
                         const nombre = p.nombres || p.nombre || '';
                         const apellido = p.apellidos || p.apellido || '';
-                        return `${nombre} ${apellido}`.trim() || `Personal #${a.personalId}`;
+                        return {
+                            usuarioId: p.usuarioId || p.id,
+                            nombre: `${nombre} ${apellido}`.trim() || `Personal #${a.personalId}`,
+                        };
                     });
-                setImplementadores(nombres);
+                setImplementadores(impls);
             } catch (error) {
                 console.error('Error al cargar implementadores:', error);
                 setImplementadores([]);
             }
         };
         cargarImplementadores();
+    }, [project?.id]);
+
+    // Cargar tareas desde el backend
+    React.useEffect(() => {
+        const cargarTareas = async () => {
+            if (!project?.id) return;
+            setLoadingTasks(true);
+            try {
+                const tareasBackend = await getTareasByActividad(project.id);
+                const tareasConSubtareas: Task[] = await Promise.all(
+                    tareasBackend.map(async (tarea) => {
+                        // Load subtasks for each task
+                        let subtareasLocal: Subtask[] = [];
+                        try {
+                            const subtareasBackend = await getSubtareasByTarea(tarea.id);
+                            subtareasLocal = subtareasBackend.map(sub => ({
+                                id: sub.codigo || `SUB-${String(sub.id).padStart(3, '0')}`,
+                                backendId: sub.id,
+                                title: sub.nombre,
+                                description: sub.descripcion || '',
+                                state: sub.estado as TaskStatus,
+                                responsibles: sub.responsable
+                                    ? [`${sub.responsable.nombre} ${sub.responsable.apellido}`.trim()]
+                                    : [],
+                                priority: sub.prioridad as Priority,
+                                startDate: sub.fechaInicio ? sub.fechaInicio.split('T')[0].split('-').reverse().join('/') : '',
+                                endDate: sub.fechaFin ? sub.fechaFin.split('T')[0].split('-').reverse().join('/') : '',
+                                informer: sub.creator ? `${sub.creator.nombre} ${sub.creator.apellido}`.trim() : '',
+                                parentTaskId: tarea.codigo || `TAR-${String(tarea.id).padStart(3, '0')}`,
+                                attachments: [],
+                                comments: [],
+                                history: [],
+                            }));
+                        } catch (e) {
+                            console.error(`Error loading subtasks for task ${tarea.id}:`, e);
+                        }
+
+                        // Map asignados to responsibles names
+                        const responsibles = tarea.asignados
+                            ? tarea.asignados.map(a => a.usuario ? `${a.usuario.nombre} ${a.usuario.apellido}`.trim() : `Usuario #${a.usuarioId}`)
+                            : tarea.asignadoAInfo
+                                ? [`${tarea.asignadoAInfo.nombre} ${tarea.asignadoAInfo.apellido}`.trim()]
+                                : [];
+
+                        return {
+                            id: tarea.codigo || `TAR-${String(tarea.id).padStart(3, '0')}`,
+                            backendId: tarea.id,
+                            title: tarea.nombre,
+                            description: tarea.descripcion || '',
+                            state: tarea.estado as TaskStatus,
+                            responsibles,
+                            priority: tarea.prioridad as Priority,
+                            startDate: tarea.fechaInicio ? tarea.fechaInicio.split('T')[0].split('-').reverse().join('/') : '',
+                            endDate: tarea.fechaFin ? tarea.fechaFin.split('T')[0].split('-').reverse().join('/') : '',
+                            informer: tarea.creator ? `${tarea.creator.nombre} ${tarea.creator.apellido}`.trim() : '',
+                            subtasks: subtareasLocal,
+                            comments: [],
+                            history: [],
+                        };
+                    })
+                );
+                setTasks(tareasConSubtareas);
+            } catch (error) {
+                console.error('Error al cargar tareas:', error);
+            } finally {
+                setLoadingTasks(false);
+            }
+        };
+        cargarTareas();
     }, [project?.id]);
 
     const handleTabClick = (tabName: string) => {
@@ -2095,47 +2081,136 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
         });
     };
 
-    const handleSaveTask = (task: Task, isEdit: boolean) => {
-        if (isEdit) {
-            setTasks(prev => prev.map(t => t.id === task.id ? task : t));
-        } else {
-            // Generar ID secuencial
-            const existingIds = tasks.map(t => {
-                const match = t.id.match(/^TAR-(\d+)$/);
-                return match ? parseInt(match[1], 10) : 0;
-            });
-            const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
-            const newTask = { ...task, id: `TAR-${String(maxId + 1).padStart(3, '0')}` };
-            setTasks(prev => [...prev, newTask]);
+    // Helper: convert DD/MM/YYYY to YYYY-MM-DD
+    const toISODate = (dateStr: string): string | undefined => {
+        if (!dateStr) return undefined;
+        if (dateStr.includes('/')) {
+            return dateStr.split('/').reverse().join('-');
+        }
+        return dateStr.split('T')[0];
+    };
+
+    // Helper: map responsible names to user IDs
+    const namesToUserIds = (names: string[]): number[] => {
+        return names
+            .map(name => implementadores.find(imp => imp.nombre === name)?.usuarioId)
+            .filter((id): id is number => id !== undefined);
+    };
+
+    const handleSaveTask = async (task: Task, isEdit: boolean) => {
+        try {
+            if (isEdit && task.backendId) {
+                // Update existing task
+                const updated = await updateTarea(task.backendId, {
+                    nombre: task.title,
+                    descripcion: task.description || undefined,
+                    prioridad: task.priority,
+                    asignadosIds: namesToUserIds(task.responsibles),
+                    fechaInicio: toISODate(task.startDate),
+                    fechaFin: toISODate(task.endDate),
+                    estado: task.state,
+                });
+                setTasks(prev => prev.map(t => t.id === task.id ? { ...task, backendId: updated.id } : t));
+            } else {
+                // Create new task
+                const existingIds = tasks.map(t => {
+                    const match = t.id.match(/^TAR-(\d+)$/);
+                    return match ? parseInt(match[1], 10) : 0;
+                });
+                const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+                const codigo = `TAR-${String(maxId + 1).padStart(3, '0')}`;
+
+                const created = await createTarea({
+                    actividadId: project!.id,
+                    codigo,
+                    nombre: task.title,
+                    descripcion: task.description || undefined,
+                    prioridad: task.priority,
+                    asignadosIds: namesToUserIds(task.responsibles),
+                    fechaInicio: toISODate(task.startDate),
+                    fechaFin: toISODate(task.endDate),
+                });
+                const newTask = { ...task, id: created.codigo || codigo, backendId: created.id };
+                setTasks(prev => [...prev, newTask]);
+            }
+        } catch (error) {
+            console.error('Error al guardar tarea:', error);
+            // Fallback to local state to not lose data
+            if (isEdit) {
+                setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+            } else {
+                const existingIds = tasks.map(t => {
+                    const match = t.id.match(/^TAR-(\d+)$/);
+                    return match ? parseInt(match[1], 10) : 0;
+                });
+                const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+                const newTask = { ...task, id: `TAR-${String(maxId + 1).padStart(3, '0')}` };
+                setTasks(prev => [...prev, newTask]);
+            }
         }
     };
 
-    const handleDeleteTask = (taskId: string) => {
+    const handleDeleteTask = async (taskId: string) => {
+        const task = tasks.find(t => t.id === taskId);
+        if (task?.backendId) {
+            try {
+                await deleteTarea(task.backendId);
+            } catch (error) {
+                console.error('Error al eliminar tarea:', error);
+            }
+        }
         setTasks(prev => prev.filter(t => t.id !== taskId));
     };
 
-    const handleSaveSubtaskFromMenu = (subtask: Subtask) => {
+    const handleSaveSubtaskFromMenu = async (subtask: Subtask) => {
         if (parentTaskForSubtask) {
+            try {
+                const parentBackendId = parentTaskForSubtask.backendId;
+
+                if (editingSubtaskFromTable && subtask.backendId) {
+                    // Update existing subtask
+                    const responsibleId = namesToUserIds(subtask.responsibles)[0];
+                    await updateSubtarea(subtask.backendId, {
+                        nombre: subtask.title,
+                        descripcion: subtask.description || undefined,
+                        prioridad: subtask.priority,
+                        responsableId: responsibleId,
+                        fechaInicio: toISODate(subtask.startDate),
+                        fechaFin: toISODate(subtask.endDate),
+                        estado: subtask.state,
+                    });
+                } else if (parentBackendId) {
+                    // Create new subtask
+                    const responsibleId = namesToUserIds(subtask.responsibles)[0];
+                    const created = await createSubtarea({
+                        tareaId: parentBackendId,
+                        codigo: subtask.id,
+                        nombre: subtask.title,
+                        descripcion: subtask.description || undefined,
+                        prioridad: subtask.priority,
+                        responsableId: responsibleId,
+                        fechaInicio: toISODate(subtask.startDate),
+                        fechaFin: toISODate(subtask.endDate),
+                    });
+                    subtask = { ...subtask, backendId: created.id, id: created.codigo || subtask.id };
+                }
+            } catch (error) {
+                console.error('Error al guardar subtarea:', error);
+            }
+
             setTasks(prev => prev.map(t => {
                 if (t.id === parentTaskForSubtask.id) {
                     let updatedSubtasks: Subtask[];
-
-                    // Si estamos editando, reemplazar la subtarea
                     if (editingSubtaskFromTable) {
                         updatedSubtasks = t.subtasks.map(s => s.id === subtask.id ? subtask : s);
                     } else {
-                        // Si es nueva, agregar
                         updatedSubtasks = [...t.subtasks, subtask];
                     }
-
-                    // Verificar si todas las subtareas están finalizadas
                     const allSubtasksFinalized = updatedSubtasks.length > 0 &&
                         updatedSubtasks.every(s => s.state === 'Finalizado');
-
                     return {
                         ...t,
                         subtasks: updatedSubtasks,
-                        // Auto-finalizar la tarea si todas las subtareas están finalizadas
                         state: allSubtasksFinalized ? 'Finalizado' : (t.state === 'Finalizado' ? 'En progreso' : t.state),
                     };
                 }
@@ -2147,14 +2222,22 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
         setEditingSubtaskFromTable(null);
     };
 
-    const handleDeleteSubtaskFromTable = (taskId: string, subtaskId: string) => {
+    const handleDeleteSubtaskFromTable = async (taskId: string, subtaskId: string) => {
+        const task = tasks.find(t => t.id === taskId);
+        const subtask = task?.subtasks.find(s => s.id === subtaskId);
+        if (subtask?.backendId) {
+            try {
+                await deleteSubtarea(subtask.backendId);
+            } catch (error) {
+                console.error('Error al eliminar subtarea:', error);
+            }
+        }
         setTasks(prev => prev.map(t => {
             if (t.id === taskId) {
                 const updatedSubtasks = t.subtasks.filter(s => s.id !== subtaskId);
                 return {
                     ...t,
                     subtasks: updatedSubtasks,
-                    // Si la tarea estaba finalizada y se elimina una subtarea, revertir estado
                     state: t.state === 'Finalizado' ? 'En progreso' : t.state,
                 };
             }
@@ -2168,9 +2251,11 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
         task.id.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    if (!project) {
+    if (!project || loadingTasks) {
         return (
-            <div className="flex h-screen w-full items-center justify-center">Cargando...</div>
+            <div className="flex h-screen w-full items-center justify-center">
+                {loadingTasks ? 'Cargando tareas...' : 'Cargando...'}
+            </div>
         );
     }
 
@@ -2467,7 +2552,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 onSave={handleSaveTask}
                 onDelete={handleDeleteTask}
                 currentUser={currentUser}
-                availableResponsibles={implementadores}
+                availableResponsibles={implementadores.map(imp => imp.nombre)}
                 actividadStartDate={project?.startDate}
                 actividadEndDate={project?.endDate}
             />
