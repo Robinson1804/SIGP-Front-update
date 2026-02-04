@@ -1509,6 +1509,21 @@ function SubtaskModal({
             newErrors.endDate = 'La fecha de fin no puede ser menor a la fecha de inicio';
         }
 
+        // Validar que las fechas estén dentro del rango de la tarea padre
+        const toISO = (d: string) => d.includes('/') ? d.split('/').reverse().join('-') : d.split('T')[0];
+        if (formData.startDate && parentTask.startDate) {
+            if (toISO(formData.startDate) < toISO(parentTask.startDate)) {
+                const formatted = toISO(parentTask.startDate).split('-').reverse().join('/');
+                newErrors.startDate = `La fecha de inicio no puede ser anterior al inicio de la tarea (${formatted})`;
+            }
+        }
+        if (formData.endDate && parentTask.endDate) {
+            if (toISO(formData.endDate) > toISO(parentTask.endDate)) {
+                const formatted = toISO(parentTask.endDate).split('-').reverse().join('/');
+                newErrors.endDate = `La fecha de fin no puede ser posterior al fin de la tarea (${formatted})`;
+            }
+        }
+
         // Validar estado Finalizado requiere adjuntos
         if (formData.state === 'Finalizado' && formData.attachments.length === 0) {
             newErrors.attachments = 'Para finalizar la subtarea debe adjuntar evidencia';
@@ -1876,6 +1891,8 @@ function SubtaskModal({
                                                     const [y, m, d] = e.target.value.split('-');
                                                     setFormData(prev => ({ ...prev, startDate: `${d}/${m}/${y}` }));
                                                 }}
+                                                min={parentTask.startDate ? (parentTask.startDate.includes('/') ? parentTask.startDate.split('/').reverse().join('-') : parentTask.startDate.split('T')[0]) : undefined}
+                                                max={parentTask.endDate ? (parentTask.endDate.includes('/') ? parentTask.endDate.split('/').reverse().join('-') : parentTask.endDate.split('T')[0]) : undefined}
                                                 className={cn("mt-1 h-8 text-sm", errors.startDate && "border-red-500")}
                                             />
                                             {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>}
@@ -1890,11 +1907,18 @@ function SubtaskModal({
                                                     const [y, m, d] = e.target.value.split('-');
                                                     setFormData(prev => ({ ...prev, endDate: `${d}/${m}/${y}` }));
                                                 }}
+                                                min={parentTask.startDate ? (parentTask.startDate.includes('/') ? parentTask.startDate.split('/').reverse().join('-') : parentTask.startDate.split('T')[0]) : undefined}
+                                                max={parentTask.endDate ? (parentTask.endDate.includes('/') ? parentTask.endDate.split('/').reverse().join('-') : parentTask.endDate.split('T')[0]) : undefined}
                                                 className={cn("mt-1 h-8 text-sm", errors.endDate && "border-red-500")}
                                             />
                                             {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>}
                                         </div>
                                     </div>
+                                    {(parentTask.startDate || parentTask.endDate) && (
+                                        <p className="text-xs text-gray-400 -mt-1">
+                                            Rango de la tarea: {parentTask.startDate || '—'} - {parentTask.endDate || '—'}
+                                        </p>
+                                    )}
 
                                     {/* Informador */}
                                     <div>
