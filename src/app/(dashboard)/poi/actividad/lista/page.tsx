@@ -1549,7 +1549,7 @@ function SubtaskModal({
                 return match ? parseInt(match[1], 10) : 0;
             });
             const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
-            return `SUB-${maxId + 1}`;
+            return `SUB-${String(maxId + 1).padStart(3, '0')}`;
         };
 
         const subtaskData: Subtask = {
@@ -2105,7 +2105,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 return match ? parseInt(match[1], 10) : 0;
             });
             const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
-            const newTask = { ...task, id: `TAR-${maxId + 1}` };
+            const newTask = { ...task, id: `TAR-${String(maxId + 1).padStart(3, '0')}` };
             setTasks(prev => [...prev, newTask]);
         }
     };
