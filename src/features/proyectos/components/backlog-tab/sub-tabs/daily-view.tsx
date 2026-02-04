@@ -46,6 +46,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/lib/hooks/use-toast';
 import { useAuth } from '@/stores';
+import { ROLES } from '@/lib/definitions';
 import type { Sprint } from '@/features/proyectos/types';
 import { getSprintDailyMeetings } from '@/features/proyectos/services/sprints.service';
 import { parseLocalDate } from '@/lib/utils';
@@ -117,6 +118,8 @@ interface TeamMember {
 
 export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: DailyViewProps) {
   const { user } = useAuth();
+  // Solo ADMIN, COORDINADOR y SCRUM_MASTER pueden crear/editar/eliminar dailies e impedimentos
+  const canManageDailies = [ROLES.ADMIN, ROLES.COORDINADOR, ROLES.SCRUM_MASTER].includes(user?.role as any);
   const [selectedSprintId, setSelectedSprintId] = useState<string>('');
   const [dailyMeetings, setDailyMeetings] = useState<DailyMeeting[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -315,10 +318,10 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
       setExpandedDailyId(existingDaily.id);
     } else {
       setSelectedDaily(null);
-      // Si es hoy o futuro, podemos crear una nueva daily
+      // Si es hoy o futuro, podemos crear una nueva daily (solo roles con permiso)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      if (date >= today) {
+      if (date >= today && canManageDailies) {
         setIsCreateModalOpen(true);
       }
     }
@@ -719,7 +722,7 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
             onCreateImpedimento={handleCreateImpedimento}
             onUpdateImpedimento={handleUpdateImpedimento}
             onResolveImpedimento={handleResolveImpedimento}
-            canManage={true}
+            canManage={canManageDailies}
           />
 
           <Button
@@ -733,18 +736,20 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
             Exportar PDF
           </Button>
 
-          <Button
-            size="sm"
-            className="gap-2 bg-purple-600 hover:bg-purple-700"
-            disabled={!selectedSprintId}
-            onClick={() => {
-              setSelectedDate(new Date());
-              setIsCreateModalOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            Nueva Daily
-          </Button>
+          {canManageDailies && (
+            <Button
+              size="sm"
+              className="gap-2 bg-purple-600 hover:bg-purple-700"
+              disabled={!selectedSprintId}
+              onClick={() => {
+                setSelectedDate(new Date());
+                setIsCreateModalOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Nueva Daily
+            </Button>
+          )}
         </div>
       </div>
 
@@ -858,8 +863,8 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
                   {selectedDaily ? (
                     <DailyDetailCard
                       daily={selectedDaily}
-                      onEdit={() => handleEditDaily(selectedDaily)}
-                      onDelete={() => handleDeleteDaily(selectedDaily)}
+                      onEdit={canManageDailies ? () => handleEditDaily(selectedDaily) : undefined}
+                      onDelete={canManageDailies ? () => handleDeleteDaily(selectedDaily) : undefined}
                     />
                   ) : selectedDate ? (
                     <Card className="border-dashed">
@@ -873,7 +878,7 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
                             month: 'long',
                           })}
                         </p>
-                        {selectedDate >= new Date(new Date().setHours(0, 0, 0, 0)) && (
+                        {selectedDate >= new Date(new Date().setHours(0, 0, 0, 0)) && canManageDailies && (
                           <Button
                             variant="outline"
                             className="gap-2"
@@ -1008,7 +1013,7 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
 // Componente para mostrar detalle de daily
 interface DailyDetailCardProps {
   daily: DailyMeeting;
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
 }
 
@@ -1063,16 +1068,20 @@ function DailyDetailCard({ daily, onEdit, onDelete }: DailyDetailCardProps) {
               </CardDescription>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onEdit}>
-              Editar
-            </Button>
-            {onDelete && (
-              <Button variant="outline" size="sm" onClick={onDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                Eliminar
-              </Button>
-            )}
-          </div>
+          {(onEdit || onDelete) && (
+            <div className="flex gap-2">
+              {onEdit && (
+                <Button variant="outline" size="sm" onClick={onEdit}>
+                  Editar
+                </Button>
+              )}
+              {onDelete && (
+                <Button variant="outline" size="sm" onClick={onDelete} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                  Eliminar
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>

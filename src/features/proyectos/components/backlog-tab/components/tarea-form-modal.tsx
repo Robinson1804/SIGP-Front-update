@@ -67,6 +67,8 @@ import {
 import {
   uploadFile,
   getArchivoDownloadUrl,
+  downloadArchivoAsBlob,
+  extractArchivoIdFromUrl,
 } from '@/lib/api/storage.service';
 import { getHistoriaById, type HistoriaUsuario } from '@/features/proyectos/services/historias.service';
 import { apiClient, ENDPOINTS, get } from '@/lib/api';
@@ -590,6 +592,27 @@ export function TareaFormModal({
       setEvidenciasExistentes((prev) => prev.filter((e) => e.id !== evidenciaId));
     } catch (error) {
       console.error('Error eliminando evidencia:', error);
+    }
+  };
+
+  // Descargar evidencia con autenticación
+  const handleDownloadEvidencia = async (url: string, nombre: string) => {
+    try {
+      const archivoId = extractArchivoIdFromUrl(url);
+      if (!archivoId) {
+        console.error('No se pudo extraer el ID del archivo de la URL:', url);
+        return;
+      }
+      const blobUrl = await downloadArchivoAsBlob(archivoId);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = nombre;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error descargando evidencia:', error);
     }
   };
 
@@ -1163,28 +1186,26 @@ export function TareaFormModal({
                             >
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 {getEvidenciaIcon(ev.tipo)}
-                                <a
-                                  href={ev.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline truncate"
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadEvidencia(ev.url, ev.nombre)}
+                                  className="text-blue-600 hover:underline truncate text-left"
                                 >
                                   {ev.nombre}
-                                </a>
+                                </button>
                                 <span className="text-xs text-gray-400">
                                   {formatFileSize(ev.tamanoBytes)}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <a
-                                  href={ev.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadEvidencia(ev.url, ev.nombre)}
                                   className="p-1 text-gray-400 hover:text-blue-500"
                                   title="Descargar"
                                 >
                                   <Download className="h-4 w-4" />
-                                </a>
+                                </button>
                                 <Button
                                   type="button"
                                   variant="ghost"

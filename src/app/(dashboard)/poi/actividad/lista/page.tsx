@@ -67,6 +67,7 @@ import { cn } from '@/lib/utils';
 import { Project, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
+import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
 import { jsPDF } from 'jspdf';
 
 // ==================== TIPOS ====================
@@ -104,7 +105,7 @@ type Subtask = {
     title: string;
     description?: string;
     state: TaskStatus;
-    responsible: string;
+    responsibles: string[];
     priority: Priority;
     startDate: string;
     endDate: string;
@@ -144,105 +145,7 @@ const priorityColors: Record<Priority, { bg: string; text: string }> = {
     'Baja': { bg: '#C5E3B5', text: 'text-green-900' },
 };
 
-const availableResponsibles = [
-    'Anayeli Monzon',
-    'Angella Trujillo',
-    'Carlos Mendoza',
-    'Ana Torres',
-    'Pedro Sánchez',
-    'María López',
-    'Juan Pérez',
-    'Diego Morales',
-    'Fernando Rojas',
-    'Rosa Martínez',
-];
-
-// Datos de ejemplo
-const initialTasks: Task[] = [
-    {
-        id: 'TAR-1',
-        title: 'Configurar servidor de desarrollo',
-        description: 'Preparar el entorno de desarrollo con todas las dependencias necesarias',
-        state: 'En progreso',
-        responsibles: ['Anayeli Monzon', 'Carlos Mendoza'],
-        priority: 'Alta',
-        startDate: '01/12/2025',
-        endDate: '05/12/2025',
-        informer: 'Scrum Master',
-        attachments: [],
-        subtasks: [
-            {
-                id: 'SUB-1',
-                title: 'Instalar dependencias del proyecto',
-                description: 'Instalar Node.js, npm y todas las dependencias',
-                state: 'Finalizado',
-                responsible: 'Anayeli Monzon',
-                priority: 'Alta',
-                startDate: '01/12/2025',
-                endDate: '02/12/2025',
-                informer: 'Scrum Master',
-                parentTaskId: 'TAR-1',
-                attachments: [{ id: '1', name: 'instalacion_completa.pdf', size: 1024000, type: 'application/pdf' }],
-                comments: [],
-                history: [
-                    { id: '1', user: 'Anayeli Monzon', action: 'creó la subtarea', timestamp: new Date('2025-12-01T09:00:00') },
-                    { id: '2', user: 'Anayeli Monzon', action: 'cambió el estado', field: 'Estado', oldValue: 'Por hacer', newValue: 'Finalizado', timestamp: new Date('2025-12-02T14:00:00') },
-                ],
-            },
-            {
-                id: 'SUB-2',
-                title: 'Configurar variables de entorno',
-                state: 'En progreso',
-                responsible: 'Carlos Mendoza',
-                priority: 'Media',
-                startDate: '02/12/2025',
-                endDate: '04/12/2025',
-                informer: 'Scrum Master',
-                parentTaskId: 'TAR-1',
-                attachments: [],
-                comments: [],
-                history: [],
-            },
-        ],
-        comments: [
-            { id: '1', user: 'Anayeli Monzon', content: 'Ya instalé las dependencias principales', timestamp: new Date('2025-12-01T15:30:00') },
-        ],
-        history: [
-            { id: '1', user: 'Scrum Master', action: 'creó la tarea', timestamp: new Date('2025-12-01T08:00:00') },
-            { id: '2', user: 'Scrum Master', action: 'cambió el estado', field: 'Estado', oldValue: 'Por hacer', newValue: 'En progreso', timestamp: new Date('2025-12-01T10:00:00') },
-        ],
-    },
-    {
-        id: 'TAR-2',
-        title: 'Diseñar esquema de base de datos',
-        description: 'Crear el modelo entidad-relación para el sistema',
-        state: 'Finalizado',
-        responsibles: ['Ana Torres'],
-        priority: 'Alta',
-        startDate: '01/12/2025',
-        endDate: '03/12/2025',
-        informer: 'Scrum Master',
-        attachments: [{ id: '1', name: 'esquema_db.png', size: 512000, type: 'image/png' }],
-        subtasks: [],
-        comments: [],
-        history: [],
-    },
-    {
-        id: 'TAR-3',
-        title: 'Implementar API REST de usuarios',
-        description: 'Desarrollar endpoints CRUD para gestión de usuarios',
-        state: 'Por hacer',
-        responsibles: ['Pedro Sánchez', 'María López'],
-        priority: 'Media',
-        startDate: '05/12/2025',
-        endDate: '10/12/2025',
-        informer: 'Scrum Master',
-        attachments: [],
-        subtasks: [],
-        comments: [],
-        history: [],
-    },
-];
+const initialTasks: Task[] = [];
 
 // ==================== COMPONENTES AUXILIARES ====================
 
@@ -735,6 +638,7 @@ function TaskModal({
     onSave,
     onDelete,
     currentUser,
+    availableResponsibles = [],
 }: {
     isOpen: boolean;
     onClose: () => void;
@@ -742,6 +646,7 @@ function TaskModal({
     onSave: (task: Task, isEdit: boolean) => void;
     onDelete: (taskId: string) => void;
     currentUser: string;
+    availableResponsibles?: string[];
 }) {
     const isEditing = task !== null;
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -763,8 +668,6 @@ function TaskModal({
     const [history, setHistory] = useState<TaskHistoryItem[]>([]);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [responsibleSearch, setResponsibleSearch] = useState('');
-    const [showResponsibleDropdown, setShowResponsibleDropdown] = useState(false);
     const [activeActivityTab, setActiveActivityTab] = useState<'comentarios' | 'historial'>('comentarios');
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -815,20 +718,13 @@ function TaskModal({
             setHistory([]);
         }
         setErrors({});
-        setResponsibleSearch('');
         setNewComment('');
     }, [task, isOpen, currentUser]);
 
-    const filteredResponsibles = availableResponsibles.filter(
-        r => r.toLowerCase().includes(responsibleSearch.toLowerCase()) && !formData.responsibles.includes(r)
-    );
-
     const addResponsible = (name: string) => {
-        if (formData.responsibles.length < 5) {
+        if (formData.responsibles.length < 5 && !formData.responsibles.includes(name)) {
             setFormData(prev => ({ ...prev, responsibles: [...prev.responsibles, name] }));
         }
-        setResponsibleSearch('');
-        setShowResponsibleDropdown(false);
     };
 
     const removeResponsible = (name: string) => {
@@ -1222,25 +1118,19 @@ function TaskModal({
                                                     ))}
                                                 </div>
                                             )}
-                                            <div className="relative">
-                                                <Input
-                                                    placeholder="Buscar responsable..."
-                                                    value={responsibleSearch}
-                                                    onChange={e => { setResponsibleSearch(e.target.value); setShowResponsibleDropdown(true); }}
-                                                    onFocus={() => setShowResponsibleDropdown(true)}
-                                                    className={cn("h-8 text-sm", errors.responsibles && "border-red-500")}
-                                                    disabled={formData.responsibles.length >= 5}
-                                                />
-                                                {showResponsibleDropdown && responsibleSearch && filteredResponsibles.length > 0 && (
-                                                    <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-32 overflow-y-auto">
-                                                        {filteredResponsibles.map(name => (
-                                                            <button key={name} type="button" onClick={() => addResponsible(name)} className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100">
-                                                                {name}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <Select
+                                                value=""
+                                                onValueChange={v => addResponsible(v)}
+                                            >
+                                                <SelectTrigger className={cn("h-8 text-sm", errors.responsibles && "border-red-500")} disabled={formData.responsibles.length >= 5}>
+                                                    <SelectValue placeholder="Seleccionar responsable" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableResponsibles.filter(name => !formData.responsibles.includes(name)).map(name => (
+                                                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             {errors.responsibles && <p className="text-red-500 text-xs">{errors.responsibles}</p>}
                                             <p className="text-xs text-gray-400">Máximo 5 responsables ({formData.responsibles.length}/5)</p>
                                         </div>
@@ -1518,7 +1408,7 @@ function SubtaskModal({
         title: '',
         description: '',
         state: 'Por hacer',
-        responsible: '',
+        responsibles: [],
         priority: 'Media',
         startDate: '',
         endDate: '',
@@ -1546,7 +1436,7 @@ function SubtaskModal({
                 title: subtask.title,
                 description: subtask.description || '',
                 state: subtask.state,
-                responsible: subtask.responsible,
+                responsibles: subtask.responsibles,
                 priority: subtask.priority,
                 startDate: subtask.startDate,
                 endDate: subtask.endDate,
@@ -1561,7 +1451,7 @@ function SubtaskModal({
                 title: '',
                 description: '',
                 state: 'Por hacer',
-                responsible: '',
+                responsibles: [],
                 priority: 'Media',
                 startDate: '',
                 endDate: '',
@@ -1685,7 +1575,7 @@ function SubtaskModal({
         const newErrors: Record<string, string> = {};
 
         if (!formData.title.trim()) newErrors.title = 'El nombre es obligatorio';
-        if (!formData.responsible) newErrors.responsible = 'Debe seleccionar un responsable';
+        if (formData.responsibles.length === 0) newErrors.responsibles = 'Debe asignar al menos un responsable';
         if (!formData.startDate) newErrors.startDate = 'La fecha de inicio es obligatoria';
         if (!formData.endDate) newErrors.endDate = 'La fecha de fin es obligatoria';
 
@@ -1975,21 +1865,42 @@ function SubtaskModal({
 
                                 {/* ========== COLUMNA DERECHA ========== */}
                                 <div className="space-y-4">
-                                    {/* Responsable */}
+                                    {/* Responsables */}
                                     <div>
                                         <Label className="text-sm font-medium">Responsable <span className="text-red-500">*</span></Label>
-                                        <Select value={formData.responsible} onValueChange={v => setFormData(prev => ({ ...prev, responsible: v }))}>
-                                            <SelectTrigger className={cn("mt-1 h-8 text-sm", errors.responsible && "border-red-500")}>
-                                                <SelectValue placeholder="Seleccionar responsable" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {parentTask.responsibles.map(name => (
-                                                    <SelectItem key={name} value={name}>{name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.responsible && <p className="text-red-500 text-xs mt-1">{errors.responsible}</p>}
-                                        <p className="text-xs text-gray-400 mt-1">Solo responsables de la tarea principal</p>
+                                        <div className="mt-1 space-y-2">
+                                            {formData.responsibles.length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {formData.responsibles.map(name => (
+                                                        <Badge key={name} variant="secondary" className="flex items-center gap-1 pr-1 text-xs">
+                                                            {name}
+                                                            <button type="button" onClick={() => setFormData(prev => ({ ...prev, responsibles: prev.responsibles.filter(r => r !== name) }))} className="ml-1 hover:bg-gray-300 rounded-full p-0.5">
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            <Select
+                                                value=""
+                                                onValueChange={v => {
+                                                    if (!formData.responsibles.includes(v) && formData.responsibles.length < 5) {
+                                                        setFormData(prev => ({ ...prev, responsibles: [...prev.responsibles, v] }));
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className={cn("h-8 text-sm", errors.responsibles && "border-red-500")} disabled={formData.responsibles.length >= 5}>
+                                                    <SelectValue placeholder="Seleccionar responsable" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {parentTask.responsibles.filter(name => !formData.responsibles.includes(name)).map(name => (
+                                                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.responsibles && <p className="text-red-500 text-xs">{errors.responsibles}</p>}
+                                            <p className="text-xs text-gray-400">Solo responsables de la tarea principal ({formData.responsibles.length}/5)</p>
+                                        </div>
                                     </div>
 
                                     {/* Estado y Prioridad en una fila */}
@@ -2165,13 +2076,17 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
     const [isDocumentPreviewOpen, setIsDocumentPreviewOpen] = useState(false);
     const [taskForDocumentPreview, setTaskForDocumentPreview] = useState<Task | null>(null);
 
+    // Implementadores (responsables disponibles) cargados desde asignaciones de la actividad
+    const [implementadores, setImplementadores] = useState<string[]>([]);
+
     const userRole = user?.role;
-    const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
+    const isAdmin = userRole === ROLES.ADMIN;
+    const isCoordinador = userRole === ROLES.COORDINADOR;
     const isImplementador = userRole === ROLES.IMPLEMENTADOR;
-    // IMPLEMENTADOR solo puede gestionar subtareas (crear, editar, eliminar)
-    const canManageSubtasks = isScrumMaster || isImplementador;
-    // Solo Scrum Master puede gestionar tareas (crear, editar, eliminar)
-    const canManageTasks = isScrumMaster;
+    // ADMIN y COORDINADOR pueden gestionar tareas (crear, editar, eliminar)
+    const canManageTasks = isAdmin || isCoordinador;
+    // ADMIN, COORDINADOR e IMPLEMENTADOR pueden gestionar subtareas
+    const canManageSubtasks = isAdmin || isCoordinador || isImplementador;
     const currentUser = user?.name || 'Scrum Master';
 
     React.useEffect(() => {
@@ -2186,6 +2101,29 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
             router.push(paths.poi.base);
         }
     }, [router]);
+
+    // Cargar implementadores (responsables) desde las asignaciones de la actividad
+    React.useEffect(() => {
+        const cargarImplementadores = async () => {
+            if (!project?.id) return;
+            try {
+                const asignaciones = await getAsignacionesActividad(project.id);
+                const nombres = asignaciones
+                    .filter((a: any) => a.activo && a.personal)
+                    .map((a: any) => {
+                        const p = a.personal;
+                        const nombre = p.nombres || p.nombre || '';
+                        const apellido = p.apellidos || p.apellido || '';
+                        return `${nombre} ${apellido}`.trim() || `Personal #${a.personalId}`;
+                    });
+                setImplementadores(nombres);
+            } catch (error) {
+                console.error('Error al cargar implementadores:', error);
+                setImplementadores([]);
+            }
+        };
+        cargarImplementadores();
+    }, [project?.id]);
 
     const handleTabClick = (tabName: string) => {
         // Navigate directly to detalles with only tab parameter (actividadId is in localStorage)
@@ -2399,7 +2337,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                 <TableCell>{task.startDate}</TableCell>
                                                 <TableCell>{task.endDate}</TableCell>
                                                 <TableCell className="text-center">
-                                                    {(canManageTasks || canManageSubtasks) && (
+                                                    {(canManageTasks || (isImplementador && task.responsibles.includes(currentUser))) && (
                                                         <DropdownMenu modal={false}>
                                                             <DropdownMenuTrigger asChild>
                                                                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -2410,8 +2348,8 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                                 {/* Si la tarea está Finalizada: Ver documento, Editar, Eliminar (sin Crear Subtarea) */}
                                                                 {task.state === 'Finalizado' ? (
                                                                     <>
-                                                                        {/* Ver documento - disponible para Scrum Master e Implementador */}
-                                                                        {canManageSubtasks && (
+                                                                        {/* Ver documento - disponible para Admin, Coordinador e Implementador asignado */}
+                                                                        {(canManageTasks || (isImplementador && task.responsibles.includes(currentUser))) && (
                                                                             <DropdownMenuItem onClick={() => setTimeout(() => {
                                                                                 setTaskForDocumentPreview(task);
                                                                                 setIsDocumentPreviewOpen(true);
@@ -2446,8 +2384,8 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        {/* Crear Subtarea - disponible para Scrum Master e Implementador (solo si NO está finalizado) */}
-                                                                        {canManageSubtasks && (
+                                                                        {/* Crear Subtarea - disponible para Admin, Coordinador e Implementador asignado (solo si NO está finalizado) */}
+                                                                        {(canManageTasks || (isImplementador && task.responsibles.includes(currentUser))) && (
                                                                             <DropdownMenuItem onClick={() => setTimeout(() => {
                                                                                 setParentTaskForSubtask(task);
                                                                                 setIsSubtaskModalOpen(true);
@@ -2499,7 +2437,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                     <TableCell>
                                                         <Badge className={cn(statusColors[subtask.state], 'font-semibold')}>{subtask.state}</Badge>
                                                     </TableCell>
-                                                    <TableCell>{subtask.responsible}</TableCell>
+                                                    <TableCell>{subtask.responsibles.join(', ')}</TableCell>
                                                     <TableCell>
                                                         <Badge
                                                             style={{ backgroundColor: priorityColors[subtask.priority].bg }}
@@ -2511,8 +2449,8 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                     <TableCell>{subtask.startDate}</TableCell>
                                                     <TableCell>{subtask.endDate}</TableCell>
                                                     <TableCell className="text-center">
-                                                        {/* Menú de subtareas - disponible para Scrum Master e Implementador */}
-                                                        {canManageSubtasks && (
+                                                        {/* Menú de subtareas - disponible para Admin, Coordinador e Implementador asignado */}
+                                                        {(canManageTasks || (isImplementador && subtask.responsibles.includes(currentUser))) && (
                                                             <DropdownMenu modal={false}>
                                                                 <DropdownMenuTrigger asChild>
                                                                     <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -2586,6 +2524,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 onSave={handleSaveTask}
                 onDelete={handleDeleteTask}
                 currentUser={currentUser}
+                availableResponsibles={implementadores}
             />
 
             {/* Modal de Subtarea desde menú de acciones */}
