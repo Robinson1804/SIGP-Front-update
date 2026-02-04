@@ -185,15 +185,15 @@ export function BacklogView({
           sprint={sprint}
           historias={sprint.historias}
           equipo={equipo}
-          onAddHistoria={isReadOnly ? undefined : () => onCreateHistoria?.(sprint.id)}
+          onAddHistoria={isReadOnly || !onCreateHistoria ? undefined : () => onCreateHistoria(sprint.id)}
           onIniciarSprint={
-            isReadOnly ? undefined :
+            isReadOnly || !onIniciarSprint ? undefined :
             (sprint.estado === 'Por hacer' || sprint.estado === 'Planificado')
-              ? () => onIniciarSprint?.(sprint.id)
+              ? () => onIniciarSprint(sprint.id)
               : undefined
           }
-          onEditSprint={isReadOnly ? undefined : () => onEditSprint?.(sprint)}
-          onDeleteSprint={isReadOnly ? undefined : () => onDeleteSprint?.(sprint)}
+          onEditSprint={isReadOnly || !onEditSprint ? undefined : () => onEditSprint(sprint)}
+          onDeleteSprint={isReadOnly || !onDeleteSprint ? undefined : () => onDeleteSprint(sprint)}
           onViewHistoria={onViewHistoria}
           onEditHistoria={isReadOnly ? undefined : onEditHistoria}
           onDeleteHistoria={isReadOnly ? undefined : onDeleteHistoria}
@@ -216,11 +216,11 @@ export function BacklogView({
         onSelectionChange={isReadOnly ? undefined : handleBacklogSelectionChange}
         onCreateSprint={isReadOnly ? undefined : onCreateSprint}
         onAssignToSprint={isReadOnly ? undefined : handleAssignSelected}
-        onAddHistoria={isReadOnly ? undefined : () => onCreateHistoria?.()}
+        onAddHistoria={isReadOnly || !onCreateHistoria ? undefined : () => onCreateHistoria()}
         onViewHistoria={onViewHistoria}
         onEditHistoria={isReadOnly ? undefined : onEditHistoria}
         onDeleteHistoria={isReadOnly ? undefined : onDeleteHistoria}
-        onAssignHistoriaToSprint={isReadOnly ? undefined : (h) => onAssignToSprint?.([h.id])}
+        onAssignHistoriaToSprint={isReadOnly || !onAssignToSprint ? undefined : (h) => onAssignToSprint([h.id])}
         onVerDocumento={onVerDocumento}
         onValidarHu={isReadOnly ? undefined : onValidarHu}
         isReadOnly={isReadOnly}

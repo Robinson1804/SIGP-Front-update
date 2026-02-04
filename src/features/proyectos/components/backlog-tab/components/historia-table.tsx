@@ -421,9 +421,9 @@ export function HistoriaTable({
                         <Eye className="h-4 w-4 mr-2" />
                         Ver detalles
                       </DropdownMenuItem>
-                      {/* Editar solo si HU NO esta en revision ni finalizada */}
-                      {historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
-                        <DropdownMenuItem onClick={() => onEdit?.(historia)}>
+                      {/* Editar solo si HU NO esta en revision ni finalizada y handler disponible */}
+                      {onEdit && historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
+                        <DropdownMenuItem onClick={() => onEdit(historia)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Editar
                         </DropdownMenuItem>
@@ -467,12 +467,12 @@ export function HistoriaTable({
                           </DropdownMenuItem>
                         </>
                       )}
-                      {/* Eliminar solo si HU NO esta en revision ni finalizada */}
-                      {historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
+                      {/* Eliminar solo si HU NO esta en revision ni finalizada y handler disponible */}
+                      {onDelete && historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
-                            onClick={() => onDelete?.(historia)}
+                            onClick={() => onDelete(historia)}
                             className="text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -610,7 +610,7 @@ export function HistoriaTable({
                                             </TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>
-                                      ) : (
+                                      ) : (onEditTarea || onDeleteTarea) ? (
                                         <DropdownMenu modal={false}>
                                           <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
@@ -618,21 +618,27 @@ export function HistoriaTable({
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => onEditTarea?.(tarea)}>
-                                              <Edit className="h-4 w-4 mr-2" />
-                                              Editar
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem
-                                              onClick={() => onDeleteTarea?.(tarea)}
-                                              className="text-red-600"
-                                            >
-                                              <Trash2 className="h-4 w-4 mr-2" />
-                                              Eliminar
-                                            </DropdownMenuItem>
+                                            {onEditTarea && (
+                                              <DropdownMenuItem onClick={() => onEditTarea(tarea)}>
+                                                <Edit className="h-4 w-4 mr-2" />
+                                                Editar
+                                              </DropdownMenuItem>
+                                            )}
+                                            {onDeleteTarea && (
+                                              <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                  onClick={() => onDeleteTarea(tarea)}
+                                                  className="text-red-600"
+                                                >
+                                                  <Trash2 className="h-4 w-4 mr-2" />
+                                                  Eliminar
+                                                </DropdownMenuItem>
+                                              </>
+                                            )}
                                           </DropdownMenuContent>
                                         </DropdownMenu>
-                                      )}
+                                      ) : null}
                                     </TableCell>
                                   </TableRow>
                                 ))}

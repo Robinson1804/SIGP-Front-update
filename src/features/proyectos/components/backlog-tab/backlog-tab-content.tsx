@@ -62,6 +62,7 @@ import {
 import { iniciarSprint } from '@/features/proyectos/services/sprints.service';
 import type { Epica, Sprint } from '@/features/proyectos/types';
 import { cn } from '@/lib/utils';
+import { usePOIPermissions } from '@/lib/hooks/use-permissions';
 
 // State-driven Navigation Types
 type SubTab = 'backlog' | 'epicas' | 'sprints' | 'tablero' | 'daily' | 'dashboard';
@@ -100,6 +101,15 @@ const subTabs: { id: SubTab; label: string; icon: React.ElementType }[] = [
 export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFechaFin, proyectoEstado }: BacklogTabContentProps) {
   // Check if project is finalized (editing disabled)
   const isProyectoFinalizado = proyectoEstado === 'Finalizado';
+
+  // Permission-based flags
+  const { canCreate, canEdit, canDelete, canManageSprints, canUpdateTaskStatus } = usePOIPermissions();
+  // Roles that can manage HU/sprints (SCRUM_MASTER, COORDINADOR, PMO)
+  const canManageHU = canCreate || canEdit || canDelete;
+  // DESARROLLADOR: can only create tasks + view details in Backlog; read-only elsewhere
+  const isDeveloperOnly = !canManageHU && !canManageSprints && canUpdateTaskStatus;
+  // Full read-only: finalized project OR roles without any edit permission (USUARIO, etc.)
+  const isReadOnly = isProyectoFinalizado || (!canManageHU && !canManageSprints && !canUpdateTaskStatus);
 
   // State-driven navigation
   const [currentView, setCurrentView] = useState<BacklogView>({
@@ -503,22 +513,22 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           isLoading={isLoading}
           error={error}
           onRefresh={refresh}
-          onCreateHistoria={handleCreateHistoria}
-          onEditHistoria={handleEditHistoria}
+          onCreateHistoria={isProyectoFinalizado || isDeveloperOnly ? undefined : handleCreateHistoria}
+          onEditHistoria={isProyectoFinalizado || isDeveloperOnly ? undefined : handleEditHistoria}
           onViewHistoria={handleViewHistoria}
-          onDeleteHistoria={handleDeleteHistoria}
-          onAssignToSprint={handleAssignToSprint}
-          onCreateSprint={handleCreateSprint}
-          onIniciarSprint={handleIniciarSprint}
-          onEditSprint={handleEditSprint}
-          onDeleteSprint={handleDeleteSprint}
-          onCreateTarea={handleCreateTarea}
-          onEditTarea={handleEditTarea}
-          onDeleteTarea={handleDeleteTarea}
+          onDeleteHistoria={isProyectoFinalizado || isDeveloperOnly ? undefined : handleDeleteHistoria}
+          onAssignToSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleAssignToSprint}
+          onCreateSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleCreateSprint}
+          onIniciarSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleIniciarSprint}
+          onEditSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleEditSprint}
+          onDeleteSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleDeleteSprint}
+          onCreateTarea={isProyectoFinalizado ? undefined : handleCreateTarea}
+          onEditTarea={isProyectoFinalizado || isDeveloperOnly ? undefined : handleEditTarea}
+          onDeleteTarea={isProyectoFinalizado || isDeveloperOnly ? undefined : handleDeleteTarea}
           tareasRefreshKey={tareasRefreshKey}
           onVerDocumento={handleVerDocumento}
-          onValidarHu={handleValidarHu}
-          isReadOnly={isProyectoFinalizado}
+          onValidarHu={isProyectoFinalizado || isDeveloperOnly ? undefined : handleValidarHu}
+          isReadOnly={isReadOnly}
         />
       )}
 
@@ -530,7 +540,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           onCreateEpica={goToNuevaEpica}
           onEditEpica={goToEditarEpica}
           onRefresh={refresh}
-          isReadOnly={isProyectoFinalizado}
+          isReadOnly={isReadOnly || isDeveloperOnly}
         />
       )}
 
@@ -542,7 +552,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           onCreateSprint={handleCreateSprint}
           onIniciarSprint={handleIniciarSprint}
           onCerrarSprint={goToCerrarSprint}
-          isReadOnly={isProyectoFinalizado}
+          isReadOnly={isReadOnly || isDeveloperOnly}
           onSprintPlanning={goToSprintPlanning}
           onEditSprint={handleEditSprint}
           onDeleteSprint={handleDeleteSprint}
@@ -559,7 +569,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           onDeleteHistoria={handleDeleteHistoria}
           proyectoFechaInicio={proyectoFechaInicio}
           proyectoFechaFin={proyectoFechaFin}
-          isReadOnly={isProyectoFinalizado}
+          isReadOnly={isReadOnly || isDeveloperOnly}
         />
       )}
 
