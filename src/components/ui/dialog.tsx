@@ -6,15 +6,29 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Dialog = ({ onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
-  const handleOpenChange = (open: boolean) => {
-    // Fix: blur active element BEFORE dialog closes to prevent aria-hidden focus conflict
-    if (!open && document.activeElement instanceof HTMLElement) {
+const Dialog = ({ onOpenChange, open, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
+  const prevOpenRef = React.useRef(open);
+
+  // Fix: detect programmatic close (open prop changes from true to false)
+  // onOpenChange does NOT fire for controlled state changes, only user-initiated ones
+  React.useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+    prevOpenRef.current = open;
+  }, [open]);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    // Fix: blur active element BEFORE dialog closes (user-initiated close via X, Escape, overlay)
+    if (!newOpen && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
-    onOpenChange?.(open);
+    onOpenChange?.(newOpen);
   };
-  return <DialogPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
+
+  return <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange} {...props} />;
 }
 
 const DialogTrigger = DialogPrimitive.Trigger
