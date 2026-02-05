@@ -8,3 +8,4 @@ export { ProyectoFilters } from './proyecto-filters';
 export { ProyectoForm } from './proyecto-form';
 export { POIModal, POIFullModal, SubProjectModal } from './poi-modal';
 export { ProyectoActions } from './proyecto-actions';
+export { AreaUsuariaDisplay } from './area-usuaria-display';

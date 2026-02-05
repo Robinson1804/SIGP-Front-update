@@ -81,6 +81,7 @@ import {
   getPersonalDisponible,
   getPersonalDesarrolladores,
   getPersonalImplementadores,
+  getPersonalPatrocinadores,
   formatPersonalNombre,
   type Usuario,
   type Personal,
@@ -351,7 +352,7 @@ export function POIFullModal({
 
     // Vista actual: 'main' o 'subproject'
     const [currentView, setCurrentView] = useState<'main' | 'subproject'>('main');
-    const [formData, setFormData] = useState<Partial<Project> & { accionEstrategicaId?: number; coordinadorId?: number; scrumMasterId?: number }>({});
+    const [formData, setFormData] = useState<Partial<Project> & { accionEstrategicaId?: number; coordinadorId?: number; scrumMasterId?: number; areaUsuaria?: number[] }>({});
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [subProjects, setSubProjects] = useState<SubProject[]>([]);
     const [editingSubProject, setEditingSubProject] = useState<SubProject | null>(null);
@@ -375,6 +376,7 @@ export function POIFullModal({
     const [personalDisponible, setPersonalDisponible] = useState<Personal[]>([]);
     const [desarrolladores, setDesarrolladores] = useState<Personal[]>([]);
     const [implementadores, setImplementadores] = useState<Personal[]>([]);
+    const [patrocinadores, setPatrocinadores] = useState<Personal[]>([]);
     const [loadingData, setLoadingData] = useState(false);
 
     // Estado del PGD para generar años válidos
@@ -412,13 +414,14 @@ export function POIFullModal({
                 ? getAccionesEstrategicasByPGD(pgdId).catch(() => [])
                 : getAccionesEstrategicas().catch(() => []);
 
-            const [aes, coords, sms, personal, devs, impls, pgds] = await Promise.all([
+            const [aes, coords, sms, personal, devs, impls, pats, pgds] = await Promise.all([
                 aesPromise,
                 getCoordinadores().catch(() => []),
                 getScrumMasters().catch(() => []), // Solo usuarios con rol SCRUM_MASTER
                 getPersonalDisponible().catch(() => []),
                 getPersonalDesarrolladores().catch(() => []), // Personal con rol Desarrollador
                 getPersonalImplementadores().catch(() => []), // Personal con rol Implementador
+                getPersonalPatrocinadores().catch(() => []), // Personal con rol Patrocinador
                 pgdPromise,
             ]);
             setAccionesEstrategicas(aes);
@@ -427,6 +430,7 @@ export function POIFullModal({
             setPersonalDisponible(personal);
             setDesarrolladores(devs);
             setImplementadores(impls);
+            setPatrocinadores(pats);
 
             // Si cargamos PGD, actualizar los años
             if (pgds && pgds.length > 0) {
@@ -547,6 +551,7 @@ export function POIFullModal({
                     scrumMasterId: projectWithIds.scrumMasterId,
                     startDate: validStartDate,
                     endDate: validEndDate,
+                    areaUsuaria: (project as any).areaUsuaria || [],
                 });
                 setSubProjects(project.subProjects || []);
             } else {
@@ -571,6 +576,7 @@ export function POIFullModal({
                     accionEstrategicaId: undefined,
                     coordinadorId: undefined,
                     scrumMasterId: undefined,
+                    areaUsuaria: [],
                 });
                 setSubProjects([]);
             }
@@ -621,6 +627,16 @@ export function POIFullModal({
 
         return [...baseResponsibleOptions, ...extraOptions];
     }, [baseResponsibleOptions, formData.responsibles, personalDisponible]);
+
+    // Opciones de patrocinadores para Área Usuaria (solo para Proyectos)
+    const patrocinadorOptions: MultiSelectOption[] = React.useMemo(() => {
+        return patrocinadores
+            .filter(p => p.usuarioId)
+            .map(p => ({
+                label: formatPersonalNombre(p),
+                value: p.usuarioId!.toString(),
+            }));
+    }, [patrocinadores]);
 
     const validate = () => {
         const newErrors: {[key: string]: string} = {};
@@ -743,6 +759,7 @@ export function POIFullModal({
                 anios: formData.years?.map(y => typeof y === 'string' ? parseInt(y, 10) : y),
                 fechaInicio: formData.startDate || undefined,
                 fechaFin: formData.endDate || undefined,
+                areaUsuaria: formData.areaUsuaria && formData.areaUsuaria.length > 0 ? formData.areaUsuaria : undefined,
             };
 
             let savedResult: any;
@@ -886,6 +903,7 @@ export function POIFullModal({
                         anios: baseData.anios,
                         fechaInicio: baseData.fechaInicio,
                         fechaFin: baseData.fechaFin,
+                        areaUsuaria: baseData.areaUsuaria,
                     };
                     savedResult = await createProyecto(createData);
 
@@ -1461,6 +1479,19 @@ export function POIFullModal({
                                             />
                                             {errors.responsibles && <p className="text-red-500 text-xs mt-1">{errors.responsibles}</p>}
                                         </div>
+                                        {formData.type === 'Proyecto' && (
+                                        <div>
+                                            <label className="text-sm font-medium">Área Usuaria</label>
+                                            <MultiSelect
+                                                options={patrocinadorOptions}
+                                                selected={(formData.areaUsuaria || []).map(String)}
+                                                onChange={(selected) => {
+                                                    setFormData(p => ({...p, areaUsuaria: selected.map(Number)}));
+                                                }}
+                                                placeholder="Seleccionar patrocinador(es)"
+                                            />
+                                        </div>
+                                        )}
                                         <div>
                                             <label className="text-sm font-medium">Año *</label>
                                             <MultiSelect

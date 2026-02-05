@@ -22,12 +22,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/multi-select';
+import type { MultiSelectOption } from '@/components/ui/multi-select';
 import { createProyecto, updateProyecto } from '@/lib/actions';
 import { paths } from '@/lib/paths';
 import { CreateProyectoSchema } from '@/lib/definitions';
 import type { Proyecto, CreateProyectoInput } from '@/lib/definitions';
 import { useState, useEffect } from 'react';
 import { getNextProyectoCodigo } from '../services/proyectos.service';
+import { apiClient, ENDPOINTS } from '@/lib/api';
 
 type FormValues = CreateProyectoInput;
 
@@ -39,6 +42,7 @@ interface ProyectoFormProps {
 export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [patrocinadores, setPatrocinadores] = useState<MultiSelectOption[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(CreateProyectoSchema),
@@ -52,6 +56,7 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
           coordinadorId: initialData.coordinadorId ?? undefined,
           scrumMasterId: initialData.scrumMasterId ?? undefined,
           patrocinadorId: initialData.patrocinadorId ?? undefined,
+          areaUsuaria: initialData.areaUsuaria || [],
           coordinacion: initialData.coordinacion ?? undefined,
           montoAnual: initialData.montoAnual ?? undefined,
         }
@@ -59,8 +64,28 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
           codigo: 'Cargando...',
           nombre: '',
           descripcion: '',
+          areaUsuaria: [],
         },
   });
+
+  // Cargar patrocinadores para el MultiSelect de Área Usuaria
+  useEffect(() => {
+    apiClient
+      .get(ENDPOINTS.RRHH.PERSONAL_PATROCINADORES)
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        const options: MultiSelectOption[] = data.map(
+          (p: { usuarioId?: number; id: number; apellidos: string; nombres: string }) => ({
+            value: String(p.usuarioId || p.id),
+            label: `${p.apellidos}, ${p.nombres}`,
+          }),
+        );
+        setPatrocinadores(options);
+      })
+      .catch(() => {
+        setPatrocinadores([]);
+      });
+  }, []);
 
   // Cargar el próximo código disponible en modo crear
   useEffect(() => {
@@ -86,6 +111,7 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
         coordinadorId: initialData.coordinadorId ?? undefined,
         scrumMasterId: initialData.scrumMasterId ?? undefined,
         patrocinadorId: initialData.patrocinadorId ?? undefined,
+        areaUsuaria: initialData.areaUsuaria || [],
         coordinacion: initialData.coordinacion ?? undefined,
         montoAnual: initialData.montoAnual ?? undefined,
       });
@@ -302,6 +328,30 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="areaUsuaria"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Área Usuaria</FormLabel>
+                <FormControl>
+                  <MultiSelect
+                    options={patrocinadores}
+                    selected={field.value?.map(String) || []}
+                    onChange={(selected) =>
+                      field.onChange(selected.map(Number))
+                    }
+                    placeholder="Seleccionar patrocinadores"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Patrocinadores asignados al proyecto como Área Usuaria
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* Información financiera y fechas */}

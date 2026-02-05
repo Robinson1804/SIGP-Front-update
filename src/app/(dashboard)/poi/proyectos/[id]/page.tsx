@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProyectoActions } from '@/features/proyectos';
+import { AreaUsuariaDisplay } from '@/features/proyectos/components/area-usuaria-display';
 import { getProyecto } from '@/lib/actions';
 import { paths } from '@/lib/paths';
 
@@ -134,7 +135,13 @@ export default async function ProyectoDetallesPage({
                 <p className="text-base">ID: {proyecto.patrocinadorId}</p>
               </div>
             )}
-            {!proyecto.coordinadorId && !proyecto.scrumMasterId && !proyecto.patrocinadorId && (
+            {proyecto.areaUsuaria && proyecto.areaUsuaria.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Área Usuaria</p>
+                <AreaUsuariaDisplay userIds={proyecto.areaUsuaria} />
+              </div>
+            )}
+            {!proyecto.coordinadorId && !proyecto.scrumMasterId && !proyecto.patrocinadorId && (!proyecto.areaUsuaria || proyecto.areaUsuaria.length === 0) && (
               <p className="text-muted-foreground text-sm">Sin responsables asignados</p>
             )}
           </CardContent>

@@ -216,6 +216,7 @@ export const ENDPOINTS = {
       `/personal/${personalId}/habilidades/${habilidadId}`,
     PERSONAL_DESARROLLADORES: '/personal/desarrolladores',
     PERSONAL_IMPLEMENTADORES: '/personal/implementadores',
+    PERSONAL_PATROCINADORES: '/personal/patrocinadores',
 
     // Divisiones
     DIVISIONES: '/divisiones',

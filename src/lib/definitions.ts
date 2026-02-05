@@ -255,6 +255,9 @@ export interface Proyecto {
   patrocinadorId: number | null;
   patrocinador?: UsuarioRelacionado | null;
 
+  // Área Usuaria - Patrocinadores asignados
+  areaUsuaria: number[] | null;
+
   // Financiero
   coordinacion: string | null;
   areasFinancieras: string[] | null;
@@ -287,6 +290,7 @@ export interface CreateProyectoInput {
   coordinadorId?: number;
   scrumMasterId?: number;
   patrocinadorId?: number;
+  areaUsuaria?: number[];
   coordinacion?: string;
   areasFinancieras?: string[];
   montoAnual?: number;
@@ -315,6 +319,7 @@ export const CreateProyectoSchema = z.object({
   coordinadorId: z.number().int().positive().optional(),
   scrumMasterId: z.number().int().positive().optional(),
   patrocinadorId: z.number().int().positive().optional(),
+  areaUsuaria: z.array(z.number().int().positive()).optional(),
   coordinacion: z.string().max(100).optional(),
   areasFinancieras: z.array(z.string()).optional(),
   montoAnual: z.number().positive().optional(),

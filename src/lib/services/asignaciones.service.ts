@@ -347,3 +347,11 @@ export async function getPersonalImplementadores(): Promise<Personal[]> {
   const response = await apiClient.get<Personal[]>(ENDPOINTS.RRHH.PERSONAL_IMPLEMENTADORES);
   return response.data || [];
 }
+
+/**
+ * Obtener personal con rol Patrocinador (para Área Usuaria de Proyectos)
+ */
+export async function getPersonalPatrocinadores(): Promise<Personal[]> {
+  const response = await apiClient.get<Personal[]>(ENDPOINTS.RRHH.PERSONAL_PATROCINADORES);
+  return response.data || [];
+}

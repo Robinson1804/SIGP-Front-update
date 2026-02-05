@@ -40,7 +40,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { POIFullModal, SubProjectModal } from '@/features/proyectos';
+import { POIFullModal, SubProjectModal, AreaUsuariaDisplay } from '@/features/proyectos';
 import { SubProject, Project, MODULES, ROLES, PERMISSIONS, type Proyecto } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -142,6 +142,7 @@ type ProjectWithIds = Project & {
   coordinadorId?: number;
   scrumMasterId?: number;
   patrocinadorId?: number;
+  areaUsuaria?: number[];
 };
 
 /**
@@ -308,6 +309,7 @@ function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = [], sub
     coordinadorId: proyecto.coordinadorId || undefined,
     scrumMasterId: proyecto.scrumMasterId || undefined,
     patrocinadorId: proyecto.patrocinadorId || undefined,
+    areaUsuaria: proyecto.areaUsuaria || undefined,
   };
 }
 
@@ -1335,6 +1337,13 @@ function ProjectDetailsContent() {
                                             <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
                                             <InfoField label="Coordinación"><p>{project.coordination || 'Son las divisiones'}</p></InfoField>
                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
+                                            <InfoField label="Área Usuaria">
+                                                {project.areaUsuaria && project.areaUsuaria.length > 0 ? (
+                                                    <AreaUsuariaDisplay userIds={project.areaUsuaria} />
+                                                ) : (
+                                                    <p className="text-gray-400">-</p>
+                                                )}
+                                            </InfoField>
                                             <InfoField label="Área Financiera">
                                                 {project.financialArea?.length ? (
                                                     project.financialArea.map(area => <Badge key={area} variant="secondary">{area}</Badge>)
