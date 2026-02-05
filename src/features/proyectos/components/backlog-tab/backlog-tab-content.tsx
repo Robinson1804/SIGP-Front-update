@@ -633,10 +633,15 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           onOpenChange={setIsDetailModalOpen}
           historia={viewingHistoria}
           equipo={equipo}
-          onEdit={isViewOnly ? undefined : () => {
-            setIsDetailModalOpen(false);
-            handleEditHistoria(viewingHistoria);
-          }}
+          onEdit={
+            isViewOnly || isDeveloperOnly || isProyectoFinalizado ||
+            viewingHistoria.estado === 'Finalizado' || viewingHistoria.estado === 'En revision'
+              ? undefined
+              : () => {
+                  setIsDetailModalOpen(false);
+                  handleEditHistoria(viewingHistoria);
+                }
+          }
         />
       )}
 
