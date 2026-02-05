@@ -475,19 +475,26 @@ export interface TableroKanban {
 // ============================================
 
 /**
- * Métricas de una Actividad
+ * Métricas Kanban de una Actividad
+ * Calculadas desde el backend a partir de las tareas KANBAN de la actividad
  */
 export interface ActividadMetricas {
-  actividadId: number;
-  totalTareas: number;
-  tareasCompletadas: number;
-  tareasPendientes: number;
-  tareasEnProgreso: number;
+  /** Tiempo promedio desde creación hasta completado (días) */
+  leadTime: number | null;
+  /** Tiempo promedio desde inicio de progreso hasta completado (días) */
+  cycleTime: number | null;
+  /** Tareas completadas en la última semana */
   throughput: number;
-  leadTimePromedio: number | null;
-  cycleTimePromedio: number | null;
+  /** Tareas actualmente en progreso (Work In Progress) */
+  wipActual: number;
+  /** Total de tareas KANBAN de la actividad */
+  totalTareas: number;
+  /** Tareas en estado "Por hacer" */
+  tareasPorHacer: number;
+  /** Tareas en estado "En progreso" */
+  tareasEnProgreso: number;
+  /** Tareas en estado "Finalizado" */
+  tareasCompletadas: number;
+  /** Porcentaje de tareas completadas sobre el total */
   porcentajeCompletado: number;
-  horasTotalesEstimadas: number;
-  horasTotalesReales: number;
-  eficiencia: number | null;
 }

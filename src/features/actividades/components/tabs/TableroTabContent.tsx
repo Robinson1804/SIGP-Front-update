@@ -5,7 +5,8 @@ import dynamic from 'next/dynamic';
 import type { DropResult } from '@hello-pangea/dnd';
 import type { DndTask, TareaEstado as DndTareaEstado, TareaPrioridad } from '@/components/dnd';
 import { moverTarea, getTareasByActividad, getTareaById } from '@/features/actividades/services/tareas-kanban.service';
-import type { TareaKanban, TareaEstado } from '@/features/actividades/types';
+import { getActividadMetricas } from '@/features/actividades/services/actividades.service';
+import type { TareaKanban, TareaEstado, ActividadMetricas } from '@/features/actividades/types';
 import {
   TaskFilters,
   type TaskFiltersState,
@@ -93,6 +94,7 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
   const [tasks, setTasks] = useState<DndTask[]>([]);
   const [allTareas, setAllTareas] = useState<TareaKanban[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [metricsData, setMetricsData] = useState<ActividadMetricas | null>(null);
 
   // New states for enhanced features
   const [filters, setFilters] = useState<TaskFiltersState>(initialFilters);
@@ -104,11 +106,20 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
     try {
       if (showLoading) setIsLoading(true);
 
-      // Fetch tasks for the activity
+      // Fetch tasks (required)
       const tareasData = await getTareasByActividad(actividadId);
       setAllTareas(tareasData);
       const mappedTasks = tareasData.map(mapToKanbanDndTask);
       setTasks(mappedTasks);
+
+      // Fetch metrics (optional - may not exist in production backend yet)
+      try {
+        const metricas = await getActividadMetricas(actividadId);
+        setMetricsData(metricas);
+      } catch {
+        // Metrics endpoint not available, use null (fallback to local calculation)
+        setMetricsData(null);
+      }
 
     } catch (error) {
       console.error('Error loading activity data:', error);
@@ -245,6 +256,14 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
     try {
       await moverTarea(taskId, newEstado, destination.index);
 
+      // Refresh metrics after task move (optional - may not exist in production)
+      try {
+        const metricas = await getActividadMetricas(actividadId);
+        setMetricsData(metricas);
+      } catch {
+        // Metrics endpoint not available, ignore
+      }
+
       toast({
         title: 'Tarea actualizada',
         description: `La tarea se movió a "${destColumn?.title}"`,
@@ -275,16 +294,16 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
         />
       </div>
 
-      {/* Metrics Bar */}
+      {/* Metrics Bar - uses API metrics when available, fallback to local calculation */}
       <div className="px-4 mt-3">
         <KanbanMetricsBar
-          leadTime={null}
-          cycleTime={null}
-          throughput={0}
-          totalTareas={metrics.total}
-          tareasCompletadas={metrics.completadas}
-          tareasEnProgreso={metrics.enProgreso}
-          tareasPorHacer={metrics.porHacer}
+          leadTime={metricsData?.leadTime ?? null}
+          cycleTime={metricsData?.cycleTime ?? null}
+          throughput={metricsData?.throughput ?? 0}
+          totalTareas={metricsData?.totalTareas ?? metrics.total}
+          tareasCompletadas={metricsData?.tareasCompletadas ?? metrics.completadas}
+          tareasEnProgreso={metricsData?.tareasEnProgreso ?? metrics.enProgreso}
+          tareasPorHacer={metricsData?.tareasPorHacer ?? metrics.porHacer}
         />
       </div>
 

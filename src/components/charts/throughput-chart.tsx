@@ -147,12 +147,12 @@ export function ThroughputChart({
             margin={{ top: 10, right: 30, left: 0, bottom: 5 }}
           >
             <defs>
-              <linearGradient id="colorTareas" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="colorTareas" x1="0" y1="0" x2="0" y2="1" key="gradient-tareas">
                 <stop offset="5%" stopColor={COLORS.tareas} stopOpacity={0.3} />
                 <stop offset="95%" stopColor={COLORS.tareas} stopOpacity={0} />
               </linearGradient>
               {showSubtareas && (
-                <linearGradient id="colorSubtareas" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="colorSubtareas" x1="0" y1="0" x2="0" y2="1" key="gradient-subtareas">
                   <stop offset="5%" stopColor={COLORS.subtareas} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={COLORS.subtareas} stopOpacity={0} />
                 </linearGradient>

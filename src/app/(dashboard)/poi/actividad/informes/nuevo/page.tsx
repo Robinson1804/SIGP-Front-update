@@ -18,6 +18,8 @@ import {
 import AppLayout from '@/components/layout/app-layout';
 import { paths } from '@/lib/paths';
 import { useToast } from '@/lib/hooks/use-toast';
+import { useAuth } from '@/stores';
+import { ROLES } from '@/lib/definitions';
 import { getActividadById } from '@/features/actividades/services/actividades.service';
 import { createInformeActividad } from '@/features/informes';
 import type { Actividad } from '@/features/actividades/types';
@@ -36,6 +38,17 @@ function NuevoInformeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const userRole = user?.role;
+  const isDesarrollador = userRole === ROLES.DESARROLLADOR;
+
+  // DESARROLLADOR no tiene acceso a Actividades (solo a Proyectos/Scrum)
+  useEffect(() => {
+    if (isDesarrollador) {
+      router.push(paths.poi.base);
+    }
+  }, [isDesarrollador, router]);
 
   const actividadIdParam = searchParams.get('actividadId') || searchParams.get('id');
 

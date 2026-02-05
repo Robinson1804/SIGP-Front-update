@@ -127,6 +127,7 @@ type Task = {
     description?: string;
     state: TaskStatus;
     responsibles: string[];
+    responsibleIds?: number[]; // IDs de usuario para evitar problemas de mapeo por nombre
     priority: Priority;
     startDate: string;
     endDate: string;
@@ -1946,6 +1947,15 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
     const isAdmin = userRole === ROLES.ADMIN;
     const isCoordinador = userRole === ROLES.COORDINADOR;
     const isImplementador = userRole === ROLES.IMPLEMENTADOR;
+    const isDesarrollador = userRole === ROLES.DESARROLLADOR;
+
+    // DESARROLLADOR no tiene acceso a Actividades (solo a Proyectos/Scrum)
+    React.useEffect(() => {
+        if (isDesarrollador) {
+            router.push(paths.poi.base);
+        }
+    }, [isDesarrollador, router]);
+
     // ADMIN y COORDINADOR pueden gestionar tareas (crear, editar, eliminar)
     const canManageTasks = isAdmin || isCoordinador;
     // ADMIN, COORDINADOR e IMPLEMENTADOR pueden gestionar subtareas
@@ -1975,8 +1985,10 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                     .filter((a: any) => a.activo && a.personal)
                     .map((a: any) => {
                         const p = a.personal;
-                        const nombre = p.nombres || p.nombre || '';
-                        const apellido = p.apellidos || p.apellido || '';
+                        // Preferir nombre del Usuario asociado si existe, de lo contrario usar Personal
+                        const u = p.usuario;
+                        const nombre = u ? (u.nombre || '') : (p.nombres || p.nombre || '');
+                        const apellido = u ? (u.apellido || '') : (p.apellidos || p.apellido || '');
                         return {
                             usuarioId: p.usuarioId || p.id,
                             nombre: `${nombre} ${apellido}`.trim() || `Personal #${a.personalId}`,
@@ -2026,11 +2038,17 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                             console.error(`Error loading subtasks for task ${tarea.id}:`, e);
                         }
 
-                        // Map asignados to responsibles names
+                        // Map asignados to responsibles names and IDs
                         const responsibles = tarea.asignados
                             ? tarea.asignados.map(a => a.usuario ? `${a.usuario.nombre} ${a.usuario.apellido}`.trim() : `Usuario #${a.usuarioId}`)
                             : tarea.asignadoAInfo
                                 ? [`${tarea.asignadoAInfo.nombre} ${tarea.asignadoAInfo.apellido}`.trim()]
+                                : [];
+                        // Guardar los IDs de usuario directamente para evitar problemas de mapeo
+                        const responsibleIds = tarea.asignados
+                            ? tarea.asignados.map(a => a.usuarioId)
+                            : tarea.asignadoA
+                                ? [tarea.asignadoA]
                                 : [];
 
                         return {
@@ -2040,6 +2058,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                             description: tarea.descripcion || '',
                             state: tarea.estado as TaskStatus,
                             responsibles,
+                            responsibleIds,
                             priority: tarea.prioridad as Priority,
                             startDate: tarea.fechaInicio ? tarea.fechaInicio.split('T')[0].split('-').reverse().join('/') : '',
                             endDate: tarea.fechaFin ? tarea.fechaFin.split('T')[0].split('-').reverse().join('/') : '',
@@ -2090,27 +2109,57 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
         return dateStr.split('T')[0];
     };
 
-    // Helper: map responsible names to user IDs
+    // Helper: normalizar nombre para comparación (sin espacios extras, minúsculas)
+    const normalizeName = (name: string): string => name.toLowerCase().trim().replace(/\s+/g, ' ');
+
+    // Helper: map responsible names to user IDs (búsqueda flexible por nombre)
     const namesToUserIds = (names: string[]): number[] => {
         return names
-            .map(name => implementadores.find(imp => imp.nombre === name)?.usuarioId)
+            .map(name => {
+                // Primero buscar por coincidencia exacta
+                let imp = implementadores.find(i => i.nombre === name);
+                // Si no encuentra, buscar normalizado
+                if (!imp) {
+                    const normalized = normalizeName(name);
+                    imp = implementadores.find(i => normalizeName(i.nombre) === normalized);
+                }
+                return imp?.usuarioId;
+            })
             .filter((id): id is number => id !== undefined);
+    };
+
+    // Helper: obtener IDs de asignados, preferir responsibleIds si están disponibles y coinciden
+    const getAsignadosIds = (task: Task): number[] => {
+        // Si hay responsibleIds y la cantidad coincide con responsibles, usar responsibleIds
+        if (task.responsibleIds && task.responsibleIds.length === task.responsibles.length && task.responsibleIds.length > 0) {
+            return task.responsibleIds;
+        }
+        // Si no, intentar mapear por nombre
+        const mappedIds = namesToUserIds(task.responsibles);
+        // Si el mapeo no encuentra todos, usar responsibleIds como fallback
+        if (mappedIds.length < task.responsibles.length && task.responsibleIds && task.responsibleIds.length > 0) {
+            console.warn('Mapeo por nombre incompleto, usando responsibleIds:', task.responsibleIds);
+            return task.responsibleIds;
+        }
+        return mappedIds;
     };
 
     const handleSaveTask = async (task: Task, isEdit: boolean) => {
         try {
+            const asignadosIds = getAsignadosIds(task);
+
             if (isEdit && task.backendId) {
                 // Update existing task
                 const updated = await updateTarea(task.backendId, {
                     nombre: task.title,
                     descripcion: task.description || undefined,
                     prioridad: task.priority,
-                    asignadosIds: namesToUserIds(task.responsibles),
+                    asignadosIds,
                     fechaInicio: toISODate(task.startDate),
                     fechaFin: toISODate(task.endDate),
                     estado: task.state,
                 });
-                setTasks(prev => prev.map(t => t.id === task.id ? { ...task, backendId: updated.id } : t));
+                setTasks(prev => prev.map(t => t.id === task.id ? { ...task, backendId: updated.id, responsibleIds: asignadosIds } : t));
             } else {
                 // Create new task
                 const existingIds = tasks.map(t => {
@@ -2126,11 +2175,11 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                     nombre: task.title,
                     descripcion: task.description || undefined,
                     prioridad: task.priority,
-                    asignadosIds: namesToUserIds(task.responsibles),
+                    asignadosIds,
                     fechaInicio: toISODate(task.startDate),
                     fechaFin: toISODate(task.endDate),
                 });
-                const newTask = { ...task, id: created.codigo || codigo, backendId: created.id };
+                const newTask = { ...task, id: created.codigo || codigo, backendId: created.id, responsibleIds: asignadosIds };
                 setTasks(prev => [...prev, newTask]);
             }
         } catch (error) {

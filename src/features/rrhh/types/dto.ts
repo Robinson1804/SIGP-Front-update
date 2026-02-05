@@ -28,7 +28,7 @@ export interface CreatePersonalDto {
   apellidos: string;
   email: string;
   telefono?: string;
-  divisionId: number;
+  divisionId?: number;
   cargo?: string;
   fechaIngreso: string;
   modalidad: Modalidad;

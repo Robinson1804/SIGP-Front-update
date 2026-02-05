@@ -76,7 +76,7 @@ const personalSchema = z.object({
     })
     .optional()
     .or(z.literal('')),
-  divisionId: z.number({ required_error: 'Seleccione una división' }),
+  divisionId: z.number().optional(),
   cargo: z
     .string()
     .max(VALIDATION_RULES.cargo.maxLength)
@@ -186,6 +186,7 @@ export function PersonalForm({
             dni: data.dni || undefined,
             telefono: data.telefono || undefined,
             cargo: data.cargo || undefined,
+            divisionId: data.divisionId || undefined,
             // Include rol for updates - backend will create/update user
             ...(rol ? { rol } : {}),
           }
@@ -197,6 +198,7 @@ export function PersonalForm({
             dni: data.dni || undefined,
             telefono: data.telefono || undefined,
             cargo: data.cargo || undefined,
+            divisionId: data.divisionId || undefined,
             // Include rol for creates - this will auto-create the user
             ...(rol ? { rol } : {}),
           };
@@ -365,10 +367,10 @@ export function PersonalForm({
                 name="divisionId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>División *</FormLabel>
+                    <FormLabel>División</FormLabel>
                     <Select
-                      value={field.value?.toString() || ''}
-                      onValueChange={(value) => field.onChange(Number(value))}
+                      value={field.value?.toString() || 'none'}
+                      onValueChange={(value) => field.onChange(value === 'none' ? undefined : Number(value))}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -376,6 +378,7 @@ export function PersonalForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent position="item-aligned">
+                        <SelectItem value="none">Sin división</SelectItem>
                         {divisiones
                           .filter((d) => d.activo)
                           .map((div) => (

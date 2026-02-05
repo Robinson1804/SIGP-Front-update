@@ -36,6 +36,7 @@ export type SecondaryTask = {
 
 export type UserStory = {
   id: string;
+  backendId?: number; // ID numérico del backend para API calls
   title: string;
   description?: string;
   state: UserStoryStatus;
@@ -51,6 +52,7 @@ export type UserStory = {
   commentsList?: Comment[]; // Lista de comentarios detallados
   points?: number;
   parentId?: string; // ID de la historia de usuario padre (solo para tareas)
+  parentBackendId?: number; // ID numérico del padre en el backend
   informer?: string; // Quien creó la HU
   acceptanceCriteria?: string[]; // Criterios de aceptación
   attachments?: string[]; // Adjuntos (generados automáticamente)

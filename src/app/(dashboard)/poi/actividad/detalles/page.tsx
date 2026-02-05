@@ -119,10 +119,18 @@ function ActividadDetailsContent() {
     const isAdmin = userRole === ROLES.ADMIN;
     const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
     const isImplementador = userRole === ROLES.IMPLEMENTADOR;
+    const isDesarrollador = userRole === ROLES.DESARROLLADOR;
+
+    // DESARROLLADOR no tiene acceso a Actividades (solo a Proyectos/Scrum)
+    React.useEffect(() => {
+        if (isDesarrollador) {
+            router.push(paths.poi.base);
+        }
+    }, [isDesarrollador, router]);
 
     // ADMIN puede todo; SCRUM MASTER e IMPLEMENTADOR solo pueden ver, no editar ni eliminar la actividad
-    const canEdit = isAdmin || (!isScrumMaster && !isImplementador);
-    const canDelete = isAdmin || (!isScrumMaster && !isImplementador);
+    const canEdit = isAdmin || (!isScrumMaster && !isImplementador && !isDesarrollador);
+    const canDelete = isAdmin || (!isScrumMaster && !isImplementador && !isDesarrollador);
 
     React.useEffect(() => {
         const idFromParams = searchParams.get('id');
