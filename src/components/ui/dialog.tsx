@@ -7,21 +7,22 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const Dialog = ({ onOpenChange, open, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
-  const prevOpenRef = React.useRef(open);
-
-  // Fix: detect programmatic close (open prop changes from true to false)
-  // onOpenChange does NOT fire for controlled state changes, only user-initiated ones
   React.useEffect(() => {
-    if (prevOpenRef.current && !open) {
+    if (!open) {
+      // Force blur to prevent aria-hidden conflict
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
+      // Safety net: Radix Dialog sets pointer-events:none on body when modal is open.
+      // If cleanup fails due to nested Select/Combobox conflicts, force restoration.
+      const timer = setTimeout(() => {
+        document.body.style.pointerEvents = '';
+      }, 300);
+      return () => clearTimeout(timer);
     }
-    prevOpenRef.current = open;
   }, [open]);
 
   const handleOpenChange = (newOpen: boolean) => {
-    // Fix: blur active element BEFORE dialog closes (user-initiated close via X, Escape, overlay)
     if (!newOpen && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
@@ -63,8 +64,6 @@ const DialogContent = React.forwardRef<
       aria-describedby={undefined}
       onPointerDownOutside={(e) => e.preventDefault()}
       onInteractOutside={(e) => e.preventDefault()}
-      // Fix: Prevent focus management conflicts with nested Select/Combobox components
-      // This prevents the aria-hidden warning when Select dropdowns are used inside Dialog
       onOpenAutoFocus={(e) => {
         if (onOpenAutoFocus) {
           onOpenAutoFocus(e);
@@ -72,10 +71,11 @@ const DialogContent = React.forwardRef<
       }}
       onCloseAutoFocus={(e) => {
         e.preventDefault();
-        // Fix: blur active element to prevent aria-hidden conflict with nested Select/Combobox
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }
+        // Force pointer-events restoration immediately on close
+        document.body.style.pointerEvents = '';
         if (onCloseAutoFocus) {
           onCloseAutoFocus(e);
         }
