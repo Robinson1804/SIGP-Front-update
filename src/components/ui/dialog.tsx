@@ -6,7 +6,16 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Dialog = DialogPrimitive.Root
+const Dialog = ({ onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
+  const handleOpenChange = (open: boolean) => {
+    // Fix: blur active element BEFORE dialog closes to prevent aria-hidden focus conflict
+    if (!open && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onOpenChange?.(open);
+  };
+  return <DialogPrimitive.Root onOpenChange={handleOpenChange} {...props} />;
+}
 
 const DialogTrigger = DialogPrimitive.Trigger
 
