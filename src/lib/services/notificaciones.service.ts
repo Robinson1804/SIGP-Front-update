@@ -55,6 +55,13 @@ export interface SprintGroup {
   noLeidas: number;
 }
 
+export interface SeccionCounts {
+  asignaciones: { total: number; noLeidas: number };
+  sprints: { total: number; noLeidas: number };
+  aprobaciones: { total: number; noLeidas: number };
+  validaciones: { total: number; noLeidas: number };
+}
+
 /**
  * Obtener todas las notificaciones del usuario
  */
@@ -174,6 +181,26 @@ export async function getNotificacionesAgrupadasPorSprint(proyectoId: number): P
 }
 
 /**
+ * Obtener conteos de notificaciones por sección para un proyecto (PMO view)
+ */
+export async function getSeccionCountsByProyecto(proyectoId: number): Promise<SeccionCounts> {
+  try {
+    const response = await apiClient.get<SeccionCounts>(
+      ENDPOINTS.NOTIFICACIONES.SECCIONES_PROYECTO(proyectoId)
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching section counts by project:', error);
+    return {
+      asignaciones: { total: 0, noLeidas: 0 },
+      sprints: { total: 0, noLeidas: 0 },
+      aprobaciones: { total: 0, noLeidas: 0 },
+      validaciones: { total: 0, noLeidas: 0 },
+    };
+  }
+}
+
+/**
  * Obtener notificaciones de un proyecto específico
  */
 export async function getNotificacionesPorProyecto(
@@ -222,6 +249,7 @@ export const notificacionesService = {
   deleteNotificacion,
   getNotificacionesAgrupadasPorProyecto,
   getNotificacionesAgrupadasPorSprint,
+  getSeccionCountsByProyecto,
   getNotificacionesPorProyecto,
   marcarTodasLeidasPorProyecto,
   bulkDeleteNotificaciones,
