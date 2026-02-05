@@ -49,6 +49,10 @@ const DialogContent = React.forwardRef<
       }}
       onCloseAutoFocus={(e) => {
         e.preventDefault();
+        // Fix: blur active element to prevent aria-hidden conflict with nested Select/Combobox
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
         if (onCloseAutoFocus) {
           onCloseAutoFocus(e);
         }
