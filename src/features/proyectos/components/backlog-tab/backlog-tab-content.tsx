@@ -63,6 +63,8 @@ import { iniciarSprint } from '@/features/proyectos/services/sprints.service';
 import type { Epica, Sprint } from '@/features/proyectos/types';
 import { cn } from '@/lib/utils';
 import { usePOIPermissions } from '@/lib/hooks/use-permissions';
+import { useAuth } from '@/stores';
+import { ROLES } from '@/lib/definitions';
 
 // State-driven Navigation Types
 type SubTab = 'backlog' | 'epicas' | 'sprints' | 'tablero' | 'daily' | 'dashboard';
@@ -102,14 +104,26 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
   // Check if project is finalized (editing disabled)
   const isProyectoFinalizado = proyectoEstado === 'Finalizado';
 
+  // Check user role for PMO override
+  const { user } = useAuth();
+  const isPMO = user?.role === ROLES.PMO;
+
   // Permission-based flags
-  const { canCreate, canEdit, canDelete, canManageSprints, canUpdateTaskStatus } = usePOIPermissions();
-  // Roles that can manage HU/sprints (SCRUM_MASTER, COORDINADOR, PMO)
+  const poiPerms = usePOIPermissions();
+  // PMO: solo visualización en Backlog (Ver Detalles y Ver documento únicamente)
+  const canCreate = isPMO ? false : poiPerms.canCreate;
+  const canEdit = isPMO ? false : poiPerms.canEdit;
+  const canDelete = isPMO ? false : poiPerms.canDelete;
+  const canManageSprints = isPMO ? false : poiPerms.canManageSprints;
+  const canUpdateTaskStatus = isPMO ? false : poiPerms.canUpdateTaskStatus;
+  // Roles that can manage HU/sprints (SCRUM_MASTER, COORDINADOR - NO PMO)
   const canManageHU = canCreate || canEdit || canDelete;
   // DESARROLLADOR: can only create tasks + view details in Backlog; read-only elsewhere
   const isDeveloperOnly = !canManageHU && !canManageSprints && canUpdateTaskStatus;
+  // PMO is view-only: can only Ver Detalles and Ver documento
+  const isViewOnly = isPMO;
   // Full read-only: finalized project OR roles without any edit permission (USUARIO, etc.)
-  const isReadOnly = isProyectoFinalizado || (!canManageHU && !canManageSprints && !canUpdateTaskStatus);
+  const isReadOnly = isProyectoFinalizado || (!canManageHU && !canManageSprints && !canUpdateTaskStatus && !isViewOnly);
 
   // State-driven navigation
   const [currentView, setCurrentView] = useState<BacklogView>({
@@ -504,6 +518,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
       </div>
 
       {/* Sub-tab content */}
+      {/* PMO (isViewOnly): solo Ver Detalles y Ver documento - sin CRUD */}
       {currentSubTab === 'backlog' && (
         <BacklogView
           sprints={sprints}
@@ -513,22 +528,22 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           isLoading={isLoading}
           error={error}
           onRefresh={refresh}
-          onCreateHistoria={isProyectoFinalizado || isDeveloperOnly ? undefined : handleCreateHistoria}
-          onEditHistoria={isProyectoFinalizado || isDeveloperOnly ? undefined : handleEditHistoria}
+          onCreateHistoria={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleCreateHistoria}
+          onEditHistoria={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleEditHistoria}
           onViewHistoria={handleViewHistoria}
-          onDeleteHistoria={isProyectoFinalizado || isDeveloperOnly ? undefined : handleDeleteHistoria}
-          onAssignToSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleAssignToSprint}
-          onCreateSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleCreateSprint}
-          onIniciarSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleIniciarSprint}
-          onEditSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleEditSprint}
-          onDeleteSprint={isProyectoFinalizado || isDeveloperOnly ? undefined : handleDeleteSprint}
-          onCreateTarea={isProyectoFinalizado ? undefined : handleCreateTarea}
-          onEditTarea={isProyectoFinalizado ? undefined : handleEditTarea}
-          onDeleteTarea={isProyectoFinalizado ? undefined : handleDeleteTarea}
+          onDeleteHistoria={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleDeleteHistoria}
+          onAssignToSprint={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleAssignToSprint}
+          onCreateSprint={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleCreateSprint}
+          onIniciarSprint={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleIniciarSprint}
+          onEditSprint={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleEditSprint}
+          onDeleteSprint={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleDeleteSprint}
+          onCreateTarea={isProyectoFinalizado || isViewOnly ? undefined : handleCreateTarea}
+          onEditTarea={isProyectoFinalizado || isViewOnly ? undefined : handleEditTarea}
+          onDeleteTarea={isProyectoFinalizado || isViewOnly ? undefined : handleDeleteTarea}
           tareasRefreshKey={tareasRefreshKey}
           onVerDocumento={handleVerDocumento}
-          onValidarHu={isProyectoFinalizado || isDeveloperOnly ? undefined : handleValidarHu}
-          isReadOnly={isReadOnly}
+          onValidarHu={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleValidarHu}
+          isReadOnly={isReadOnly || isViewOnly}
         />
       )}
 
@@ -537,10 +552,10 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           proyectoId={proyectoId}
           epicas={epicas}
           isLoading={isLoading}
-          onCreateEpica={goToNuevaEpica}
-          onEditEpica={goToEditarEpica}
+          onCreateEpica={isViewOnly ? undefined : goToNuevaEpica}
+          onEditEpica={isViewOnly ? undefined : goToEditarEpica}
           onRefresh={refresh}
-          isReadOnly={isReadOnly || isDeveloperOnly}
+          isReadOnly={isReadOnly || isDeveloperOnly || isViewOnly}
         />
       )}
 
@@ -549,13 +564,13 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           proyectoId={proyectoId}
           sprints={sprints}
           isLoading={isLoading}
-          onCreateSprint={handleCreateSprint}
-          onIniciarSprint={handleIniciarSprint}
-          onCerrarSprint={goToCerrarSprint}
-          isReadOnly={isReadOnly || isDeveloperOnly}
+          onCreateSprint={isViewOnly ? undefined : handleCreateSprint}
+          onIniciarSprint={isViewOnly ? undefined : handleIniciarSprint}
+          onCerrarSprint={isViewOnly ? undefined : goToCerrarSprint}
+          isReadOnly={isReadOnly || isDeveloperOnly || isViewOnly}
           onSprintPlanning={goToSprintPlanning}
-          onEditSprint={handleEditSprint}
-          onDeleteSprint={handleDeleteSprint}
+          onEditSprint={isViewOnly ? undefined : handleEditSprint}
+          onDeleteSprint={isViewOnly ? undefined : handleDeleteSprint}
           onRefresh={refresh}
         />
       )}
@@ -563,13 +578,13 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
       {currentSubTab === 'tablero' && (
         <TableroView
           proyectoId={proyectoId}
-          onCreateHistoria={handleCreateHistoria}
-          onEditHistoria={handleEditHistoria}
+          onCreateHistoria={isViewOnly ? undefined : handleCreateHistoria}
+          onEditHistoria={isViewOnly ? undefined : handleEditHistoria}
           onViewHistoria={handleViewHistoria}
-          onDeleteHistoria={handleDeleteHistoria}
+          onDeleteHistoria={isViewOnly ? undefined : handleDeleteHistoria}
           proyectoFechaInicio={proyectoFechaInicio}
           proyectoFechaFin={proyectoFechaFin}
-          isReadOnly={isReadOnly || isDeveloperOnly}
+          isReadOnly={isReadOnly || isDeveloperOnly || isViewOnly}
         />
       )}
 
