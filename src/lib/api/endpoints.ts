@@ -280,6 +280,11 @@ export const ENDPOINTS = {
     MARCAR_TODAS_LEIDAS: '/notificaciones/leer-todas',
     NO_LEIDAS: '/notificaciones/no-leidas',
     COUNT: '/notificaciones/count',
+    AGRUPADAS_PROYECTOS: '/notificaciones/agrupadas/proyectos',
+    AGRUPADAS_SPRINTS: (proyectoId: number | string) => `/notificaciones/agrupadas/sprints/${proyectoId}`,
+    LEER_TODAS_PROYECTO: (proyectoId: number | string) => `/notificaciones/leer-todas/proyecto/${proyectoId}`,
+    BULK_DELETE: '/notificaciones/bulk',
+    BULK_DELETE_PROYECTOS: '/notificaciones/bulk/proyectos',
   },
 
   // ============================================

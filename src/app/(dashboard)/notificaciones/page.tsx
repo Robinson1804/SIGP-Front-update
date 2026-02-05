@@ -2,20 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellRing, Folder, Loader2, RefreshCw, MessageSquare } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { BellRing, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { MODULES, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
@@ -24,262 +15,235 @@ import { useAuth } from '@/stores';
 import { useToast } from '@/lib/hooks/use-toast';
 import {
   getNotificaciones,
+  getNotificacionesAgrupadasPorProyecto,
+  getNotificacionesAgrupadasPorSprint,
   marcarNotificacionLeida,
   marcarTodasLeidas,
-  type Notificacion,
+  marcarTodasLeidasPorProyecto,
+  bulkDeleteNotificaciones,
+  bulkDeleteByProyectos,
+  type ProyectoGroup,
+  type SprintGroup,
 } from '@/lib/services/notificaciones.service';
+import {
+  NotificationCard,
+  mapBackendNotification,
+  type LocalNotification,
+  type NotificationType,
+} from './components/notification-card';
+import { ProyectoBlockList } from './components/proyecto-block-list';
+import { SprintBlockList } from './components/sprint-block-list';
+import { NotificationList } from './components/notification-list';
+import { DeleteToolbar } from './components/delete-toolbar';
+import { ObservacionDialog } from './components/observacion-dialog';
+import { PaginationControls } from './components/pagination-controls';
 
-type NotificationStatus = 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado' | 'En revisión';
-type NotificationType = 'project' | 'sprint' | 'delay' | 'hu_revision' | 'hu_validated' | 'hu_rejected' | 'validacion' | 'aprobacion' | 'sistema';
+const PAGE_SIZE = 5;
 
-// Local notification type that maps from backend
-type LocalNotification = {
-  id: string;
-  type: NotificationType;
-  title: string;
-  description?: string;
-  projectName: string;
-  projectCode?: string; // Código actual del proyecto
-  projectType: 'Proyecto' | 'Actividad' | 'Cronograma';
-  status?: NotificationStatus;
-  timestamp: Date;
-  read: boolean;
-  projectId: string;
-  huId?: string;
-  urlAccion?: string; // URL para navegación directa
-  observacion?: string; // Observación/comentario de PMO o PATROCINADOR
-};
+// Navigation state types
+type NavLevel =
+  | { level: 'proyectos' }
+  | { level: 'sprints'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string }
+  | { level: 'notificaciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string; sprintId?: number; sprintNombre?: string };
 
-const statusStyles: { [key: string]: { bg: string, text: string } } = {
-  'Pendiente': { bg: 'bg-[#FE9F43]/20', text: 'text-yellow-800' },
-  'En planificación': { bg: 'bg-[#FFD700]/20', text: 'text-amber-800' },
-  'En desarrollo': { bg: 'bg-[#559FFE]/20', text: 'text-blue-800' },
-  'Finalizado': { bg: 'bg-[#2FD573]/20', text: 'text-green-800' },
-  'En revisión': { bg: 'bg-[#9B59B6]/20', text: 'text-purple-800' },
-};
+// Tab types for different sections
+type TabName = 'Proyectos' | 'Sprints' | 'Aprobaciones' | 'Validaciones';
 
-// Map backend notification to local format
-function mapBackendNotification(n: any): LocalNotification {
-  let type: NotificationType = 'sistema';
-  const tipoLower = n.tipo?.toLowerCase() || '';
-
-  if (tipoLower === 'proyectos' || tipoLower === 'proyecto' || tipoLower === 'tareas' || tipoLower === 'tarea') {
-    type = 'project';
-  } else if (tipoLower === 'sprints' || tipoLower === 'sprint') {
-    type = 'sprint';
-  } else if (tipoLower === 'retrasos' || tipoLower === 'retraso') {
-    type = 'delay';
-  } else if (tipoLower === 'validaciones' || tipoLower === 'validacion') {
-    type = 'validacion';
-  } else if (tipoLower === 'aprobaciones' || tipoLower === 'aprobacion') {
-    type = 'aprobacion';
-  } else if (n.tipo === 'hu_revision') {
-    type = 'hu_revision';
-  } else if (n.tipo === 'hu_validated') {
-    type = 'hu_validated';
-  } else if (n.tipo === 'hu_rejected') {
-    type = 'hu_rejected';
-  }
-
-  // Determinar el tipo de entidad para mostrar
-  let projectType: 'Proyecto' | 'Actividad' | 'Cronograma' = 'Proyecto';
-  if (n.entidadTipo === 'actividad' || n.entidadTipo === 'Actividad') {
-    projectType = 'Actividad';
-  } else if (n.entidadTipo === 'Cronograma' || n.entidadTipo === 'cronograma') {
-    projectType = 'Cronograma';
-  }
-
-  // Construir título con código actual del proyecto si está disponible
-  let title = n.titulo;
-  const projectCode = n.proyectoCodigo;
-  const projectName = n.proyectoNombre || n.entidadNombre;
-
-  // Si tenemos datos actuales del proyecto, actualizar el título dinámicamente
-  if (projectCode && projectName) {
-    // Detectar tipo de notificación para reconstruir título con datos actuales
-    if (n.titulo?.includes('Nuevo proyecto asignado') || n.titulo?.includes('Asignado como')) {
-      if (n.titulo.includes('Scrum Master')) {
-        title = `Asignado como Scrum Master: ${projectCode}`;
-      } else if (n.titulo.includes('Coordinador')) {
-        title = `Asignado como Coordinador: ${projectCode}`;
-      } else {
-        title = `Nuevo proyecto asignado: ${projectCode}`;
-      }
-    } else if (n.titulo?.includes('Cronograma aprobado')) {
-      title = `Cronograma aprobado: ${projectName}`;
-    } else if (n.titulo?.includes('Cronograma rechazado')) {
-      title = `Cronograma rechazado: ${projectName}`;
-    } else if (n.titulo?.includes('Cronograma pendiente')) {
-      title = `Cronograma pendiente de aprobación: ${projectName}`;
-    }
-  }
-
-  return {
-    id: n.id.toString(),
-    type,
-    title,
-    description: n.descripcion || n.mensaje,
-    projectName: projectName || 'Sin proyecto',
-    projectCode,
-    projectType,
-    status: n.metadata?.estado as NotificationStatus,
-    timestamp: new Date(n.createdAt),
-    read: n.leida,
-    projectId: n.proyectoId?.toString() || n.entidadId?.toString() || '',
-    huId: n.metadata?.huId?.toString(),
-    urlAccion: n.urlAccion,
-    observacion: n.observacion, // Observación/comentario de PMO o PATROCINADOR
-  };
+interface TabDefinition {
+  name: TabName;
+  types?: NotificationType[];
+  drillDown: 'project-only' | 'project-sprint' | 'flat';
 }
 
-const TimeAgo = ({ date }: { date: Date }) => {
-  const [timeAgo, setTimeAgo] = useState('');
+const TAB_DEFINITIONS: TabDefinition[] = [
+  { name: 'Proyectos', drillDown: 'project-only' },
+  { name: 'Sprints', drillDown: 'project-sprint' },
+  { name: 'Aprobaciones', types: ['aprobacion'], drillDown: 'flat' },
+  { name: 'Validaciones', types: ['validacion', 'hu_revision', 'hu_validated', 'hu_rejected'], drillDown: 'flat' },
+];
 
-  useEffect(() => {
-    const update = () => {
-      const formatted = formatDistanceToNow(date, { addSuffix: true, locale: es });
-      setTimeAgo(formatted);
-    };
-
-    update();
-    const intervalId = setInterval(update, 60000);
-
-    return () => clearInterval(intervalId);
-  }, [date]);
-
-  return <span className="text-sm text-gray-500 whitespace-nowrap">{timeAgo}</span>;
-};
-
-const NotificationCard = ({
-  notification,
-  onClick,
-  onViewObservacion,
-}: {
-  notification: LocalNotification,
-  onClick: (notification: LocalNotification) => void,
-  onViewObservacion?: (notification: LocalNotification) => void,
-}) => {
-  const isUnread = !notification.read;
-
-  const handleViewObservacion = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Evitar que se propague el click al card
-    if (onViewObservacion) {
-      onViewObservacion(notification);
-    }
-  };
-
-  return (
-    <div
-      className={cn(
-        "relative flex items-center gap-4 p-4 rounded-lg cursor-pointer transition-colors duration-300 hover:bg-gray-200/50 border",
-        notification.read ? 'bg-gray-100 border-gray-200' : 'bg-white border-transparent shadow-sm'
-      )}
-      onClick={() => onClick(notification)}
-    >
-      {isUnread && <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#018CD1] rounded-l-lg"></div>}
-
-      <div className="relative shrink-0">
-        <div className={cn("flex items-center justify-center h-10 w-10 rounded-full", isUnread ? "bg-blue-100" : "bg-gray-200")}>
-          <Folder className={cn("h-5 w-5", isUnread ? "text-[#018CD1]" : "text-gray-500")} />
-        </div>
-        {isUnread && <div className="absolute top-0 right-0 h-2.5 w-2.5 rounded-full bg-[#018CD1] border-2 border-white"></div>}
-      </div>
-
-      <div className="flex-grow flex flex-col gap-1">
-        <p className="font-semibold text-gray-800">{notification.title}</p>
-        {notification.description && (
-          <p className="text-sm text-gray-600">{notification.description}</p>
-        )}
-        {notification.status && (
-          <Badge className={cn(statusStyles[notification.status]?.bg, statusStyles[notification.status]?.text, "font-semibold text-xs w-fit")}>
-            {notification.status}
-          </Badge>
-        )}
-        {notification.projectName && notification.projectName !== 'Sin proyecto' && (
-          <Badge variant="outline" className="bg-[#E9F4FF] border-transparent text-black text-xs w-fit">
-            {notification.projectType}: {notification.projectName}
-          </Badge>
-        )}
-        {/* Botón Ver Observaciones cuando existe observación */}
-        {notification.observacion && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-fit mt-1 text-xs"
-            onClick={handleViewObservacion}
-          >
-            <MessageSquare className="h-3 w-3 mr-1" />
-            Ver Observaciones
-          </Button>
-        )}
-      </div>
-
-      <div className="shrink-0 ml-auto self-start">
-        <TimeAgo date={notification.timestamp} />
-      </div>
-    </div>
-  );
-};
+function getTabsForRole(role?: string): TabDefinition[] {
+  if (role === ROLES.SCRUM_MASTER || role === ROLES.COORDINADOR || role === ROLES.PMO) {
+    return TAB_DEFINITIONS;
+  }
+  if (role === ROLES.PATROCINADOR) {
+    return TAB_DEFINITIONS.filter(tab => tab.name !== 'Sprints');
+  }
+  return TAB_DEFINITIONS.filter(tab => tab.name === 'Proyectos');
+}
 
 export default function NotificationsPage() {
-  const [activeTab, setActiveTab] = useState('Proyectos');
-  const [notifications, setNotifications] = useState<LocalNotification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [viewingObservacion, setViewingObservacion] = useState<LocalNotification | null>(null);
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Handler para ver observaciones
-  const handleViewObservacion = (notification: LocalNotification) => {
-    setViewingObservacion(notification);
-  };
+  // Tab state
+  const TABS = getTabsForRole(user?.role);
+  const [activeTab, setActiveTab] = useState<TabName>(TABS[0]?.name || 'Proyectos');
 
-  // Load notifications from backend
-  const loadNotifications = useCallback(async () => {
+  // Navigation drill-down state
+  const [navStack, setNavStack] = useState<NavLevel>({ level: 'proyectos' });
+
+  // Data state
+  const [proyectoGroups, setProyectoGroups] = useState<ProyectoGroup[]>([]);
+  const [sprintGroups, setSprintGroups] = useState<SprintGroup[]>([]);
+  const [notifications, setNotifications] = useState<LocalNotification[]>([]);
+  const [flatNotifications, setFlatNotifications] = useState<LocalNotification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [flatPage, setFlatPage] = useState(1);
+  const [flatTotalItems, setFlatTotalItems] = useState(0);
+
+  // Delete mode state
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedProyectoIds, setSelectedProyectoIds] = useState<Set<number>>(new Set());
+  const [selectedNotificationIds, setSelectedNotificationIds] = useState<Set<string>>(new Set());
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Observacion dialog
+  const [viewingObservacion, setViewingObservacion] = useState<LocalNotification | null>(null);
+
+  const currentTab = TABS.find(t => t.name === activeTab) || TABS[0];
+
+  // Reset nav, selection and page when tab changes
+  useEffect(() => {
+    setNavStack({ level: 'proyectos' });
+    setDeleteMode(false);
+    setSelectedProyectoIds(new Set());
+    setSelectedNotificationIds(new Set());
+    setPage(1);
+    setFlatPage(1);
+  }, [activeTab]);
+
+  // Load data based on current tab and nav level
+  const loadData = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
     try {
-      const response = await getNotificaciones();
-      const mapped = response.notificaciones.map(mapBackendNotification);
-      setNotifications(mapped.sort((a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      ));
-    } catch (err: any) {
-      console.error('Error loading notifications:', err);
-      setError('Error al cargar las notificaciones');
-      // Show empty state instead of mock data
-      setNotifications([]);
+      if (currentTab?.drillDown === 'flat') {
+        // For flat tabs we filter client-side by type, so fetch more from backend
+        // and paginate client-side
+        const response = await getNotificaciones({ limit: 200 });
+        const mapped = response.notificaciones
+          .map(mapBackendNotification)
+          .filter(n => currentTab.types?.includes(n.type))
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setFlatTotalItems(mapped.length);
+        // Client-side pagination for flat tabs
+        const start = (flatPage - 1) * PAGE_SIZE;
+        setFlatNotifications(mapped.slice(start, start + PAGE_SIZE));
+      } else if (navStack.level === 'proyectos') {
+        const groups = await getNotificacionesAgrupadasPorProyecto();
+        setProyectoGroups(groups);
+      } else if (navStack.level === 'sprints') {
+        const groups = await getNotificacionesAgrupadasPorSprint(navStack.proyectoId);
+        setSprintGroups(groups);
+      } else if (navStack.level === 'notificaciones') {
+        const filters: Record<string, any> = {
+          proyectoId: navStack.proyectoId,
+          limit: PAGE_SIZE,
+          page,
+        };
+        if (navStack.sprintId) {
+          filters.entidadId = navStack.sprintId;
+          filters.tipo = 'Sprints';
+        }
+        const response = await getNotificaciones(filters);
+        const mapped = response.notificaciones
+          .map(mapBackendNotification)
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setNotifications(mapped);
+        setTotalItems(response.total);
+      }
+    } catch (err) {
+      console.error('Error loading data:', err);
+      toast({ title: 'Error', description: 'Error al cargar las notificaciones', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentTab, navStack, page, flatPage, toast]);
 
   useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    loadData();
+  }, [loadData]);
 
+  // Navigation handlers
+  const handleProyectoClick = (proyectoId: number, proyectoNombre: string, proyectoCodigo: string) => {
+    if (currentTab?.drillDown === 'project-sprint') {
+      setNavStack({ level: 'sprints', proyectoId, proyectoNombre, proyectoCodigo });
+    } else {
+      setNavStack({ level: 'notificaciones', proyectoId, proyectoNombre, proyectoCodigo });
+    }
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedProyectoIds(new Set());
+    setSelectedNotificationIds(new Set());
+  };
+
+  const handleSprintClick = (sprintId: number, sprintNombre: string) => {
+    if (navStack.level === 'sprints') {
+      setNavStack({
+        level: 'notificaciones',
+        proyectoId: navStack.proyectoId,
+        proyectoNombre: navStack.proyectoNombre,
+        proyectoCodigo: navStack.proyectoCodigo,
+        sprintId,
+        sprintNombre,
+      });
+      setPage(1);
+      setDeleteMode(false);
+      setSelectedNotificationIds(new Set());
+    }
+  };
+
+  const handleBack = () => {
+    if (navStack.level === 'notificaciones' && navStack.sprintId) {
+      setNavStack({
+        level: 'sprints',
+        proyectoId: navStack.proyectoId,
+        proyectoNombre: navStack.proyectoNombre,
+        proyectoCodigo: navStack.proyectoCodigo,
+      });
+    } else {
+      setNavStack({ level: 'proyectos' });
+    }
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedProyectoIds(new Set());
+    setSelectedNotificationIds(new Set());
+  };
+
+  // Page change handlers
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    setSelectedNotificationIds(new Set());
+  };
+
+  const handleFlatPageChange = (newPage: number) => {
+    setFlatPage(newPage);
+    setSelectedNotificationIds(new Set());
+  };
+
+  // Notification click handler
   const handleNotificationClick = async (clickedNotification: LocalNotification) => {
-    if (!clickedNotification) return;
+    if (deleteMode) return;
 
-    // Mark as read in state
-    setNotifications(
-      notifications.map(n => n.id === clickedNotification.id ? { ...n, read: true } : n)
+    setNotifications(prev =>
+      prev.map(n => n.id === clickedNotification.id ? { ...n, read: true } : n)
+    );
+    setFlatNotifications(prev =>
+      prev.map(n => n.id === clickedNotification.id ? { ...n, read: true } : n)
     );
 
-    // Mark as read in backend
     try {
       await marcarNotificacionLeida(clickedNotification.id);
     } catch (err) {
       console.error('Error marking notification as read:', err);
     }
 
-    // Navigate based on notification type
-    // For validacion/aprobacion notifications, use urlAccion to navigate directly
     if ((clickedNotification.type === 'validacion' || clickedNotification.type === 'aprobacion') && clickedNotification.urlAccion) {
-      // Transform old URL format to new format if needed
-      // Old: /poi/proyectos/58/cronograma -> New: /poi/proyecto/detalles?id=58&tab=Cronograma
       let targetUrl = clickedNotification.urlAccion;
       const oldUrlMatch = targetUrl.match(/^\/poi\/proyectos\/(\d+)\/cronograma$/);
       if (oldUrlMatch) {
@@ -297,11 +261,8 @@ export default function NotificationsPage() {
         : paths.poi.actividad.lista;
       router.push(`${backlogRoute}?tab=Backlog`);
     } else if (clickedNotification.type === 'project' && clickedNotification.urlAccion) {
-      // La URL ya incluye ?id=X&tab=Backlog o ?id=X&tab=Lista
-      // Las páginas de detalles cargan los datos desde la API usando el ID del query param
       router.push(clickedNotification.urlAccion);
     } else if (clickedNotification.projectId) {
-      // Fallback: usar la ruta de detalles con query param
       const route = clickedNotification.projectType === 'Proyecto'
         ? `/poi/proyecto/detalles?id=${clickedNotification.projectId}`
         : `/poi/actividad/detalles?id=${clickedNotification.projectId}`;
@@ -309,10 +270,11 @@ export default function NotificationsPage() {
     }
   };
 
+  // Mark all read handlers
   const handleMarkAllRead = async () => {
     try {
       await marcarTodasLeidas();
-      setNotifications(notifications.map(n => ({ ...n, read: true })));
+      setFlatNotifications(prev => prev.map(n => ({ ...n, read: true })));
       toast({ title: 'Listo', description: 'Todas las notificaciones marcadas como leídas' });
     } catch (err) {
       console.error('Error marking all as read:', err);
@@ -320,52 +282,200 @@ export default function NotificationsPage() {
     }
   };
 
-  // Pestañas disponibles según rol:
-  // - SCRUM_MASTER / COORDINADOR: Proyectos, Sprints, Aprobaciones, Validaciones
-  // - PMO: Proyectos, Sprints, Aprobaciones, Validaciones
-  // - PATROCINADOR: Proyectos, Aprobaciones, Validaciones
-  // - ADMIN: Solo Proyectos (maneja RRHH)
-  const TAB_DEFINITIONS: { name: string, type: NotificationType | NotificationType[] | 'all' }[] = [
-    { name: 'Proyectos', type: 'project' },
-    { name: 'Sprints', type: 'sprint' },
-    { name: 'Aprobaciones', type: 'aprobacion' }, // Resultados de aprobación/rechazo de PMO/PATROCINADOR
-    { name: 'Validaciones', type: ['validacion', 'hu_revision', 'hu_validated', 'hu_rejected'] }, // Solicitudes pendientes de validar/aprobar
-  ];
-
-  const getTabsForRole = (): typeof TAB_DEFINITIONS => {
-    const role = user?.role;
-
-    if (role === ROLES.SCRUM_MASTER || role === ROLES.COORDINADOR) {
-      // Proyectos, Sprints, Aprobaciones, Validaciones
-      return TAB_DEFINITIONS;
+  const handleMarkAllReadByProject = async () => {
+    if (navStack.level !== 'notificaciones') return;
+    try {
+      await marcarTodasLeidasPorProyecto(navStack.proyectoId);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      toast({ title: 'Listo', description: 'Notificaciones marcadas como leídas' });
+    } catch (err) {
+      console.error('Error marking project notifications as read:', err);
+      toast({ title: 'Error', description: 'No se pudieron marcar las notificaciones', variant: 'destructive' });
     }
-
-    if (role === ROLES.PMO) {
-      // Proyectos, Sprints, Aprobaciones, Validaciones
-      return TAB_DEFINITIONS;
-    }
-
-    if (role === ROLES.PATROCINADOR) {
-      // Proyectos, Aprobaciones, Validaciones (sin Sprints)
-      return TAB_DEFINITIONS.filter(tab => tab.name !== 'Sprints');
-    }
-
-    // ADMIN y otros roles: solo Proyectos
-    return TAB_DEFINITIONS.filter(tab => tab.name === 'Proyectos');
   };
 
-  const TABS = getTabsForRole();
-
-  const currentTabType = TABS.find(t => t.name === activeTab)?.type;
-  const filteredNotifications = notifications.filter(n => {
-    if (!currentTabType) return true;
-    if (Array.isArray(currentTabType)) {
-      return currentTabType.includes(n.type);
+  // Delete mode handlers
+  const toggleDeleteMode = () => {
+    if (deleteMode) {
+      setDeleteMode(false);
+      setSelectedProyectoIds(new Set());
+      setSelectedNotificationIds(new Set());
+    } else {
+      setDeleteMode(true);
     }
-    return n.type === currentTabType;
-  });
+  };
 
-  const unreadCount = filteredNotifications.filter(n => !n.read).length;
+  const toggleProyectoSelect = (id: number) => {
+    setSelectedProyectoIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleNotificationSelect = (id: string) => {
+    setSelectedNotificationIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    setIsDeleting(true);
+    try {
+      if (navStack.level === 'proyectos' && selectedProyectoIds.size > 0) {
+        await bulkDeleteByProyectos(Array.from(selectedProyectoIds));
+        setProyectoGroups(prev => prev.filter(g => !selectedProyectoIds.has(g.proyectoId)));
+        toast({ title: 'Listo', description: `${selectedProyectoIds.size} proyecto(s) eliminados` });
+      } else if (navStack.level === 'notificaciones' && selectedNotificationIds.size > 0) {
+        const ids = Array.from(selectedNotificationIds).map(Number);
+        await bulkDeleteNotificaciones(ids);
+        toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificación(es) eliminadas` });
+        loadData();
+      } else if (currentTab?.drillDown === 'flat' && selectedNotificationIds.size > 0) {
+        const ids = Array.from(selectedNotificationIds).map(Number);
+        await bulkDeleteNotificaciones(ids);
+        toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificación(es) eliminadas` });
+        loadData();
+      }
+    } catch (err) {
+      console.error('Error deleting:', err);
+      toast({ title: 'Error', description: 'No se pudieron eliminar las notificaciones', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
+      setDeleteMode(false);
+      setSelectedProyectoIds(new Set());
+      setSelectedNotificationIds(new Set());
+    }
+  };
+
+  // Count selected items for toolbar
+  const selectedCount = navStack.level === 'proyectos'
+    ? selectedProyectoIds.size
+    : selectedNotificationIds.size;
+
+  // Calculate unread counts for current view
+  const currentUnreadCount = (() => {
+    if (currentTab?.drillDown === 'flat') {
+      return flatNotifications.filter(n => !n.read).length;
+    }
+    if (navStack.level === 'proyectos') {
+      return proyectoGroups.reduce((sum, g) => sum + g.noLeidas, 0);
+    }
+    if (navStack.level === 'notificaciones') {
+      return notifications.filter(n => !n.read).length;
+    }
+    return 0;
+  })();
+
+  // Pagination calculations
+  const drillTotalPages = Math.ceil(totalItems / PAGE_SIZE);
+  const flatTotalPages = Math.ceil(flatTotalItems / PAGE_SIZE);
+
+  // Render content
+  const renderContent = () => {
+    // Flat tab (aprobaciones/validaciones)
+    if (currentTab?.drillDown === 'flat') {
+      if (isLoading) {
+        return (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+          </div>
+        );
+      }
+      if (flatNotifications.length === 0 && flatTotalItems === 0) {
+        return (
+          <div className="text-center py-10 text-gray-500">
+            No hay notificaciones en esta categoría.
+          </div>
+        );
+      }
+      return (
+        <>
+          <div className="space-y-3">
+            {flatNotifications.map(notification => (
+              <NotificationCard
+                key={notification.id}
+                notification={notification}
+                onClick={handleNotificationClick}
+                onViewObservacion={setViewingObservacion}
+                checkbox={deleteMode}
+                checked={selectedNotificationIds.has(notification.id)}
+                onCheckChange={() => toggleNotificationSelect(notification.id)}
+              />
+            ))}
+          </div>
+          <PaginationControls
+            page={flatPage}
+            totalPages={flatTotalPages}
+            total={flatTotalItems}
+            limit={PAGE_SIZE}
+            onPageChange={handleFlatPageChange}
+          />
+        </>
+      );
+    }
+
+    // Drill-down tabs
+    if (navStack.level === 'proyectos') {
+      return (
+        <ProyectoBlockList
+          groups={proyectoGroups}
+          loading={isLoading}
+          deleteMode={deleteMode}
+          selectedIds={selectedProyectoIds}
+          onToggleSelect={toggleProyectoSelect}
+          onProyectoClick={handleProyectoClick}
+        />
+      );
+    }
+
+    if (navStack.level === 'sprints') {
+      return (
+        <SprintBlockList
+          groups={sprintGroups}
+          loading={isLoading}
+          proyectoNombre={navStack.proyectoNombre}
+          proyectoCodigo={navStack.proyectoCodigo}
+          deleteMode={deleteMode}
+          selectedIds={new Set()}
+          onToggleSelect={() => {}}
+          onSprintClick={handleSprintClick}
+          onBack={handleBack}
+        />
+      );
+    }
+
+    if (navStack.level === 'notificaciones') {
+      return (
+        <NotificationList
+          notifications={notifications}
+          loading={isLoading}
+          proyectoNombre={navStack.proyectoNombre}
+          proyectoCodigo={navStack.proyectoCodigo}
+          sprintNombre={navStack.sprintNombre}
+          deleteMode={deleteMode}
+          selectedIds={selectedNotificationIds}
+          onToggleSelect={toggleNotificationSelect}
+          onNotificationClick={handleNotificationClick}
+          onViewObservacion={setViewingObservacion}
+          onMarkAllRead={handleMarkAllReadByProject}
+          onBack={handleBack}
+          hasUnread={notifications.some(n => !n.read)}
+          page={page}
+          totalPages={drillTotalPages}
+          total={totalItems}
+          limit={PAGE_SIZE}
+          onPageChange={handlePageChange}
+        />
+      );
+    }
+
+    return null;
+  };
 
   return (
     <ProtectedRoute module={MODULES.NOTIFICACIONES}>
@@ -374,28 +484,51 @@ export default function NotificationsPage() {
           <div className="p-2 flex items-center justify-between w-full">
             <h2 className="font-bold text-black pl-2">NOTIFICACIONES</h2>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadNotifications}
-                disabled={isLoading}
-              >
-                <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
-                Actualizar
-              </Button>
-              {unreadCount > 0 && (
+              {!deleteMode && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleDeleteMode}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Eliminar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={loadData}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
+                    Actualizar
+                  </Button>
+                  {currentTab?.drillDown === 'flat' && currentUnreadCount > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleMarkAllRead}
+                    >
+                      Marcar todas como leídas
+                    </Button>
+                  )}
+                </>
+              )}
+              {deleteMode && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleMarkAllRead}
+                  onClick={toggleDeleteMode}
                 >
-                  Marcar todas como leídas
+                  Cancelar
                 </Button>
               )}
             </div>
           </div>
         </div>
+
         <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
+          {/* Tabs */}
           <div className="flex items-center mb-6 gap-2">
             {TABS.map(tab => (
               <Button
@@ -414,66 +547,39 @@ export default function NotificationsPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3 mb-4">
-            <BellRing className="h-6 w-6 text-gray-700" />
-            <h3 className="text-xl font-bold text-gray-800">Mis Notificaciones</h3>
-            {unreadCount > 0 && (
-              <Badge variant="secondary">{unreadCount} sin leer</Badge>
-            )}
-          </div>
+          {/* Header with count */}
+          {(navStack.level === 'proyectos' || currentTab?.drillDown === 'flat') && (
+            <div className="flex items-center gap-3 mb-4">
+              <BellRing className="h-6 w-6 text-gray-700" />
+              <h3 className="text-xl font-bold text-gray-800">Mis Notificaciones</h3>
+              {currentUnreadCount > 0 && (
+                <Badge variant="secondary">{currentUnreadCount} sin leer</Badge>
+              )}
+            </div>
+          )}
 
-          <div className="space-y-3">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
-              </div>
-            ) : error ? (
-              <div className="text-center py-10">
-                <p className="text-red-500 mb-4">{error}</p>
-                <Button variant="outline" onClick={loadNotifications}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Reintentar
-                </Button>
-              </div>
-            ) : filteredNotifications.length > 0 ? (
-              filteredNotifications.map(notification => (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  onClick={handleNotificationClick}
-                  onViewObservacion={handleViewObservacion}
-                />
-              ))
-            ) : (
-              <div className="text-center py-10 text-gray-500">
-                No hay notificaciones en esta categoría.
-              </div>
-            )}
-          </div>
+          {/* Content */}
+          {renderContent()}
         </div>
       </AppLayout>
 
-      {/* Dialog para ver observaciones */}
-      <Dialog open={!!viewingObservacion} onOpenChange={(open) => !open && setViewingObservacion(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-blue-600" />
-              Observaciones
-            </DialogTitle>
-            <DialogDescription>
-              {viewingObservacion?.title}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <div className="p-4 bg-gray-50 rounded-lg border">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                {viewingObservacion?.observacion || 'Sin observaciones'}
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Delete toolbar */}
+      {deleteMode && selectedCount > 0 && (
+        <DeleteToolbar
+          selectedCount={selectedCount}
+          onDelete={handleDeleteSelected}
+          onCancel={toggleDeleteMode}
+          deleting={isDeleting}
+        />
+      )}
+
+      {/* Observacion dialog */}
+      <ObservacionDialog
+        open={!!viewingObservacion}
+        onOpenChange={(open) => !open && setViewingObservacion(null)}
+        title={viewingObservacion?.title}
+        observacion={viewingObservacion?.observacion}
+      />
     </ProtectedRoute>
   );
 }

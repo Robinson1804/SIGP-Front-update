@@ -27,13 +27,32 @@ export interface NotificacionesResponse {
   notificaciones: Notificacion[];
   total: number;
   noLeidas: number;
+  page: number;
+  limit: number;
 }
 
 export interface NotificacionFilters {
   tipo?: string;
   leida?: boolean;
   limit?: number;
-  offset?: number;
+  page?: number;
+  proyectoId?: number;
+  entidadId?: number;
+}
+
+export interface ProyectoGroup {
+  proyectoId: number;
+  proyectoCodigo: string;
+  proyectoNombre: string;
+  total: number;
+  noLeidas: number;
+}
+
+export interface SprintGroup {
+  sprintId: number;
+  sprintNombre: string;
+  total: number;
+  noLeidas: number;
 }
 
 /**
@@ -43,21 +62,33 @@ export async function getNotificaciones(
   filters?: NotificacionFilters
 ): Promise<NotificacionesResponse> {
   try {
-    const response = await apiClient.get<Notificacion[]>(
+    const response = await apiClient.get(
       ENDPOINTS.NOTIFICACIONES.BASE,
       { params: filters }
     );
-    // Backend returns array directly in data, wrap it in expected format
-    const notificaciones = Array.isArray(response.data) ? response.data : [];
+    const raw = response.data;
+    // Backend returns { data: [...], total, page, limit }
+    if (raw && Array.isArray(raw.data)) {
+      return {
+        notificaciones: raw.data,
+        total: raw.total ?? raw.data.length,
+        noLeidas: raw.data.filter((n: any) => !n.leida).length,
+        page: raw.page ?? 1,
+        limit: raw.limit ?? 10,
+      };
+    }
+    // Fallback: backend returns array directly
+    const notificaciones = Array.isArray(raw) ? raw : [];
     return {
       notificaciones,
       total: notificaciones.length,
-      noLeidas: notificaciones.filter(n => !n.leida).length,
+      noLeidas: notificaciones.filter((n: any) => !n.leida).length,
+      page: 1,
+      limit: 10,
     };
   } catch (error) {
     console.error('Error fetching notificaciones:', error);
-    // Return empty response if endpoint not available
-    return { notificaciones: [], total: 0, noLeidas: 0 };
+    return { notificaciones: [], total: 0, noLeidas: 0, page: 1, limit: 10 };
   }
 }
 
@@ -112,6 +143,75 @@ export async function deleteNotificacion(id: number | string): Promise<void> {
   await apiClient.delete(ENDPOINTS.NOTIFICACIONES.BY_ID(id));
 }
 
+/**
+ * Obtener notificaciones agrupadas por proyecto
+ */
+export async function getNotificacionesAgrupadasPorProyecto(): Promise<ProyectoGroup[]> {
+  try {
+    const response = await apiClient.get<ProyectoGroup[]>(
+      ENDPOINTS.NOTIFICACIONES.AGRUPADAS_PROYECTOS
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching grouped notifications by project:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtener notificaciones agrupadas por sprint para un proyecto
+ */
+export async function getNotificacionesAgrupadasPorSprint(proyectoId: number): Promise<SprintGroup[]> {
+  try {
+    const response = await apiClient.get<SprintGroup[]>(
+      ENDPOINTS.NOTIFICACIONES.AGRUPADAS_SPRINTS(proyectoId)
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching grouped notifications by sprint:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtener notificaciones de un proyecto específico
+ */
+export async function getNotificacionesPorProyecto(
+  proyectoId: number,
+  filters?: Omit<NotificacionFilters, 'proyectoId'>
+): Promise<NotificacionesResponse> {
+  return getNotificaciones({ ...filters, proyectoId });
+}
+
+/**
+ * Marcar todas como leídas por proyecto
+ */
+export async function marcarTodasLeidasPorProyecto(proyectoId: number): Promise<void> {
+  await apiClient.patch(ENDPOINTS.NOTIFICACIONES.LEER_TODAS_PROYECTO(proyectoId));
+}
+
+/**
+ * Soft delete masivo de notificaciones por IDs
+ */
+export async function bulkDeleteNotificaciones(ids: number[]): Promise<{ eliminadas: number }> {
+  const response = await apiClient.delete<{ eliminadas: number }>(
+    ENDPOINTS.NOTIFICACIONES.BULK_DELETE,
+    { data: { ids } }
+  );
+  return response.data;
+}
+
+/**
+ * Soft delete de todas las notificaciones de proyectos específicos
+ */
+export async function bulkDeleteByProyectos(proyectoIds: number[]): Promise<{ eliminadas: number }> {
+  const response = await apiClient.delete<{ eliminadas: number }>(
+    ENDPOINTS.NOTIFICACIONES.BULK_DELETE_PROYECTOS,
+    { data: { proyectoIds } }
+  );
+  return response.data;
+}
+
 // Export service object
 export const notificacionesService = {
   getNotificaciones,
@@ -120,4 +220,10 @@ export const notificacionesService = {
   marcarNotificacionLeida,
   marcarTodasLeidas,
   deleteNotificacion,
+  getNotificacionesAgrupadasPorProyecto,
+  getNotificacionesAgrupadasPorSprint,
+  getNotificacionesPorProyecto,
+  marcarTodasLeidasPorProyecto,
+  bulkDeleteNotificaciones,
+  bulkDeleteByProyectos,
 };
