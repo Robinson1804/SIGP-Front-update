@@ -364,10 +364,12 @@ export default function NotificationsPage() {
         : paths.poi.actividad.lista;
       router.push(backlogRoute);
     } else if (clickedNotification.type === 'sprint' || clickedNotification.type === 'delay') {
-      const backlogRoute = clickedNotification.projectType === 'Proyecto'
-        ? paths.poi.proyecto.backlog.base
-        : paths.poi.actividad.lista;
-      router.push(`${backlogRoute}?tab=Backlog`);
+      if (clickedNotification.projectType === 'Proyecto' && clickedNotification.projectId) {
+        // Navegar a detalles del proyecto con tab Backlog
+        router.push(`/poi/proyecto/detalles?id=${clickedNotification.projectId}&tab=Backlog`);
+      } else {
+        router.push(paths.poi.actividad.lista);
+      }
     } else if (clickedNotification.type === 'project' && clickedNotification.urlAccion) {
       router.push(clickedNotification.urlAccion);
     } else if (clickedNotification.projectId) {
