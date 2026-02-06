@@ -18,14 +18,20 @@ import {
   getNotificacionesAgrupadasPorProyecto,
   getNotificacionesAgrupadasPorSprint,
   getSeccionCountsByProyecto,
+  getNotificacionesAgrupadasPorActividad,
+  getSeccionCountsByActividad,
   marcarNotificacionLeida,
   marcarTodasLeidas,
   marcarTodasLeidasPorProyecto,
+  marcarTodasLeidasPorActividad,
   bulkDeleteNotificaciones,
   bulkDeleteByProyectos,
+  bulkDeleteByActividades,
   type ProyectoGroup,
   type SprintGroup,
   type SeccionCounts,
+  type ActividadGroup,
+  type ActividadSeccionCounts,
 } from '@/lib/services/notificaciones.service';
 import {
   NotificationCard,
@@ -36,6 +42,8 @@ import {
 import { ProyectoBlockList } from './components/proyecto-block-list';
 import { SprintBlockList } from './components/sprint-block-list';
 import { SeccionBlockList, type SeccionName } from './components/seccion-block-list';
+import { ActividadBlockList } from './components/actividad-block-list';
+import { ActividadSeccionBlockList, type ActividadSeccionName } from './components/actividad-seccion-block-list';
 import { NotificationList } from './components/notification-list';
 import { DeleteToolbar } from './components/delete-toolbar';
 import { ObservacionDialog } from './components/observacion-dialog';
@@ -43,12 +51,18 @@ import { PaginationControls } from './components/pagination-controls';
 
 const PAGE_SIZE = 5;
 
-// Mapeo seccion → tipo backend
+// Mapeo seccion → tipo backend (for projects)
 const SECCION_TO_TIPO: Record<SeccionName, string> = {
   asignaciones: 'Proyectos',
   sprints: 'Sprints',
   aprobaciones: 'Aprobaciones',
   validaciones: 'Validaciones',
+};
+
+// Mapeo seccion → tipo backend (for activities)
+const ACTIVIDAD_SECCION_TO_TIPO: Record<ActividadSeccionName, string> = {
+  asignaciones: 'Proyectos', // Activity assignments use same type
+  tareas: 'Tareas',
 };
 
 // Tab types - PMO has Proyectos/Actividades, others have different tabs
@@ -61,6 +75,12 @@ type PmoNavLevel =
   | { level: 'proyectos' }
   | { level: 'secciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string }
   | { level: 'notificaciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string; seccion: SeccionName };
+
+// Navigation state types for PMO (Actividades tab)
+type PmoActividadNavLevel =
+  | { level: 'actividades' }
+  | { level: 'secciones'; actividadId: number; actividadNombre: string; actividadCodigo: string }
+  | { level: 'notificaciones'; actividadId: number; actividadNombre: string; actividadCodigo: string; seccion: ActividadSeccionName };
 
 // Navigation state types for other roles
 type OtherNavLevel =
@@ -107,6 +127,7 @@ export default function NotificationsPage() {
 
   // Navigation state - different for PMO vs other roles
   const [pmoNavStack, setPmoNavStack] = useState<PmoNavLevel>({ level: 'proyectos' });
+  const [pmoActividadNavStack, setPmoActividadNavStack] = useState<PmoActividadNavLevel>({ level: 'actividades' });
   const [otherNavStack, setOtherNavStack] = useState<OtherNavLevel>({ level: 'proyectos' });
 
   // Data state
@@ -117,6 +138,12 @@ export default function NotificationsPage() {
     sprints: { total: 0, noLeidas: 0 },
     aprobaciones: { total: 0, noLeidas: 0 },
     validaciones: { total: 0, noLeidas: 0 },
+  });
+  // Activity data state (PMO Actividades tab)
+  const [actividadGroups, setActividadGroups] = useState<ActividadGroup[]>([]);
+  const [actividadSeccionCounts, setActividadSeccionCounts] = useState<ActividadSeccionCounts>({
+    asignaciones: { total: 0, noLeidas: 0 },
+    tareas: { total: 0, noLeidas: 0 },
   });
   const [notifications, setNotifications] = useState<LocalNotification[]>([]);
   const [flatNotifications, setFlatNotifications] = useState<LocalNotification[]>([]);
@@ -131,6 +158,7 @@ export default function NotificationsPage() {
   // Delete mode state
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedProyectoIds, setSelectedProyectoIds] = useState<Set<number>>(new Set());
+  const [selectedActividadIds, setSelectedActividadIds] = useState<Set<number>>(new Set());
   const [selectedNotificationIds, setSelectedNotificationIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -144,11 +172,13 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (isPmo) {
       setPmoNavStack({ level: 'proyectos' });
+      setPmoActividadNavStack({ level: 'actividades' });
     } else {
       setOtherNavStack({ level: 'proyectos' });
     }
     setDeleteMode(false);
     setSelectedProyectoIds(new Set());
+    setSelectedActividadIds(new Set());
     setSelectedNotificationIds(new Set());
     setPage(1);
     setFlatPage(1);
@@ -161,31 +191,49 @@ export default function NotificationsPage() {
       if (isPmo) {
         // PMO Navigation Flow
         if (activeTab === 'Actividades') {
-          // Placeholder for Actividades tab
-          setIsLoading(false);
-          return;
-        }
-
-        // Tab Proyectos for PMO
-        if (pmoNavStack.level === 'proyectos') {
-          const groups = await getNotificacionesAgrupadasPorProyecto();
-          setProyectoGroups(groups);
-        } else if (pmoNavStack.level === 'secciones') {
-          const counts = await getSeccionCountsByProyecto(pmoNavStack.proyectoId);
-          setSeccionCounts(counts);
-        } else if (pmoNavStack.level === 'notificaciones') {
-          const tipo = SECCION_TO_TIPO[pmoNavStack.seccion];
-          const response = await getNotificaciones({
-            proyectoId: pmoNavStack.proyectoId,
-            tipo,
-            page,
-            limit: PAGE_SIZE,
-          });
-          const mapped = response.notificaciones
-            .map(mapBackendNotification)
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-          setNotifications(mapped);
-          setTotalItems(response.total);
+          // Tab Actividades for PMO
+          if (pmoActividadNavStack.level === 'actividades') {
+            const groups = await getNotificacionesAgrupadasPorActividad();
+            setActividadGroups(groups);
+          } else if (pmoActividadNavStack.level === 'secciones') {
+            const counts = await getSeccionCountsByActividad(pmoActividadNavStack.actividadId);
+            setActividadSeccionCounts(counts);
+          } else if (pmoActividadNavStack.level === 'notificaciones') {
+            const tipo = ACTIVIDAD_SECCION_TO_TIPO[pmoActividadNavStack.seccion];
+            const response = await getNotificaciones({
+              actividadId: pmoActividadNavStack.actividadId,
+              tipo,
+              page,
+              limit: PAGE_SIZE,
+            });
+            const mapped = response.notificaciones
+              .map(mapBackendNotification)
+              .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+            setNotifications(mapped);
+            setTotalItems(response.total);
+          }
+        } else {
+          // Tab Proyectos for PMO
+          if (pmoNavStack.level === 'proyectos') {
+            const groups = await getNotificacionesAgrupadasPorProyecto();
+            setProyectoGroups(groups);
+          } else if (pmoNavStack.level === 'secciones') {
+            const counts = await getSeccionCountsByProyecto(pmoNavStack.proyectoId);
+            setSeccionCounts(counts);
+          } else if (pmoNavStack.level === 'notificaciones') {
+            const tipo = SECCION_TO_TIPO[pmoNavStack.seccion];
+            const response = await getNotificaciones({
+              proyectoId: pmoNavStack.proyectoId,
+              tipo,
+              page,
+              limit: PAGE_SIZE,
+            });
+            const mapped = response.notificaciones
+              .map(mapBackendNotification)
+              .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+            setNotifications(mapped);
+            setTotalItems(response.total);
+          }
         }
       } else {
         // Non-PMO Navigation Flow (existing logic)
@@ -230,7 +278,7 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isPmo, activeTab, pmoNavStack, otherNavStack, currentNonPmoTab, page, flatPage, toast]);
+  }, [isPmo, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, currentNonPmoTab, page, flatPage, toast]);
 
   useEffect(() => {
     loadData();
@@ -274,6 +322,47 @@ export default function NotificationsPage() {
     setPage(1);
     setDeleteMode(false);
     setSelectedProyectoIds(new Set());
+    setSelectedNotificationIds(new Set());
+  };
+
+  // PMO Activity Navigation handlers
+  const handlePmoActividadClick = (actividadId: number, actividadNombre: string, actividadCodigo: string) => {
+    setPmoActividadNavStack({ level: 'secciones', actividadId, actividadNombre, actividadCodigo });
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedActividadIds(new Set());
+    setSelectedNotificationIds(new Set());
+  };
+
+  const handleActividadSeccionClick = (seccion: ActividadSeccionName) => {
+    if (pmoActividadNavStack.level === 'secciones') {
+      setPmoActividadNavStack({
+        level: 'notificaciones',
+        actividadId: pmoActividadNavStack.actividadId,
+        actividadNombre: pmoActividadNavStack.actividadNombre,
+        actividadCodigo: pmoActividadNavStack.actividadCodigo,
+        seccion,
+      });
+      setPage(1);
+      setDeleteMode(false);
+      setSelectedNotificationIds(new Set());
+    }
+  };
+
+  const handlePmoActividadBack = () => {
+    if (pmoActividadNavStack.level === 'notificaciones') {
+      setPmoActividadNavStack({
+        level: 'secciones',
+        actividadId: pmoActividadNavStack.actividadId,
+        actividadNombre: pmoActividadNavStack.actividadNombre,
+        actividadCodigo: pmoActividadNavStack.actividadCodigo,
+      });
+    } else if (pmoActividadNavStack.level === 'secciones') {
+      setPmoActividadNavStack({ level: 'actividades' });
+    }
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedActividadIds(new Set());
     setSelectedNotificationIds(new Set());
   };
 
@@ -427,11 +516,25 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleMarkAllReadByActivity = async () => {
+    if (pmoActividadNavStack.level !== 'notificaciones') return;
+
+    try {
+      await marcarTodasLeidasPorActividad(pmoActividadNavStack.actividadId);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      toast({ title: 'Listo', description: 'Notificaciones marcadas como leidas' });
+    } catch (err) {
+      console.error('Error marking activity notifications as read:', err);
+      toast({ title: 'Error', description: 'No se pudieron marcar las notificaciones', variant: 'destructive' });
+    }
+  };
+
   // Delete mode handlers
   const toggleDeleteMode = () => {
     if (deleteMode) {
       setDeleteMode(false);
       setSelectedProyectoIds(new Set());
+      setSelectedActividadIds(new Set());
       setSelectedNotificationIds(new Set());
     } else {
       setDeleteMode(true);
@@ -440,6 +543,15 @@ export default function NotificationsPage() {
 
   const toggleProyectoSelect = (id: number) => {
     setSelectedProyectoIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleActividadSelect = (id: number) => {
+    setSelectedActividadIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -459,9 +571,24 @@ export default function NotificationsPage() {
   const handleDeleteSelected = async () => {
     setIsDeleting(true);
     try {
-      const currentLevel = isPmo ? pmoNavStack.level : otherNavStack.level;
+      // Determine current level based on active tab
+      const currentLevel = isPmo
+        ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
+        : otherNavStack.level;
 
-      if (currentLevel === 'proyectos' && selectedProyectoIds.size > 0) {
+      if (isPmo && activeTab === 'Actividades') {
+        // Handle Actividades tab deletion
+        if (currentLevel === 'actividades' && selectedActividadIds.size > 0) {
+          await bulkDeleteByActividades(Array.from(selectedActividadIds));
+          setActividadGroups(prev => prev.filter(g => !selectedActividadIds.has(g.actividadId)));
+          toast({ title: 'Listo', description: `${selectedActividadIds.size} actividad(es) eliminadas` });
+        } else if (currentLevel === 'notificaciones' && selectedNotificationIds.size > 0) {
+          const ids = Array.from(selectedNotificationIds).map(Number);
+          await bulkDeleteNotificaciones(ids);
+          toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
+          loadData();
+        }
+      } else if (currentLevel === 'proyectos' && selectedProyectoIds.size > 0) {
         await bulkDeleteByProyectos(Array.from(selectedProyectoIds));
         setProyectoGroups(prev => prev.filter(g => !selectedProyectoIds.has(g.proyectoId)));
         toast({ title: 'Listo', description: `${selectedProyectoIds.size} proyecto(s) eliminados` });
@@ -478,15 +605,21 @@ export default function NotificationsPage() {
       setIsDeleting(false);
       setDeleteMode(false);
       setSelectedProyectoIds(new Set());
+      setSelectedActividadIds(new Set());
       setSelectedNotificationIds(new Set());
     }
   };
 
   // Count selected items for toolbar
-  const currentLevel = isPmo ? pmoNavStack.level : otherNavStack.level;
-  const selectedCount = currentLevel === 'proyectos'
-    ? selectedProyectoIds.size
-    : selectedNotificationIds.size;
+  const currentLevel = isPmo
+    ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
+    : otherNavStack.level;
+  const selectedCount = (() => {
+    if (isPmo && activeTab === 'Actividades') {
+      return currentLevel === 'actividades' ? selectedActividadIds.size : selectedNotificationIds.size;
+    }
+    return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
+  })();
 
   // Calculate unread counts for current view
   const currentUnreadCount = (() => {
@@ -494,11 +627,20 @@ export default function NotificationsPage() {
       return flatNotifications.filter(n => !n.read).length;
     }
     if (isPmo) {
-      if (pmoNavStack.level === 'proyectos') {
-        return proyectoGroups.reduce((sum, g) => sum + g.noLeidas, 0);
-      }
-      if (pmoNavStack.level === 'notificaciones') {
-        return notifications.filter(n => !n.read).length;
+      if (activeTab === 'Actividades') {
+        if (pmoActividadNavStack.level === 'actividades') {
+          return actividadGroups.reduce((sum, g) => sum + g.noLeidas, 0);
+        }
+        if (pmoActividadNavStack.level === 'notificaciones') {
+          return notifications.filter(n => !n.read).length;
+        }
+      } else {
+        if (pmoNavStack.level === 'proyectos') {
+          return proyectoGroups.reduce((sum, g) => sum + g.noLeidas, 0);
+        }
+        if (pmoNavStack.level === 'notificaciones') {
+          return notifications.filter(n => !n.read).length;
+        }
       }
     } else {
       if (otherNavStack.level === 'proyectos') {
@@ -530,13 +672,106 @@ export default function NotificationsPage() {
   const renderContent = () => {
     // PMO View
     if (isPmo) {
-      // Actividades tab placeholder
+      // Actividades tab
       if (activeTab === 'Actividades') {
-        return (
-          <div className="text-center py-10 text-gray-500">
-            Proximamente: Notificaciones de Actividades
-          </div>
-        );
+        if (pmoActividadNavStack.level === 'actividades') {
+          return (
+            <ActividadBlockList
+              groups={actividadGroups}
+              loading={isLoading}
+              deleteMode={deleteMode}
+              selectedIds={selectedActividadIds}
+              onToggleSelect={toggleActividadSelect}
+              onActividadClick={handlePmoActividadClick}
+            />
+          );
+        }
+
+        if (pmoActividadNavStack.level === 'secciones') {
+          return (
+            <ActividadSeccionBlockList
+              actividadId={pmoActividadNavStack.actividadId}
+              actividadNombre={pmoActividadNavStack.actividadNombre}
+              actividadCodigo={pmoActividadNavStack.actividadCodigo}
+              counts={actividadSeccionCounts}
+              loading={isLoading}
+              onSeccionClick={handleActividadSeccionClick}
+              onBack={handlePmoActividadBack}
+            />
+          );
+        }
+
+        if (pmoActividadNavStack.level === 'notificaciones') {
+          const getActividadSeccionLabel = (seccion: ActividadSeccionName) => {
+            const labels: Record<ActividadSeccionName, string> = {
+              asignaciones: 'Asignaciones',
+              tareas: 'Tareas',
+            };
+            return labels[seccion];
+          };
+
+          return (
+            <div>
+              {/* Custom header for PMO activity notification list */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={handlePmoActividadBack} className="gap-1">
+                    <span className="mr-1">&larr;</span>
+                    Volver
+                  </Button>
+                  <nav className="text-sm text-gray-500">
+                    <span className="text-gray-400">Actividades</span>
+                    <span className="mx-1 text-gray-400">&gt;</span>
+                    <span className="text-gray-400">{pmoActividadNavStack.actividadCodigo}</span>
+                    <span className="mx-1 text-gray-400">&gt;</span>
+                    <span className="font-medium text-gray-700">{getActividadSeccionLabel(pmoActividadNavStack.seccion)}</span>
+                  </nav>
+                </div>
+
+                {notifications.some(n => !n.read) && !deleteMode && (
+                  <Button variant="outline" size="sm" onClick={handleMarkAllReadByActivity}>
+                    Marcar todas como leidas
+                  </Button>
+                )}
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+                </div>
+              ) : notifications.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">
+                  No hay notificaciones.
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {notifications.map((notification) => (
+                      <NotificationCard
+                        key={notification.id}
+                        notification={notification}
+                        onClick={handleNotificationClick}
+                        onViewObservacion={setViewingObservacion}
+                        checkbox={deleteMode}
+                        checked={selectedNotificationIds.has(notification.id)}
+                        onCheckChange={() => toggleNotificationSelect(notification.id)}
+                      />
+                    ))}
+                  </div>
+                  <PaginationControls
+                    page={page}
+                    totalPages={drillTotalPages}
+                    total={totalItems}
+                    limit={PAGE_SIZE}
+                    onPageChange={handlePageChange}
+                  />
+                </>
+              )}
+            </div>
+          );
+        }
+
+        return null;
       }
 
       // Proyectos tab
@@ -734,7 +969,7 @@ export default function NotificationsPage() {
   // Determine which tabs to show
   const showFlatTabUnreadCount = !isPmo && currentNonPmoTab?.drillDown === 'flat' && currentUnreadCount > 0;
   const showHeaderUnreadBadge = isPmo
-    ? (pmoNavStack.level === 'proyectos' || activeTab === 'Actividades')
+    ? (pmoNavStack.level === 'proyectos' || (activeTab === 'Actividades' && pmoActividadNavStack.level === 'actividades'))
     : (otherNavStack.level === 'proyectos' || currentNonPmoTab?.drillDown === 'flat');
 
   return (

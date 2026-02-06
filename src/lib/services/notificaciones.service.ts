@@ -37,6 +37,7 @@ export interface NotificacionFilters {
   limit?: number;
   page?: number;
   proyectoId?: number;
+  actividadId?: number;
   entidadId?: number;
 }
 
@@ -53,6 +54,19 @@ export interface SprintGroup {
   sprintNombre: string;
   total: number;
   noLeidas: number;
+}
+
+export interface ActividadGroup {
+  actividadId: number;
+  actividadCodigo: string;
+  actividadNombre: string;
+  total: number;
+  noLeidas: number;
+}
+
+export interface ActividadSeccionCounts {
+  asignaciones: { total: number; noLeidas: number };
+  tareas: { total: number; noLeidas: number };
 }
 
 export interface SeccionCounts {
@@ -239,6 +253,61 @@ export async function bulkDeleteByProyectos(proyectoIds: number[]): Promise<{ el
   return response.data;
 }
 
+// ==========================================
+// Activity-related functions (PMO Actividades tab)
+// ==========================================
+
+/**
+ * Obtener notificaciones agrupadas por actividad
+ */
+export async function getNotificacionesAgrupadasPorActividad(): Promise<ActividadGroup[]> {
+  try {
+    const response = await apiClient.get<ActividadGroup[]>(
+      ENDPOINTS.NOTIFICACIONES.AGRUPADAS_ACTIVIDADES
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching grouped notifications by activity:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtener conteos de notificaciones por sección para una actividad (PMO view)
+ */
+export async function getSeccionCountsByActividad(actividadId: number): Promise<ActividadSeccionCounts> {
+  try {
+    const response = await apiClient.get<ActividadSeccionCounts>(
+      ENDPOINTS.NOTIFICACIONES.SECCIONES_ACTIVIDAD(actividadId)
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching section counts by activity:', error);
+    return {
+      asignaciones: { total: 0, noLeidas: 0 },
+      tareas: { total: 0, noLeidas: 0 },
+    };
+  }
+}
+
+/**
+ * Marcar todas como leídas por actividad
+ */
+export async function marcarTodasLeidasPorActividad(actividadId: number): Promise<void> {
+  await apiClient.patch(ENDPOINTS.NOTIFICACIONES.LEER_TODAS_ACTIVIDAD(actividadId));
+}
+
+/**
+ * Soft delete de todas las notificaciones de actividades específicas
+ */
+export async function bulkDeleteByActividades(actividadIds: number[]): Promise<{ eliminadas: number }> {
+  const response = await apiClient.delete<{ eliminadas: number }>(
+    ENDPOINTS.NOTIFICACIONES.BULK_DELETE_ACTIVIDADES,
+    { data: { actividadIds } }
+  );
+  return response.data;
+}
+
 // Export service object
 export const notificacionesService = {
   getNotificaciones,
@@ -254,4 +323,9 @@ export const notificacionesService = {
   marcarTodasLeidasPorProyecto,
   bulkDeleteNotificaciones,
   bulkDeleteByProyectos,
+  // Activity-related
+  getNotificacionesAgrupadasPorActividad,
+  getSeccionCountsByActividad,
+  marcarTodasLeidasPorActividad,
+  bulkDeleteByActividades,
 };

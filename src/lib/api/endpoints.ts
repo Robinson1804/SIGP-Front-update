@@ -286,6 +286,11 @@ export const ENDPOINTS = {
     LEER_TODAS_PROYECTO: (proyectoId: number | string) => `/notificaciones/leer-todas/proyecto/${proyectoId}`,
     BULK_DELETE: '/notificaciones/bulk',
     BULK_DELETE_PROYECTOS: '/notificaciones/bulk/proyectos',
+    // Activity-related endpoints (PMO Actividades tab)
+    AGRUPADAS_ACTIVIDADES: '/notificaciones/agrupadas/actividades',
+    SECCIONES_ACTIVIDAD: (actividadId: number | string) => `/notificaciones/actividad/${actividadId}/secciones`,
+    LEER_TODAS_ACTIVIDAD: (actividadId: number | string) => `/notificaciones/leer-todas/actividad/${actividadId}`,
+    BULK_DELETE_ACTIVIDADES: '/notificaciones/bulk/actividades',
   },
 
   // ============================================
