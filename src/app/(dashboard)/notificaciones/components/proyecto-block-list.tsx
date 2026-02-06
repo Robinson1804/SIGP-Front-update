@@ -85,10 +85,7 @@ export function ProyectoBlockList({
                     : "bg-gray-200 text-gray-600"
                 )}
               >
-                {group.total}
-                {hasUnread && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-white inline-block" />
-                )}
+                {group.noLeidas}
               </span>
             </div>
           </div>
