@@ -1337,7 +1337,7 @@ function ProjectDetailsContent() {
                                             <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
                                             <InfoField label="Coordinación"><p>{project.coordination || 'Son las divisiones'}</p></InfoField>
                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                            <InfoField label="Área Usuaria">
+                                            <InfoField label="Product Owner">
                                                 {project.areaUsuaria && project.areaUsuaria.length > 0 ? (
                                                     <AreaUsuariaDisplay userIds={project.areaUsuaria} />
                                                 ) : (
@@ -1496,6 +1496,7 @@ function ProjectDetailsContent() {
                             proyectoFechaInicio={project?.startDate}
                             proyectoFechaFin={project?.endDate}
                             proyectoEstado={project?.status}
+                            onProjectStateChange={() => fetchProjectData(true)}
                         />
                     )}
 

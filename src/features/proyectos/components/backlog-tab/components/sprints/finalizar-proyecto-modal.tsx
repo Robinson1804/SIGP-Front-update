@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { updateProyecto } from '@/features/proyectos/services/proyectos.service';
+import { cambiarEstadoProyecto } from '@/features/proyectos/services/proyectos.service';
 
 interface FinalizarProyectoModalProps {
   open: boolean;
@@ -36,7 +36,7 @@ export function FinalizarProyectoModal({
       setIsSubmitting(true);
       setError(null);
 
-      await updateProyecto(proyectoId, { estado: 'Finalizado' });
+      await cambiarEstadoProyecto(proyectoId, 'Finalizado');
 
       onSuccess(true);
       onOpenChange(false);

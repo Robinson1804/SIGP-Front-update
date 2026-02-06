@@ -65,7 +65,7 @@ import {
   getTareaHistorial,
 } from '@/features/proyectos/services/tareas.service';
 import {
-  uploadFile,
+  uploadFileDirect,
   getArchivoDownloadUrl,
   downloadArchivoAsBlob,
   extractArchivoIdFromUrl,
@@ -557,8 +557,8 @@ export function TareaFormModal({
         const file = archivosAdjuntos[i];
         setUploadProgress(Math.round((i / totalFiles) * 100));
 
-        // 1. Subir archivo a MinIO usando storage service
-        const archivo = await uploadFile(
+        // 1. Subir archivo al backend (upload directo, evita presigned URL)
+        const archivo = await uploadFileDirect(
           file,
           'TAREA',
           tareaId,
@@ -737,7 +737,7 @@ export function TareaFormModal({
       console.log('Error response data:', error?.response?.data);
       console.log('Error response data.error:', error?.response?.data?.error);
 
-      // Extract error message from backend response
+      // Extract error message from backend response or generic error
       let errorMsg = 'Error al guardar la tarea';
       const data = error?.response?.data;
 
@@ -749,6 +749,9 @@ export function TareaFormModal({
         backendMsg = data.error;
       } else if (data?.message) {
         backendMsg = typeof data.message === 'string' ? data.message : String(data.message?.message || '');
+      } else if (error?.message && !error?.response) {
+        // Non-axios error (e.g., network error, fetch failure)
+        backendMsg = error.message;
       }
 
       // Check if error is specifically about requiring evidence for SCRUM task

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutList,
   Kanban,
@@ -89,6 +89,8 @@ interface BacklogTabContentProps {
   proyectoFechaFin?: string | null;
   /** Estado del proyecto - cuando es 'Finalizado' se deshabilita la edición */
   proyectoEstado?: 'Pendiente' | 'En planificación' | 'En desarrollo' | 'Finalizado';
+  /** Callback cuando el estado del proyecto cambia (para refrescar datos en la página padre) */
+  onProjectStateChange?: () => void;
 }
 
 const subTabs: { id: SubTab; label: string; icon: React.ElementType }[] = [
@@ -100,7 +102,7 @@ const subTabs: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
 ];
 
-export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFechaFin, proyectoEstado }: BacklogTabContentProps) {
+export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFechaFin, proyectoEstado, onProjectStateChange }: BacklogTabContentProps) {
   // Check if project is finalized (editing disabled)
   const isProyectoFinalizado = proyectoEstado === 'Finalizado';
 
@@ -142,6 +144,18 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
     refresh,
     refreshBacklog,
   } = useBacklogData(proyectoId);
+
+  // Auto-show finalizar proyecto modal when all sprints are finalized on load
+  useEffect(() => {
+    if (
+      !isLoading &&
+      sprints.length > 0 &&
+      proyectoEstado === 'En desarrollo' &&
+      sprints.every((s) => s.estado === 'Finalizado')
+    ) {
+      setIsFinalizarProyectoModalOpen(true);
+    }
+  }, [sprints, isLoading, proyectoEstado]);
 
   // Modal states (for modals that overlay the current view)
   const [isHistoriaModalOpen, setIsHistoriaModalOpen] = useState(false);
@@ -352,6 +366,8 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
     setIsSprintModalOpen(false);
     setEditingSprint(null);
     refresh();
+    // Creating a sprint may auto-transition project state (En planificación → En desarrollo)
+    onProjectStateChange?.();
   };
 
   const handleDeleteSprintSuccess = () => {
@@ -382,9 +398,8 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
   const handleFinalizarProyectoComplete = (finalized: boolean) => {
     setIsFinalizarProyectoModalOpen(false);
     refresh();
-    // Si se finalizo el proyecto, podriamos redirigir o mostrar mensaje
     if (finalized) {
-      // El proyecto fue finalizado - refresh cargara el nuevo estado
+      onProjectStateChange?.();
     }
   };
 
