@@ -44,6 +44,8 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getTareasBySprint } from '@/features/proyectos/services/tareas.service';
+import type { Tarea } from '@/features/proyectos/services/tareas.service';
 
 // Schema de validación
 const dailySchema = z.object({
@@ -102,6 +104,7 @@ export function CreateDailyModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [participantes, setParticipantes] = useState<ParticipanteInput[]>([]);
   const [expandedParticipante, setExpandedParticipante] = useState<string>('');
+  const [sprintTareas, setSprintTareas] = useState<Tarea[]>([]);
 
   const form = useForm<DailyFormData>({
     resolver: zodResolver(dailySchema),
@@ -154,6 +157,55 @@ export function CreateDailyModal({
       );
     }
   }, [open, fechaPreseleccionada, equipoSprint]);
+
+  // Fetch tareas del sprint al abrir el modal
+  useEffect(() => {
+    if (open && sprintId) {
+      getTareasBySprint(sprintId)
+        .then(setSprintTareas)
+        .catch(() => setSprintTareas([]));
+    }
+  }, [open, sprintId]);
+
+  // Auto-poblar campos queHiceAyer y queHareHoy con tareas del sprint
+  useEffect(() => {
+    if (sprintTareas.length === 0 || participantes.length === 0) return;
+
+    const fechaDaily = form.getValues('fecha');
+    if (!fechaDaily) return;
+
+    const hoy = new Date(fechaDaily + 'T00:00:00');
+    const ayer = new Date(hoy);
+    ayer.setDate(ayer.getDate() - 1);
+
+    const buildTaskSummary = (usuarioId: number, date: Date): string => {
+      return sprintTareas
+        .filter((t) => {
+          if (t.asignadoA !== usuarioId) return false;
+          if (!t.fechaInicio || !t.fechaFin) return false;
+          const inicio = new Date(t.fechaInicio + 'T00:00:00');
+          const fin = new Date(t.fechaFin + 'T23:59:59');
+          return date >= inicio && date <= fin;
+        })
+        .map((t) => `${t.codigo} - ${t.nombre}`)
+        .join('\n');
+    };
+
+    setParticipantes((prev) => {
+      let changed = false;
+      const updated = prev.map((p) => {
+        const ayerSummary = p.queHiceAyer === '' ? buildTaskSummary(p.usuarioId, ayer) : p.queHiceAyer;
+        const hoySummary = p.queHareHoy === '' ? buildTaskSummary(p.usuarioId, hoy) : p.queHareHoy;
+        if (ayerSummary !== p.queHiceAyer || hoySummary !== p.queHareHoy) {
+          changed = true;
+          return { ...p, queHiceAyer: ayerSummary, queHareHoy: hoySummary };
+        }
+        return p;
+      });
+      return changed ? updated : prev;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sprintTareas, participantes.length]);
 
   const updateParticipante = (
     usuarioId: number,

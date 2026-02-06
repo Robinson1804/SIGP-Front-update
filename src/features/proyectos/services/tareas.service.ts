@@ -184,6 +184,16 @@ export interface MoverTareaData {
 // ============================================
 
 /**
+ * Obtener tareas de un sprint (todas las tareas SCRUM activas del sprint)
+ */
+export async function getTareasBySprint(sprintId: number | string): Promise<Tarea[]> {
+  const response = await apiClient.get<Tarea[]>(ENDPOINTS.TAREAS.BASE, {
+    params: { sprintId, activo: 'true', tipo: 'SCRUM' },
+  });
+  return response.data;
+}
+
+/**
  * Obtener tareas de una historia de usuario
  */
 export async function getTareasByHistoria(
