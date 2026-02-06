@@ -335,9 +335,10 @@ export default function NotificationsPage() {
   };
 
   // Notification click handler
-  const handleNotificationClick = async (clickedNotification: LocalNotification) => {
+  const handleNotificationClick = (clickedNotification: LocalNotification) => {
     if (deleteMode) return;
 
+    // Actualizar estado local inmediatamente
     setNotifications(prev =>
       prev.map(n => n.id === clickedNotification.id ? { ...n, read: true } : n)
     );
@@ -345,11 +346,14 @@ export default function NotificationsPage() {
       prev.map(n => n.id === clickedNotification.id ? { ...n, read: true } : n)
     );
 
-    try {
-      await marcarNotificacionLeida(clickedNotification.id);
-    } catch (err) {
+    // Marcar como leída en background (no bloquea navegación)
+    marcarNotificacionLeida(clickedNotification.id).catch(err => {
       console.error('Error marking notification as read:', err);
-    }
+    });
+
+    // Determinar ruta de navegación
+    const projectId = clickedNotification.projectId;
+    const isProyecto = clickedNotification.projectType === 'Proyecto';
 
     if ((clickedNotification.type === 'validacion' || clickedNotification.type === 'aprobacion') && clickedNotification.urlAccion) {
       let targetUrl = clickedNotification.urlAccion;
@@ -359,23 +363,37 @@ export default function NotificationsPage() {
       }
       router.push(targetUrl);
     } else if (clickedNotification.type === 'hu_revision' || clickedNotification.type === 'hu_validated' || clickedNotification.type === 'hu_rejected') {
-      const backlogRoute = clickedNotification.projectType === 'Proyecto'
-        ? paths.poi.proyecto.backlog.base
-        : paths.poi.actividad.lista;
-      router.push(backlogRoute);
-    } else if (clickedNotification.type === 'sprint' || clickedNotification.type === 'delay') {
-      if (clickedNotification.projectType === 'Proyecto' && clickedNotification.projectId) {
-        // Navegar a detalles del proyecto con tab Backlog
-        router.push(`/poi/proyecto/detalles?id=${clickedNotification.projectId}&tab=Backlog`);
+      // Historias de usuario - ir al Backlog del proyecto
+      if (isProyecto && projectId) {
+        router.push(`/poi/proyecto/detalles?id=${projectId}&tab=Backlog`);
+      } else if (projectId) {
+        router.push(`/poi/actividad/detalles?id=${projectId}`);
       } else {
         router.push(paths.poi.actividad.lista);
       }
-    } else if (clickedNotification.type === 'project' && clickedNotification.urlAccion) {
-      router.push(clickedNotification.urlAccion);
-    } else if (clickedNotification.projectId) {
-      const route = clickedNotification.projectType === 'Proyecto'
-        ? `/poi/proyecto/detalles?id=${clickedNotification.projectId}`
-        : `/poi/actividad/detalles?id=${clickedNotification.projectId}`;
+    } else if (clickedNotification.type === 'sprint' || clickedNotification.type === 'delay') {
+      // Sprints - ir al Backlog del proyecto
+      if (isProyecto && projectId) {
+        router.push(`/poi/proyecto/detalles?id=${projectId}&tab=Backlog`);
+      } else if (projectId) {
+        router.push(`/poi/actividad/detalles?id=${projectId}`);
+      } else {
+        router.push(paths.poi.actividad.lista);
+      }
+    } else if (clickedNotification.type === 'project') {
+      // Asignación de proyecto - ir a detalles
+      if (clickedNotification.urlAccion) {
+        router.push(clickedNotification.urlAccion);
+      } else if (isProyecto && projectId) {
+        router.push(`/poi/proyecto/detalles?id=${projectId}`);
+      } else if (projectId) {
+        router.push(`/poi/actividad/detalles?id=${projectId}`);
+      }
+    } else if (projectId) {
+      // Fallback - ir a detalles del proyecto/actividad
+      const route = isProyecto
+        ? `/poi/proyecto/detalles?id=${projectId}`
+        : `/poi/actividad/detalles?id=${projectId}`;
       router.push(route);
     }
   };
