@@ -95,11 +95,14 @@ import type { Proyecto } from "@/lib/definitions";
 
 // Areas disponibles para selección
 const AREAS_DISPONIBLES = [
-  "Oficina de Tecnologías de la Información (OTIN)",
-  "Oficina de Administración y Finanzas",
-  "Oficina de Planificación y Presupuesto",
+  "Oficina Técnica de Administración (OTA)",
+  "Dirección de Censos y Encuestas (DNCE)",
+  "Dirección Técnica de Indicadores (DTI)",
+  "Oficina de Administración y Finanzas (OAF)",
   "Oficina de Gestión Documental (OGD)",
+  "Oficina de Planificación y Presupuesto (OPP)",
   "Oficina de Formación Ciudadana e Identidad",
+  "Oficina de Tecnologías de la Información (OTIN)",
   "Oficina de Recursos Humanos",
 ];
 
@@ -904,15 +907,9 @@ function ViewProjectModal({
           {/* Responsables */}
           <div className="border-t pt-4">
             <h3 className="font-bold text-[#004272] mb-3">RESPONSABLES</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Area Responsable</label>
-                <p>{proyectoAny.areaResponsable || '-'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-500">Coordinacion</label>
-                <p>{proyectoAny.coordinacion || '-'}</p>
-              </div>
+            <div>
+              <label className="text-sm font-medium text-gray-500">Area Responsable</label>
+              <p>{proyectoAny.areaResponsable || '-'}</p>
             </div>
             {proyectoAny.areasFinancieras && proyectoAny.areasFinancieras.length > 0 && (
               <div className="mt-3">

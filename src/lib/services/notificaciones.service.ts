@@ -167,10 +167,11 @@ export async function deleteNotificacion(id: number | string): Promise<void> {
 /**
  * Obtener notificaciones agrupadas por proyecto
  */
-export async function getNotificacionesAgrupadasPorProyecto(): Promise<ProyectoGroup[]> {
+export async function getNotificacionesAgrupadasPorProyecto(pgdId?: number): Promise<ProyectoGroup[]> {
   try {
     const response = await apiClient.get<ProyectoGroup[]>(
-      ENDPOINTS.NOTIFICACIONES.AGRUPADAS_PROYECTOS
+      ENDPOINTS.NOTIFICACIONES.AGRUPADAS_PROYECTOS,
+      pgdId ? { params: { pgdId } } : undefined
     );
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
@@ -260,10 +261,11 @@ export async function bulkDeleteByProyectos(proyectoIds: number[]): Promise<{ el
 /**
  * Obtener notificaciones agrupadas por actividad
  */
-export async function getNotificacionesAgrupadasPorActividad(): Promise<ActividadGroup[]> {
+export async function getNotificacionesAgrupadasPorActividad(pgdId?: number): Promise<ActividadGroup[]> {
   try {
     const response = await apiClient.get<ActividadGroup[]>(
-      ENDPOINTS.NOTIFICACIONES.AGRUPADAS_ACTIVIDADES
+      ENDPOINTS.NOTIFICACIONES.AGRUPADAS_ACTIVIDADES,
+      pgdId ? { params: { pgdId } } : undefined
     );
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {

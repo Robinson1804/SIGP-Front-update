@@ -55,7 +55,7 @@ export function ActividadSeccionBlockList({
   }
 
   const totalNotificaciones = Object.values(counts).reduce(
-    (sum, c) => sum + c.total,
+    (sum, c) => sum + c.noLeidas,
     0
   );
 
@@ -105,7 +105,7 @@ export function ActividadSeccionBlockList({
         {ACTIVIDAD_SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
           const seccionData = counts[key];
           const hasUnread = seccionData.noLeidas > 0;
-          const total = seccionData.total;
+          const total = seccionData.noLeidas;
 
           // Don't render if no notifications in this section
           if (total === 0) {

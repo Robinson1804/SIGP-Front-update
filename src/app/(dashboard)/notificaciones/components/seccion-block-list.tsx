@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
-import { ArrowLeft, Loader2, FolderKanban, RefreshCw, CheckCircle, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Loader2, FolderKanban, RefreshCw, CheckCircle, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { SeccionCounts } from '@/lib/services/notificaciones.service';
@@ -16,6 +16,7 @@ interface SeccionBlockListProps {
   loading: boolean;
   onSeccionClick: (seccion: SeccionName) => void;
   onBack: () => void;
+  onDeleteSeccion?: (seccion: SeccionName) => Promise<void>;
 }
 
 const SECCION_CONFIG: {
@@ -57,7 +58,11 @@ export function SeccionBlockList({
   loading,
   onSeccionClick,
   onBack,
+  onDeleteSeccion,
 }: SeccionBlockListProps) {
+  const [deletingSeccion, setDeletingSeccion] = useState<SeccionName | null>(null);
+  const [confirmSeccion, setConfirmSeccion] = useState<SeccionName | null>(null);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -67,7 +72,7 @@ export function SeccionBlockList({
   }
 
   const totalNotificaciones = Object.values(counts).reduce(
-    (sum, c) => sum + c.total,
+    (sum, c) => sum + c.noLeidas,
     0
   );
 
@@ -91,6 +96,28 @@ export function SeccionBlockList({
       </div>
     );
   }
+
+  const handleDeleteClick = async (e: React.MouseEvent, key: SeccionName) => {
+    e.stopPropagation();
+    if (confirmSeccion === key) {
+      // Second click = confirm
+      setDeletingSeccion(key);
+      setConfirmSeccion(null);
+      try {
+        await onDeleteSeccion?.(key);
+      } finally {
+        setDeletingSeccion(null);
+      }
+    } else {
+      // First click = ask confirmation
+      setConfirmSeccion(key);
+    }
+  };
+
+  const handleCancelConfirm = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmSeccion(null);
+  };
 
   return (
     <div>
@@ -117,7 +144,9 @@ export function SeccionBlockList({
         {SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
           const seccionData = counts[key];
           const hasUnread = seccionData.noLeidas > 0;
-          const total = seccionData.total;
+          const total = seccionData.noLeidas;
+          const isDeleting = deletingSeccion === key;
+          const isConfirming = confirmSeccion === key;
 
           // Don't render if no notifications in this section
           if (total === 0) {
@@ -144,10 +173,12 @@ export function SeccionBlockList({
             <div
               key={key}
               className={cn(
-                "flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors duration-200",
-                "hover:bg-gray-100 bg-white border-gray-200"
+                "flex items-center gap-4 p-4 rounded-lg border transition-colors duration-200",
+                isConfirming
+                  ? "bg-red-50 border-red-300"
+                  : "hover:bg-gray-100 bg-white border-gray-200 cursor-pointer"
               )}
-              onClick={() => onSeccionClick(key)}
+              onClick={() => !isConfirming && !isDeleting && onSeccionClick(key)}
             >
               <div
                 className={cn(
@@ -165,22 +196,67 @@ export function SeccionBlockList({
 
               <div className="flex-grow min-w-0">
                 <p className="font-semibold text-gray-800">{label}</p>
-                <p className="text-xs text-gray-500">{description}</p>
+                {isConfirming ? (
+                  <p className="text-xs text-red-600 font-medium">
+                    Vaciar todas las notificaciones de {label}?
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500">{description}</p>
+                )}
               </div>
 
-              <span
-                className={cn(
-                  "shrink-0 inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-sm font-medium",
-                  hasUnread
-                    ? "bg-[#018CD1] text-white"
-                    : "bg-gray-200 text-gray-600"
+              <div className="flex items-center gap-2 shrink-0">
+                {isConfirming ? (
+                  <>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={(e) => handleDeleteClick(e, key)}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        'Confirmar'
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={handleCancelConfirm}
+                    >
+                      Cancelar
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <span
+                      className={cn(
+                        "inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-sm font-medium",
+                        hasUnread
+                          ? "bg-[#018CD1] text-white"
+                          : "bg-gray-200 text-gray-600"
+                      )}
+                    >
+                      {total}
+                      {hasUnread && (
+                        <span className="ml-1 h-2 w-2 rounded-full bg-white inline-block" />
+                      )}
+                    </span>
+                    {onDeleteSeccion && (
+                      <button
+                        className="p-1 rounded hover:bg-red-100 text-gray-400 hover:text-red-500 transition-colors"
+                        title={`Vaciar ${label}`}
+                        onClick={(e) => handleDeleteClick(e, key)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </>
                 )}
-              >
-                {total}
-                {hasUnread && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-white inline-block" />
-                )}
-              </span>
+              </div>
             </div>
           );
         })}

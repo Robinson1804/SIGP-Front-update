@@ -11,8 +11,10 @@ import { cn } from '@/lib/utils';
 import { MODULES, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { ProtectedRoute } from "@/features/auth";
-import { useAuth } from '@/stores';
+import { useAuth, usePGD } from '@/stores';
 import { useToast } from '@/lib/hooks/use-toast';
+import { getPGDs } from '@/features/planning';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   getNotificaciones,
   getNotificacionesAgrupadasPorProyecto,
@@ -119,6 +121,26 @@ export default function NotificationsPage() {
 
   const isPmo = user?.role === ROLES.PMO;
 
+  // PGD filter state (PMO only)
+  const { initializePGD, pgds, selectedPGD, setSelectedPGD } = usePGD();
+  const [pgdFilterId, setPgdFilterId] = useState<number | undefined>(undefined);
+
+  // Load PGDs for filter
+  useEffect(() => {
+    if (isPmo) {
+      getPGDs({ activo: true }).then((list) => {
+        initializePGD(list);
+      });
+    }
+  }, [isPmo, initializePGD]);
+
+  // Sync pgdFilterId with selectedPGD from store
+  useEffect(() => {
+    if (isPmo && selectedPGD) {
+      setPgdFilterId(selectedPGD.id);
+    }
+  }, [isPmo, selectedPGD]);
+
   // Tab state
   const PMO_TABS: PmoTabName[] = ['Proyectos', 'Actividades'];
   const NON_PMO_TABS = getTabsForNonPmo(user?.role);
@@ -193,7 +215,7 @@ export default function NotificationsPage() {
         if (activeTab === 'Actividades') {
           // Tab Actividades for PMO
           if (pmoActividadNavStack.level === 'actividades') {
-            const groups = await getNotificacionesAgrupadasPorActividad();
+            const groups = await getNotificacionesAgrupadasPorActividad(pgdFilterId);
             setActividadGroups(groups);
           } else if (pmoActividadNavStack.level === 'secciones') {
             const counts = await getSeccionCountsByActividad(pmoActividadNavStack.actividadId);
@@ -215,7 +237,7 @@ export default function NotificationsPage() {
         } else {
           // Tab Proyectos for PMO
           if (pmoNavStack.level === 'proyectos') {
-            const groups = await getNotificacionesAgrupadasPorProyecto();
+            const groups = await getNotificacionesAgrupadasPorProyecto(pgdFilterId);
             setProyectoGroups(groups);
           } else if (pmoNavStack.level === 'secciones') {
             const counts = await getSeccionCountsByProyecto(pmoNavStack.proyectoId);
@@ -278,7 +300,7 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isPmo, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, currentNonPmoTab, page, flatPage, toast]);
+  }, [isPmo, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
 
   useEffect(() => {
     loadData();
@@ -305,6 +327,29 @@ export default function NotificationsPage() {
       setPage(1);
       setDeleteMode(false);
       setSelectedNotificationIds(new Set());
+    }
+  };
+
+  const handleDeleteSeccion = async (seccion: SeccionName) => {
+    if (pmoNavStack.level !== 'secciones') return;
+    try {
+      const tipo = SECCION_TO_TIPO[seccion];
+      const response = await getNotificaciones({
+        proyectoId: pmoNavStack.proyectoId,
+        tipo,
+        limit: 1000,
+      });
+      const ids = response.notificaciones.map((n: any) => n.id).filter(Boolean);
+      if (ids.length === 0) {
+        toast({ title: 'Info', description: 'No hay notificaciones para eliminar en esta sección' });
+        return;
+      }
+      await bulkDeleteNotificaciones(ids);
+      toast({ title: 'Listo', description: `Notificaciones de ${seccion} eliminadas (${ids.length})` });
+      loadData();
+    } catch (err) {
+      console.error('Error deleting section notifications:', err);
+      toast({ title: 'Error', description: 'No se pudieron eliminar las notificaciones', variant: 'destructive' });
     }
   };
 
@@ -798,6 +843,7 @@ export default function NotificationsPage() {
             loading={isLoading}
             onSeccionClick={handleSeccionClick}
             onBack={handlePmoBack}
+            onDeleteSeccion={handleDeleteSeccion}
           />
         );
       }
@@ -1026,22 +1072,57 @@ export default function NotificationsPage() {
           {/* Tabs */}
           <div className="flex items-center mb-6 gap-2">
             {isPmo ? (
-              // PMO Tabs
-              PMO_TABS.map(tabName => (
-                <Button
-                  key={tabName}
-                  size="sm"
-                  onClick={() => setActiveTab(tabName)}
-                  className={cn(
-                    activeTab === tabName
-                      ? 'bg-[#018CD1] text-white'
-                      : 'bg-white text-black border-gray-300'
-                  )}
-                  variant={activeTab === tabName ? 'default' : 'outline'}
-                >
-                  {tabName}
-                </Button>
-              ))
+              // PMO Tabs + PGD Filter
+              <>
+                {PMO_TABS.map(tabName => (
+                  <Button
+                    key={tabName}
+                    size="sm"
+                    onClick={() => setActiveTab(tabName)}
+                    className={cn(
+                      activeTab === tabName
+                        ? 'bg-[#018CD1] text-white'
+                        : 'bg-white text-black border-gray-300'
+                    )}
+                    variant={activeTab === tabName ? 'default' : 'outline'}
+                  >
+                    {tabName}
+                  </Button>
+                ))}
+                {pgds.length > 0 && (
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-600">PGD:</span>
+                    <Select
+                      value={pgdFilterId?.toString() || 'all'}
+                      onValueChange={(val) => {
+                        const newPgdId = val === 'all' ? undefined : parseInt(val, 10);
+                        setPgdFilterId(newPgdId);
+                        const pgd = pgds.find(p => p.id === newPgdId) || null;
+                        setSelectedPGD(pgd);
+                        // Reset navigation to project/activity list level
+                        setPmoNavStack({ level: 'proyectos' });
+                        setPmoActividadNavStack({ level: 'actividades' });
+                        setDeleteMode(false);
+                        setSelectedProyectoIds(new Set());
+                        setSelectedActividadIds(new Set());
+                        setSelectedNotificationIds(new Set());
+                      }}
+                    >
+                      <SelectTrigger className="w-[280px] h-8 bg-white text-sm">
+                        <SelectValue placeholder="Todos los PGD" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los PGD</SelectItem>
+                        {pgds.map((pgd) => (
+                          <SelectItem key={pgd.id} value={pgd.id.toString()}>
+                            {pgd.nombre} ({pgd.anioInicio}-{pgd.anioFin})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </>
             ) : (
               // Non-PMO Tabs
               NON_PMO_TABS.map(tab => (

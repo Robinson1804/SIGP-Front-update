@@ -90,24 +90,50 @@ import {
 } from "@/lib/services";
 
 // Opciones predefinidas para áreas financieras
+// Mapa para normalizar valores antiguos de áreas financieras al formato actual
+const FINANCIAL_AREA_NORMALIZE: Record<string, string> = {
+    'Oficina de Administración y Finanzas': 'Oficina de Administración y Finanzas (OAF)',
+    'Oficina de Planificación y Presupuesto': 'Oficina de Planificación y Presupuesto (OPP)',
+    'OTA': 'Oficina Técnica de Administración (OTA)',
+    'DCNC': 'Dirección de Censos y Encuestas (DNCE)',
+    'DTI': 'Dirección Técnica de Indicadores (DTI)',
+};
+
+function normalizeFinancialAreas(areas: string[]): string[] {
+    const seen = new Set<string>();
+    return areas.reduce<string[]>((acc, area) => {
+        const normalized = FINANCIAL_AREA_NORMALIZE[area] || area;
+        if (!seen.has(normalized)) {
+            seen.add(normalized);
+            acc.push(normalized);
+        }
+        return acc;
+    }, []);
+}
+
 // Los valores deben coincidir exactamente con lo que se guarda en la BD
 const financialAreaOptions: MultiSelectOption[] = [
-    { label: 'OTIN - Oficina de Tecnologías de la Información', value: 'Oficina de Tecnologías de la Información (OTIN)' },
-    { label: 'OTA - Oficina Técnica de Administración', value: 'OTA' },
-    { label: 'DCNC - Dirección de Censos y Encuestas', value: 'DCNC' },
-    { label: 'DTI - Dirección Técnica de Indicadores', value: 'DTI' },
-    { label: 'OAF - Oficina de Administración y Finanzas', value: 'Oficina de Administración y Finanzas' },
+    { label: 'OTA - Oficina Técnica de Administración', value: 'Oficina Técnica de Administración (OTA)' },
+    { label: 'DNCE - Dirección de Censos y Encuestas', value: 'Dirección de Censos y Encuestas (DNCE)' },
+    { label: 'DTI - Dirección Técnica de Indicadores', value: 'Dirección Técnica de Indicadores (DTI)' },
+    { label: 'OAF - Oficina de Administración y Finanzas', value: 'Oficina de Administración y Finanzas (OAF)' },
     { label: 'OGD - Oficina de Gestión Documental', value: 'Oficina de Gestión Documental (OGD)' },
-    { label: 'OPP - Oficina de Planificación y Presupuesto', value: 'Oficina de Planificación y Presupuesto' },
+    { label: 'OPP - Oficina de Planificación y Presupuesto', value: 'Oficina de Planificación y Presupuesto (OPP)' },
+    { label: 'Oficina de Formación Ciudadana e Identidad', value: 'Oficina de Formación Ciudadana e Identidad' },
+    { label: 'OTIN - Oficina de Tecnologías de la Información', value: 'Oficina de Tecnologías de la Información (OTIN)' },
+    { label: 'ORH - Oficina de Recursos Humanos', value: 'Oficina de Recursos Humanos' },
 ];
 
 // Areas disponibles para Coordinación (sincronizado con Area Responsable de PGD)
 const AREAS_DISPONIBLES = [
-  "Oficina de Tecnologías de la Información (OTIN)",
-  "Oficina de Administración y Finanzas",
-  "Oficina de Planificación y Presupuesto",
+  "Oficina Técnica de Administración (OTA)",
+  "Dirección de Censos y Encuestas (DNCE)",
+  "Dirección Técnica de Indicadores (DTI)",
+  "Oficina de Administración y Finanzas (OAF)",
   "Oficina de Gestión Documental (OGD)",
+  "Oficina de Planificación y Presupuesto (OPP)",
   "Oficina de Formación Ciudadana e Identidad",
+  "Oficina de Tecnologías de la Información (OTIN)",
   "Oficina de Recursos Humanos",
 ];
 
@@ -474,7 +500,7 @@ export function POIFullModal({
 
                 // Asegurar que los arrays sean válidos (copia profunda)
                 const financialAreaValue = Array.isArray(project.financialArea)
-                    ? [...project.financialArea]
+                    ? normalizeFinancialAreas(project.financialArea)
                     : [];
                 const yearsValue = Array.isArray(project.years)
                     ? [...project.years]
