@@ -1440,8 +1440,9 @@ export function POIFullModal({
                                             <Select
                                                 value={formData.scrumMasterId?.toString() || ''}
                                                 onValueChange={(value) => {
-                                                    // Para Actividad usar coordinadores, para Proyecto usar scrumMasters (que incluye SM + Coord)
-                                                    const listaUsuarios = formData.type === 'Actividad' ? coordinadores : scrumMasters;
+                                                    // Para Actividad usar coordinadores + scrumMasters (gestor puede ser cualquiera de esos roles), para Proyecto usar scrumMasters
+                                                    const gestorList = [...coordinadores, ...scrumMasters.filter(sm => !coordinadores.some(c => c.id === sm.id))];
+                                                    const listaUsuarios = formData.type === 'Actividad' ? gestorList : scrumMasters;
                                                     const usuario = listaUsuarios.find(u => u.id.toString() === value);
                                                     setFormData(p => ({
                                                         ...p,
@@ -1455,8 +1456,8 @@ export function POIFullModal({
                                                     <SelectValue placeholder={formData.type === 'Actividad' ? 'Seleccionar gestor' : 'Seleccionar scrum master'} />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {/* Para Actividad mostrar solo Coordinadores, para Proyecto mostrar SM + Coordinadores */}
-                                                    {(formData.type === 'Actividad' ? coordinadores : scrumMasters).map((usuario) => (
+                                                    {/* Para Actividad mostrar Coordinadores + Scrum Masters, para Proyecto mostrar SM + Coordinadores */}
+                                                    {(formData.type === 'Actividad' ? [...coordinadores, ...scrumMasters.filter(sm => !coordinadores.some(c => c.id === sm.id))] : scrumMasters).map((usuario) => (
                                                         <SelectItem key={usuario.id} value={usuario.id.toString()}>
                                                             {formatUsuarioNombre(usuario)}
                                                         </SelectItem>
