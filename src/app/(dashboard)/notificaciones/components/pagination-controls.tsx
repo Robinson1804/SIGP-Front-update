@@ -23,7 +23,7 @@ export function PaginationControls({ page, totalPages, total, limit, onPageChang
       <span className="text-sm text-gray-500">
         Mostrando {from}-{to} de {total} {total === 1 ? 'notificación' : 'notificaciones'}
       </span>
-      {totalPages > 1 && (
+      {totalPages >= 1 && (
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
