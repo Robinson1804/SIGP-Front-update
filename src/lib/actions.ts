@@ -140,6 +140,35 @@ export async function getProyecto(id: number): Promise<Proyecto> {
 }
 
 /**
+ * Obtiene un subproyecto por ID desde la API
+ */
+export async function getSubproyecto(id: number) {
+  try {
+    const token = await getAuthToken();
+
+    const response = await fetch(`${API_BASE}/api/v1/subproyectos/${id}`, {
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Subproyecto no encontrado');
+      }
+      throw new Error(`Error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data || data;
+  } catch (error) {
+    console.error(`Error in getSubproyecto ${id}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Crea un nuevo proyecto
  * @deprecated Usar el servicio del cliente en features/proyectos/services
  */

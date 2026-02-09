@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -58,7 +59,7 @@ import {
   getSubproyectosByProyecto,
   updateSubproyecto,
   deleteSubproyecto,
-  generateSubproyectoCodigo,
+  getNextSubproyectoCodigo,
   type Subproyecto,
 } from "../services/subproyectos.service";
 import {
@@ -88,6 +89,7 @@ import {
   type AsignacionError,
   formatUsuarioNombre,
 } from "@/lib/services";
+import { paths } from "@/lib/paths";
 
 // Opciones predefinidas para áreas financieras
 // Mapa para normalizar valores antiguos de áreas financieras al formato actual
@@ -172,6 +174,7 @@ export function POIModal({
     pgdAnioInicio?: number;
     pgdAnioFin?: number;
 }) {
+    const router = useRouter();
     const [formData, setFormData] = React.useState<Partial<Project>>({});
     const [errors, setErrors] = React.useState<{[key: string]: string}>({});
 
@@ -984,9 +987,11 @@ export function POIFullModal({
                         if (isNewSubproject) {
                             // Crear nuevo subproyecto
                             const aniosNumeros = sp.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+                            // Obtener el siguiente código disponible (formato SUB-001, SUB-002, etc.)
+                            const nextCodigo = await getNextSubproyectoCodigo(proyectoId);
                             const newSubproyecto = await createSubproyecto({
                                 proyectoPadreId: proyectoId,
-                                codigo: generateSubproyectoCodigo(proyectoCodigo, subIndex),
+                                codigo: nextCodigo,
                                 nombre: sp.name,
                                 descripcion: sp.description,
                                 monto: sp.amount,
@@ -1193,16 +1198,21 @@ export function POIFullModal({
     const isProyecto = formData.type === 'Proyecto';
 
     // Opciones de responsables y años para subproyecto
-    // Filtrar personal asignado al proyecto padre para subproyectos
+    // Filtrar solo DESARROLLADORES asignados al proyecto padre para subproyectos
     const subResponsibleOptions: MultiSelectOption[] = (formData.responsibles && formData.responsibles.length > 0)
-        ? formData.responsibles.map(id => {
-            const personal = personalDisponible.find(p => p.id.toString() === id);
-            return {
-                label: personal ? formatPersonalNombre(personal) : id,
-                value: id,
-            };
-        })
-        : responsibleOptions;
+        ? formData.responsibles
+            .filter(id => {
+                // Solo incluir si este personal es un Desarrollador
+                return desarrolladores.some(dev => dev.id.toString() === id);
+            })
+            .map(id => {
+                const personal = personalDisponible.find(p => p.id.toString() === id);
+                return {
+                    label: personal ? formatPersonalNombre(personal) : id,
+                    value: id,
+                };
+            })
+        : []; // Sin fallback - si el proyecto padre no tiene responsables desarrolladores, el subproyecto no puede tener ninguno
 
     const subYearOptions: MultiSelectOption[] = (formData.years && formData.years.length > 0)
         ? formData.years.map(y => ({ label: y, value: y }))
@@ -1298,11 +1308,24 @@ export function POIFullModal({
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {subProjects.map((sp) => (
-                                                                <TableRow
+                                                            {subProjects.map((sp) => {
+                                                                // Verificar si es un subproyecto existente (ID numérico) o temporal (sp-X)
+                                                                const isExisting = !sp.id.toString().startsWith('sp-');
+                                                                const handleRowClick = () => {
+                                                                    if (isExisting) {
+                                                                        // Navegar a la página de detalle del subproyecto
+                                                                        router.push(paths.poi.subproyectos.detalles(sp.id));
+                                                                        onClose(); // Cerrar el modal
+                                                                    } else {
+                                                                        // Abrir formulario de edición para subproyectos no guardados
+                                                                        openSubProjectForm(sp);
+                                                                    }
+                                                                };
+
+                                                                return (<TableRow
                                                                     key={sp.id}
                                                                     className="cursor-pointer hover:bg-gray-100"
-                                                                    onClick={() => openSubProjectForm(sp)}
+                                                                    onClick={handleRowClick}
                                                                 >
                                                                     <TableCell>{sp.name}</TableCell>
                                                                     <TableCell>S/ {sp.amount?.toLocaleString('es-PE')}</TableCell>
@@ -1318,8 +1341,8 @@ export function POIFullModal({
                                                                             <Trash2 className="h-4 w-4" />
                                                                         </Button>
                                                                     </TableCell>
-                                                                </TableRow>
-                                                            ))}
+                                                                </TableRow>);
+                                                            })}
                                                         </TableBody>
                                                     </Table>
                                                 )}

@@ -97,7 +97,17 @@ export async function deleteSubproyecto(id: number | string): Promise<void> {
 
 /**
  * Genera un código único para el subproyecto
+ * @deprecated Use getNextSubproyectoCodigo instead
  */
 export function generateSubproyectoCodigo(proyectoCodigo: string, index: number): string {
   return `${proyectoCodigo}-SP${String(index + 1).padStart(2, '0')}`;
+}
+
+/**
+ * Obtiene el siguiente código de subproyecto disponible desde el backend
+ * Formato: SUB-001, SUB-002, etc. (secuencial por proyecto)
+ */
+export async function getNextSubproyectoCodigo(proyectoId: number | string): Promise<string> {
+  const response = await apiClient.get(`/proyectos/${proyectoId}/subproyectos/next-codigo`);
+  return response.data.data || response.data;
 }
