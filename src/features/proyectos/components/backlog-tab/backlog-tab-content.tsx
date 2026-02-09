@@ -151,11 +151,12 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
       !isLoading &&
       sprints.length > 0 &&
       proyectoEstado === 'En desarrollo' &&
-      sprints.every((s) => s.estado === 'Finalizado')
+      sprints.every((s) => s.estado === 'Finalizado') &&
+      !userDecidedToContinue  // No mostrar si el usuario ya decidió continuar
     ) {
       setIsFinalizarProyectoModalOpen(true);
     }
-  }, [sprints, isLoading, proyectoEstado]);
+  }, [sprints, isLoading, proyectoEstado, userDecidedToContinue]);
 
   // Modal states (for modals that overlay the current view)
   const [isHistoriaModalOpen, setIsHistoriaModalOpen] = useState(false);
@@ -176,6 +177,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
   const [isCerrarSprintModalOpen, setIsCerrarSprintModalOpen] = useState(false);
   const [sprintToCerrar, setSprintToCerrar] = useState<Sprint | null>(null);
   const [isFinalizarProyectoModalOpen, setIsFinalizarProyectoModalOpen] = useState(false);
+  const [userDecidedToContinue, setUserDecidedToContinue] = useState(false);
 
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [isDeleteSprintModalOpen, setIsDeleteSprintModalOpen] = useState(false);
@@ -365,6 +367,8 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
   const handleSprintSuccess = () => {
     setIsSprintModalOpen(false);
     setEditingSprint(null);
+    // Resetear decisión del usuario cuando se crea/edita un sprint
+    setUserDecidedToContinue(false);
     refresh();
     // Creating a sprint may auto-transition project state (En planificación → En desarrollo)
     onProjectStateChange?.();
@@ -400,6 +404,9 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
     refresh();
     if (finalized) {
       onProjectStateChange?.();
+    } else {
+      // Usuario eligió continuar - recordar para no volver a mostrar el modal
+      setUserDecidedToContinue(true);
     }
   };
 
