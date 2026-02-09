@@ -95,6 +95,11 @@ type DeveloperNavLevel =
   | { level: 'proyectos' }
   | { level: 'tareas'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string };
 
+// Navigation state types for IMPLEMENTADOR (simpler: just actividades → subtareas)
+type ImplementadorNavLevel =
+  | { level: 'actividades' }
+  | { level: 'subtareas'; actividadId: number; actividadNombre: string; actividadCodigo: string };
+
 // Tab definitions for non-PMO roles
 interface TabDefinition {
   name: OtherTabName;
@@ -128,6 +133,7 @@ export default function NotificationsPage() {
   const isCoordinador = user?.role === ROLES.COORDINADOR;
   const isScrumMaster = user?.role === ROLES.SCRUM_MASTER;
   const isDeveloper = user?.role === ROLES.DESARROLLADOR;
+  const isImplementador = user?.role === ROLES.IMPLEMENTADOR;
 
   // COORDINADOR and SCRUM_MASTER use PMO-like flow (tabs + sections)
   const usePmoFlow = isPmo || isCoordinador || isScrumMaster;
@@ -151,11 +157,12 @@ export default function NotificationsPage() {
 
   const [activeTab, setActiveTab] = useState<TabName>(usePmoFlow ? 'Proyectos' : (NON_PMO_TABS[0]?.name || 'Proyectos'));
 
-  // Navigation state - different for PMO vs other roles vs DESARROLLADOR
+  // Navigation state - different for PMO vs other roles vs DESARROLLADOR vs IMPLEMENTADOR
   const [pmoNavStack, setPmoNavStack] = useState<PmoNavLevel>({ level: 'proyectos' });
   const [pmoActividadNavStack, setPmoActividadNavStack] = useState<PmoActividadNavLevel>({ level: 'actividades' });
   const [otherNavStack, setOtherNavStack] = useState<OtherNavLevel>({ level: 'proyectos' });
   const [developerNavStack, setDeveloperNavStack] = useState<DeveloperNavLevel>({ level: 'proyectos' });
+  const [implementadorNavStack, setImplementadorNavStack] = useState<ImplementadorNavLevel>({ level: 'actividades' });
 
   // Data state
   const [proyectoGroups, setProyectoGroups] = useState<ProyectoGroup[]>([]);
@@ -200,7 +207,7 @@ export default function NotificationsPage() {
     if (usePmoFlow) {
       setPmoNavStack({ level: 'proyectos' });
       setPmoActividadNavStack({ level: 'actividades' });
-    } else if (!isDeveloper) {
+    } else if (!isDeveloper && !isImplementador) {
       setOtherNavStack({ level: 'proyectos' });
     }
     setDeleteMode(false);
@@ -209,7 +216,7 @@ export default function NotificationsPage() {
     setSelectedNotificationIds(new Set());
     setPage(1);
     setFlatPage(1);
-  }, [activeTab, usePmoFlow, isDeveloper]);
+  }, [activeTab, usePmoFlow, isDeveloper, isImplementador]);
 
   // Load data based on current tab and nav level
   const loadData = useCallback(async () => {
@@ -282,6 +289,26 @@ export default function NotificationsPage() {
           setNotifications(mapped);
           setTotalItems(response.total);
         }
+      } else if (isImplementador) {
+        // IMPLEMENTADOR Navigation Flow (specialized view)
+        if (implementadorNavStack.level === 'actividades') {
+          // Show activity blocks with subtask notifications count
+          const groups = await getNotificacionesAgrupadasPorActividad();
+          setActividadGroups(groups);
+        } else if (implementadorNavStack.level === 'subtareas') {
+          // Show subtask notifications for selected activity (type: Tareas)
+          const response = await getNotificaciones({
+            actividadId: implementadorNavStack.actividadId,
+            tipo: 'Tareas',
+            page,
+            limit: PAGE_SIZE,
+          });
+          const mapped = response.notificaciones
+            .map(mapBackendNotification)
+            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          setNotifications(mapped);
+          setTotalItems(response.total);
+        }
       } else {
         // Non-PMO Navigation Flow (existing logic)
         if (currentNonPmoTab?.drillDown === 'flat') {
@@ -325,7 +352,7 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [usePmoFlow, isDeveloper, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, developerNavStack, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
+  }, [usePmoFlow, isDeveloper, isImplementador, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, developerNavStack, implementadorNavStack, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
 
   useEffect(() => {
     loadData();
@@ -492,6 +519,21 @@ export default function NotificationsPage() {
 
   const handleDeveloperBack = () => {
     setDeveloperNavStack({ level: 'proyectos' });
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedNotificationIds(new Set());
+  };
+
+  // IMPLEMENTADOR Navigation handlers
+  const handleImplementadorActividadClick = (actividadId: number, actividadNombre: string, actividadCodigo: string) => {
+    setImplementadorNavStack({ level: 'subtareas', actividadId, actividadNombre, actividadCodigo });
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedNotificationIds(new Set());
+  };
+
+  const handleImplementadorBack = () => {
+    setImplementadorNavStack({ level: 'actividades' });
     setPage(1);
     setDeleteMode(false);
     setSelectedNotificationIds(new Set());
@@ -1079,6 +1121,118 @@ export default function NotificationsPage() {
       return null;
     }
 
+    // IMPLEMENTADOR View (specialized)
+    if (isImplementador) {
+      if (implementadorNavStack.level === 'actividades') {
+        // Show activity blocks
+        return (
+          <ActividadBlockList
+            groups={actividadGroups}
+            loading={isLoading}
+            deleteMode={false}
+            selectedIds={new Set()}
+            onToggleSelect={() => {}}
+            onActividadClick={handleImplementadorActividadClick}
+          />
+        );
+      }
+
+      if (implementadorNavStack.level === 'subtareas') {
+        // Show subtask notifications for selected activity
+        return (
+          <div>
+            {/* Custom header for implementador subtask list */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={handleImplementadorBack} className="gap-1">
+                  <span className="mr-1">&larr;</span>
+                  Volver
+                </Button>
+                <nav className="text-sm text-gray-500">
+                  <span className="text-gray-400">Actividades</span>
+                  <span className="mx-1 text-gray-400">&gt;</span>
+                  <span className="font-medium text-gray-700">{implementadorNavStack.actividadCodigo}: {implementadorNavStack.actividadNombre}</span>
+                </nav>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {deleteMode && (
+                  <Button variant="outline" size="sm" onClick={selectAllNotifications}>
+                    Seleccionar todas
+                  </Button>
+                )}
+                {!deleteMode && (
+                  <>
+                    {notifications.some(n => !n.read) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await marcarTodasLeidasPorActividad(implementadorNavStack.actividadId);
+                            toast({ title: 'Listo', description: 'Todas las notificaciones marcadas como leídas' });
+                            loadData();
+                          } catch (err) {
+                            console.error('Error marking all as read:', err);
+                            toast({ title: 'Error', description: 'No se pudieron marcar como leídas', variant: 'destructive' });
+                          }
+                        }}
+                      >
+                        Marcar todas como leídas
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={toggleDeleteMode}>
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Eliminar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+                      <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
+                      Actualizar
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">
+                No hay notificaciones de subtareas.
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {notifications.map((notification) => (
+                    <NotificationCard
+                      key={notification.id}
+                      notification={notification}
+                      onClick={handleNotificationClick}
+                      onViewObservacion={setViewingObservacion}
+                      checkbox={deleteMode}
+                      checked={selectedNotificationIds.has(notification.id)}
+                      onCheckChange={() => toggleNotificationSelect(notification.id)}
+                    />
+                  ))}
+                </div>
+                <PaginationControls
+                  page={page}
+                  totalPages={drillTotalPages}
+                  total={totalItems}
+                  limit={PAGE_SIZE}
+                  onPageChange={handlePageChange}
+                />
+              </>
+            )}
+          </div>
+        );
+      }
+
+      return null;
+    }
+
     // Non-PMO View (existing logic)
     // Flat tab (aprobaciones/validaciones)
     if (currentNonPmoTab?.drillDown === 'flat') {
@@ -1186,6 +1340,8 @@ export default function NotificationsPage() {
     ? (pmoNavStack.level === 'proyectos' || (activeTab === 'Actividades' && pmoActividadNavStack.level === 'actividades'))
     : isDeveloper
     ? developerNavStack.level === 'proyectos'
+    : isImplementador
+    ? implementadorNavStack.level === 'actividades'
     : (otherNavStack.level === 'proyectos' || currentNonPmoTab?.drillDown === 'flat');
 
   return (
@@ -1240,7 +1396,7 @@ export default function NotificationsPage() {
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
           {/* Tabs */}
-          {!isDeveloper && (
+          {!isDeveloper && !isImplementador && (
             <div className="flex items-center mb-6 gap-2">
               {usePmoFlow ? (
                 // PMO/COORDINADOR/SCRUM_MASTER Tabs + PGD Filter
