@@ -312,16 +312,18 @@ export default function NotificationsPage() {
       } else {
         // Non-PMO Navigation Flow (existing logic)
         if (currentNonPmoTab?.drillDown === 'flat') {
-          // For flat tabs we filter client-side by type
-          const response = await getNotificaciones({ limit: 200 });
+          // For flat tabs, get first type and paginate server-side
+          const tipo = currentNonPmoTab.types?.[0];
+          const response = await getNotificaciones({
+            tipo,
+            page: flatPage,
+            limit: PAGE_SIZE,
+          });
           const mapped = response.notificaciones
             .map(mapBackendNotification)
-            .filter(n => currentNonPmoTab.types?.includes(n.type))
             .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-          setFlatTotalItems(mapped.length);
-          // Client-side pagination for flat tabs
-          const start = (flatPage - 1) * PAGE_SIZE;
-          setFlatNotifications(mapped.slice(start, start + PAGE_SIZE));
+          setFlatTotalItems(response.total);
+          setFlatNotifications(mapped);
         } else if (otherNavStack.level === 'proyectos') {
           const groups = await getNotificacionesAgrupadasPorProyecto();
           setProyectoGroups(groups);
