@@ -41,6 +41,10 @@ interface SprintSectionProps {
   onValidarHu?: (historia: HistoriaUsuario) => void;
   /** Modo solo lectura */
   isReadOnly?: boolean;
+  /** Current user ID for task ownership checks */
+  currentUserId?: number;
+  /** Developer-only mode - restrict edit/delete to owned tasks */
+  isDeveloperOnly?: boolean;
 }
 
 const estadoConfig: Record<string, { bg: string; text: string; label: string }> = {
@@ -72,6 +76,8 @@ export const SprintSection = memo(function SprintSection({
   onVerDocumento,
   onValidarHu,
   isReadOnly = false,
+  currentUserId,
+  isDeveloperOnly = false,
 }: SprintSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -191,6 +197,8 @@ export const SprintSection = memo(function SprintSection({
               tareasRefreshKey={tareasRefreshKey}
               onVerDocumento={onVerDocumento}
               onValidarHu={onValidarHu}
+              currentUserId={currentUserId}
+              isDeveloperOnly={isDeveloperOnly}
             />
 
             {/* Add historia button */}

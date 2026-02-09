@@ -556,6 +556,8 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           onEditTarea={isProyectoFinalizado || isViewOnly ? undefined : handleEditTarea}
           onDeleteTarea={isProyectoFinalizado || isViewOnly ? undefined : handleDeleteTarea}
           tareasRefreshKey={tareasRefreshKey}
+          currentUserId={user?.id ? parseInt(user.id, 10) : undefined}
+          isDeveloperOnly={isDeveloperOnly}
           onVerDocumento={handleVerDocumento}
           onValidarHu={isProyectoFinalizado || isDeveloperOnly || isViewOnly ? undefined : handleValidarHu}
           isReadOnly={isReadOnly || isViewOnly}

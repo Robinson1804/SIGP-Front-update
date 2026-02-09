@@ -90,6 +90,11 @@ type OtherNavLevel =
   | { level: 'sprints'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string }
   | { level: 'notificaciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string; sprintId?: number; sprintNombre?: string };
 
+// Navigation state types for DESARROLLADOR (simpler: just proyectos → tareas)
+type DeveloperNavLevel =
+  | { level: 'proyectos' }
+  | { level: 'tareas'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string };
+
 // Tab definitions for non-PMO roles
 interface TabDefinition {
   name: OtherTabName;
@@ -120,37 +125,37 @@ export default function NotificationsPage() {
   const { toast } = useToast();
 
   const isPmo = user?.role === ROLES.PMO;
+  const isCoordinador = user?.role === ROLES.COORDINADOR;
+  const isScrumMaster = user?.role === ROLES.SCRUM_MASTER;
+  const isDeveloper = user?.role === ROLES.DESARROLLADOR;
 
-  // PGD filter state (PMO only)
-  const { initializePGD, pgds, selectedPGD, setSelectedPGD } = usePGD();
+  // COORDINADOR and SCRUM_MASTER use PMO-like flow (tabs + sections)
+  const usePmoFlow = isPmo || isCoordinador || isScrumMaster;
+
+  // PGD filter state (PMO only) - defaults to "Todos" (undefined), user selects explicitly
+  const { initializePGD, pgds } = usePGD();
   const [pgdFilterId, setPgdFilterId] = useState<number | undefined>(undefined);
 
-  // Load PGDs for filter
+  // Load PGDs for filter (PMO and COORDINADOR)
   useEffect(() => {
-    if (isPmo) {
+    if (usePmoFlow) {
       getPGDs({ activo: true }).then((list) => {
         initializePGD(list);
       });
     }
-  }, [isPmo, initializePGD]);
+  }, [usePmoFlow, initializePGD]);
 
-  // Sync pgdFilterId with selectedPGD from store
-  useEffect(() => {
-    if (isPmo && selectedPGD) {
-      setPgdFilterId(selectedPGD.id);
-    }
-  }, [isPmo, selectedPGD]);
-
-  // Tab state
-  const PMO_TABS: PmoTabName[] = ['Proyectos', 'Actividades'];
+  // Tab state - SCRUM_MASTER only sees Proyectos, PMO/COORDINADOR see both
+  const PMO_TABS: PmoTabName[] = isScrumMaster ? ['Proyectos'] : ['Proyectos', 'Actividades'];
   const NON_PMO_TABS = getTabsForNonPmo(user?.role);
 
-  const [activeTab, setActiveTab] = useState<TabName>(isPmo ? 'Proyectos' : (NON_PMO_TABS[0]?.name || 'Proyectos'));
+  const [activeTab, setActiveTab] = useState<TabName>(usePmoFlow ? 'Proyectos' : (NON_PMO_TABS[0]?.name || 'Proyectos'));
 
-  // Navigation state - different for PMO vs other roles
+  // Navigation state - different for PMO vs other roles vs DESARROLLADOR
   const [pmoNavStack, setPmoNavStack] = useState<PmoNavLevel>({ level: 'proyectos' });
   const [pmoActividadNavStack, setPmoActividadNavStack] = useState<PmoActividadNavLevel>({ level: 'actividades' });
   const [otherNavStack, setOtherNavStack] = useState<OtherNavLevel>({ level: 'proyectos' });
+  const [developerNavStack, setDeveloperNavStack] = useState<DeveloperNavLevel>({ level: 'proyectos' });
 
   // Data state
   const [proyectoGroups, setProyectoGroups] = useState<ProyectoGroup[]>([]);
@@ -192,10 +197,10 @@ export default function NotificationsPage() {
 
   // Reset nav, selection and page when tab changes
   useEffect(() => {
-    if (isPmo) {
+    if (usePmoFlow) {
       setPmoNavStack({ level: 'proyectos' });
       setPmoActividadNavStack({ level: 'actividades' });
-    } else {
+    } else if (!isDeveloper) {
       setOtherNavStack({ level: 'proyectos' });
     }
     setDeleteMode(false);
@@ -204,14 +209,14 @@ export default function NotificationsPage() {
     setSelectedNotificationIds(new Set());
     setPage(1);
     setFlatPage(1);
-  }, [activeTab, isPmo]);
+  }, [activeTab, usePmoFlow, isDeveloper]);
 
   // Load data based on current tab and nav level
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (isPmo) {
-        // PMO Navigation Flow
+      if (usePmoFlow) {
+        // PMO/COORDINADOR/SCRUM_MASTER Navigation Flow
         if (activeTab === 'Actividades') {
           // Tab Actividades for PMO
           if (pmoActividadNavStack.level === 'actividades') {
@@ -257,6 +262,26 @@ export default function NotificationsPage() {
             setTotalItems(response.total);
           }
         }
+      } else if (isDeveloper) {
+        // DESARROLLADOR Navigation Flow (specialized view)
+        if (developerNavStack.level === 'proyectos') {
+          // Show project blocks with task notifications count
+          const groups = await getNotificacionesAgrupadasPorProyecto();
+          setProyectoGroups(groups);
+        } else if (developerNavStack.level === 'tareas') {
+          // Show task notifications for selected project
+          const response = await getNotificaciones({
+            proyectoId: developerNavStack.proyectoId,
+            tipo: 'Tareas',
+            page,
+            limit: PAGE_SIZE,
+          });
+          const mapped = response.notificaciones
+            .map(mapBackendNotification)
+            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          setNotifications(mapped);
+          setTotalItems(response.total);
+        }
       } else {
         // Non-PMO Navigation Flow (existing logic)
         if (currentNonPmoTab?.drillDown === 'flat') {
@@ -300,7 +325,7 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isPmo, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
+  }, [usePmoFlow, isDeveloper, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, developerNavStack, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
 
   useEffect(() => {
     loadData();
@@ -457,6 +482,21 @@ export default function NotificationsPage() {
     setSelectedNotificationIds(new Set());
   };
 
+  // DESARROLLADOR Navigation handlers
+  const handleDeveloperProyectoClick = (proyectoId: number, proyectoNombre: string, proyectoCodigo: string) => {
+    setDeveloperNavStack({ level: 'tareas', proyectoId, proyectoNombre, proyectoCodigo });
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedNotificationIds(new Set());
+  };
+
+  const handleDeveloperBack = () => {
+    setDeveloperNavStack({ level: 'proyectos' });
+    setPage(1);
+    setDeleteMode(false);
+    setSelectedNotificationIds(new Set());
+  };
+
   // Page change handlers
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
@@ -545,8 +585,10 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllReadByProject = async () => {
-    const proyectoId = isPmo
+    const proyectoId = usePmoFlow
       ? (pmoNavStack.level === 'notificaciones' ? pmoNavStack.proyectoId : null)
+      : isDeveloper
+      ? (developerNavStack.level === 'tareas' ? developerNavStack.proyectoId : null)
       : (otherNavStack.level === 'notificaciones' ? otherNavStack.proyectoId : null);
 
     if (!proyectoId) return;
@@ -613,15 +655,22 @@ export default function NotificationsPage() {
     });
   };
 
+  const selectAllNotifications = () => {
+    const allIds = new Set(notifications.map(n => n.id));
+    setSelectedNotificationIds(allIds);
+  };
+
   const handleDeleteSelected = async () => {
     setIsDeleting(true);
     try {
-      // Determine current level based on active tab
-      const currentLevel = isPmo
+      // Determine current level based on role and navigation
+      const currentLevel = usePmoFlow
         ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
+        : isDeveloper
+        ? developerNavStack.level
         : otherNavStack.level;
 
-      if (isPmo && activeTab === 'Actividades') {
+      if (usePmoFlow && activeTab === 'Actividades') {
         // Handle Actividades tab deletion
         if (currentLevel === 'actividades' && selectedActividadIds.size > 0) {
           await bulkDeleteByActividades(Array.from(selectedActividadIds));
@@ -637,7 +686,7 @@ export default function NotificationsPage() {
         await bulkDeleteByProyectos(Array.from(selectedProyectoIds));
         setProyectoGroups(prev => prev.filter(g => !selectedProyectoIds.has(g.proyectoId)));
         toast({ title: 'Listo', description: `${selectedProyectoIds.size} proyecto(s) eliminados` });
-      } else if ((currentLevel === 'notificaciones' || (!isPmo && currentNonPmoTab?.drillDown === 'flat')) && selectedNotificationIds.size > 0) {
+      } else if ((currentLevel === 'notificaciones' || (!usePmoFlow && !isDeveloper && currentNonPmoTab?.drillDown === 'flat')) && selectedNotificationIds.size > 0) {
         const ids = Array.from(selectedNotificationIds).map(Number);
         await bulkDeleteNotificaciones(ids);
         toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
@@ -656,22 +705,27 @@ export default function NotificationsPage() {
   };
 
   // Count selected items for toolbar
-  const currentLevel = isPmo
+  const currentLevel = usePmoFlow
     ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
+    : isDeveloper
+    ? developerNavStack.level
     : otherNavStack.level;
   const selectedCount = (() => {
-    if (isPmo && activeTab === 'Actividades') {
+    if (usePmoFlow && activeTab === 'Actividades') {
       return currentLevel === 'actividades' ? selectedActividadIds.size : selectedNotificationIds.size;
+    }
+    if (isDeveloper) {
+      return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
     }
     return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
   })();
 
   // Calculate unread counts for current view
   const currentUnreadCount = (() => {
-    if (!isPmo && currentNonPmoTab?.drillDown === 'flat') {
+    if (!usePmoFlow && !isDeveloper && currentNonPmoTab?.drillDown === 'flat') {
       return flatNotifications.filter(n => !n.read).length;
     }
-    if (isPmo) {
+    if (usePmoFlow) {
       if (activeTab === 'Actividades') {
         if (pmoActividadNavStack.level === 'actividades') {
           return actividadGroups.reduce((sum, g) => sum + g.noLeidas, 0);
@@ -687,6 +741,8 @@ export default function NotificationsPage() {
           return notifications.filter(n => !n.read).length;
         }
       }
+    } else if (isDeveloper) {
+      return 0; // Developer handles count separately
     } else {
       if (otherNavStack.level === 'proyectos') {
         return proyectoGroups.reduce((sum, g) => sum + g.noLeidas, 0);
@@ -715,8 +771,8 @@ export default function NotificationsPage() {
 
   // Render content
   const renderContent = () => {
-    // PMO View
-    if (isPmo) {
+    // PMO/COORDINADOR View
+    if (usePmoFlow) {
       // Actividades tab
       if (activeTab === 'Actividades') {
         if (pmoActividadNavStack.level === 'actividades') {
@@ -911,6 +967,118 @@ export default function NotificationsPage() {
       }
     }
 
+    // DESARROLLADOR View (specialized)
+    if (isDeveloper) {
+      if (developerNavStack.level === 'proyectos') {
+        // Show project blocks
+        return (
+          <ProyectoBlockList
+            groups={proyectoGroups}
+            loading={isLoading}
+            deleteMode={false}
+            selectedIds={new Set()}
+            onToggleSelect={() => {}}
+            onProyectoClick={handleDeveloperProyectoClick}
+          />
+        );
+      }
+
+      if (developerNavStack.level === 'tareas') {
+        // Show task notifications for selected project
+        return (
+          <div>
+            {/* Custom header for developer task list */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={handleDeveloperBack} className="gap-1">
+                  <span className="mr-1">&larr;</span>
+                  Volver
+                </Button>
+                <nav className="text-sm text-gray-500">
+                  <span className="text-gray-400">Proyectos</span>
+                  <span className="mx-1 text-gray-400">&gt;</span>
+                  <span className="font-medium text-gray-700">{developerNavStack.proyectoCodigo}: {developerNavStack.proyectoNombre}</span>
+                </nav>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {deleteMode && (
+                  <Button variant="outline" size="sm" onClick={selectAllNotifications}>
+                    Seleccionar todas
+                  </Button>
+                )}
+                {!deleteMode && (
+                  <>
+                    {notifications.some(n => !n.read) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            await marcarTodasLeidasPorProyecto(developerNavStack.proyectoId);
+                            toast({ title: 'Listo', description: 'Todas las notificaciones marcadas como leídas' });
+                            loadData();
+                          } catch (err) {
+                            console.error('Error marking all as read:', err);
+                            toast({ title: 'Error', description: 'No se pudieron marcar como leídas', variant: 'destructive' });
+                          }
+                        }}
+                      >
+                        Marcar todas como leídas
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={toggleDeleteMode}>
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Eliminar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
+                      <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
+                      Actualizar
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">
+                No hay notificaciones de tareas.
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {notifications.map((notification) => (
+                    <NotificationCard
+                      key={notification.id}
+                      notification={notification}
+                      onClick={handleNotificationClick}
+                      onViewObservacion={setViewingObservacion}
+                      checkbox={deleteMode}
+                      checked={selectedNotificationIds.has(notification.id)}
+                      onCheckChange={() => toggleNotificationSelect(notification.id)}
+                    />
+                  ))}
+                </div>
+                <PaginationControls
+                  page={page}
+                  totalPages={drillTotalPages}
+                  total={totalItems}
+                  limit={PAGE_SIZE}
+                  onPageChange={handlePageChange}
+                />
+              </>
+            )}
+          </div>
+        );
+      }
+
+      return null;
+    }
+
     // Non-PMO View (existing logic)
     // Flat tab (aprobaciones/validaciones)
     if (currentNonPmoTab?.drillDown === 'flat') {
@@ -1013,9 +1181,11 @@ export default function NotificationsPage() {
   };
 
   // Determine which tabs to show
-  const showFlatTabUnreadCount = !isPmo && currentNonPmoTab?.drillDown === 'flat' && currentUnreadCount > 0;
-  const showHeaderUnreadBadge = isPmo
+  const showFlatTabUnreadCount = !usePmoFlow && !isDeveloper && currentNonPmoTab?.drillDown === 'flat' && currentUnreadCount > 0;
+  const showHeaderUnreadBadge = usePmoFlow
     ? (pmoNavStack.level === 'proyectos' || (activeTab === 'Actividades' && pmoActividadNavStack.level === 'actividades'))
+    : isDeveloper
+    ? developerNavStack.level === 'proyectos'
     : (otherNavStack.level === 'proyectos' || currentNonPmoTab?.drillDown === 'flat');
 
   return (
@@ -1070,11 +1240,12 @@ export default function NotificationsPage() {
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
           {/* Tabs */}
-          <div className="flex items-center mb-6 gap-2">
-            {isPmo ? (
-              // PMO Tabs + PGD Filter
-              <>
-                {PMO_TABS.map(tabName => (
+          {!isDeveloper && (
+            <div className="flex items-center mb-6 gap-2">
+              {usePmoFlow ? (
+                // PMO/COORDINADOR/SCRUM_MASTER Tabs + PGD Filter
+                <>
+                  {PMO_TABS.map(tabName => (
                   <Button
                     key={tabName}
                     size="sm"
@@ -1097,8 +1268,6 @@ export default function NotificationsPage() {
                       onValueChange={(val) => {
                         const newPgdId = val === 'all' ? undefined : parseInt(val, 10);
                         setPgdFilterId(newPgdId);
-                        const pgd = pgds.find(p => p.id === newPgdId) || null;
-                        setSelectedPGD(pgd);
                         // Reset navigation to project/activity list level
                         setPmoNavStack({ level: 'proyectos' });
                         setPmoActividadNavStack({ level: 'actividades' });
@@ -1140,8 +1309,9 @@ export default function NotificationsPage() {
                   {tab.name}
                 </Button>
               ))
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Header with count */}
           {showHeaderUnreadBadge && (
@@ -1179,3 +1349,4 @@ export default function NotificationsPage() {
     </ProtectedRoute>
   );
 }
+

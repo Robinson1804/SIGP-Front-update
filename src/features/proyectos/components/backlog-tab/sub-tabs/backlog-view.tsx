@@ -42,6 +42,10 @@ interface BacklogViewProps {
   onValidarHu?: (historia: HistoriaUsuario) => void;
   /** Modo solo lectura - deshabilita todas las acciones de edición */
   isReadOnly?: boolean;
+  /** Current user ID for task ownership checks */
+  currentUserId?: number;
+  /** Developer-only mode - restrict edit/delete to owned tasks */
+  isDeveloperOnly?: boolean;
 }
 
 export function BacklogView({
@@ -68,6 +72,8 @@ export function BacklogView({
   onVerDocumento,
   onValidarHu,
   isReadOnly = false,
+  currentUserId,
+  isDeveloperOnly = false,
 }: BacklogViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedEpicaId, setSelectedEpicaId] = useState('all');
@@ -205,6 +211,8 @@ export function BacklogView({
           onVerDocumento={onVerDocumento}
           onValidarHu={isReadOnly ? undefined : onValidarHu}
           isReadOnly={isReadOnly}
+          currentUserId={currentUserId}
+          isDeveloperOnly={isDeveloperOnly}
         />
       ))}
 

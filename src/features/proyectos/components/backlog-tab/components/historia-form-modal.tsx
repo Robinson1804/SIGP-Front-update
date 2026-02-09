@@ -50,7 +50,7 @@ import {
 } from '@/features/proyectos/services/historias.service';
 import { getEpicasByProyecto, type Epica } from '@/features/proyectos/services/epicas.service';
 import { getSprintsByProyecto, type Sprint } from '@/features/proyectos/services/sprints.service';
-import { getRequerimientosByProyecto, type Requerimiento } from '@/features/requerimientos';
+import { getRequerimientosFuncionalesByProyecto, type Requerimiento } from '@/features/requerimientos';
 import { apiClient, ENDPOINTS } from '@/lib/api';
 import { useCurrentUser } from '@/stores/auth.store';
 import { formatDate } from '@/lib/utils';
@@ -395,7 +395,7 @@ export function HistoriaFormModal({
       const [epicasData, sprintsData, requerimientosData, asignacionesResponse] = await Promise.all([
         getEpicasByProyecto(proyectoId),
         getSprintsByProyecto(proyectoId),
-        getRequerimientosByProyecto(proyectoId).catch(() => []),
+        getRequerimientosFuncionalesByProyecto(proyectoId).catch(() => []),
         apiClient.get(ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId)).catch(() => ({ data: [] })),
       ]);
 

@@ -159,6 +159,7 @@ export function TareaFormModal({
   // Obtener usuario actual para el campo Informador
   const currentUser = useCurrentUser();
   const informadorNombre = currentUser?.name || 'Usuario';
+  const isDeveloper = currentUser?.role === 'DESARROLLADOR';
 
   const form = useForm<TareaFormValues>({
     resolver: zodResolver(tareaSchema),
@@ -440,12 +441,17 @@ export function TareaFormModal({
           fechaFin: tarea.fechaFin?.split('T')[0] || '',
         });
       } else {
+        // For developers, auto-assign themselves when creating
+        const autoResponsables = isDeveloper && currentUser?.id
+          ? [parseInt(currentUser.id, 10)]
+          : [];
+
         form.reset({
           nombre: '',
           descripcion: '',
           estado: 'Por hacer',
           prioridad: undefined,
-          responsableIds: [],
+          responsableIds: autoResponsables,
           fechaInicio: '',
           fechaFin: '',
         });
@@ -1029,8 +1035,14 @@ export function TareaFormModal({
                               field.onChange(numericIds);
                             }}
                             placeholder={isLoadingEquipo ? "Cargando equipo..." : "Seleccionar responsables"}
+                            disabled={isDeveloper}
                           />
                         </FormControl>
+                        {isDeveloper && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Como Desarrollador, solo puedes asignarte a ti mismo
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     );

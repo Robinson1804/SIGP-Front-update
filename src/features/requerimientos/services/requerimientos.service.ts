@@ -19,6 +19,7 @@ const ENDPOINTS = {
   BASE: '/requerimientos',
   BY_ID: (id: number | string) => `/requerimientos/${id}`,
   BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/requerimientos`,
+  FUNCIONALES_BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/requerimientos/funcionales`,
 };
 
 /**
@@ -53,6 +54,19 @@ export async function getRequerimientosByProyecto(
   }
 
   return data;
+}
+
+/**
+ * Obtener solo requerimientos funcionales de un proyecto
+ * Usado en el formulario de Historias de Usuario
+ */
+export async function getRequerimientosFuncionalesByProyecto(
+  proyectoId: number | string
+): Promise<Requerimiento[]> {
+  const response = await apiClient.get<Requerimiento[]>(
+    ENDPOINTS.FUNCIONALES_BY_PROYECTO(proyectoId)
+  );
+  return response.data;
 }
 
 /**

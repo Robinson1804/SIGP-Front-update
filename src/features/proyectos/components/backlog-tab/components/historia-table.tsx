@@ -67,6 +67,10 @@ interface HistoriaTableProps {
   // Acciones de validacion (solo para SCRUM_MASTER)
   onVerDocumento?: (historia: HistoriaUsuario) => void;
   onValidarHu?: (historia: HistoriaUsuario) => void;
+  /** Current user ID for task ownership checks */
+  currentUserId?: number;
+  /** Developer-only mode - restrict edit/delete to owned tasks */
+  isDeveloperOnly?: boolean;
 }
 
 // Colores para estados de tareas
@@ -106,6 +110,8 @@ export function HistoriaTable({
   tareasRefreshKey,
   onVerDocumento,
   onValidarHu,
+  currentUserId,
+  isDeveloperOnly = false,
 }: HistoriaTableProps) {
   // Estado para filas expandidas
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -611,33 +617,40 @@ export function HistoriaTable({
                                           </Tooltip>
                                         </TooltipProvider>
                                       ) : (onEditTarea || onDeleteTarea) ? (
-                                        <DropdownMenu modal={false}>
-                                          <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                                              <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end">
-                                            {onEditTarea && (
-                                              <DropdownMenuItem onClick={() => onEditTarea(tarea)}>
-                                                <Edit className="h-4 w-4 mr-2" />
-                                                Editar
-                                              </DropdownMenuItem>
-                                            )}
-                                            {onDeleteTarea && (
-                                              <>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem
-                                                  onClick={() => onDeleteTarea(tarea)}
-                                                  className="text-red-600"
-                                                >
-                                                  <Trash2 className="h-4 w-4 mr-2" />
-                                                  Eliminar
-                                                </DropdownMenuItem>
-                                              </>
-                                            )}
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        (() => {
+                                          // For developers, only show edit/delete if they own the task
+                                          const canEditThisTarea = !isDeveloperOnly || tarea.asignadoA === currentUserId;
+
+                                          return canEditThisTarea ? (
+                                            <DropdownMenu modal={false}>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                                                  <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                {onEditTarea && (
+                                                  <DropdownMenuItem onClick={() => onEditTarea(tarea)}>
+                                                    <Edit className="h-4 w-4 mr-2" />
+                                                    Editar
+                                                  </DropdownMenuItem>
+                                                )}
+                                                {onDeleteTarea && (
+                                                  <>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                      onClick={() => onDeleteTarea(tarea)}
+                                                      className="text-red-600"
+                                                    >
+                                                      <Trash2 className="h-4 w-4 mr-2" />
+                                                      Eliminar
+                                                    </DropdownMenuItem>
+                                                  </>
+                                                )}
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          ) : null;
+                                        })()
                                       ) : null}
                                     </TableCell>
                                   </TableRow>
