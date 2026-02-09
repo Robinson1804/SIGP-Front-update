@@ -710,6 +710,8 @@ export default function NotificationsPage() {
         ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
         : isDeveloper
         ? developerNavStack.level
+        : isImplementador
+        ? implementadorNavStack.level
         : otherNavStack.level;
 
       if (usePmoFlow && activeTab === 'Actividades') {
@@ -728,7 +730,11 @@ export default function NotificationsPage() {
         await bulkDeleteByProyectos(Array.from(selectedProyectoIds));
         setProyectoGroups(prev => prev.filter(g => !selectedProyectoIds.has(g.proyectoId)));
         toast({ title: 'Listo', description: `${selectedProyectoIds.size} proyecto(s) eliminados` });
-      } else if ((currentLevel === 'notificaciones' || (!usePmoFlow && !isDeveloper && currentNonPmoTab?.drillDown === 'flat')) && selectedNotificationIds.size > 0) {
+      } else if (isImplementador && currentLevel === 'actividades' && selectedActividadIds.size > 0) {
+        await bulkDeleteByActividades(Array.from(selectedActividadIds));
+        setActividadGroups(prev => prev.filter(g => !selectedActividadIds.has(g.actividadId)));
+        toast({ title: 'Listo', description: `${selectedActividadIds.size} actividad(es) eliminadas` });
+      } else if ((currentLevel === 'notificaciones' || currentLevel === 'tareas' || currentLevel === 'subtareas' || (!usePmoFlow && !isDeveloper && !isImplementador && currentNonPmoTab?.drillDown === 'flat')) && selectedNotificationIds.size > 0) {
         const ids = Array.from(selectedNotificationIds).map(Number);
         await bulkDeleteNotificaciones(ids);
         toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
@@ -751,6 +757,8 @@ export default function NotificationsPage() {
     ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
     : isDeveloper
     ? developerNavStack.level
+    : isImplementador
+    ? implementadorNavStack.level
     : otherNavStack.level;
   const selectedCount = (() => {
     if (usePmoFlow && activeTab === 'Actividades') {
@@ -759,12 +767,15 @@ export default function NotificationsPage() {
     if (isDeveloper) {
       return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
     }
+    if (isImplementador) {
+      return currentLevel === 'actividades' ? selectedActividadIds.size : selectedNotificationIds.size;
+    }
     return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
   })();
 
   // Calculate unread counts for current view
   const currentUnreadCount = (() => {
-    if (!usePmoFlow && !isDeveloper && currentNonPmoTab?.drillDown === 'flat') {
+    if (!usePmoFlow && !isDeveloper && !isImplementador && currentNonPmoTab?.drillDown === 'flat') {
       return flatNotifications.filter(n => !n.read).length;
     }
     if (usePmoFlow) {
@@ -785,6 +796,8 @@ export default function NotificationsPage() {
       }
     } else if (isDeveloper) {
       return 0; // Developer handles count separately
+    } else if (isImplementador) {
+      return 0; // Implementador handles count separately
     } else {
       if (otherNavStack.level === 'proyectos') {
         return proyectoGroups.reduce((sum, g) => sum + g.noLeidas, 0);
@@ -1335,7 +1348,7 @@ export default function NotificationsPage() {
   };
 
   // Determine which tabs to show
-  const showFlatTabUnreadCount = !usePmoFlow && !isDeveloper && currentNonPmoTab?.drillDown === 'flat' && currentUnreadCount > 0;
+  const showFlatTabUnreadCount = !usePmoFlow && !isDeveloper && !isImplementador && currentNonPmoTab?.drillDown === 'flat' && currentUnreadCount > 0;
   const showHeaderUnreadBadge = usePmoFlow
     ? (pmoNavStack.level === 'proyectos' || (activeTab === 'Actividades' && pmoActividadNavStack.level === 'actividades'))
     : isDeveloper
