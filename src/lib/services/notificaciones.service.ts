@@ -88,17 +88,19 @@ export async function getNotificaciones(
       { params: filters }
     );
     const raw = response.data;
-    // Backend returns { data: [...], total, page, limit }
-    if (raw && Array.isArray(raw.data)) {
+    // Backend returns { data: [...], meta: { total, page, limit } }
+    if (raw && Array.isArray(raw)) {
+      // Direct array response (from interceptor extracting data.data)
+      const meta = (response as any).meta || {};
       return {
-        notificaciones: raw.data,
-        total: raw.total ?? raw.data.length,
-        noLeidas: raw.data.filter((n: any) => !n.leida).length,
-        page: raw.page ?? 1,
-        limit: raw.limit ?? 10,
+        notificaciones: raw,
+        total: meta.total ?? raw.length,
+        noLeidas: raw.filter((n: any) => !n.leida).length,
+        page: meta.page ?? 1,
+        limit: meta.limit ?? 10,
       };
     }
-    // Fallback: backend returns array directly
+    // Fallback: wrapped response
     const notificaciones = Array.isArray(raw) ? raw : [];
     return {
       notificaciones,
