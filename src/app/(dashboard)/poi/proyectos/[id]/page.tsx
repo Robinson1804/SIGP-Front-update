@@ -1,13 +1,16 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Users, DollarSign, Target, FileText, FolderOpen, ClipboardList, BarChart } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, DollarSign, Target, FileText, FolderOpen, ClipboardList, BarChart, Plus, FolderTree } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProyectoActions } from '@/features/proyectos';
 import { AreaUsuariaDisplay } from '@/features/proyectos/components/area-usuaria-display';
+import { PermissionGate } from '@/features/auth';
 import { getProyecto } from '@/lib/actions';
+import { getSubproyectosByProyecto } from '@/features/subproyectos/services/subproyectos.service';
 import { paths } from '@/lib/paths';
+import { MODULES, PERMISSIONS } from '@/lib/definitions';
 
 interface ProyectoDetallesPageProps {
   params: {
@@ -31,6 +34,9 @@ export default async function ProyectoDetallesPage({
   if (!proyecto) {
     notFound();
   }
+
+  // Cargar subproyectos del proyecto
+  const subproyectos = await getSubproyectosByProyecto(parseInt(params.id)).catch(() => []);
 
   return (
     <div className="space-y-6">
@@ -251,6 +257,68 @@ export default async function ProyectoDetallesPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Subproyectos */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <FolderTree className="h-5 w-5" />
+            Subproyectos
+          </CardTitle>
+          <PermissionGate module={MODULES.POI} permission={PERMISSIONS.CREATE}>
+            <Button asChild size="sm">
+              <Link href={`${paths.poi.subproyectos.nuevo}?proyectoPadreId=${proyecto.id}`}>
+                <Plus className="mr-2 h-4 w-4" />
+                Crear Subproyecto
+              </Link>
+            </Button>
+          </PermissionGate>
+        </CardHeader>
+        <CardContent>
+          {subproyectos.length > 0 ? (
+            <div className="space-y-2">
+              {subproyectos.map((subproyecto) => (
+                <div
+                  key={subproyecto.id}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent transition-colors"
+                >
+                  <div className="flex-1">
+                    <Link
+                      href={paths.poi.subproyectos.detalles(subproyecto.id)}
+                      className="font-medium hover:underline"
+                    >
+                      {subproyecto.codigo} - {subproyecto.nombre}
+                    </Link>
+                    {subproyecto.descripcion && (
+                      <p className="text-sm text-muted-foreground line-clamp-1">
+                        {subproyecto.descripcion}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={estadoVariants[subproyecto.estado] as any}>
+                      {subproyecto.estado}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <FolderTree className="mx-auto h-12 w-12 mb-2 opacity-50" />
+              <p>Este proyecto no tiene subproyectos</p>
+              <PermissionGate module={MODULES.POI} permission={PERMISSIONS.CREATE}>
+                <Button asChild variant="outline" className="mt-4">
+                  <Link href={`${paths.poi.subproyectos.nuevo}?proyectoPadreId=${proyecto.id}`}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Crear el primer subproyecto
+                  </Link>
+                </Button>
+              </PermissionGate>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Enlaces rápidos a secciones del proyecto */}
       <Card>
