@@ -72,7 +72,7 @@ export function SeccionBlockList({
   }
 
   const totalNotificaciones = Object.values(counts).reduce(
-    (sum, c) => sum + c.noLeidas,
+    (sum, c) => sum + c.total,
     0
   );
 
@@ -144,7 +144,7 @@ export function SeccionBlockList({
         {SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
           const seccionData = counts[key];
           const hasUnread = seccionData.noLeidas > 0;
-          const total = seccionData.noLeidas;
+          const total = seccionData.total;
           const isDeleting = deletingSeccion === key;
           const isConfirming = confirmSeccion === key;
 
