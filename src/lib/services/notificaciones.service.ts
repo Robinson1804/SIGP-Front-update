@@ -4,7 +4,7 @@
  * Servicios para gestión de notificaciones del usuario
  */
 
-import { apiClient } from '@/lib/api';
+import { apiClient, invalidateCache } from '@/lib/api';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 
 // Types
@@ -150,6 +150,8 @@ export async function getNotificacionesCount(): Promise<number> {
  */
 export async function marcarNotificacionLeida(id: number | string): Promise<void> {
   await apiClient.patch(ENDPOINTS.NOTIFICACIONES.MARCAR_LEIDA(id));
+  // Invalidar caché de notificaciones para reflejar cambios inmediatamente
+  invalidateCache('/notificaciones');
 }
 
 /**
@@ -157,6 +159,8 @@ export async function marcarNotificacionLeida(id: number | string): Promise<void
  */
 export async function marcarTodasLeidas(): Promise<void> {
   await apiClient.patch(ENDPOINTS.NOTIFICACIONES.MARCAR_TODAS_LEIDAS);
+  // Invalidar caché de notificaciones para reflejar cambios inmediatamente
+  invalidateCache('/notificaciones');
 }
 
 /**
@@ -232,6 +236,8 @@ export async function getNotificacionesPorProyecto(
  */
 export async function marcarTodasLeidasPorProyecto(proyectoId: number): Promise<void> {
   await apiClient.patch(ENDPOINTS.NOTIFICACIONES.LEER_TODAS_PROYECTO(proyectoId));
+  // Invalidar caché de notificaciones para reflejar cambios inmediatamente
+  invalidateCache('/notificaciones');
 }
 
 /**
@@ -299,6 +305,8 @@ export async function getSeccionCountsByActividad(actividadId: number): Promise<
  */
 export async function marcarTodasLeidasPorActividad(actividadId: number): Promise<void> {
   await apiClient.patch(ENDPOINTS.NOTIFICACIONES.LEER_TODAS_ACTIVIDAD(actividadId));
+  // Invalidar caché de notificaciones para reflejar cambios inmediatamente
+  invalidateCache('/notificaciones');
 }
 
 /**
