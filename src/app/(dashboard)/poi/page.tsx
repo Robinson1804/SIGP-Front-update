@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   Folder,
@@ -525,6 +525,10 @@ function PmoPoiView() {
     const { sidebarOpen } = useSidebar();
     const { user } = useAuth();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+
+    // Leer query parameter 'tipo' de la URL para filtro inicial
+    const tipoFromUrl = searchParams.get('tipo');
 
     // Estado para proyectos cargados desde API (con IDs para edición)
     const [projects, setProjects] = useState<ProjectWithIds[]>([]);
@@ -548,8 +552,10 @@ function PmoPoiView() {
         availableYears: pgdAvailableYears,
     } = usePGD();
 
-    // Filtros
-    const [selectedType, setSelectedType] = useState<string>("Proyecto");
+    // Filtros - inicializar con el tipo de la URL si existe
+    const [selectedType, setSelectedType] = useState<string>(
+        tipoFromUrl === 'Proyecto' || tipoFromUrl === 'Actividad' ? tipoFromUrl : "Proyecto"
+    );
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedClassification, setSelectedClassification] = useState<string>("all");
     const [selectedYear, setSelectedYear] = useState<string>("all");

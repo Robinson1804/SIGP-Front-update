@@ -113,11 +113,11 @@ export function DashboardContent() {
 
   // Navigation handlers
   const handleViewAllProyectos = () => {
-    router.push(paths.poi.proyectos.base);
+    router.push(`${paths.poi.base}?tipo=Proyecto`);
   };
 
   const handleViewAllActividades = () => {
-    router.push(paths.poi.actividades);
+    router.push(`${paths.poi.base}?tipo=Actividad`);
   };
 
   const handleSprintClick = (sprint: SprintTimeline) => {
@@ -194,7 +194,7 @@ export function DashboardContent() {
                 icon={Briefcase}
                 iconColor="text-blue-600"
                 loading={loading}
-                onClick={() => router.push(paths.poi.proyectos.base)}
+                onClick={() => router.push(`${paths.poi.base}?tipo=Proyecto`)}
               />
               <KpiCardEnhanced
                 title="Actividades"
@@ -202,7 +202,7 @@ export function DashboardContent() {
                 icon={Layers}
                 iconColor="text-green-600"
                 loading={loading}
-                onClick={() => router.push(paths.poi.actividades)}
+                onClick={() => router.push(`${paths.poi.base}?tipo=Actividad`)}
               />
               <KpiCardEnhanced
                 title="Sprints Activos"
