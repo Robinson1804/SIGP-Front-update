@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { PermissionGate } from '@/features/auth';
 import { SubproyectoList, getSubproyectos } from '@/features/subproyectos';
 import { MODULES, PERMISSIONS } from '@/lib/definitions';
+import { paths } from '@/lib/paths';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -29,7 +30,7 @@ export default async function SubproyectosPage() {
 
         <PermissionGate module={MODULES.POI} permission={PERMISSIONS.CREATE}>
           <Button asChild>
-            <Link href="/poi/subproyectos/nuevo">
+            <Link href={paths.poi.subproyectos.nuevo}>
               <Plus className="mr-2 h-4 w-4" />
               Nuevo Subproyecto
             </Link>

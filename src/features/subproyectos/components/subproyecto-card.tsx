@@ -58,7 +58,7 @@ export function SubproyectoCard({ data }: SubproyectoCardProps) {
         <div className="space-y-1 flex-1">
           <CardTitle className="text-base">
             <Link
-              href={`/poi/subproyectos/${data.id}`}
+              href={paths.poi.subproyectos.detalles(data.id)}
               className="hover:underline"
             >
               {data.codigo} - {data.nombre}
@@ -81,7 +81,7 @@ export function SubproyectoCard({ data }: SubproyectoCardProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/poi/subproyectos/${data.id}/editar`}>
+                <Link href={paths.poi.subproyectos.editar(data.id)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Editar
                 </Link>

@@ -47,6 +47,7 @@ export const paths = {
     },
     subproyectos: {
       base: '/poi/subproyectos',
+      nuevo: '/poi/subproyectos/nuevo',
       detalles: (id: number | string) => `/poi/subproyectos/${id}`,
       editar: (id: number | string) => `/poi/subproyectos/${id}/editar`,
       cronograma: (id: number | string) => `/poi/subproyectos/${id}/cronograma`,

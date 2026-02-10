@@ -327,3 +327,27 @@ export const CreateProyectoSchema = z.object({
   fechaInicio: z.string().optional(),
   fechaFin: z.string().optional(),
 });
+
+/**
+ * Schema de validacion para crear subproyecto
+ */
+export const CreateSubproyectoSchema = z.object({
+  proyectoPadreId: z.number().int().positive('Debe seleccionar un proyecto padre'),
+  codigo: z.string().optional(), // Autogenerado por el backend
+  nombre: z.string().min(3, 'Nombre debe tener al menos 3 caracteres').max(200),
+  descripcion: z.string().optional(),
+  clasificacion: z.enum(['Al ciudadano', 'Gestion interna']).optional(),
+  coordinadorId: z.number().int().positive().optional(),
+  scrumMasterId: z.number().int().positive().optional(),
+  patrocinadorId: z.number().int().positive().optional(),
+  areaUsuaria: z.array(z.number().int().positive()).optional(),
+  coordinacion: z.string().max(100).optional(),
+  areaResponsable: z.string().max(200).optional(),
+  areasFinancieras: z.array(z.string()).optional(),
+  monto: z.number().positive().optional(),
+  anios: z.array(z.number().int().min(2024).max(2050)).optional(),
+  fechaInicio: z.string().optional(),
+  fechaFin: z.string().optional(),
+});
+
+export type CreateSubproyectoInput = z.infer<typeof CreateSubproyectoSchema>;
