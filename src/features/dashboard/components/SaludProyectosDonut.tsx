@@ -31,7 +31,15 @@ const LABELS = {
 /**
  * Dona de Salud de Proyectos
  *
- * Muestra distribucion de proyectos por estado de salud (verde/amarillo/rojo)
+ * Muestra distribución de proyectos activos por estado de salud:
+ * - Verde: Proyectos que van en tiempo según cronograma
+ * - Amarillo: Proyectos en riesgo de atraso
+ * - Rojo: Proyectos atrasados o con problemas críticos
+ *
+ * Funcionalidad:
+ * - Hover sobre segmentos muestra detalles específicos
+ * - Click en segmentos o leyenda ejecuta onSegmentClick (si está configurado)
+ * - Centro muestra total de proyectos cuando no hay hover
  */
 export function SaludProyectosDonut({
   data,
@@ -159,7 +167,8 @@ export function SaludProyectosDonut({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-center">
+        {/* Contenedor del gráfico con posicionamiento relativo */}
+        <div className="relative flex items-center justify-center">
           <ResponsiveContainer width={220} height={220}>
             <PieChart>
               <Pie
@@ -183,36 +192,45 @@ export function SaludProyectosDonut({
               </Pie>
             </PieChart>
           </ResponsiveContainer>
+
+          {/* Texto central cuando no hay hover - posicionado dentro del gráfico */}
+          {activeIndex === null && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-gray-800">{total}</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">proyectos</p>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Center text when no hover */}
-        {activeIndex === null && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center">
-              <p className="text-2xl font-bold">{total}</p>
-              <p className="text-xs text-gray-500">proyectos</p>
-            </div>
-          </div>
-        )}
-
-        {/* Legend */}
-        <div className="flex justify-center gap-4 mt-4">
+        {/* Leyenda con indicadores de color y contadores */}
+        <div className="flex flex-col gap-2 mt-6 px-2">
           {chartData.map((item) => (
             <button
               key={item.name}
               className={cn(
-                'flex items-center gap-2 px-2 py-1 rounded transition-colors',
-                onSegmentClick && 'hover:bg-gray-100 cursor-pointer'
+                'flex items-center justify-between gap-3 px-3 py-2 rounded-lg transition-all',
+                'border border-gray-200',
+                onSegmentClick && 'hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm cursor-pointer'
               )}
               onClick={() => onSegmentClick && handleClick(item, 0)}
             >
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-xs">
-                {item.label}: <strong>{item.value}</strong>
-              </span>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  {item.label}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-gray-900">{item.value}</span>
+                <span className="text-xs text-gray-500">
+                  ({((item.value / total) * 100).toFixed(0)}%)
+                </span>
+              </div>
             </button>
           ))}
         </div>
