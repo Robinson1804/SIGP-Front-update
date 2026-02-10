@@ -119,9 +119,16 @@ apiClient.interceptors.request.use(
  */
 apiClient.interceptors.response.use(
   (response) => {
-    // La API de SIGP envuelve las respuestas en { data, statusCode, message }
-    // Extraemos solo la data para simplificar el uso
-    return response.data?.data ? { ...response, data: response.data.data } : response;
+    // La API de SIGP envuelve las respuestas en { success, data, meta, timestamp }
+    // Extraemos data pero preservamos meta para paginación
+    if (response.data?.data) {
+      return {
+        ...response,
+        data: response.data.data,
+        meta: response.data.meta // Preserve pagination metadata
+      };
+    }
+    return response;
   },
   (error: AxiosError) => {
     // Si es error 401, limpiar sesión y redirigir a login
