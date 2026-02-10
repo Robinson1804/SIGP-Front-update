@@ -2572,7 +2572,6 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                                             No disponible - Actividad finalizada
                                                                         </div>
                                                                     )}
-                                                                    </DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                         )}
