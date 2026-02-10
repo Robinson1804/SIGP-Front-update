@@ -218,6 +218,20 @@ export async function getBacklog(
 }
 
 /**
+ * Obtener backlog de un subproyecto
+ */
+export async function getBacklogBySubproyecto(
+  subproyectoId: number | string,
+  filters?: HistoriaQueryFilters
+): Promise<BacklogData> {
+  const response = await apiClient.get<BacklogData>(
+    `${ENDPOINTS.SUBPROYECTOS.BY_ID(subproyectoId)}/historias-usuario/backlog`,
+    { params: filters }
+  );
+  return response.data;
+}
+
+/**
  * Obtener historias de usuario de un sprint
  */
 export async function getHistoriasBySprint(

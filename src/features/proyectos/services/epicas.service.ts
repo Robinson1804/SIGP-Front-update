@@ -118,6 +118,20 @@ export async function getEpicasByProyecto(
 }
 
 /**
+ * Obtener epicas de un subproyecto
+ */
+export async function getEpicasBySubproyecto(
+  subproyectoId: number | string,
+  filters?: EpicaQueryFilters
+): Promise<Epica[]> {
+  const response = await apiClient.get<Epica[]>(
+    ENDPOINTS.SUBPROYECTOS.EPICAS(subproyectoId),
+    { params: filters }
+  );
+  return response.data;
+}
+
+/**
  * Obtener una epica por ID
  */
 export async function getEpicaById(id: number | string): Promise<Epica> {

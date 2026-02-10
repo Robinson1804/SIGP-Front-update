@@ -72,6 +72,29 @@ export const ENDPOINTS = {
   },
 
   // ============================================
+  // SUBPROYECTOS - Gestión de Subproyectos Scrum
+  // ============================================
+  SUBPROYECTOS: {
+    BASE: '/subproyectos',
+    BY_ID: (id: number | string) => `/subproyectos/${id}`,
+
+    // Backlog
+    BACKLOG: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/backlog`,
+
+    // Sprints
+    SPRINTS: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/sprints`,
+
+    // Épicas
+    EPICAS: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/epicas`,
+
+    // Historias de Usuario
+    HISTORIAS: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/historias-usuario`,
+
+    // Daily Meetings
+    DAILY_MEETINGS: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/daily-meetings`,
+  },
+
+  // ============================================
   // ACTIVIDADES - Gestión de Actividades Kanban
   // ============================================
   ACTIVIDADES: {

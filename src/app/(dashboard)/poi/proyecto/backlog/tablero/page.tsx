@@ -35,6 +35,7 @@ const KanbanBoard = dynamic(
 // Services
 import {
   getSprintsByProyecto,
+  getSprintsBySubproyecto,
   getSprintTablero,
   cerrarSprint,
   type Sprint,
@@ -92,8 +93,9 @@ function TableroContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  // Get proyectoId from URL query params
+  // Get proyectoId or subproyectoId from URL query params
   const proyectoId = searchParams.get('proyectoId');
+  const subproyectoId = searchParams.get('subproyectoId');
 
   // State
   const [project, setProject] = useState<any>(null);
@@ -112,21 +114,29 @@ function TableroContent() {
 
   // ==================== LOAD PROJECT ====================
   useEffect(() => {
-    const savedProjectData = localStorage.getItem('selectedProject');
-    if (savedProjectData) {
-      setProject(JSON.parse(savedProjectData));
-    } else if (!proyectoId) {
-      router.push(paths.poi.base);
+    if (subproyectoId) {
+      // Set placeholder project for subproyecto
+      setProject({ id: subproyectoId, name: 'Subproyecto', code: `SUB-${subproyectoId}` });
+    } else {
+      const savedProjectData = localStorage.getItem('selectedProject');
+      if (savedProjectData) {
+        setProject(JSON.parse(savedProjectData));
+      } else if (!proyectoId) {
+        router.push(paths.poi.base);
+      }
     }
-  }, [router, proyectoId]);
+  }, [router, proyectoId, subproyectoId]);
 
   // ==================== LOAD SPRINTS ====================
   useEffect(() => {
     async function fetchSprints() {
-      if (!proyectoId) return;
+      const entityId = subproyectoId || proyectoId;
+      if (!entityId) return;
 
       try {
-        const sprintsData = await getSprintsByProyecto(proyectoId);
+        const sprintsData = subproyectoId
+          ? await getSprintsBySubproyecto(subproyectoId)
+          : await getSprintsByProyecto(proyectoId!);
         setSprints(sprintsData);
 
         // Auto-select active sprint or first sprint
@@ -146,7 +156,7 @@ function TableroContent() {
     }
 
     fetchSprints();
-  }, [proyectoId, toast]);
+  }, [proyectoId, subproyectoId, toast]);
 
   // ==================== LOAD SPRINT BOARD ====================
   useEffect(() => {

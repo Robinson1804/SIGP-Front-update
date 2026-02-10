@@ -94,14 +94,17 @@ import {
 } from '@/lib/backlog-data';
 import {
     getSprintsByProyecto,
+    getSprintsBySubproyecto,
     type Sprint as ApiSprint,
 } from '@/features/proyectos/services/sprints.service';
 import {
     getEpicasByProyecto,
+    getEpicasBySubproyecto,
     type Epica,
 } from '@/features/proyectos/services/epicas.service';
 import {
     getBacklog,
+    getBacklogBySubproyecto,
     getHistoriasBySprint,
     type HistoriaUsuario,
 } from '@/features/proyectos/services/historias.service';
@@ -4836,14 +4839,21 @@ function BacklogContent() {
     };
 
     // Función para cargar datos del backend
-    const loadBackendData = React.useCallback(async (proyectoId: string) => {
+    const loadBackendData = React.useCallback(async (proyectoId: string, subproyectoId?: string) => {
         setIsLoadingData(true);
         try {
             // Cargar sprints, épicas e historias en paralelo
+            // Si hay subproyectoId, usar endpoints de subproyecto; sino, usar endpoints de proyecto
             const [sprintsData, epicasData, backlogData, personalData] = await Promise.all([
-                getSprintsByProyecto(proyectoId).catch(() => []),
-                getEpicasByProyecto(proyectoId).catch(() => []),
-                getBacklog(proyectoId).catch(() => ({ backlog: [], metricas: { total: 0, porPrioridad: {}, porEstado: {} } })),
+                subproyectoId
+                    ? getSprintsBySubproyecto(subproyectoId).catch(() => [])
+                    : getSprintsByProyecto(proyectoId).catch(() => []),
+                subproyectoId
+                    ? getEpicasBySubproyecto(subproyectoId).catch(() => [])
+                    : getEpicasByProyecto(proyectoId).catch(() => []),
+                subproyectoId
+                    ? getBacklogBySubproyecto(subproyectoId).catch(() => ({ backlog: [], metricas: { total: 0, porPrioridad: {}, porEstado: {} } }))
+                    : getBacklog(proyectoId).catch(() => ({ backlog: [], metricas: { total: 0, porPrioridad: {}, porEstado: {} } })),
                 getPersonal().catch(() => []),
             ]);
 
@@ -4948,14 +4958,25 @@ function BacklogContent() {
     };
 
     React.useEffect(() => {
-        const savedProjectData = localStorage.getItem('selectedProject');
-        if (savedProjectData) {
-            const projectData = JSON.parse(savedProjectData);
-            setProject(projectData);
-            // Load backend data when project is available
-            loadBackendData(projectData.id);
+        // Check if this is a subproyecto view
+        const subproyectoId = searchParams.get('subproyectoId');
+
+        if (subproyectoId) {
+            // Load data for subproyecto
+            loadBackendData(subproyectoId, subproyectoId);
+            // Set a placeholder project for UI compatibility
+            setProject({ id: subproyectoId, name: 'Subproyecto', code: `SUB-${subproyectoId}` } as Project);
         } else {
-            router.push(paths.poi.base);
+            // Load data for proyecto (existing logic)
+            const savedProjectData = localStorage.getItem('selectedProject');
+            if (savedProjectData) {
+                const projectData = JSON.parse(savedProjectData);
+                setProject(projectData);
+                // Load backend data when project is available
+                loadBackendData(projectData.id);
+            } else {
+                router.push(paths.poi.base);
+            }
         }
 
         const tab = searchParams.get('tab');

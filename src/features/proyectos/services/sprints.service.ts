@@ -136,6 +136,20 @@ export async function getSprintsByProyecto(
 }
 
 /**
+ * Obtener sprints de un subproyecto
+ */
+export async function getSprintsBySubproyecto(
+  subproyectoId: number | string,
+  filters?: SprintQueryFilters
+): Promise<Sprint[]> {
+  const response = await apiClient.get<Sprint[]>(
+    ENDPOINTS.SUBPROYECTOS.SPRINTS(subproyectoId),
+    { params: filters }
+  );
+  return response.data;
+}
+
+/**
  * Obtener un sprint por ID
  */
 export async function getSprintById(id: number | string): Promise<Sprint> {
