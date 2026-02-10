@@ -252,7 +252,23 @@ export async function reanudarActividad(
 }
 
 /**
- * Finalizar una actividad
+ * Verificar si todas las tareas de una actividad están finalizadas
+ *
+ * @param id - ID de la actividad
+ * @returns Información sobre el estado de las tareas
+ */
+export async function verificarTareasFinalizadas(
+  id: number | string
+): Promise<{ todasFinalizadas: boolean; totalTareas: number; tareasFinalizadas: number }> {
+  const response = await apiClient.get<{ todasFinalizadas: boolean; totalTareas: number; tareasFinalizadas: number }>(
+    ENDPOINTS.ACTIVIDADES.VERIFICAR_TAREAS_FINALIZADAS(id)
+  );
+  return response.data;
+}
+
+/**
+ * Finalizar una actividad manualmente
+ * Llama al endpoint que valida que todas las tareas estén completas
  *
  * @param id - ID de la actividad
  * @returns Actividad finalizada
@@ -260,7 +276,10 @@ export async function reanudarActividad(
 export async function finalizarActividad(
   id: number | string
 ): Promise<Actividad> {
-  return cambiarEstadoActividad(id, 'Finalizado');
+  const response = await apiClient.post<Actividad>(
+    ENDPOINTS.ACTIVIDADES.FINALIZAR(id)
+  );
+  return response.data;
 }
 
 // ============================================

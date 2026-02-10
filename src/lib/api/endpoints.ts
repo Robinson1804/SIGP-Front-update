@@ -114,6 +114,10 @@ export const ENDPOINTS = {
     // Reportes
     REPORTES: (actividadId: number | string) => `/actividades/${actividadId}/reportes`,
     METRICAS: (actividadId: number | string) => `/actividades/${actividadId}/metricas`,
+
+    // Estado
+    FINALIZAR: (actividadId: number | string) => `/actividades/${actividadId}/finalizar`,
+    VERIFICAR_TAREAS_FINALIZADAS: (actividadId: number | string) => `/actividades/${actividadId}/verificar-tareas-finalizadas`,
   },
 
   // ============================================

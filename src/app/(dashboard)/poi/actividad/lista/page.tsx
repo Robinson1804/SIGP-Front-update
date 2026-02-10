@@ -70,6 +70,7 @@ import { useAuth } from '@/stores';
 import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
 import { getTareasByActividad, createTarea, updateTarea, deleteTarea } from '@/features/actividades/services/tareas-kanban.service';
 import { getSubtareasByTarea, createSubtarea, updateSubtarea, deleteSubtarea } from '@/features/actividades/services/subtareas.service';
+import { verificarTareasFinalizadas, finalizarActividad } from '@/features/actividades/services/actividades.service';
 import type { TareaKanban, Subtarea as SubtareaBackend } from '@/features/actividades/types';
 import { jsPDF } from 'jspdf';
 
@@ -1938,6 +1939,9 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
     const [isDocumentPreviewOpen, setIsDocumentPreviewOpen] = useState(false);
     const [taskForDocumentPreview, setTaskForDocumentPreview] = useState<Task | null>(null);
 
+    // Modal de finalización de actividad
+    const [isFinalizarModalOpen, setIsFinalizarModalOpen] = useState(false);
+
     // Implementadores (responsables disponibles) cargados desde asignaciones de la actividad
     type Implementador = { usuarioId: number; nombre: string };
     const [implementadores, setImplementadores] = useState<Implementador[]>([]);
@@ -2181,6 +2185,14 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 });
                 const newTask = { ...task, id: created.codigo || codigo, backendId: created.id, responsibleIds: asignadosIds };
                 setTasks(prev => [...prev, newTask]);
+            }
+
+            // Verificar si todas las tareas están finalizadas para mostrar modal de finalización
+            if (project?.id && project?.status === 'En desarrollo') {
+                const verificacion = await verificarTareasFinalizadas(project.id);
+                if (verificacion.todasFinalizadas) {
+                    setIsFinalizarModalOpen(true);
+                }
             }
         } catch (error) {
             console.error('Error al guardar tarea:', error);
@@ -2462,7 +2474,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                                 ) : (
                                                                     <>
                                                                         {/* Crear Subtarea - disponible para Admin, Coordinador e Implementador asignado (solo si NO está finalizado) */}
-                                                                        {(canManageTasks || (isImplementador && task.responsibles.includes(currentUser))) && (
+                                                                        {(canManageTasks || (isImplementador && task.responsibles.includes(currentUser))) && project?.status !== 'Finalizado' && (
                                                                             <DropdownMenuItem onClick={() => setTimeout(() => {
                                                                                 setParentTaskForSubtask(task);
                                                                                 setIsSubtaskModalOpen(true);
@@ -2471,8 +2483,8 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                                                 Crear Subtarea
                                                                             </DropdownMenuItem>
                                                                         )}
-                                                                        {/* Editar y Eliminar tarea - solo Scrum Master */}
-                                                                        {canManageTasks && (
+                                                                        {/* Editar y Eliminar tarea - solo Scrum Master y si no está finalizado */}
+                                                                        {canManageTasks && project?.status !== 'Finalizado' && (
                                                                             <>
                                                                                 <DropdownMenuItem onClick={() => setTimeout(() => {
                                                                                     setEditingTask(task);
@@ -2535,21 +2547,31 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
-                                                                    <DropdownMenuItem onClick={() => setTimeout(() => {
-                                                                        // Editar subtarea - abrir modal de subtarea
-                                                                        setParentTaskForSubtask(task);
-                                                                        setEditingSubtaskFromTable(subtask);
-                                                                        setIsSubtaskModalOpen(true);
-                                                                    }, 0)}>
-                                                                        <Pencil className="h-4 w-4 mr-2" />
-                                                                        Editar
-                                                                    </DropdownMenuItem>
-                                                                    <DropdownMenuItem
-                                                                        className="text-red-500"
-                                                                        onClick={() => setTimeout(() => handleDeleteSubtaskFromTable(task.id, subtask.id), 0)}
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                                        Eliminar
+                                                                    {project?.status !== 'Finalizado' && (
+                                                                        <>
+                                                                            <DropdownMenuItem onClick={() => setTimeout(() => {
+                                                                                // Editar subtarea - abrir modal de subtarea
+                                                                                setParentTaskForSubtask(task);
+                                                                                setEditingSubtaskFromTable(subtask);
+                                                                                setIsSubtaskModalOpen(true);
+                                                                            }, 0)}>
+                                                                                <Pencil className="h-4 w-4 mr-2" />
+                                                                                Editar
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                className="text-red-500"
+                                                                                onClick={() => setTimeout(() => handleDeleteSubtaskFromTable(task.id, subtask.id), 0)}
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4 mr-2" />
+                                                                                Eliminar
+                                                                            </DropdownMenuItem>
+                                                                        </>
+                                                                    )}
+                                                                    {project?.status === 'Finalizado' && (
+                                                                        <div className="px-2 py-1.5 text-sm text-gray-500">
+                                                                            No disponible - Actividad finalizada
+                                                                        </div>
+                                                                    )}
                                                                     </DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
@@ -2580,6 +2602,8 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                                     setEditingTask(null);
                                                     setIsTaskModalOpen(true);
                                                 }}
+                                                disabled={project?.status === 'Finalizado'}
+                                                title={project?.status === 'Finalizado' ? 'No se pueden agregar tareas a una actividad finalizada' : ''}
                                             >
                                                 <Plus className="mr-2 h-4 w-4" />
                                                 Agregar tarea
@@ -2652,6 +2676,55 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 }}
                 task={taskForDocumentPreview}
             />
+
+            {/* Modal de finalización de actividad */}
+            <Dialog open={isFinalizarModalOpen} onOpenChange={setIsFinalizarModalOpen}>
+                <DialogContent className="sm:max-w-md p-6" showCloseButton={false}>
+                    <DialogHeader className="mb-4">
+                        <DialogTitle className="text-xl font-semibold text-gray-800">
+                            ¿Desea finalizar la actividad?
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3 text-sm text-gray-600 mb-6">
+                        <p>Todas las tareas han sido completadas.</p>
+                        <p className="font-medium">Opciones:</p>
+                        <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li><strong>Continuar creando tareas:</strong> La actividad permanecerá en estado "En desarrollo" y podrá seguir agregando nuevas tareas.</li>
+                            <li><strong>Finalizar actividad:</strong> La actividad cambiará a estado "Finalizado" y no se podrán crear más tareas ni subtareas.</li>
+                        </ul>
+                    </div>
+                    <DialogFooter className="flex gap-2 sm:justify-end">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsFinalizarModalOpen(false)}
+                            className="flex-1 sm:flex-none"
+                        >
+                            Continuar creando tareas
+                        </Button>
+                        <Button
+                            variant="default"
+                            onClick={async () => {
+                                try {
+                                    if (project?.id) {
+                                        await finalizarActividad(project.id);
+                                        setIsFinalizarModalOpen(false);
+                                        // Actualizar el estado del proyecto en la UI
+                                        setProject(prev => prev ? { ...prev, status: 'Finalizado' } : null);
+                                        // Opcional: mostrar mensaje de éxito
+                                        alert('Actividad finalizada exitosamente');
+                                    }
+                                } catch (error) {
+                                    console.error('Error al finalizar actividad:', error);
+                                    alert('Error al finalizar la actividad');
+                                }
+                            }}
+                            className="flex-1 sm:flex-none bg-[#004272] hover:bg-[#003562]"
+                        >
+                            Finalizar actividad
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 
