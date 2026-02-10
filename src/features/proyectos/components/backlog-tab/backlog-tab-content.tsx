@@ -145,6 +145,9 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
     refreshBacklog,
   } = useBacklogData(proyectoId);
 
+  // Estado para controlar si el usuario decidió continuar trabajando
+  const [userDecidedToContinue, setUserDecidedToContinue] = useState(false);
+
   // Auto-show finalizar proyecto modal when all sprints are finalized on load
   useEffect(() => {
     if (
@@ -177,7 +180,6 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
   const [isCerrarSprintModalOpen, setIsCerrarSprintModalOpen] = useState(false);
   const [sprintToCerrar, setSprintToCerrar] = useState<Sprint | null>(null);
   const [isFinalizarProyectoModalOpen, setIsFinalizarProyectoModalOpen] = useState(false);
-  const [userDecidedToContinue, setUserDecidedToContinue] = useState(false);
 
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [isDeleteSprintModalOpen, setIsDeleteSprintModalOpen] = useState(false);
