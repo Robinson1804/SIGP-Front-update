@@ -190,6 +190,12 @@ export interface TareaKanban {
   // Evidencia
   evidenciaUrl: string | null;
 
+  /**
+   * URL del documento PDF consolidado con evidencias de todas las subtareas.
+   * Se genera automáticamente cuando todas las subtareas están finalizadas.
+   */
+  documentoEvidenciasUrl: string | null;
+
   // Validación
   validada: boolean;
   validadaPor: number | null;

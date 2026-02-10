@@ -42,7 +42,9 @@ import {
   X,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  FileText,
+  ExternalLink,
 } from 'lucide-react';
 import type { TareaKanban, TareaEstado, TareaPrioridad, Subtarea } from '../types';
 import { SubtareaList } from './SubtareaList';
@@ -311,6 +313,31 @@ export function TaskDetailPanel({
                 onSubtareasChange={handleSubtareasChange}
               />
             </div>
+
+            {/* Documento de Evidencias */}
+            {tarea.documentoEvidenciasUrl && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Documento de Evidencias</h4>
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 text-blue-700 rounded-md">
+                    <FileText className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm flex-1">
+                      PDF consolidado con todas las evidencias de subtareas
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-shrink-0"
+                      onClick={() => window.open(tarea.documentoEvidenciasUrl!, '_blank')}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      Ver documento
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Validacion */}
             {tarea.validada && (
