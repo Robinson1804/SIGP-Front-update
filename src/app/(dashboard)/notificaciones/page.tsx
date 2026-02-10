@@ -360,6 +360,27 @@ export default function NotificationsPage() {
     loadData();
   }, [loadData]);
 
+  // Reload data when page becomes visible (e.g., returning from another page)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData();
+      }
+    };
+
+    const handleFocus = () => {
+      loadData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [loadData]);
+
   // PMO Navigation handlers
   const handlePmoProyectoClick = (proyectoId: number, proyectoNombre: string, proyectoCodigo: string) => {
     setPmoNavStack({ level: 'secciones', proyectoId, proyectoNombre, proyectoCodigo });
