@@ -58,7 +58,7 @@ function mapBackendToFrontend(backendData: any): DashboardActividad {
   const tareasPorEstado = backendData.tareasPorEstado || {};
   const porHacer = tareasPorEstado['Por hacer'] || 0;
   const enProgreso = tareasPorEstado['En progreso'] || 0;
-  const enRevision = tareasPorEstado['En revision'] || 0;
+  const enRevision = tareasPorEstado['En revisión'] || 0;
   const finalizadas = tareasPorEstado['Finalizado'] || 0;
   const total = porHacer + enProgreso + enRevision + finalizadas;
 

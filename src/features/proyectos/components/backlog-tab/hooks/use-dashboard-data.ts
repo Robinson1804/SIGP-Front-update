@@ -116,7 +116,7 @@ const estadoColors: Record<string, string> = {
   'Lista': '#34D399',
   'En desarrollo': '#FBBF24',
   'En pruebas': '#A78BFA',
-  'En revision': '#F59E0B',
+  'En revisión': '#F59E0B',
   'Terminada': '#10B981',
   // Estados de Tarea
   'Por hacer': '#9CA3AF',
@@ -213,7 +213,7 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
 
       const tareasFinalizadas = allTareas.filter((t) => t.estado === 'Finalizado').length;
       const husEnProgreso = allHistorias.filter(
-        (h) => h.estado === 'En progreso' || h.estado === 'En revision'
+        (h) => h.estado === 'En progreso' || h.estado === 'En revisión'
       ).length;
       const tareasCreadasHoy = allTareas.filter((t) => {
         const created = new Date(t.createdAt);
@@ -322,7 +322,7 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
         const accion =
           historia.estado === 'Finalizado' ? 'ha finalizado' :
           historia.estado === 'En progreso' ? 'ha iniciado' :
-          historia.estado === 'En revision' ? 'ha enviado a revisión' :
+          historia.estado === 'En revisión' ? 'ha enviado a revisión' :
           new Date(historia.createdAt).getTime() === new Date(historia.updatedAt).getTime() ? 'ha creado' : 'ha actualizado';
 
         recentActivities.push({
@@ -346,7 +346,7 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
         const accion =
           tarea.estado === 'Finalizado' ? 'ha finalizado' :
           tarea.estado === 'En progreso' ? 'ha iniciado' :
-          tarea.estado === 'En revision' ? 'ha enviado a revisión' :
+          tarea.estado === 'En revisión' ? 'ha enviado a revisión' :
           new Date(tarea.createdAt).getTime() === new Date(tarea.updatedAt).getTime() ? 'ha creado' : 'ha actualizado';
 
         recentActivities.push({

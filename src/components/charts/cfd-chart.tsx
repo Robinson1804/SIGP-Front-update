@@ -42,7 +42,7 @@ const COLORS = {
 const LABELS = {
   porHacer: 'Por hacer',
   enProgreso: 'En progreso',
-  enRevision: 'En revision',
+  enRevision: 'En revisión',
   finalizado: 'Finalizado',
 };
 

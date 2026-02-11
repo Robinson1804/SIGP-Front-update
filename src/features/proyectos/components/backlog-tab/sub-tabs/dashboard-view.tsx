@@ -212,7 +212,7 @@ export function DashboardView({ proyectoId }: DashboardViewProps) {
     { label: 'Finalizado', value: estadoStats.find((s) => s.estado === 'Finalizado')?.cantidad || 0, color: '#10B981' },
     { label: 'En progreso', value: estadoStats.find((s) => s.estado === 'En progreso')?.cantidad || 0, color: '#3B82F6' },
     { label: 'Por hacer', value: estadoStats.find((s) => s.estado === 'Por hacer')?.cantidad || 0, color: '#9CA3AF' },
-    { label: 'Revisión', value: estadoStats.find((s) => s.estado === 'En revision')?.cantidad || 0, color: '#8B5CF6' },
+    { label: 'Revisión', value: estadoStats.find((s) => s.estado === 'En revisión')?.cantidad || 0, color: '#8B5CF6' },
   ];
 
   // Calcular totales para resumen
@@ -407,7 +407,7 @@ export function DashboardView({ proyectoId }: DashboardViewProps) {
                                 ? 'bg-green-100 text-green-700 hover:bg-green-100'
                                 : activity.estado === 'En progreso'
                                 ? 'bg-blue-100 text-blue-700 hover:bg-blue-100'
-                                : activity.estado === 'En revision'
+                                : activity.estado === 'En revisión'
                                 ? 'bg-purple-100 text-purple-700 hover:bg-purple-100'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-100'
                             )}
