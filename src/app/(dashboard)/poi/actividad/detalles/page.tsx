@@ -147,7 +147,7 @@ function ActividadDetailsContent() {
                     router.push(paths.poi.base);
                     return;
                 }
-                const mapped: Project = {
+                const mapped: Project & { gestorId?: number; coordinadorId?: number; accionEstrategicaId?: number } = {
                     id: actividad.id.toString(),
                     code: actividad.codigo,
                     name: actividad.nombre,
@@ -168,6 +168,10 @@ function ActividadDetailsContent() {
                     subProjects: [],
                     startDate: actividad.fechaInicio,
                     endDate: actividad.fechaFin,
+                    // Agregar IDs necesarios para el modal de edición
+                    gestorId: actividad.gestorId || undefined,
+                    coordinadorId: actividad.coordinadorId || undefined,
+                    accionEstrategicaId: actividad.accionEstrategicaId || undefined,
                 };
                 setProject(mapped);
                 // Sincronizar localStorage para que tabs internos funcionen
