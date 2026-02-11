@@ -2188,7 +2188,8 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
             }
 
             // Verificar si todas las tareas están finalizadas para mostrar modal de finalización
-            if (project?.id && project?.status === 'En desarrollo') {
+            // Solo mostrar si la actividad NO está ya finalizada
+            if (project?.id && project?.status !== 'Finalizado') {
                 const verificacion = await verificarTareasFinalizadas(project.id);
                 if (verificacion.todasFinalizadas) {
                     setIsFinalizarModalOpen(true);
