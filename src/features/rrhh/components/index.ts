@@ -26,6 +26,7 @@ export { HabilidadForm } from './HabilidadForm';
 // Asignaciones
 export { AsignacionTable } from './AsignacionTable';
 export { AsignacionForm } from './AsignacionForm';
+export { SobrecargaWarningModal } from './SobrecargaWarningModal';
 
 // Dashboard
 export { RRHHDashboard } from './RRHHDashboard';

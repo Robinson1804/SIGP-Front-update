@@ -6,7 +6,7 @@
  * Formulario para crear y editar asignaciones
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,11 +37,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import type { Asignacion, Personal } from '../types';
 import { TipoAsignacion, getTipoAsignacionLabel, getNombreCompleto } from '../types';
 import type { CreateAsignacionDto, UpdateAsignacionDto } from '../types/dto';
 import { VALIDATION_RULES } from '../types/dto';
+import { verificarSobrecarga, type PersonalSobrecargado } from '../services/asignaciones.service';
+import { SobrecargaWarningModal } from './SobrecargaWarningModal';
 
 // Tipos para proyectos/actividades/subproyectos
 interface ProyectoBasico {
@@ -97,6 +99,12 @@ export function AsignacionForm({
 }: AsignacionFormProps) {
   const isEditing = !!asignacion;
 
+  // Estados para validación de sobrecarga
+  const [showWarning, setShowWarning] = useState(false);
+  const [personalSobrecargado, setPersonalSobrecargado] = useState<PersonalSobrecargado | null>(null);
+  const [pendingData, setPendingData] = useState<AsignacionFormData | null>(null);
+  const [checkingSobrecarga, setCheckingSobrecarga] = useState(false);
+
   const form = useForm<AsignacionFormData>({
     resolver: zodResolver(asignacionSchema),
     defaultValues: {
@@ -113,6 +121,28 @@ export function AsignacionForm({
   });
 
   const tipoAsignacion = form.watch('tipoAsignacion');
+  const personalId = form.watch('personalId');
+  const porcentajeDedicacion = form.watch('porcentajeDedicacion');
+
+  // Estado para mostrar información de disponibilidad
+  const [disponibilidadInfo, setDisponibilidadInfo] = useState<{
+    porcentajeActual: number;
+    porcentajeDisponible: number;
+  } | null>(null);
+
+  // Verificar disponibilidad cuando cambia el personal seleccionado
+  useEffect(() => {
+    if (personalId && !isEditing) {
+      verificarSobrecarga(personalId).then((resultado) => {
+        setDisponibilidadInfo({
+          porcentajeActual: resultado.porcentajeActual,
+          porcentajeDisponible: resultado.porcentajeDisponible,
+        });
+      });
+    } else {
+      setDisponibilidadInfo(null);
+    }
+  }, [personalId, isEditing]);
 
   // Reset form when asignacion changes (fix for edit mode not loading values)
   useEffect(() => {
@@ -142,6 +172,30 @@ export function AsignacionForm({
 
   const handleSubmit = async (data: AsignacionFormData) => {
     try {
+      setCheckingSobrecarga(true);
+
+      // Verificar si el personal está sobrecargado
+      const resultado = await verificarSobrecarga(data.personalId);
+
+      // Si está sobrecargado y la nueva asignación lo sobrecargará más, mostrar advertencia
+      if (resultado.estaSobrecargado && resultado.porcentajeDisponible < data.porcentajeDedicacion) {
+        setPendingData(data);
+        setPersonalSobrecargado(resultado.personal!);
+        setShowWarning(true);
+        setCheckingSobrecarga(false);
+        return; // No continuar hasta que el usuario confirme
+      }
+
+      // Si no está sobrecargado o hay disponibilidad suficiente, continuar
+      await submitAsignacion(data);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setCheckingSobrecarga(false);
+    }
+  };
+
+  const submitAsignacion = async (data: AsignacionFormData) => {
+    try {
       const submitData: CreateAsignacionDto | UpdateAsignacionDto = {
         personalId: data.personalId,
         tipoAsignacion: data.tipoAsignacion,
@@ -155,10 +209,28 @@ export function AsignacionForm({
       };
       await onSubmit(submitData);
       form.reset();
+      setCheckingSobrecarga(false);
       onClose();
     } catch (error) {
       console.error('Error submitting form:', error);
+      setCheckingSobrecarga(false);
     }
+  };
+
+  const handleContinueWithWarning = async () => {
+    if (pendingData) {
+      setShowWarning(false);
+      await submitAsignacion(pendingData);
+      setPendingData(null);
+      setPersonalSobrecargado(null);
+    }
+  };
+
+  const handleCancelWarning = () => {
+    setShowWarning(false);
+    setPendingData(null);
+    setPersonalSobrecargado(null);
+    setCheckingSobrecarga(false);
   };
 
   const handleClose = () => {
@@ -238,6 +310,42 @@ export function AsignacionForm({
                     </SelectContent>
                   </Select>
                   <FormMessage />
+
+                  {/* Indicador de disponibilidad */}
+                  {disponibilidadInfo && (
+                    <div
+                      className={`mt-2 p-3 rounded-lg border ${
+                        disponibilidadInfo.porcentajeDisponible < 20
+                          ? 'bg-red-50 border-red-200'
+                          : disponibilidadInfo.porcentajeDisponible < 50
+                          ? 'bg-amber-50 border-amber-200'
+                          : 'bg-green-50 border-green-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium">
+                          Asignación actual: {disponibilidadInfo.porcentajeActual.toFixed(0)}%
+                        </span>
+                        <span
+                          className={`font-semibold ${
+                            disponibilidadInfo.porcentajeDisponible < 20
+                              ? 'text-red-700'
+                              : disponibilidadInfo.porcentajeDisponible < 50
+                              ? 'text-amber-700'
+                              : 'text-green-700'
+                          }`}
+                        >
+                          Disponible: {disponibilidadInfo.porcentajeDisponible.toFixed(0)}%
+                        </span>
+                      </div>
+                      {disponibilidadInfo.porcentajeDisponible < 20 && (
+                        <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Capacidad casi agotada - Considera otro recurso
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </FormItem>
               )}
             />
@@ -378,14 +486,31 @@ export function AsignacionForm({
               <Button type="button" variant="outline" onClick={handleClose}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? 'Guardar cambios' : 'Crear asignación'}
+              <Button type="submit" disabled={isLoading || checkingSobrecarga}>
+                {(isLoading || checkingSobrecarga) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {checkingSobrecarga
+                  ? 'Verificando disponibilidad...'
+                  : isEditing
+                  ? 'Guardar cambios'
+                  : 'Crear asignación'}
               </Button>
             </DialogFooter>
           </form>
         </Form>
       </DialogContent>
+
+      {/* Modal de advertencia de sobrecarga */}
+      {showWarning && personalSobrecargado && pendingData && (
+        <SobrecargaWarningModal
+          open={showWarning}
+          onClose={handleCancelWarning}
+          onContinue={handleContinueWithWarning}
+          personal={personalSobrecargado}
+          porcentajeSolicitado={pendingData.porcentajeDedicacion}
+        />
+      )}
     </Dialog>
   );
 }
