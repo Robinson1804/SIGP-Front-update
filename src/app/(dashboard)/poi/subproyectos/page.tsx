@@ -8,6 +8,8 @@ import { MODULES, PERMISSIONS } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Subproyectos | SIGP',
   description: 'Gestión de subproyectos POI',
