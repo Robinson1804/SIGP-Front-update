@@ -77,7 +77,7 @@ import { cn } from '@/lib/utils';
 import { Project, ROLES, MODULES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
-import { jsPDF } from 'jspdf';
+// jsPDF se importa dinámicamente para evitar problemas de SSR/bundling en producción
 import {
     getTasksByStoryId,
     storyHasTasks,
@@ -1894,6 +1894,7 @@ function GeneratedDocumentModal({
     const handleDownloadPdf = async () => {
         setIsGeneratingPdf(true);
         try {
+            const { jsPDF } = await import('jspdf');
             const doc = new jsPDF();
             let yPosition = 20;
             const pageWidth = doc.internal.pageSize.getWidth();
