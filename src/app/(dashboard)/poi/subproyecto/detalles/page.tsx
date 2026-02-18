@@ -525,14 +525,14 @@ function SubprojectDetailsContent() {
   // Estado mapeado
   const estado = subproyecto.estado || 'Pendiente';
 
-  // Tabs del subproyecto
+  // Tabs del subproyecto (mismo orden que proyecto)
   const projectTabs = [
     { name: 'Detalles' },
-    { name: 'Backlog' },
     { name: 'Documentos' },
     { name: 'Actas' },
     { name: 'Requerimientos' },
     { name: 'Cronograma' },
+    { name: 'Backlog' },
   ];
 
   // Breadcrumbs
