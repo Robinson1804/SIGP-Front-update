@@ -26,6 +26,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { Epica } from '@/features/proyectos/types';
 import { createEpica, updateEpica } from '@/features/proyectos/services/epicas.service';
+import { apiClient, ENDPOINTS } from '@/lib/api';
 import { useCurrentUser } from '@/stores/auth.store';
 
 type Prioridad = 'Baja' | 'Media' | 'Alta';
@@ -42,9 +43,12 @@ type EpicaFormData = z.infer<typeof epicaSchema>;
 
 interface EpicaFormProps {
   proyectoId: number;
+  subproyectoId?: number;
   epica?: Epica;
   onSuccess: () => void;
   onCancel: () => void;
+  proyectoFechaInicio?: string | null;
+  proyectoFechaFin?: string | null;
 }
 
 const COLORS = [
@@ -68,6 +72,7 @@ const ESTADO_BADGE_COLORS: Record<string, string> = {
 
 export function EpicaForm({
   proyectoId,
+  subproyectoId,
   epica,
   onSuccess,
   onCancel,
@@ -105,8 +110,13 @@ export function EpicaForm({
         // Al actualizar, no enviar proyectoId (no se puede cambiar de proyecto)
         await updateEpica(epica.id, data);
       } else {
-        // Al crear, incluir proyectoId
-        await createEpica({ ...data, proyectoId });
+        // Al crear, incluir proyectoId o subproyectoId
+        if (subproyectoId) {
+          // Usar endpoint de subproyectos para crear epica
+          await apiClient.post(ENDPOINTS.SUBPROYECTOS.EPICAS(subproyectoId), data);
+        } else {
+          await createEpica({ ...data, proyectoId });
+        }
       }
 
       onSuccess();

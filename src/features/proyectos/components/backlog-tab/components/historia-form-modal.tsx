@@ -48,8 +48,8 @@ import {
   getNextCodigo,
   getHistoriaById,
 } from '@/features/proyectos/services/historias.service';
-import { getEpicasByProyecto, type Epica } from '@/features/proyectos/services/epicas.service';
-import { getSprintsByProyecto, type Sprint } from '@/features/proyectos/services/sprints.service';
+import { getEpicasByProyecto, getEpicasBySubproyecto, type Epica } from '@/features/proyectos/services/epicas.service';
+import { getSprintsByProyecto, getSprintsBySubproyecto, type Sprint } from '@/features/proyectos/services/sprints.service';
 import { getRequerimientosFuncionalesByProyecto, type Requerimiento } from '@/features/requerimientos';
 import { apiClient, ENDPOINTS } from '@/lib/api';
 import { useCurrentUser } from '@/stores/auth.store';
@@ -159,6 +159,7 @@ interface HistoriaFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   proyectoId: number;
+  subproyectoId?: number;
   historia?: HistoriaUsuario | null;
   sprintId?: number;
   onSuccess: () => void;
@@ -182,6 +183,7 @@ export function HistoriaFormModal({
   open,
   onOpenChange,
   proyectoId,
+  subproyectoId,
   historia,
   sprintId: initialSprintId,
   onSuccess,
@@ -392,11 +394,14 @@ export function HistoriaFormModal({
   const loadData = async () => {
     setIsLoadingData(true);
     try {
+      const asignacionesEndpoint = subproyectoId
+        ? ENDPOINTS.RRHH.ASIGNACIONES_SUBPROYECTO(subproyectoId)
+        : ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId);
       const [epicasData, sprintsData, requerimientosData, asignacionesResponse] = await Promise.all([
-        getEpicasByProyecto(proyectoId),
-        getSprintsByProyecto(proyectoId),
+        subproyectoId ? getEpicasBySubproyecto(subproyectoId) : getEpicasByProyecto(proyectoId),
+        subproyectoId ? getSprintsBySubproyecto(subproyectoId) : getSprintsByProyecto(proyectoId),
         getRequerimientosFuncionalesByProyecto(proyectoId).catch(() => []),
-        apiClient.get(ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId)).catch(() => ({ data: [] })),
+        apiClient.get(asignacionesEndpoint).catch(() => ({ data: [] })),
       ]);
 
       // Mapear asignaciones a miembros del equipo
@@ -451,7 +456,9 @@ export function HistoriaFormModal({
   const fetchNextCodigo = async () => {
     try {
       setIsLoadingCodigo(true);
-      const nextCodigo = await getNextCodigo(proyectoId);
+      // Use subproyectoId or proyectoId for fetching next code
+      const idForCodigo = subproyectoId || proyectoId;
+      const nextCodigo = await getNextCodigo(idForCodigo);
       form.setValue('codigo', nextCodigo);
     } catch (err) {
       console.error('Error fetching next codigo:', err);
@@ -569,7 +576,7 @@ export function HistoriaFormModal({
           fechaFin: values.fechaFin || undefined,
           sprintId: values.sprintId && values.sprintId !== '__backlog__' ? parseInt(values.sprintId) : null,
           storyPoints: values.storyPoints !== undefined ? values.storyPoints : undefined,
-          proyectoId,
+          ...(subproyectoId ? { subproyectoId } : { proyectoId }),
           criteriosAceptacion: criterios.map(c => ({
             descripcion: c.descripcion,
             completado: c.completado,

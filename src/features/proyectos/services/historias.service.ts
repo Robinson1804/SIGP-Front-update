@@ -219,16 +219,32 @@ export async function getBacklog(
 
 /**
  * Obtener backlog de un subproyecto
+ * El backend no tiene endpoint /backlog para subproyectos, se usa /historias-usuario y se filtra client-side
  */
 export async function getBacklogBySubproyecto(
   subproyectoId: number | string,
   filters?: HistoriaQueryFilters
 ): Promise<BacklogData> {
-  const response = await apiClient.get<BacklogData>(
-    `${ENDPOINTS.SUBPROYECTOS.BY_ID(subproyectoId)}/historias-usuario/backlog`,
+  const response = await apiClient.get<HistoriaUsuario[]>(
+    ENDPOINTS.SUBPROYECTOS.HISTORIAS(subproyectoId),
     { params: filters }
   );
-  return response.data;
+  const allHistorias = Array.isArray(response.data) ? response.data : [];
+  // Backlog = historias sin sprint asignado
+  const backlog = allHistorias.filter((h) => !h.sprintId);
+
+  // Calcular métricas client-side
+  const porPrioridad: Record<string, number> = {};
+  const porEstado: Record<string, number> = {};
+  backlog.forEach((h) => {
+    if (h.prioridad) porPrioridad[h.prioridad] = (porPrioridad[h.prioridad] || 0) + 1;
+    porEstado[h.estado] = (porEstado[h.estado] || 0) + 1;
+  });
+
+  return {
+    backlog,
+    metricas: { total: backlog.length, porPrioridad, porEstado },
+  };
 }
 
 /**

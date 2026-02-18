@@ -361,7 +361,7 @@ const SubProjectCard = ({ subProject, onEdit, onDelete, canEdit }: { subProject:
                 <Briefcase className="w-5 h-5 text-gray-500 flex-shrink-0" />
                 <CardTitle className="text-base font-bold truncate">
                     <Link
-                        href={paths.poi.subproyectos.detalles(parseInt(subProject.id))}
+                        href={`/poi/subproyecto/detalles?id=${parseInt(subProject.id)}`}
                         className="hover:underline"
                     >
                         {subProject.name}

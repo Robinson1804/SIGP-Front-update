@@ -32,7 +32,7 @@ export function SubproyectoCard({ data }: SubproyectoCardProps) {
         <div className="space-y-1 flex-1">
           <CardTitle className="text-base">
             <Link
-              href={paths.poi.subproyectos.detalles(data.id)}
+              href={`/poi/subproyecto/detalles?id=${data.id}`}
               className="hover:underline"
             >
               {data.codigo} - {data.nombre}

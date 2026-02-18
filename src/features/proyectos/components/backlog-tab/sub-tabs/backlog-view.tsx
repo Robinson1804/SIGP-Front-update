@@ -20,6 +20,8 @@ interface BacklogViewProps {
   backlogHistorias: HistoriaUsuario[];
   epicas: Epica[];
   equipo?: MiembroEquipo[];
+  /** ID del subproyecto (si aplica) */
+  subproyectoId?: number;
   isLoading: boolean;
   error: string | null;
   onRefresh: () => void;
@@ -53,6 +55,7 @@ export function BacklogView({
   backlogHistorias,
   epicas,
   equipo = [],
+  subproyectoId,
   isLoading,
   error,
   onRefresh,

@@ -38,6 +38,8 @@ import { parseLocalDate, formatDate } from '@/lib/utils';
 
 interface SprintsViewProps {
   proyectoId: number;
+  /** ID del subproyecto (si aplica) */
+  subproyectoId?: number;
   sprints: Sprint[];
   isLoading: boolean;
   onCreateSprint: () => void;
@@ -73,6 +75,7 @@ const ESTADO_BADGE: Record<string, string> = {
 
 export function SprintsView({
   proyectoId,
+  subproyectoId,
   sprints: initialSprints,
   isLoading: initialLoading,
   onCreateSprint,

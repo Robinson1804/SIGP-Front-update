@@ -83,6 +83,8 @@ type BacklogView =
 
 interface BacklogTabContentProps {
   proyectoId: number;
+  /** ID del subproyecto (si aplica) */
+  subproyectoId?: number;
   /** Fecha inicio del proyecto (para validación de historias) */
   proyectoFechaInicio?: string | null;
   /** Fecha fin del proyecto (para validación de historias) */
@@ -102,7 +104,7 @@ const subTabs: { id: SubTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
 ];
 
-export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFechaFin, proyectoEstado, onProjectStateChange }: BacklogTabContentProps) {
+export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInicio, proyectoFechaFin, proyectoEstado, onProjectStateChange }: BacklogTabContentProps) {
   // Check if project is finalized (editing disabled)
   const isProyectoFinalizado = proyectoEstado === 'Finalizado';
 
@@ -143,7 +145,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
     error,
     refresh,
     refreshBacklog,
-  } = useBacklogData(proyectoId);
+  } = useBacklogData(proyectoId, subproyectoId);
 
   // Estado para controlar si el usuario decidió continuar trabajando
   const [userDecidedToContinue, setUserDecidedToContinue] = useState(false);
@@ -436,6 +438,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
         </div>
         <EpicaForm
           proyectoId={proyectoId}
+          subproyectoId={subproyectoId}
           onSuccess={handleEpicaSuccess}
           onCancel={() => goToList('epicas')}
           proyectoFechaInicio={proyectoFechaInicio}
@@ -454,6 +457,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
         </div>
         <EpicaForm
           proyectoId={proyectoId}
+          subproyectoId={subproyectoId}
           epica={currentView.epica}
           onSuccess={handleEpicaSuccess}
           onCancel={() => goToList('epicas')}
@@ -549,6 +553,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
           backlogHistorias={backlogHistorias}
           epicas={epicas}
           equipo={equipo}
+          subproyectoId={subproyectoId}
           isLoading={isLoading}
           error={error}
           onRefresh={refresh}
@@ -576,6 +581,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
       {currentSubTab === 'epicas' && (
         <EpicasView
           proyectoId={proyectoId}
+          subproyectoId={subproyectoId}
           epicas={epicas}
           isLoading={isLoading}
           onCreateEpica={isViewOnly ? undefined : goToNuevaEpica}
@@ -588,6 +594,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
       {currentSubTab === 'sprints' && (
         <SprintsView
           proyectoId={proyectoId}
+          subproyectoId={subproyectoId}
           sprints={sprints}
           isLoading={isLoading}
           onCreateSprint={isViewOnly ? undefined : handleCreateSprint}
@@ -625,6 +632,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
         open={isHistoriaModalOpen}
         onOpenChange={setIsHistoriaModalOpen}
         proyectoId={proyectoId}
+        subproyectoId={subproyectoId}
         historia={editingHistoria}
         sprintId={targetSprintId}
         onSuccess={handleHistoriaSuccess}
@@ -636,6 +644,7 @@ export function BacklogTabContent({ proyectoId, proyectoFechaInicio, proyectoFec
         open={isSprintModalOpen}
         onOpenChange={setIsSprintModalOpen}
         proyectoId={proyectoId}
+        subproyectoId={subproyectoId}
         onSuccess={handleSprintSuccess}
         proyectoFechaInicio={proyectoFechaInicio}
         proyectoFechaFin={proyectoFechaFin}

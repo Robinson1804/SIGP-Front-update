@@ -48,7 +48,8 @@ export interface Sprint {
 export interface CreateSprintData {
   nombre: string;
   sprintGoal?: string;
-  proyectoId: number;
+  proyectoId?: number;
+  subproyectoId?: number;
   fechaInicio?: string;
   fechaFin?: string;
   capacidadEquipo?: number;

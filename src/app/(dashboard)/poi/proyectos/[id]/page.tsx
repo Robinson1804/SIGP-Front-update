@@ -284,7 +284,7 @@ export default async function ProyectoDetallesPage({
                 >
                   <div className="flex-1">
                     <Link
-                      href={paths.poi.subproyectos.detalles(subproyecto.id)}
+                      href={`/poi/subproyecto/detalles?id=${subproyecto.id}`}
                       className="font-medium hover:underline"
                     >
                       {subproyecto.codigo} - {subproyecto.nombre}

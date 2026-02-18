@@ -33,6 +33,8 @@ import { deleteEpica } from '@/features/proyectos/services/epicas.service';
 
 interface EpicasViewProps {
   proyectoId: number;
+  /** ID del subproyecto (si aplica) */
+  subproyectoId?: number;
   epicas: Epica[];
   isLoading: boolean;
   onCreateEpica: () => void;
@@ -56,6 +58,7 @@ const ESTADO_COLORS: Record<string, string> = {
 
 export function EpicasView({
   proyectoId,
+  subproyectoId,
   epicas,
   isLoading,
   onCreateEpica,

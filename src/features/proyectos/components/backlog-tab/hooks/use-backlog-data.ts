@@ -3,16 +3,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   getSprintsByProyecto,
+  getSprintsBySubproyecto,
   type Sprint,
 } from '@/features/proyectos/services/sprints.service';
 import {
   getBacklog,
+  getBacklogBySubproyecto,
   getHistoriasBySprint,
   type HistoriaUsuario,
   type BacklogData,
 } from '@/features/proyectos/services/historias.service';
 import {
   getEpicasByProyecto,
+  getEpicasBySubproyecto,
   type Epica,
 } from '@/features/proyectos/services/epicas.service';
 import { apiClient, ENDPOINTS } from '@/lib/api';
@@ -53,7 +56,7 @@ export interface UseBacklogDataReturn {
   refreshBacklog: () => Promise<void>;
 }
 
-export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
+export function useBacklogData(proyectoId: number, subproyectoId?: number): UseBacklogDataReturn {
   const [sprints, setSprints] = useState<SprintWithHistorias[]>([]);
   const [backlogHistorias, setBacklogHistorias] = useState<HistoriaUsuario[]>([]);
   const [backlogStats, setBacklogStats] = useState<UseBacklogDataReturn['backlogStats']>(null);
@@ -67,17 +70,22 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
 
   const fetchEpicas = useCallback(async () => {
     try {
-      const data = await getEpicasByProyecto(proyectoId);
+      const data = subproyectoId
+        ? await getEpicasBySubproyecto(subproyectoId)
+        : await getEpicasByProyecto(proyectoId);
       setEpicas(data);
     } catch (err) {
       console.error('Error fetching epicas:', err);
     }
-  }, [proyectoId]);
+  }, [proyectoId, subproyectoId]);
 
   const fetchEquipo = useCallback(async () => {
     try {
-      // Obtener asignaciones del proyecto para mapear personalId -> nombre
-      const response = await apiClient.get(ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId));
+      // Obtener asignaciones del proyecto/subproyecto para mapear personalId -> nombre
+      const endpoint = subproyectoId
+        ? ENDPOINTS.RRHH.ASIGNACIONES_SUBPROYECTO(subproyectoId)
+        : ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(proyectoId);
+      const response = await apiClient.get(endpoint);
       // El backend envuelve la respuesta en { data: [...] }, pero el interceptor puede ya haberlo desenvuelto
       const responseData = response.data;
       const asignaciones = Array.isArray(responseData) ? responseData : (responseData?.data || responseData || []);
@@ -119,12 +127,14 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
     } catch (err) {
       console.error('Error fetching equipo:', err);
     }
-  }, [proyectoId]);
+  }, [proyectoId, subproyectoId]);
 
   const fetchBacklog = useCallback(async () => {
     try {
       setIsLoadingBacklog(true);
-      const data = await getBacklog(proyectoId);
+      const data = subproyectoId
+        ? await getBacklogBySubproyecto(subproyectoId)
+        : await getBacklog(proyectoId);
       setBacklogHistorias(data.backlog || []);
       setBacklogStats(data.metricas || {
         total: 0,
@@ -137,14 +147,16 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
     } finally {
       setIsLoadingBacklog(false);
     }
-  }, [proyectoId]);
+  }, [proyectoId, subproyectoId]);
 
   const fetchSprintsWithHistorias = useCallback(async () => {
     try {
       setIsLoadingSprints(true);
 
-      // Get ALL sprints for the project (including completed ones)
-      const sprintsData = await getSprintsByProyecto(proyectoId);
+      // Get ALL sprints for the project/subproyecto (including completed ones)
+      const sprintsData = subproyectoId
+        ? await getSprintsBySubproyecto(subproyectoId)
+        : await getSprintsByProyecto(proyectoId);
 
       // Helper para verificar estados (soporta ambos formatos)
       const isEnProgreso = (estado: string) => estado === 'En progreso' || estado === 'Activo';
@@ -188,7 +200,7 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
     } finally {
       setIsLoadingSprints(false);
     }
-  }, [proyectoId]);
+  }, [proyectoId, subproyectoId]);
 
   const refresh = useCallback(async () => {
     try {
@@ -227,10 +239,10 @@ export function useBacklogData(proyectoId: number): UseBacklogDataReturn {
 
   // Initial load
   useEffect(() => {
-    if (proyectoId) {
+    if (subproyectoId || proyectoId) {
       refresh();
     }
-  }, [proyectoId, refresh]);
+  }, [proyectoId, subproyectoId, refresh]);
 
   return {
     sprints,

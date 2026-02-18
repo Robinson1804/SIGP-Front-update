@@ -113,6 +113,7 @@ interface SprintFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   proyectoId: number;
+  subproyectoId?: number;
   onSuccess: () => void;
   proyectoFechaInicio?: string | null;
   proyectoFechaFin?: string | null;
@@ -198,6 +199,7 @@ export function SprintFormModal({
   open,
   onOpenChange,
   proyectoId,
+  subproyectoId,
   onSuccess,
   proyectoFechaInicio,
   proyectoFechaFin,
@@ -311,7 +313,7 @@ export function SprintFormModal({
           fechaInicio: values.fechaInicio || undefined,
           fechaFin: values.fechaFin || undefined,
           capacidadEquipo: values.velocidadPlanificada || undefined,
-          proyectoId,
+          ...(subproyectoId ? { subproyectoId } : { proyectoId }),
         });
       }
 
