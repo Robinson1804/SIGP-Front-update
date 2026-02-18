@@ -1399,14 +1399,8 @@ export function POIFullModal({
                                                                 // Verificar si es un subproyecto existente (ID numérico) o temporal (sp-X)
                                                                 const isExisting = !sp.id.toString().startsWith('sp-');
                                                                 const handleRowClick = () => {
-                                                                    if (isExisting) {
-                                                                        // Navegar a la página de detalle del subproyecto
-                                                                        router.push(paths.poi.subproyectos.detalles(sp.id));
-                                                                        onClose(); // Cerrar el modal
-                                                                    } else {
-                                                                        // Abrir formulario de edición para subproyectos no guardados
-                                                                        openSubProjectForm(sp);
-                                                                    }
+                                                                    // Abrir formulario de edición para todos los subproyectos
+                                                                    openSubProjectForm(sp);
                                                                 };
 
                                                                 return (<TableRow

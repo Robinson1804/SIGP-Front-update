@@ -37,6 +37,7 @@ import { PERMISSIONS } from '@/lib/definitions';
 import {
   getSubproyecto,
   deleteSubproyecto,
+  updateSubproyecto,
   type Subproyecto,
 } from '@/features/subproyectos/services/subproyectos.service';
 import {
@@ -55,6 +56,13 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { X } from 'lucide-react';
+import { SubProjectModal } from '@/features/proyectos/components';
+import { type SubProject } from '@/lib/definitions';
+import {
+  getScrumMasters,
+  syncAsignacionesSubproyecto,
+  type Usuario,
+} from '@/lib/services';
 
 // ============================================
 // TIPOS Y HELPERS
@@ -223,6 +231,8 @@ function SubprojectDetailsContent() {
   const [activeTab, setActiveTab] = useState('Detalles');
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [scrumMasters, setScrumMasters] = useState<Usuario[]>([]);
 
   const [progressAnimated, setProgressAnimated] = useState(false);
 
@@ -302,6 +312,19 @@ function SubprojectDetailsContent() {
     }
   }, [subproyectoId, fetchSubprojectData]);
 
+  // Cargar scrum masters
+  useEffect(() => {
+    const loadScrumMasters = async () => {
+      try {
+        const data = await getScrumMasters();
+        setScrumMasters(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error loading scrum masters:', err);
+      }
+    };
+    loadScrumMasters();
+  }, []);
+
   const formatMonthYear = (dateString: string | Date | undefined) => {
     if (!dateString) return '-';
     const dateStr = typeof dateString === 'string' ? dateString : dateString.toISOString();
@@ -334,6 +357,74 @@ function SubprojectDetailsContent() {
       toast({
         title: 'Error',
         description: 'No se pudo eliminar el subproyecto. Intente nuevamente.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Mapear Subproyecto del backend al tipo SubProject para el modal
+  const mapToSubProject = (sp: Subproyecto): SubProject => {
+    const scrumMasterNombreModal = sp.scrumMaster
+      ? `${sp.scrumMaster.nombre || ''} ${sp.scrumMaster.apellido || ''}`.trim()
+      : '';
+    return {
+      id: sp.id.toString(),
+      name: sp.nombre,
+      description: sp.descripcion || '',
+      responsible: [],
+      scrumMaster: scrumMasterNombreModal,
+      years: sp.anios?.map(String) || [],
+      amount: sp.monto || 0,
+      managementMethod: 'Scrum',
+      financialArea: sp.areasFinancieras || [],
+      status: sp.estado,
+    };
+  };
+
+  const handleSaveEdit = async (subProject: SubProject) => {
+    if (!subproyectoId) return;
+    try {
+      // Buscar el ID del scrum master por nombre
+      const scrumMasterFound = scrumMasters.find(sm => {
+        const nombre = sm.personal
+          ? [sm.personal.nombre, sm.personal.apellidoPaterno, sm.personal.apellidoMaterno].filter(Boolean).join(' ')
+          : `${sm.nombre || ''} ${sm.apellido || ''}`.trim();
+        return nombre === subProject.scrumMaster;
+      });
+
+      const aniosNumeros = subProject.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+      const responsablesIds = subProject.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
+
+      await updateSubproyecto(subproyectoId, {
+        nombre: subProject.name,
+        descripcion: subProject.description,
+        monto: subProject.amount,
+        anios: aniosNumeros,
+        areasFinancieras: subProject.financialArea || [],
+        scrumMasterId: scrumMasterFound?.id,
+      });
+
+      // Sincronizar asignaciones
+      if (responsablesIds.length > 0) {
+        try {
+          await syncAsignacionesSubproyecto(subproyectoId, responsablesIds);
+        } catch (err) {
+          console.warn('Error al sincronizar asignaciones:', err);
+        }
+      }
+
+      setIsEditModalOpen(false);
+      toast({
+        title: 'Subproyecto actualizado',
+        description: `El subproyecto se ha actualizado correctamente.`,
+      });
+      // Recargar datos
+      await fetchSubprojectData();
+    } catch (error) {
+      console.error('Error saving subproject:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo actualizar el subproyecto. Intente nuevamente.',
         variant: 'destructive',
       });
     }
@@ -479,6 +570,19 @@ function SubprojectDetailsContent() {
                 </div>
                 {showEditDeleteButtons && (
                   <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "border-[#018CD1] text-[#018CD1] hover:bg-[#018CD1] hover:text-white",
+                        !canEdit && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={() => canEdit && setIsEditModalOpen(true)}
+                      disabled={!canEdit}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar
+                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -726,6 +830,17 @@ function SubprojectDetailsContent() {
         title="AVISO"
         message="El subproyecto sera eliminado"
       />
+
+      {isEditModalOpen && subproyecto && (
+        <SubProjectModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSaveEdit}
+          subProject={mapToSubProject(subproyecto)}
+          scrumMasters={scrumMasters}
+          existingSubProjects={[]}
+        />
+      )}
     </AppLayout>
   );
 }
