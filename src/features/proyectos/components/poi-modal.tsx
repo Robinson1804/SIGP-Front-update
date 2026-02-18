@@ -1248,6 +1248,10 @@ export function POIFullModal({
                 amount: 0,
                 managementMethod: 'Scrum',
                 financialArea: [],
+                coordinador: '',
+                coordinacion: '',
+                fechaInicio: '',
+                fechaFin: '',
             });
         }
         setSubProjectErrors({});
@@ -1895,6 +1899,53 @@ export function POIFullModal({
                                 />
                                 {subProjectErrors.amount && <p className="text-red-500 text-xs mt-1">{subProjectErrors.amount}</p>}
                             </div>
+                            {/* Coordinador */}
+                            <div>
+                                <label className="text-sm font-medium">Coordinador</label>
+                                <Select
+                                    value={subProjectForm.coordinador || ''}
+                                    onValueChange={(value) => setSubProjectForm(p => ({ ...p, coordinador: value }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar coordinador" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {coordinadores.map((c) => (
+                                            <SelectItem key={c.id} value={formatUsuarioNombre(c)}>
+                                                {formatUsuarioNombre(c)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {/* Coordinación */}
+                            <div>
+                                <label className="text-sm font-medium">Coordinación</label>
+                                <Input
+                                    placeholder="Ingresar coordinación"
+                                    value={subProjectForm.coordinacion || ''}
+                                    onChange={(e) => setSubProjectForm(p => ({ ...p, coordinacion: e.target.value }))}
+                                />
+                            </div>
+                            {/* Fechas */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium">Fecha Inicio</label>
+                                    <Input
+                                        type="date"
+                                        value={subProjectForm.fechaInicio || ''}
+                                        onChange={(e) => setSubProjectForm(p => ({ ...p, fechaInicio: e.target.value }))}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium">Fecha Fin</label>
+                                    <Input
+                                        type="date"
+                                        value={subProjectForm.fechaFin || ''}
+                                        onChange={(e) => setSubProjectForm(p => ({ ...p, fechaFin: e.target.value }))}
+                                    />
+                                </div>
+                            </div>
                             <div>
                                 <label className="text-sm font-medium">Método de Gestión del proyecto</label>
                                 <Input
@@ -2090,6 +2141,7 @@ export function SubProjectModal({
   onSave,
   subProject,
   scrumMasters = [],
+  coordinadores = [],
   responsibleOptions = [],
   financialAreaOptions: externalFinancialAreaOptions,
   yearOptions: externalYearOptions,
@@ -2103,6 +2155,7 @@ export function SubProjectModal({
   onSave: (data: SubProject) => void;
   subProject: SubProject | null;
   scrumMasters?: UsuarioOption[];
+  coordinadores?: UsuarioOption[];
   responsibleOptions?: SelectOption[];
   financialAreaOptions?: SelectOption[];
   yearOptions?: SelectOption[];
@@ -2154,6 +2207,10 @@ export function SubProjectModal({
           amount: 0,
           managementMethod: 'Scrum',
           financialArea: [],
+          coordinador: '',
+          coordinacion: '',
+          fechaInicio: '',
+          fechaFin: '',
         });
       }
       setErrors({});
@@ -2353,6 +2410,56 @@ export function SubProjectModal({
               className={errors.amount ? 'border-red-500' : ''}
             />
             {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
+          </div>
+
+          {/* Coordinador */}
+          <div>
+            <label className="text-sm font-medium">Coordinador</label>
+            <Select
+              value={formData.coordinador || ''}
+              onValueChange={(value) => setFormData(p => ({ ...p, coordinador: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar coordinador" />
+              </SelectTrigger>
+              <SelectContent>
+                {coordinadores.map((c) => (
+                  <SelectItem key={c.id} value={formatUsuarioNombreLocal(c)}>
+                    {formatUsuarioNombreLocal(c)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Coordinación */}
+          <div>
+            <label className="text-sm font-medium">Coordinación</label>
+            <Input
+              placeholder="Ingresar coordinación"
+              value={formData.coordinacion || ''}
+              onChange={(e) => setFormData(p => ({ ...p, coordinacion: e.target.value }))}
+            />
+          </div>
+
+          {/* Fechas */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Fecha Inicio</label>
+              <Input
+                type="date"
+                value={formData.fechaInicio || ''}
+                onChange={(e) => setFormData(p => ({ ...p, fechaInicio: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Fecha Fin</label>
+              <Input
+                type="date"
+                value={formData.fechaFin || ''}
+                onChange={(e) => setFormData(p => ({ ...p, fechaFin: e.target.value }))}
+              />
+            </div>
           </div>
 
           {/* Método de Gestión */}

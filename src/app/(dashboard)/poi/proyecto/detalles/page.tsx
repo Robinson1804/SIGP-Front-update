@@ -63,6 +63,7 @@ import {
 } from '@/features/proyectos/services/subproyectos.service';
 import {
   getScrumMasters,
+  getCoordinadores,
   type Usuario,
 } from '@/lib/services/usuarios.service';
 import {
@@ -189,6 +190,17 @@ function mapSubproyectoToSubProject(subproyecto: Subproyecto): SubProject {
     ? subproyecto.anios.map(a => a.toString())
     : [];
 
+  // Nombre del coordinador
+  const coordinadorNombre = subproyecto.coordinador
+    ? getUsuarioNombre(subproyecto.coordinador)
+    : '';
+
+  // Formatear fechas a YYYY-MM-DD
+  const toDateStr = (d: string | undefined) => {
+    if (!d) return '';
+    return d.substring(0, 10);
+  };
+
   // Responsables se cargan dinámicamente via getAsignacionesBySubproyecto cuando se edita
   return {
     id: subproyecto.id.toString(),
@@ -204,6 +216,10 @@ function mapSubproyectoToSubProject(subproyecto: Subproyecto): SubProject {
     financialArea: subproyecto.areasFinancieras || [],
     progress: 0, // TODO: Calcular progreso basado en sprints del subproyecto
     status: subproyecto.estado || 'Pendiente',
+    coordinador: coordinadorNombre,
+    coordinacion: subproyecto.coordinacion || '',
+    fechaInicio: toDateStr(subproyecto.fechaInicio),
+    fechaFin: toDateStr(subproyecto.fechaFin),
   };
 }
 
@@ -607,6 +623,7 @@ function ProjectDetailsContent() {
 
     // Datos para modal de subproyectos
     const [scrumMasters, setScrumMasters] = useState<Usuario[]>([]);
+    const [coordinadoresData, setCoordinadoresData] = useState<Usuario[]>([]);
     const [personalDisponible, setPersonalDisponible] = useState<Personal[]>([]);
 
     const [progressAnimated, setProgressAnimated] = useState(false);
@@ -650,16 +667,18 @@ function ProjectDetailsContent() {
         }
     }, [searchParams, router]);
 
-    // Cargar scrum masters y personal disponible al montar
+    // Cargar scrum masters, coordinadores y personal disponible al montar
     useEffect(() => {
         const loadUsersData = async () => {
             try {
-                const [scrumMastersData, personalData] = await Promise.all([
+                const [scrumMastersData, personalData, coordinadoresLoaded] = await Promise.all([
                     getScrumMasters().catch(() => []),
                     getPersonalDisponible().catch(() => []),
+                    getCoordinadores().catch(() => []),
                 ]);
                 setScrumMasters(scrumMastersData);
                 setPersonalDisponible(personalData);
+                setCoordinadoresData(Array.isArray(coordinadoresLoaded) ? coordinadoresLoaded : []);
             } catch (error) {
                 console.error('Error loading users data:', error);
             }
@@ -991,6 +1010,14 @@ function ProjectDetailsContent() {
                 return nombre === subProject.scrumMaster;
             });
 
+            // Buscar el ID del coordinador por nombre
+            const coordinador = coordinadoresData.find(c => {
+                const nombre = c.personal
+                    ? [c.personal.nombre, c.personal.apellidoPaterno, c.personal.apellidoMaterno].filter(Boolean).join(' ')
+                    : `${c.nombre || ''} ${c.apellido || ''}`.trim();
+                return nombre === subProject.coordinador;
+            });
+
             // Convertir años de string a number
             const aniosNumeros = subProject.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
             // Convertir responsables de string a number para asignaciones
@@ -1006,6 +1033,10 @@ function ProjectDetailsContent() {
                     anios: aniosNumeros,
                     areasFinancieras: subProject.financialArea || [],
                     scrumMasterId: scrumMaster?.id,
+                    coordinadorId: coordinador?.id,
+                    coordinacion: subProject.coordinacion || undefined,
+                    fechaInicio: subProject.fechaInicio || undefined,
+                    fechaFin: subProject.fechaFin || undefined,
                 });
 
                 // Sincronizar asignaciones para subproyecto existente
@@ -1029,6 +1060,10 @@ function ProjectDetailsContent() {
                     anios: aniosNumeros,
                     areasFinancieras: subProject.financialArea || [],
                     scrumMasterId: scrumMaster?.id,
+                    coordinadorId: coordinador?.id,
+                    coordinacion: subProject.coordinacion || undefined,
+                    fechaInicio: subProject.fechaInicio || undefined,
+                    fechaFin: subProject.fechaFin || undefined,
                 });
 
                 // Sincronizar asignaciones para el nuevo subproyecto
@@ -1533,6 +1568,7 @@ function ProjectDetailsContent() {
                     onSave={handleSaveSubProject}
                     subProject={editingSubProject}
                     scrumMasters={scrumMasters}
+                    coordinadores={coordinadoresData}
                     responsibleOptions={personalDisponible.map(p => ({
                         label: formatPersonalNombre(p),
                         value: p.id.toString(),

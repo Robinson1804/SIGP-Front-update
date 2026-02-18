@@ -11,6 +11,18 @@ export interface Subproyecto {
   areasFinancieras?: string[];
   // responsables se manejan via tabla rrhh.asignaciones (tipoAsignacion='Subproyecto')
   estado: string;
+  coordinadorId?: number;
+  coordinador?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    personal?: {
+      nombre: string;
+      apellidoPaterno?: string;
+      apellidoMaterno?: string;
+    };
+  } | null;
+  coordinacion?: string;
   scrumMasterId?: number;
   scrumMaster?: {
     id: number;
@@ -38,6 +50,8 @@ export interface CreateSubproyectoData {
   anios?: number[];
   areasFinancieras?: string[];
   // responsables se manejan via syncAsignacionesSubproyecto()
+  coordinadorId?: number;
+  coordinacion?: string;
   scrumMasterId?: number;
   fechaInicio?: string;
   fechaFin?: string;
@@ -50,6 +64,8 @@ export interface UpdateSubproyectoData {
   anios?: number[];
   areasFinancieras?: string[];
   // responsables se manejan via syncAsignacionesSubproyecto()
+  coordinadorId?: number;
+  coordinacion?: string;
   scrumMasterId?: number;
   fechaInicio?: string;
   fechaFin?: string;

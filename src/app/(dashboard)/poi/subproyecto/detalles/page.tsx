@@ -60,6 +60,7 @@ import { SubProjectModal } from '@/features/proyectos/components';
 import { type SubProject } from '@/lib/definitions';
 import {
   getScrumMasters,
+  getCoordinadores,
   syncAsignacionesSubproyecto,
   type Usuario,
 } from '@/lib/services';
@@ -233,6 +234,7 @@ function SubprojectDetailsContent() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [scrumMasters, setScrumMasters] = useState<Usuario[]>([]);
+  const [coordinadoresData, setCoordinadoresData] = useState<Usuario[]>([]);
 
   const [progressAnimated, setProgressAnimated] = useState(false);
 
@@ -312,17 +314,21 @@ function SubprojectDetailsContent() {
     }
   }, [subproyectoId, fetchSubprojectData]);
 
-  // Cargar scrum masters
+  // Cargar scrum masters y coordinadores
   useEffect(() => {
-    const loadScrumMasters = async () => {
+    const loadUsersData = async () => {
       try {
-        const data = await getScrumMasters();
-        setScrumMasters(Array.isArray(data) ? data : []);
+        const [smData, coordData] = await Promise.all([
+          getScrumMasters(),
+          getCoordinadores(),
+        ]);
+        setScrumMasters(Array.isArray(smData) ? smData : []);
+        setCoordinadoresData(Array.isArray(coordData) ? coordData : []);
       } catch (err) {
-        console.error('Error loading scrum masters:', err);
+        console.error('Error loading users data:', err);
       }
     };
-    loadScrumMasters();
+    loadUsersData();
   }, []);
 
   const formatMonthYear = (dateString: string | Date | undefined) => {
@@ -367,6 +373,15 @@ function SubprojectDetailsContent() {
     const scrumMasterNombreModal = sp.scrumMaster
       ? `${sp.scrumMaster.nombre || ''} ${sp.scrumMaster.apellido || ''}`.trim()
       : '';
+    const coordinadorNombreModal = sp.coordinador
+      ? `${sp.coordinador.nombre || ''} ${sp.coordinador.apellido || ''}`.trim()
+      : '';
+    // Format dates to YYYY-MM-DD
+    const toDateStr = (d: string | Date | undefined) => {
+      if (!d) return '';
+      const str = typeof d === 'string' ? d : d.toISOString();
+      return str.substring(0, 10);
+    };
     return {
       id: sp.id.toString(),
       name: sp.nombre,
@@ -378,6 +393,10 @@ function SubprojectDetailsContent() {
       managementMethod: 'Scrum',
       financialArea: sp.areasFinancieras || [],
       status: sp.estado,
+      coordinador: coordinadorNombreModal,
+      coordinacion: sp.coordinacion || '',
+      fechaInicio: toDateStr(sp.fechaInicio),
+      fechaFin: toDateStr(sp.fechaFin),
     };
   };
 
@@ -392,6 +411,14 @@ function SubprojectDetailsContent() {
         return nombre === subProject.scrumMaster;
       });
 
+      // Buscar el ID del coordinador por nombre
+      const coordinadorFound = coordinadoresData.find(c => {
+        const nombre = c.personal
+          ? [c.personal.nombre, c.personal.apellidoPaterno, c.personal.apellidoMaterno].filter(Boolean).join(' ')
+          : `${c.nombre || ''} ${c.apellido || ''}`.trim();
+        return nombre === subProject.coordinador;
+      });
+
       const aniosNumeros = subProject.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
       const responsablesIds = subProject.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
 
@@ -402,6 +429,10 @@ function SubprojectDetailsContent() {
         anios: aniosNumeros,
         areasFinancieras: subProject.financialArea || [],
         scrumMasterId: scrumMasterFound?.id,
+        coordinadorId: coordinadorFound?.id,
+        coordinacion: subProject.coordinacion || undefined,
+        fechaInicio: subProject.fechaInicio || undefined,
+        fechaFin: subProject.fechaFin || undefined,
       });
 
       // Sincronizar asignaciones
@@ -837,6 +868,7 @@ function SubprojectDetailsContent() {
           onSave={handleSaveEdit}
           subProject={mapToSubProject(subproyecto)}
           scrumMasters={scrumMasters}
+          coordinadores={coordinadoresData}
           existingSubProjects={[]}
         />
       )}
