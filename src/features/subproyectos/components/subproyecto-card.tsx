@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Calendar, Users, Folder } from 'lucide-react';
 import {
   Card,
@@ -26,17 +27,18 @@ const estadoVariants = {
 } as const;
 
 export function SubproyectoCard({ data }: SubproyectoCardProps) {
+  const router = useRouter();
+  const href = `/poi/subproyecto/detalles?id=${data.id}`;
+
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card
+      className="hover:shadow-md transition-shadow cursor-pointer"
+      onClick={() => router.push(href)}
+    >
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <div className="space-y-1 flex-1">
           <CardTitle className="text-base">
-            <Link
-              href={`/poi/subproyecto/detalles?id=${data.id}`}
-              className="hover:underline"
-            >
-              {data.codigo} - {data.nombre}
-            </Link>
+            {data.codigo} - {data.nombre}
           </CardTitle>
           <CardDescription className="line-clamp-2">
             {data.descripcion || 'Sin descripción'}
@@ -68,6 +70,7 @@ export function SubproyectoCard({ data }: SubproyectoCardProps) {
             <Link
               href={paths.poi.proyectos.detalles(data.proyectoPadreId)}
               className="hover:underline"
+              onClick={(e) => e.stopPropagation()}
             >
               {data.proyectoPadre.codigo}
             </Link>

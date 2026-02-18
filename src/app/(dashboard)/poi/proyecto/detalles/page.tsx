@@ -340,6 +340,7 @@ const InfoField = ({ label, children }: { label: string, children: React.ReactNo
 );
 
 const SubProjectCard = ({ subProject, onEdit, onDelete, canEdit }: { subProject: SubProject, onEdit: () => void, onDelete: () => void, canEdit: boolean }) => {
+    const router = useRouter();
     const formatAmount = (amount: number) => {
         if (amount >= 1000000) {
             return `S/ ${(amount / 1000000).toFixed(1)}M`;
@@ -355,17 +356,15 @@ const SubProjectCard = ({ subProject, onEdit, onDelete, canEdit }: { subProject:
     const statusColor = subProjectStatusColors[status] || subProjectStatusColors['Pendiente'];
 
     return (
-    <Card className="bg-white hover:shadow-md transition-shadow">
+    <Card
+        className="bg-white hover:shadow-md transition-shadow cursor-pointer"
+        onClick={() => router.push(`/poi/subproyecto/detalles?id=${parseInt(subProject.id)}`)}
+    >
         <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Briefcase className="w-5 h-5 text-gray-500 flex-shrink-0" />
                 <CardTitle className="text-base font-bold truncate">
-                    <Link
-                        href={`/poi/subproyecto/detalles?id=${parseInt(subProject.id)}`}
-                        className="hover:underline"
-                    >
-                        {subProject.name}
-                    </Link>
+                    {subProject.name}
                 </CardTitle>
             </div>
         </CardHeader>
