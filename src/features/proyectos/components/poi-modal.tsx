@@ -1801,6 +1801,34 @@ export function POIFullModal({
                                 />
                                 {subProjectErrors.description && <p className="text-red-500 text-xs mt-1">{subProjectErrors.description}</p>}
                             </div>
+                            {/* Coordinación */}
+                            <div>
+                                <label className="text-sm font-medium">Coordinación</label>
+                                <Input
+                                    placeholder="Ingresar coordinación"
+                                    value={subProjectForm.coordinacion || ''}
+                                    onChange={(e) => setSubProjectForm(p => ({ ...p, coordinacion: e.target.value }))}
+                                />
+                            </div>
+                            {/* Coordinador */}
+                            <div>
+                                <label className="text-sm font-medium">Coordinador</label>
+                                <Select
+                                    value={subProjectForm.coordinador || ''}
+                                    onValueChange={(value) => setSubProjectForm(p => ({ ...p, coordinador: value }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar coordinador" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {coordinadores.map((c) => (
+                                            <SelectItem key={c.id} value={formatUsuarioNombre(c)}>
+                                                {formatUsuarioNombre(c)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             <div>
                                 <label className="text-sm font-medium">Área Financiera</label>
                                 <MultiSelect
@@ -1898,34 +1926,6 @@ export function POIFullModal({
                                     className={subProjectErrors.amount ? 'border-red-500' : ''}
                                 />
                                 {subProjectErrors.amount && <p className="text-red-500 text-xs mt-1">{subProjectErrors.amount}</p>}
-                            </div>
-                            {/* Coordinador */}
-                            <div>
-                                <label className="text-sm font-medium">Coordinador</label>
-                                <Select
-                                    value={subProjectForm.coordinador || ''}
-                                    onValueChange={(value) => setSubProjectForm(p => ({ ...p, coordinador: value }))}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Seleccionar coordinador" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {coordinadores.map((c) => (
-                                            <SelectItem key={c.id} value={formatUsuarioNombre(c)}>
-                                                {formatUsuarioNombre(c)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {/* Coordinación */}
-                            <div>
-                                <label className="text-sm font-medium">Coordinación</label>
-                                <Input
-                                    placeholder="Ingresar coordinación"
-                                    value={subProjectForm.coordinacion || ''}
-                                    onChange={(e) => setSubProjectForm(p => ({ ...p, coordinacion: e.target.value }))}
-                                />
                             </div>
                             {/* Fechas */}
                             <div className="grid grid-cols-2 gap-4">
@@ -2149,6 +2149,8 @@ export function SubProjectModal({
   existingSubProjects = [],
   pgdAnioInicio,
   pgdAnioFin,
+  projectFechaInicio,
+  projectFechaFin,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -2163,6 +2165,8 @@ export function SubProjectModal({
   existingSubProjects?: SubProject[];
   pgdAnioInicio?: number;
   pgdAnioFin?: number;
+  projectFechaInicio?: string;
+  projectFechaFin?: string;
 }) {
   const [formData, setFormData] = React.useState<Partial<SubProject>>({});
   const [errors, setErrors] = React.useState<{[key: string]: string}>({});
@@ -2248,6 +2252,18 @@ export function SubProjectModal({
       }
     }
 
+    // Validar que fechaFin >= fechaInicio
+    if (formData.fechaInicio && formData.fechaFin && formData.fechaFin < formData.fechaInicio) {
+      newErrors.fechaFin = 'La fecha fin debe ser posterior a la fecha de inicio';
+    }
+    // Validar que fechas estén dentro del rango del proyecto padre
+    if (projectFechaInicio && formData.fechaInicio && formData.fechaInicio < projectFechaInicio) {
+      newErrors.fechaInicio = `La fecha de inicio no puede ser anterior al inicio del proyecto (${projectFechaInicio})`;
+    }
+    if (projectFechaFin && formData.fechaFin && formData.fechaFin > projectFechaFin) {
+      newErrors.fechaFin = `La fecha fin no puede ser posterior al fin del proyecto (${projectFechaFin})`;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -2308,6 +2324,36 @@ export function SubProjectModal({
               className={`min-h-[80px] ${errors.description ? 'border-red-500' : ''}`}
             />
             {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
+          </div>
+
+          {/* Coordinación */}
+          <div>
+            <label className="text-sm font-medium">Coordinación</label>
+            <Input
+              placeholder="Ingresar coordinación"
+              value={formData.coordinacion || ''}
+              onChange={(e) => setFormData(p => ({ ...p, coordinacion: e.target.value }))}
+            />
+          </div>
+
+          {/* Coordinador */}
+          <div>
+            <label className="text-sm font-medium">Coordinador</label>
+            <Select
+              value={formData.coordinador || ''}
+              onValueChange={(value) => setFormData(p => ({ ...p, coordinador: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar coordinador" />
+              </SelectTrigger>
+              <SelectContent>
+                {coordinadores.map((c) => (
+                  <SelectItem key={c.id} value={formatUsuarioNombreLocal(c)}>
+                    {formatUsuarioNombreLocal(c)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Área Financiera */}
@@ -2412,36 +2458,6 @@ export function SubProjectModal({
             {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount}</p>}
           </div>
 
-          {/* Coordinador */}
-          <div>
-            <label className="text-sm font-medium">Coordinador</label>
-            <Select
-              value={formData.coordinador || ''}
-              onValueChange={(value) => setFormData(p => ({ ...p, coordinador: value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar coordinador" />
-              </SelectTrigger>
-              <SelectContent>
-                {coordinadores.map((c) => (
-                  <SelectItem key={c.id} value={formatUsuarioNombreLocal(c)}>
-                    {formatUsuarioNombreLocal(c)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Coordinación */}
-          <div>
-            <label className="text-sm font-medium">Coordinación</label>
-            <Input
-              placeholder="Ingresar coordinación"
-              value={formData.coordinacion || ''}
-              onChange={(e) => setFormData(p => ({ ...p, coordinacion: e.target.value }))}
-            />
-          </div>
-
           {/* Fechas */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -2449,16 +2465,30 @@ export function SubProjectModal({
               <Input
                 type="date"
                 value={formData.fechaInicio || ''}
-                onChange={(e) => setFormData(p => ({ ...p, fechaInicio: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(p => ({ ...p, fechaInicio: e.target.value }));
+                  if (errors.fechaInicio) setErrors(prev => ({...prev, fechaInicio: ''}));
+                }}
+                min={projectFechaInicio}
+                max={projectFechaFin}
+                className={errors.fechaInicio ? 'border-red-500' : ''}
               />
+              {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
             </div>
             <div>
               <label className="text-sm font-medium">Fecha Fin</label>
               <Input
                 type="date"
                 value={formData.fechaFin || ''}
-                onChange={(e) => setFormData(p => ({ ...p, fechaFin: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(p => ({ ...p, fechaFin: e.target.value }));
+                  if (errors.fechaFin) setErrors(prev => ({...prev, fechaFin: ''}));
+                }}
+                min={formData.fechaInicio || projectFechaInicio}
+                max={projectFechaFin}
+                className={errors.fechaFin ? 'border-red-500' : ''}
               />
+              {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
             </div>
           </div>
 

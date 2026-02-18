@@ -583,6 +583,15 @@ function SubprojectDetailsContent() {
     ? (typeof subproyecto.fechaFin === 'string' ? subproyecto.fechaFin.substring(0, 10) : new Date(subproyecto.fechaFin).toISOString().substring(0, 10))
     : null;
 
+  // Fechas del proyecto padre (para validar rango en el modal de edición)
+  const toDateStr = (d: string | Date | undefined | null): string | undefined => {
+    if (!d) return undefined;
+    const str = typeof d === 'string' ? d : (d as Date).toISOString();
+    return str.substring(0, 10);
+  };
+  const proyectoPadreFechaInicio = toDateStr((subproyecto.proyectoPadre as any)?.fechaInicio);
+  const proyectoPadreFechaFin = toDateStr((subproyecto.proyectoPadre as any)?.fechaFin);
+
   return (
     <AppLayout
       breadcrumbs={breadcrumbs}
@@ -870,6 +879,8 @@ function SubprojectDetailsContent() {
           scrumMasters={scrumMasters}
           coordinadores={coordinadoresData}
           existingSubProjects={[]}
+          projectFechaInicio={proyectoPadreFechaInicio}
+          projectFechaFin={proyectoPadreFechaFin}
         />
       )}
     </AppLayout>

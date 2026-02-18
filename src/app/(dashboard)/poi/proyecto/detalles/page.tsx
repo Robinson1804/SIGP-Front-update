@@ -1576,6 +1576,8 @@ function ProjectDetailsContent() {
                     yearOptions={project.years?.map(y => ({ label: y, value: y })) || []}
                     projectAmount={project.annualAmount || 0}
                     existingSubProjects={project.subProjects || []}
+                    projectFechaInicio={project.startDate || undefined}
+                    projectFechaFin={project.endDate || undefined}
                 />
             )}
 
