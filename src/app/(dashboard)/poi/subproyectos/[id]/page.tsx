@@ -1,9 +1,14 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Calendar, Users, DollarSign, Target, FileText } from 'lucide-react';
+import {
+  ArrowLeft, Calendar, Users, DollarSign, Target,
+  FileText, FolderOpen, ClipboardList, BarChart, Folder,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SubproyectoActions } from '@/features/subproyectos/components/subproyecto-actions';
+import { AreaUsuariaDisplay } from '@/features/proyectos/components/area-usuaria-display';
 import { getSubproyecto } from '@/lib/actions';
 import { paths } from '@/lib/paths';
 
@@ -30,26 +35,13 @@ export default async function SubproyectoDetallesPage({
     notFound();
   }
 
-  // Formatear monto
-  const formatMonto = (monto: number | string | undefined) => {
-    if (!monto) return 'No especificado';
-    const num = typeof monto === 'string' ? parseFloat(monto) : monto;
-    return `S/ ${num.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  // Formatear fecha
-  const formatFecha = (fecha: string | undefined) => {
-    if (!fecha) return 'No especificado';
-    return new Date(fecha).toLocaleDateString('es-PE');
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href={paths.poi.proyectos.base}>
+            <Link href={paths.poi.subproyectos.base}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
@@ -58,20 +50,37 @@ export default async function SubproyectoDetallesPage({
               {subproyecto.codigo} - {subproyecto.nombre}
             </h1>
             <p className="text-muted-foreground">
-              Detalles del subproyecto POI
+              {subproyecto.proyectoPadre
+                ? `Subproyecto de ${subproyecto.proyectoPadre.codigo} - ${subproyecto.proyectoPadre.nombre}`
+                : 'Detalle del subproyecto'}
             </p>
           </div>
         </div>
+
+        <SubproyectoActions
+          subproyectoId={subproyecto.id}
+          subproyectoCodigo={subproyecto.codigo}
+          subproyectoNombre={subproyecto.nombre}
+        />
       </div>
 
-      {/* Estado */}
-      <div className="flex items-center gap-2">
-        <Badge variant={estadoVariants[subproyecto.estado as keyof typeof estadoVariants] || 'secondary'}>
+      {/* Estado y Clasificación */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge variant={estadoVariants[subproyecto.estado as keyof typeof estadoVariants] as any}>
           {subproyecto.estado}
         </Badge>
-        <Badge variant="outline" className="font-mono">
-          Scrum
-        </Badge>
+        {subproyecto.clasificacion && (
+          <Badge variant="outline">{subproyecto.clasificacion}</Badge>
+        )}
+        <Badge variant="outline" className="font-mono">Scrum</Badge>
+        {subproyecto.proyectoPadre && (
+          <Link href={paths.poi.proyectos.detalles(subproyecto.proyectoPadreId)}>
+            <Badge variant="secondary" className="gap-1 cursor-pointer hover:bg-secondary/80">
+              <Folder className="h-3 w-3" />
+              {subproyecto.proyectoPadre.codigo}
+            </Badge>
+          </Link>
+        )}
       </div>
 
       {/* Grid de cards */}
@@ -99,48 +108,38 @@ export default async function SubproyectoDetallesPage({
                 <p className="text-base">{subproyecto.descripcion}</p>
               </div>
             )}
+            {subproyecto.coordinacion && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Coordinación</p>
+                <p className="text-base">{subproyecto.coordinacion}</p>
+              </div>
+            )}
+            {subproyecto.areaResponsable && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Área Responsable</p>
+                <p className="text-base">{subproyecto.areaResponsable}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Presupuesto y Fechas */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Presupuesto y Cronograma
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Monto Asignado</p>
-              <p className="text-base font-semibold">{formatMonto(subproyecto.monto)}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Fecha de Inicio</p>
-              <p className="text-base flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {formatFecha(subproyecto.fechaInicio)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Fecha de Fin</p>
-              <p className="text-base flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                {formatFecha(subproyecto.fechaFin)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Equipo */}
+        {/* Responsables */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Equipo del Subproyecto
+              Responsables
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {subproyecto.coordinador && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Coordinador</p>
+                <p className="text-base">
+                  {subproyecto.coordinador.nombre} {subproyecto.coordinador.apellido}
+                </p>
+              </div>
+            )}
             {subproyecto.scrumMaster && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Scrum Master</p>
@@ -149,46 +148,163 @@ export default async function SubproyectoDetallesPage({
                 </p>
               </div>
             )}
+            {subproyecto.patrocinador && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Patrocinador</p>
+                <p className="text-base">
+                  {subproyecto.patrocinador.nombre} {subproyecto.patrocinador.apellido}
+                </p>
+              </div>
+            )}
+            {subproyecto.areaUsuaria && subproyecto.areaUsuaria.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Área Usuaria</p>
+                <AreaUsuariaDisplay userIds={subproyecto.areaUsuaria} />
+              </div>
+            )}
+            {!subproyecto.coordinador && !subproyecto.scrumMaster && !subproyecto.patrocinador && (
+              <p className="text-muted-foreground text-sm">Sin responsables asignados</p>
+            )}
           </CardContent>
         </Card>
 
-        {/* Enlaces rápidos */}
+        {/* Fechas */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Gestión del Subproyecto
+              <Calendar className="h-5 w-5" />
+              Fechas
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-2">
-              <Button variant="outline" className="justify-start" asChild>
-                <Link href={`/poi/proyecto/backlog?subproyectoId=${subproyecto.id}`}>
-                  📋 Backlog y Tareas
-                </Link>
-              </Button>
-              <Button variant="outline" className="justify-start" asChild>
-                <Link href={`/poi/proyecto/backlog/tablero?subproyectoId=${subproyecto.id}`}>
-                  📊 Tablero Kanban
-                </Link>
-              </Button>
-              <Button variant="outline" className="justify-start" asChild>
-                <Link href={`/poi/proyecto/backlog/dashboard?subproyectoId=${subproyecto.id}`}>
-                  📈 Dashboard
-                </Link>
-              </Button>
+          <CardContent className="space-y-4">
+            {subproyecto.fechaInicio && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Fecha de Inicio</p>
+                <p className="text-base">
+                  {new Date(subproyecto.fechaInicio).toLocaleDateString('es-PE', {
+                    day: 'numeric', month: 'long', year: 'numeric',
+                  })}
+                </p>
+              </div>
+            )}
+            {subproyecto.fechaFin && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Fecha de Fin</p>
+                <p className="text-base">
+                  {new Date(subproyecto.fechaFin).toLocaleDateString('es-PE', {
+                    day: 'numeric', month: 'long', year: 'numeric',
+                  })}
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Fecha de Creación</p>
+              <p className="text-base">
+                {new Date(subproyecto.createdAt).toLocaleDateString('es-PE', {
+                  day: 'numeric', month: 'long', year: 'numeric',
+                })}
+              </p>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Información Financiera */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Información Financiera
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {subproyecto.monto ? (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Monto Asignado</p>
+                <p className="text-2xl font-bold">
+                  S/ {Number(subproyecto.monto).toLocaleString('es-PE', {
+                    minimumFractionDigits: 2, maximumFractionDigits: 2,
+                  })}
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">Sin presupuesto asignado</p>
+            )}
+            {subproyecto.anios && subproyecto.anios.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Años</p>
+                <div className="flex gap-2 flex-wrap">
+                  {subproyecto.anios.map((anio: number) => (
+                    <Badge key={anio} variant="secondary">{anio}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            {subproyecto.areasFinancieras && subproyecto.areasFinancieras.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Áreas Financieras</p>
+                <div className="flex gap-2 flex-wrap">
+                  {subproyecto.areasFinancieras.map((area: string) => (
+                    <Badge key={area} variant="outline">{area}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Nota informativa */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="pt-6">
-          <p className="text-sm text-blue-900">
-            <strong>Nota:</strong> Este subproyecto forma parte del proyecto padre y comparte los mismos sprints y metodología Scrum.
-            Puedes gestionar el backlog, historias de usuario y tareas desde los enlaces de gestión.
-          </p>
+      {/* Secciones del Subproyecto */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Secciones del Subproyecto</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-8">
+            <Button variant="outline" asChild>
+              <Link href={paths.poi.subproyectos.sprints(subproyecto.id)}>
+                Sprints
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={paths.poi.subproyectos.backlog(subproyecto.id)}>
+                Backlog
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={paths.poi.subproyectos.tablero(subproyecto.id)}>
+                Tablero
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={paths.poi.subproyectos.epicas(subproyecto.id)}>
+                Épicas
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.subproyectos.requerimientos(subproyecto.id)}>
+                <FileText className="h-4 w-4" />
+                Requerimientos
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.subproyectos.documentos(subproyecto.id)}>
+                <FolderOpen className="h-4 w-4" />
+                Documentos
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.subproyectos.actas(subproyecto.id)}>
+                <ClipboardList className="h-4 w-4" />
+                Actas
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.subproyectos.informes(subproyecto.id)}>
+                <BarChart className="h-4 w-4" />
+                Informes
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
