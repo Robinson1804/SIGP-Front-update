@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MoreVertical, Edit, Trash, Calendar, Users, Folder } from 'lucide-react';
+import { Calendar, Users, Folder } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -9,20 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PermissionGate } from '@/features/auth';
 import { paths } from '@/lib/paths';
-import { MODULES, PERMISSIONS } from '@/lib/definitions';
 import type { Subproyecto } from '../services/subproyectos.service';
-import { deleteSubproyecto } from '../services/subproyectos.service';
-import { useRouter } from 'next/navigation';
 
 interface SubproyectoCardProps {
   data: Subproyecto;
@@ -37,21 +26,6 @@ const estadoVariants = {
 } as const;
 
 export function SubproyectoCard({ data }: SubproyectoCardProps) {
-  const router = useRouter();
-
-  const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de eliminar este subproyecto?')) return;
-
-    try {
-      await deleteSubproyecto(data.id);
-      router.refresh();
-      // TODO: Mostrar toast de éxito
-    } catch (error) {
-      console.error('Error deleting subproyecto:', error);
-      // TODO: Mostrar toast de error
-    }
-  };
-
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
@@ -68,40 +42,6 @@ export function SubproyectoCard({ data }: SubproyectoCardProps) {
             {data.descripcion || 'Sin descripción'}
           </CardDescription>
         </div>
-
-        <PermissionGate
-          module={MODULES.POI}
-          permission={PERMISSIONS.EDIT}
-        >
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link href={paths.poi.subproyectos.editar(data.id)}>
-                  <Edit className="mr-2 h-4 w-4" />
-                  Editar
-                </Link>
-              </DropdownMenuItem>
-
-              <PermissionGate
-                module={MODULES.POI}
-                permission={PERMISSIONS.DELETE}
-              >
-                <DropdownMenuItem
-                  onClick={handleDelete}
-                  className="text-destructive"
-                >
-                  <Trash className="mr-2 h-4 w-4" />
-                  Eliminar
-                </DropdownMenuItem>
-              </PermissionGate>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </PermissionGate>
       </CardHeader>
 
       <CardContent className="space-y-3">
