@@ -10,7 +10,6 @@ import {
   DollarSign,
   Users as UsersIcon,
   CheckCircle,
-  MoreHorizontal,
   AlertTriangle,
   X,
   Loader2,
@@ -20,12 +19,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -362,25 +355,19 @@ const SubProjectCard = ({ subProject, onEdit, onDelete, canEdit }: { subProject:
     const statusColor = subProjectStatusColors[status] || subProjectStatusColors['Pendiente'];
 
     return (
-    <Card className="bg-white">
+    <Card className="bg-white hover:shadow-md transition-shadow">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Briefcase className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                <CardTitle className="text-base font-bold truncate">{subProject.name}</CardTitle>
+                <CardTitle className="text-base font-bold truncate">
+                    <Link
+                        href={paths.poi.subproyectos.detalles(parseInt(subProject.id))}
+                        className="hover:underline"
+                    >
+                        {subProject.name}
+                    </Link>
+                </CardTitle>
             </div>
-            {canEdit && (
-                <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
-                        <DropdownMenuItem onClick={onDelete} className="text-red-600">Eliminar</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            )}
         </CardHeader>
         <CardContent>
             <Progress value={subProject.progress || 0} indicatorClassName="bg-[#559FFE]" />
