@@ -639,7 +639,6 @@ function SubprojectDetailsContent() {
                         <InfoField label="Clasificacion"><p>{subproyecto.clasificacion || 'Sin clasificacion'}</p></InfoField>
                         <InfoField label="Coordinacion"><p>{subproyecto.coordinacion || 'Sin coordinacion'}</p></InfoField>
                         <InfoField label="Coordinador"><p>{coordinadorNombre}</p></InfoField>
-                        <InfoField label="Area Responsable"><p>{subproyecto.areaResponsable || '-'}</p></InfoField>
                         {subproyecto.areasFinancieras && subproyecto.areasFinancieras.length > 0 && (
                           <InfoField label="Area Financiera">
                             {subproyecto.areasFinancieras.map(area => (
