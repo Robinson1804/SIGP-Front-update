@@ -382,7 +382,7 @@ export function POIFullModal({
 
     // Vista actual: 'main' o 'subproject'
     const [currentView, setCurrentView] = useState<'main' | 'subproject'>('main');
-    const [formData, setFormData] = useState<Partial<Project> & { accionEstrategicaId?: number; coordinadorId?: number; scrumMasterId?: number; areaUsuaria?: number[] }>({});
+    const [formData, setFormData] = useState<Partial<Project> & { accionEstrategicaId?: number; coordinadorId?: number; scrumMasterId?: number; areaUsuaria?: number }>({});
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [subProjects, setSubProjects] = useState<SubProject[]>([]);
     const [editingSubProject, setEditingSubProject] = useState<SubProject | null>(null);
@@ -603,7 +603,7 @@ export function POIFullModal({
                     scrumMasterId: scrumMasterIdValue,
                     startDate: validStartDate,
                     endDate: validEndDate,
-                    areaUsuaria: (project as any).areaUsuaria || [],
+                    areaUsuaria: (project as any).areaUsuariaId || undefined,
                 });
                 setSubProjects(project.subProjects || []);
             } else {
@@ -628,7 +628,7 @@ export function POIFullModal({
                     accionEstrategicaId: undefined,
                     coordinadorId: undefined,
                     scrumMasterId: undefined,
-                    areaUsuaria: [],
+                    areaUsuaria: undefined,
                 });
                 setSubProjects([]);
             }
@@ -888,7 +888,7 @@ export function POIFullModal({
                 anios: formData.years?.map(y => typeof y === 'string' ? parseInt(y, 10) : y),
                 fechaInicio: formData.startDate || undefined,
                 fechaFin: formData.endDate || undefined,
-                areaUsuaria: formData.areaUsuaria && formData.areaUsuaria.length > 0 ? formData.areaUsuaria : undefined,
+                areaUsuariaId: formData.areaUsuaria || undefined,
             };
 
             let savedResult: any;
@@ -1645,15 +1645,28 @@ export function POIFullModal({
                                         </div>
                                         {formData.type === 'Proyecto' && (
                                         <div>
-                                            <label className="text-sm font-medium">Área Usuaria</label>
-                                            <MultiSelect
-                                                options={patrocinadorOptions}
-                                                selected={(formData.areaUsuaria || []).map(String)}
-                                                onChange={(selected) => {
-                                                    setFormData(p => ({...p, areaUsuaria: selected.map(Number)}));
+                                            <label className="text-sm font-medium">Área Usuaria (Patrocinador)</label>
+                                            <Select
+                                                value={formData.areaUsuaria ? String(formData.areaUsuaria) : ''}
+                                                onValueChange={(value) => {
+                                                    setFormData(p => ({
+                                                        ...p,
+                                                        areaUsuaria: value ? Number(value) : undefined
+                                                    }));
                                                 }}
-                                                placeholder="Seleccionar patrocinador(es)"
-                                            />
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Seleccionar patrocinador" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="">Sin asignar</SelectItem>
+                                                    {patrocinadorOptions.map((option) => (
+                                                        <SelectItem key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         )}
                                         <div>

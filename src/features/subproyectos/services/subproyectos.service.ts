@@ -18,8 +18,7 @@ export interface Subproyecto {
   // Stakeholders
   coordinadorId?: number;
   scrumMasterId?: number;
-  patrocinadorId?: number;
-  areaUsuaria?: number[];
+  areaUsuariaId?: number;
 
   // Administrativo
   coordinacion?: string;
@@ -80,8 +79,7 @@ export interface CreateSubproyectoData {
 
   coordinadorId?: number;
   scrumMasterId?: number;
-  patrocinadorId?: number;
-  areaUsuaria?: number[];
+  areaUsuariaId?: number;
 
   coordinacion?: string;
   areaResponsable?: string;

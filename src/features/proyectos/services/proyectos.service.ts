@@ -42,8 +42,7 @@ export interface CreateProyectoData {
   accionEstrategicaId?: number;
   coordinadorId?: number;
   scrumMasterId?: number;
-  patrocinadorId?: number;
-  areaUsuaria?: number[];
+  areaUsuariaId?: number;
   coordinacion?: string;
   areaResponsable?: string;
   areasFinancieras?: string[];

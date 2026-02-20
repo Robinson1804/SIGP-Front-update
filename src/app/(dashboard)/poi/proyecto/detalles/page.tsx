@@ -135,8 +135,7 @@ type ProjectWithIds = Project & {
   accionEstrategicaId?: number;
   coordinadorId?: number;
   scrumMasterId?: number;
-  patrocinadorId?: number;
-  areaUsuaria?: number[];
+  areaUsuariaId?: number;
 };
 
 /**
@@ -317,8 +316,7 @@ function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = [], sub
     accionEstrategicaId: proyecto.accionEstrategicaId || undefined,
     coordinadorId: proyecto.coordinadorId || undefined,
     scrumMasterId: proyecto.scrumMasterId || undefined,
-    patrocinadorId: proyecto.patrocinadorId || undefined,
-    areaUsuaria: proyecto.areaUsuaria || undefined,
+    areaUsuaria: proyecto.areaUsuariaId || undefined,
   };
 }
 
@@ -1359,8 +1357,8 @@ function ProjectDetailsContent() {
                                             <InfoField label="Coordinación"><p>{project.coordination || 'Son las divisiones'}</p></InfoField>
                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
                                             <InfoField label="Product Owner">
-                                                {project.areaUsuaria && project.areaUsuaria.length > 0 ? (
-                                                    <AreaUsuariaDisplay userIds={project.areaUsuaria} />
+                                                {project.areaUsuariaId ? (
+                                                    <AreaUsuariaDisplay userIds={[project.areaUsuariaId]} />
                                                 ) : (
                                                     <p className="text-gray-400">-</p>
                                                 )}
