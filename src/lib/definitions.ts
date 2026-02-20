@@ -256,8 +256,6 @@ export interface Proyecto {
   coordinador?: UsuarioRelacionado | null;
   scrumMasterId: number | null;
   scrumMaster?: UsuarioRelacionado | null;
-  patrocinadorId: number | null;
-  patrocinador?: UsuarioRelacionado | null;
 
   // Área Usuaria - Patrocinadores asignados
   areaUsuaria: number[] | null;
@@ -293,7 +291,6 @@ export interface CreateProyectoInput {
   accionEstrategicaId?: number;
   coordinadorId?: number;
   scrumMasterId?: number;
-  patrocinadorId?: number;
   areaUsuaria?: number[];
   coordinacion?: string;
   areasFinancieras?: string[];
@@ -322,7 +319,6 @@ export const CreateProyectoSchema = z.object({
   accionEstrategicaId: z.number().int().positive().optional(),
   coordinadorId: z.number().int().positive().optional(),
   scrumMasterId: z.number().int().positive().optional(),
-  patrocinadorId: z.number().int().positive().optional(),
   areaUsuaria: z.array(z.number().int().positive()).optional(),
   coordinacion: z.string().max(100).optional(),
   areasFinancieras: z.array(z.string()).optional(),
@@ -343,7 +339,6 @@ export const CreateSubproyectoSchema = z.object({
   clasificacion: z.enum(['Al ciudadano', 'Gestion interna']).optional(),
   coordinadorId: z.number().int().positive().optional(),
   scrumMasterId: z.number().int().positive().optional(),
-  patrocinadorId: z.number().int().positive().optional(),
   areaUsuaria: z.array(z.number().int().positive()).optional(),
   responsables: z.array(z.number().int().positive()).optional(), // IDs de desarrolladores asignados
   coordinacion: z.string().max(100).optional(),

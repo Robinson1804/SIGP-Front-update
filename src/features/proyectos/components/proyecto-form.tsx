@@ -55,7 +55,6 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
           clasificacion: initialData.clasificacion ?? undefined,
           coordinadorId: initialData.coordinadorId ?? undefined,
           scrumMasterId: initialData.scrumMasterId ?? undefined,
-          patrocinadorId: initialData.patrocinadorId ?? undefined,
           areaUsuaria: initialData.areaUsuaria || [],
           coordinacion: initialData.coordinacion ?? undefined,
           montoAnual: initialData.montoAnual ?? undefined,
@@ -110,7 +109,6 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
         clasificacion: initialData.clasificacion ?? undefined,
         coordinadorId: initialData.coordinadorId ?? undefined,
         scrumMasterId: initialData.scrumMasterId ?? undefined,
-        patrocinadorId: initialData.patrocinadorId ?? undefined,
         areaUsuaria: initialData.areaUsuaria || [],
         coordinacion: initialData.coordinacion ?? undefined,
         montoAnual: initialData.montoAnual ?? undefined,
@@ -304,29 +302,6 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="patrocinadorId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Patrocinador</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="ID del patrocinador"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseInt(e.target.value) : undefined
-                        )
-                      }
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
 
           <FormField

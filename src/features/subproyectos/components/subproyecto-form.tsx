@@ -75,7 +75,6 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
           clasificacion: initialData.clasificacion ?? undefined,
           coordinadorId: initialData.coordinadorId ?? undefined,
           scrumMasterId: initialData.scrumMasterId ?? undefined,
-          patrocinadorId: initialData.patrocinadorId ?? undefined,
           areaUsuaria: initialData.areaUsuaria || [],
           responsables: [], // Se cargará desde asignaciones en useEffect
           coordinacion: initialData.coordinacion ?? undefined,
@@ -247,7 +246,6 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
             clasificacion: initialData.clasificacion ?? undefined,
             coordinadorId: initialData.coordinadorId ?? undefined,
             scrumMasterId: initialData.scrumMasterId ?? undefined,
-            patrocinadorId: initialData.patrocinadorId ?? undefined,
             areaUsuaria: initialData.areaUsuaria || [],
             responsables: responsablesIds,
             coordinacion: initialData.coordinacion ?? undefined,
@@ -272,7 +270,6 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
             clasificacion: initialData.clasificacion ?? undefined,
             coordinadorId: initialData.coordinadorId ?? undefined,
             scrumMasterId: initialData.scrumMasterId ?? undefined,
-            patrocinadorId: initialData.patrocinadorId ?? undefined,
             areaUsuaria: initialData.areaUsuaria || [],
             responsables: [],
             coordinacion: initialData.coordinacion ?? undefined,
@@ -600,41 +597,6 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="patrocinadorId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Patrocinador</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      if (value === '' || value === null || value === undefined) {
-                        field.onChange(null);
-                      } else {
-                        const numValue = parseInt(value, 10);
-                        field.onChange(isNaN(numValue) ? null : numValue);
-                      }
-                    }}
-                    value={field.value ? String(field.value) : ''}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar patrocinador" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">Sin asignar</SelectItem>
-                      {patrocinadores.map((pat) => (
-                        <SelectItem key={pat.value} value={pat.value}>
-                          {pat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
 
           <FormField
