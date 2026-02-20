@@ -56,6 +56,8 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [patrocinadores, setPatrocinadores] = useState<MultiSelectOption[]>([]);
   const [desarrolladores, setDesarrolladores] = useState<MultiSelectOption[]>([]);
+  const [coordinadores, setCoordinadores] = useState<{ id: number; nombre: string }[]>([]);
+  const [scrumMasters, setScrumMasters] = useState<{ id: number; nombre: string }[]>([]);
   const [proyectos, setProyectos] = useState<{ id: number; codigo: string; nombre: string; fechaInicio: string | null; fechaFin: string | null }[]>([]);
   const [loadingCodigo, setLoadingCodigo] = useState(false);
 
@@ -157,6 +159,40 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
       })
       .catch(() => {
         setDesarrolladores([]);
+      });
+  }, []);
+
+  // Cargar coordinadores disponibles
+  useEffect(() => {
+    apiClient
+      .get(ENDPOINTS.USUARIOS.COORDINADORES)
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        const coords = data.map((u: any) => ({
+          id: u.id,
+          nombre: `${u.nombre || ''} ${u.apellido || ''}`.trim() || u.username || `Usuario ${u.id}`,
+        }));
+        setCoordinadores(coords);
+      })
+      .catch(() => {
+        setCoordinadores([]);
+      });
+  }, []);
+
+  // Cargar scrum masters disponibles
+  useEffect(() => {
+    apiClient
+      .get(ENDPOINTS.USUARIOS.SCRUM_MASTERS)
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        const sms = data.map((u: any) => ({
+          id: u.id,
+          nombre: `${u.nombre || ''} ${u.apellido || ''}`.trim() || u.username || `Usuario ${u.id}`,
+        }));
+        setScrumMasters(sms);
+      })
+      .catch(() => {
+        setScrumMasters([]);
       });
   }, []);
 
@@ -482,19 +518,24 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Coordinador</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="ID del coordinador"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseInt(e.target.value) : undefined
-                        )
-                      }
-                      value={field.value || ''}
-                    />
-                  </FormControl>
+                  <Select
+                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    value={field.value ? String(field.value) : ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar coordinador" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Sin asignar</SelectItem>
+                      {coordinadores.map((coord) => (
+                        <SelectItem key={coord.id} value={String(coord.id)}>
+                          {coord.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -506,19 +547,24 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Scrum Master</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="ID del Scrum Master"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseInt(e.target.value) : undefined
-                        )
-                      }
-                      value={field.value || ''}
-                    />
-                  </FormControl>
+                  <Select
+                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    value={field.value ? String(field.value) : ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar Scrum Master" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Sin asignar</SelectItem>
+                      {scrumMasters.map((sm) => (
+                        <SelectItem key={sm.id} value={String(sm.id)}>
+                          {sm.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -530,19 +576,24 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Patrocinador</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="ID del patrocinador"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value ? parseInt(e.target.value) : undefined
-                        )
-                      }
-                      value={field.value || ''}
-                    />
-                  </FormControl>
+                  <Select
+                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    value={field.value ? String(field.value) : ''}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar patrocinador" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">Sin asignar</SelectItem>
+                      {patrocinadores.map((pat) => (
+                        <SelectItem key={pat.value} value={pat.value}>
+                          {pat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
