@@ -316,7 +316,8 @@ function mapProyectoToProject(proyecto: Proyecto, equipo: TeamMember[] = [], sub
     accionEstrategicaId: proyecto.accionEstrategicaId || undefined,
     coordinadorId: proyecto.coordinadorId || undefined,
     scrumMasterId: proyecto.scrumMasterId || undefined,
-    areaUsuaria: proyecto.areaUsuariaId || undefined,
+    areaUsuaria: (proyecto as any).areaUsuaria?.id || (proyecto as any).areaUsuariaId || undefined,
+    areaUsuariaId: (proyecto as any).areaUsuaria?.id || (proyecto as any).areaUsuariaId || undefined,
   };
 }
 
