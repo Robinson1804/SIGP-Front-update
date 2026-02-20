@@ -587,41 +587,37 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="areaUsuariaId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Área Usuaria (Patrocinador)</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      const numValue = parseInt(value, 10);
+                      field.onChange(isNaN(numValue) ? undefined : numValue);
+                    }}
+                    value={field.value ? String(field.value) : undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar patrocinador" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {patrocinadores.map((pat) => (
+                        <SelectItem key={pat.value} value={pat.value}>
+                          {pat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
-
-          <FormField
-            control={form.control}
-            name="areaUsuariaId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Área Usuaria (Patrocinador)</FormLabel>
-                <Select
-                  onValueChange={(value) => {
-                    const numValue = parseInt(value, 10);
-                    field.onChange(isNaN(numValue) ? undefined : numValue);
-                  }}
-                  value={field.value ? String(field.value) : undefined}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar patrocinador" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {patrocinadores.map((pat) => (
-                      <SelectItem key={pat.value} value={pat.value}>
-                        {pat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Patrocinador del subproyecto (Área Usuaria)
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}
