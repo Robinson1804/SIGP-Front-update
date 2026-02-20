@@ -312,14 +312,10 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
                 <FormLabel>Área Usuaria (Patrocinador)</FormLabel>
                 <Select
                   onValueChange={(value) => {
-                    if (value === '' || value === null || value === undefined) {
-                      field.onChange(null);
-                    } else {
-                      const numValue = parseInt(value, 10);
-                      field.onChange(isNaN(numValue) ? null : numValue);
-                    }
+                    const numValue = parseInt(value, 10);
+                    field.onChange(isNaN(numValue) ? undefined : numValue);
                   }}
-                  value={field.value ? String(field.value) : ''}
+                  value={field.value ? String(field.value) : undefined}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -327,7 +323,6 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Sin asignar</SelectItem>
                     {patrocinadores.map((pat) => (
                       <SelectItem key={pat.value} value={pat.value}>
                         {pat.label}

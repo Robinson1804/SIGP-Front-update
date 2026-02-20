@@ -1647,7 +1647,7 @@ export function POIFullModal({
                                         <div>
                                             <label className="text-sm font-medium">Área Usuaria (Patrocinador)</label>
                                             <Select
-                                                value={formData.areaUsuaria ? String(formData.areaUsuaria) : ''}
+                                                value={formData.areaUsuaria ? String(formData.areaUsuaria) : undefined}
                                                 onValueChange={(value) => {
                                                     setFormData(p => ({
                                                         ...p,
@@ -1659,7 +1659,6 @@ export function POIFullModal({
                                                     <SelectValue placeholder="Seleccionar patrocinador" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="">Sin asignar</SelectItem>
                                                     {patrocinadorOptions.map((option) => (
                                                         <SelectItem key={option.value} value={option.value}>
                                                             {option.label}
