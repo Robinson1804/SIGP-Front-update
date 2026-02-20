@@ -603,7 +603,7 @@ export function POIFullModal({
                     scrumMasterId: scrumMasterIdValue,
                     startDate: validStartDate,
                     endDate: validEndDate,
-                    areaUsuaria: (project as any).areaUsuariaId || undefined,
+                    areaUsuaria: (project as any).areaUsuaria?.id || (project as any).areaUsuariaId || undefined,
                 });
                 setSubProjects(project.subProjects || []);
             } else {
