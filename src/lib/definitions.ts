@@ -339,7 +339,7 @@ export const CreateSubproyectoSchema = z.object({
   clasificacion: z.enum(['Al ciudadano', 'Gestion interna']).optional(),
   coordinadorId: z.number().int().positive().optional(),
   scrumMasterId: z.number().int().positive().optional(),
-  areaUsuaria: z.array(z.number().int().positive()).optional(),
+  areaUsuariaId: z.number().int().positive().optional(),
   responsables: z.array(z.number().int().positive()).optional(), // IDs de desarrolladores asignados
   coordinacion: z.string().max(100).optional(),
   areaResponsable: z.string().max(200).optional(),

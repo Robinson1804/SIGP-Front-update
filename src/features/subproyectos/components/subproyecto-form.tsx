@@ -75,7 +75,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
           clasificacion: initialData.clasificacion ?? undefined,
           coordinadorId: initialData.coordinadorId ?? undefined,
           scrumMasterId: initialData.scrumMasterId ?? undefined,
-          areaUsuaria: initialData.areaUsuaria || [],
+          areaUsuariaId: initialData.areaUsuariaId ?? undefined,
           responsables: [], // Se cargará desde asignaciones en useEffect
           coordinacion: initialData.coordinacion ?? undefined,
           areaResponsable: initialData.areaResponsable ?? undefined,
@@ -94,7 +94,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
           codigo: 'Seleccione proyecto padre...',
           nombre: '',
           descripcion: '',
-          areaUsuaria: [],
+          areaUsuariaId: undefined,
           responsables: [],
         },
   });
@@ -246,7 +246,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
             clasificacion: initialData.clasificacion ?? undefined,
             coordinadorId: initialData.coordinadorId ?? undefined,
             scrumMasterId: initialData.scrumMasterId ?? undefined,
-            areaUsuaria: initialData.areaUsuaria || [],
+            areaUsuariaId: initialData.areaUsuariaId ?? undefined,
             responsables: responsablesIds,
             coordinacion: initialData.coordinacion ?? undefined,
             areaResponsable: initialData.areaResponsable ?? undefined,
@@ -270,7 +270,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
             clasificacion: initialData.clasificacion ?? undefined,
             coordinadorId: initialData.coordinadorId ?? undefined,
             scrumMasterId: initialData.scrumMasterId ?? undefined,
-            areaUsuaria: initialData.areaUsuaria || [],
+            areaUsuariaId: initialData.areaUsuariaId ?? undefined,
             responsables: [],
             coordinacion: initialData.coordinacion ?? undefined,
             areaResponsable: initialData.areaResponsable ?? undefined,
@@ -601,22 +601,37 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
 
           <FormField
             control={form.control}
-            name="areaUsuaria"
+            name="areaUsuariaId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Area Usuaria</FormLabel>
-                <FormControl>
-                  <MultiSelect
-                    options={patrocinadores}
-                    selected={field.value?.map(String) || []}
-                    onChange={(selected) =>
-                      field.onChange(selected.map(Number))
+                <FormLabel>Área Usuaria (Patrocinador)</FormLabel>
+                <Select
+                  onValueChange={(value) => {
+                    if (value === '' || value === null || value === undefined) {
+                      field.onChange(null);
+                    } else {
+                      const numValue = parseInt(value, 10);
+                      field.onChange(isNaN(numValue) ? null : numValue);
                     }
-                    placeholder="Seleccionar patrocinadores"
-                  />
-                </FormControl>
+                  }}
+                  value={field.value ? String(field.value) : ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar patrocinador" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">Sin asignar</SelectItem>
+                    {patrocinadores.map((pat) => (
+                      <SelectItem key={pat.value} value={pat.value}>
+                        {pat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormDescription>
-                  Patrocinadores asignados al subproyecto como Area Usuaria
+                  Patrocinador del subproyecto (Área Usuaria)
                 </FormDescription>
                 <FormMessage />
               </FormItem>

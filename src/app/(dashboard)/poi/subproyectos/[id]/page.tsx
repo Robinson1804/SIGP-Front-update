@@ -148,21 +148,15 @@ export default async function SubproyectoDetallesPage({
                 </p>
               </div>
             )}
-            {subproyecto.patrocinador && (
+            {subproyecto.areaUsuaria && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Patrocinador</p>
+                <p className="text-sm font-medium text-muted-foreground">Área Usuaria (Patrocinador)</p>
                 <p className="text-base">
-                  {subproyecto.patrocinador.nombre} {subproyecto.patrocinador.apellido}
+                  {subproyecto.areaUsuaria.nombre} {subproyecto.areaUsuaria.apellido}
                 </p>
               </div>
             )}
-            {subproyecto.areaUsuaria && subproyecto.areaUsuaria.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Área Usuaria</p>
-                <AreaUsuariaDisplay userIds={subproyecto.areaUsuaria} />
-              </div>
-            )}
-            {!subproyecto.coordinador && !subproyecto.scrumMaster && !subproyecto.patrocinador && (
+            {!subproyecto.coordinador && !subproyecto.scrumMaster && !subproyecto.areaUsuaria && (
               <p className="text-muted-foreground text-sm">Sin responsables asignados</p>
             )}
           </CardContent>
