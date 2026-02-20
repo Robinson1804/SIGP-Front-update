@@ -313,6 +313,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
         console.log('Datos completos a enviar:', JSON.stringify(dataWithoutReadonly, null, 2));
         console.log('coordinadorId:', dataWithoutReadonly.coordinadorId, '(tipo:', typeof dataWithoutReadonly.coordinadorId, ')');
         console.log('scrumMasterId:', dataWithoutReadonly.scrumMasterId, '(tipo:', typeof dataWithoutReadonly.scrumMasterId, ')');
+        console.log('areaUsuariaId:', dataWithoutReadonly.areaUsuariaId, '(tipo:', typeof dataWithoutReadonly.areaUsuariaId, ')');
         console.log('='.repeat(80));
 
         const resultado = await updateSubproyecto(subproyectoId, dataWithoutReadonly);
