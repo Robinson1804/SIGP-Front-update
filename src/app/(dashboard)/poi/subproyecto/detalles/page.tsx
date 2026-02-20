@@ -692,6 +692,9 @@ function SubprojectDetailsContent() {
   const coordinadorNombre = subproyecto.coordinador
     ? getUsuarioNombre(subproyecto.coordinador)
     : 'Sin asignar';
+  const areaUsuariaNombre = subproyecto.areaUsuaria
+    ? getUsuarioNombre(subproyecto.areaUsuaria)
+    : 'Sin asignar';
 
   // Obtener nombres de responsables desde asignaciones
   const responsablesNombres = asignaciones
@@ -869,6 +872,7 @@ function SubprojectDetailsContent() {
                         <InfoField label="Clasificacion"><p>{subproyecto.clasificacion || 'Sin clasificacion'}</p></InfoField>
                         <InfoField label="Coordinacion"><p>{subproyecto.coordinacion || 'Sin coordinacion'}</p></InfoField>
                         <InfoField label="Coordinador"><p>{coordinadorNombre}</p></InfoField>
+                        <InfoField label="Área Usuaria (Patrocinador)"><p>{areaUsuariaNombre}</p></InfoField>
                         <InfoField label="Responsables">
                           {responsablesNombres.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
