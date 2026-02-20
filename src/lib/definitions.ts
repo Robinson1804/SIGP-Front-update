@@ -319,7 +319,7 @@ export const CreateProyectoSchema = z.object({
   accionEstrategicaId: z.number().int().positive().optional(),
   coordinadorId: z.number().int().positive().optional(),
   scrumMasterId: z.number().int().positive().optional(),
-  areaUsuaria: z.array(z.number().int().positive()).optional(),
+  areaUsuariaId: z.number().int().positive().optional(),
   coordinacion: z.string().max(100).optional(),
   areasFinancieras: z.array(z.string()).optional(),
   montoAnual: z.number().positive().optional(),

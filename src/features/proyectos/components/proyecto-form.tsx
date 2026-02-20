@@ -55,7 +55,7 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
           clasificacion: initialData.clasificacion ?? undefined,
           coordinadorId: initialData.coordinadorId ?? undefined,
           scrumMasterId: initialData.scrumMasterId ?? undefined,
-          areaUsuaria: initialData.areaUsuaria || [],
+          areaUsuariaId: initialData.areaUsuariaId ?? undefined,
           coordinacion: initialData.coordinacion ?? undefined,
           montoAnual: initialData.montoAnual ?? undefined,
         }
@@ -63,7 +63,7 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
           codigo: 'Cargando...',
           nombre: '',
           descripcion: '',
-          areaUsuaria: [],
+          areaUsuariaId: undefined,
         },
   });
 
@@ -109,7 +109,7 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
         clasificacion: initialData.clasificacion ?? undefined,
         coordinadorId: initialData.coordinadorId ?? undefined,
         scrumMasterId: initialData.scrumMasterId ?? undefined,
-        areaUsuaria: initialData.areaUsuaria || [],
+        areaUsuariaId: initialData.areaUsuariaId ?? undefined,
         coordinacion: initialData.coordinacion ?? undefined,
         montoAnual: initialData.montoAnual ?? undefined,
       });
@@ -306,22 +306,37 @@ export function ProyectoForm({ initialData, mode }: ProyectoFormProps) {
 
           <FormField
             control={form.control}
-            name="areaUsuaria"
+            name="areaUsuariaId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Área Usuaria</FormLabel>
-                <FormControl>
-                  <MultiSelect
-                    options={patrocinadores}
-                    selected={field.value?.map(String) || []}
-                    onChange={(selected) =>
-                      field.onChange(selected.map(Number))
+                <FormLabel>Área Usuaria (Patrocinador)</FormLabel>
+                <Select
+                  onValueChange={(value) => {
+                    if (value === '' || value === null || value === undefined) {
+                      field.onChange(null);
+                    } else {
+                      const numValue = parseInt(value, 10);
+                      field.onChange(isNaN(numValue) ? null : numValue);
                     }
-                    placeholder="Seleccionar patrocinadores"
-                  />
-                </FormControl>
+                  }}
+                  value={field.value ? String(field.value) : ''}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar patrocinador" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">Sin asignar</SelectItem>
+                    {patrocinadores.map((pat) => (
+                      <SelectItem key={pat.value} value={pat.value}>
+                        {pat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormDescription>
-                  Patrocinadores asignados al proyecto como Área Usuaria
+                  Patrocinador del proyecto (Área Usuaria)
                 </FormDescription>
                 <FormMessage />
               </FormItem>

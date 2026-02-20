@@ -135,19 +135,15 @@ export default async function ProyectoDetallesPage({
                 <p className="text-base">ID: {proyecto.scrumMasterId}</p>
               </div>
             )}
-            {proyecto.patrocinadorId && (
+            {proyecto.areaUsuaria && (
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Patrocinador</p>
-                <p className="text-base">ID: {proyecto.patrocinadorId}</p>
+                <p className="text-sm font-medium text-muted-foreground">Área Usuaria (Patrocinador)</p>
+                <p className="text-base">
+                  {proyecto.areaUsuaria.nombre} {proyecto.areaUsuaria.apellido}
+                </p>
               </div>
             )}
-            {proyecto.areaUsuaria && proyecto.areaUsuaria.length > 0 && (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Área Usuaria</p>
-                <AreaUsuariaDisplay userIds={proyecto.areaUsuaria} />
-              </div>
-            )}
-            {!proyecto.coordinadorId && !proyecto.scrumMasterId && !proyecto.patrocinadorId && (!proyecto.areaUsuaria || proyecto.areaUsuaria.length === 0) && (
+            {!proyecto.coordinadorId && !proyecto.scrumMasterId && !proyecto.areaUsuaria && (
               <p className="text-muted-foreground text-sm">Sin responsables asignados</p>
             )}
           </CardContent>
