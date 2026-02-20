@@ -323,7 +323,13 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
 
         // Sincronizar asignaciones de responsables
         if (responsables !== undefined) {
-          await syncAsignacionesSubproyecto(subproyectoId, responsables || []);
+          try {
+            await syncAsignacionesSubproyecto(subproyectoId, responsables || []);
+          } catch (error) {
+            // Si hay error en la sincronización de asignaciones (ej: verificación de sobrecarga),
+            // no bloqueamos la actualización del subproyecto
+            console.warn('⚠️ Error al sincronizar asignaciones (ignorado):', error);
+          }
         }
       }
 
