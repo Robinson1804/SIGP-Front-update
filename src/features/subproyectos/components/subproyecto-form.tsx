@@ -37,6 +37,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { apiClient, ENDPOINTS } from '@/lib/api';
 import type { Proyecto } from '@/lib/definitions';
 import { CalendarIcon, InfoIcon } from 'lucide-react';
+import {
+  getPersonalDesarrolladores,
+  getAsignacionesBySubproyecto,
+  syncAsignacionesSubproyecto,
+} from '@/lib/services';
 
 type FormValues = CreateSubproyectoInput;
 
@@ -50,6 +55,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [patrocinadores, setPatrocinadores] = useState<MultiSelectOption[]>([]);
+  const [desarrolladores, setDesarrolladores] = useState<MultiSelectOption[]>([]);
   const [proyectos, setProyectos] = useState<{ id: number; codigo: string; nombre: string; fechaInicio: string | null; fechaFin: string | null }[]>([]);
   const [loadingCodigo, setLoadingCodigo] = useState(false);
 
@@ -69,6 +75,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
           scrumMasterId: initialData.scrumMasterId ?? undefined,
           patrocinadorId: initialData.patrocinadorId ?? undefined,
           areaUsuaria: initialData.areaUsuaria || [],
+          responsables: [], // Se cargará desde asignaciones en useEffect
           coordinacion: initialData.coordinacion ?? undefined,
           areaResponsable: initialData.areaResponsable ?? undefined,
           monto: initialData.monto ?? undefined,
@@ -87,6 +94,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
           nombre: '',
           descripcion: '',
           areaUsuaria: [],
+          responsables: [],
         },
   });
 
@@ -137,6 +145,37 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
       });
   }, []);
 
+  // Cargar desarrolladores disponibles para el MultiSelect de Responsables
+  useEffect(() => {
+    getPersonalDesarrolladores()
+      .then((data) => {
+        const options: MultiSelectOption[] = data.map((d) => ({
+          value: String(d.id),
+          label: `${d.apellidos}, ${d.nombres}`,
+        }));
+        setDesarrolladores(options);
+      })
+      .catch(() => {
+        setDesarrolladores([]);
+      });
+  }, []);
+
+  // Cargar asignaciones actuales en modo edición
+  useEffect(() => {
+    if (mode === 'edit' && initialData?.id) {
+      getAsignacionesBySubproyecto(initialData.id)
+        .then((asignaciones) => {
+          const responsablesIds = asignaciones
+            .filter((a) => a.activo && a.personalId)
+            .map((a) => a.personalId);
+          form.setValue('responsables', responsablesIds);
+        })
+        .catch((error) => {
+          console.error('Error cargando asignaciones:', error);
+        });
+    }
+  }, [mode, initialData?.id, form]);
+
   // Cargar el proximo codigo disponible cuando se selecciona un proyecto padre
   useEffect(() => {
     if (mode === 'create' && selectedProyectoPadreId) {
@@ -157,26 +196,60 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
   // Resetear el formulario cuando cambian los datos en modo edicion
   useEffect(() => {
     if (mode === 'edit' && initialData) {
-      form.reset({
-        proyectoPadreId: initialData.proyectoPadreId,
-        codigo: initialData.codigo,
-        nombre: initialData.nombre,
-        descripcion: initialData.descripcion || '',
-        clasificacion: initialData.clasificacion ?? undefined,
-        coordinadorId: initialData.coordinadorId ?? undefined,
-        scrumMasterId: initialData.scrumMasterId ?? undefined,
-        patrocinadorId: initialData.patrocinadorId ?? undefined,
-        areaUsuaria: initialData.areaUsuaria || [],
-        coordinacion: initialData.coordinacion ?? undefined,
-        areaResponsable: initialData.areaResponsable ?? undefined,
-        monto: initialData.monto ?? undefined,
-        fechaInicio: initialData.fechaInicio
-          ? String(initialData.fechaInicio).split('T')[0]
-          : undefined,
-        fechaFin: initialData.fechaFin
-          ? String(initialData.fechaFin).split('T')[0]
-          : undefined,
-      });
+      // Cargar asignaciones para obtener responsables
+      getAsignacionesBySubproyecto(initialData.id)
+        .then((asignaciones) => {
+          const responsablesIds = asignaciones
+            .filter((a) => a.activo && a.personalId)
+            .map((a) => a.personalId);
+
+          form.reset({
+            proyectoPadreId: initialData.proyectoPadreId,
+            codigo: initialData.codigo,
+            nombre: initialData.nombre,
+            descripcion: initialData.descripcion || '',
+            clasificacion: initialData.clasificacion ?? undefined,
+            coordinadorId: initialData.coordinadorId ?? undefined,
+            scrumMasterId: initialData.scrumMasterId ?? undefined,
+            patrocinadorId: initialData.patrocinadorId ?? undefined,
+            areaUsuaria: initialData.areaUsuaria || [],
+            responsables: responsablesIds,
+            coordinacion: initialData.coordinacion ?? undefined,
+            areaResponsable: initialData.areaResponsable ?? undefined,
+            monto: initialData.monto ?? undefined,
+            fechaInicio: initialData.fechaInicio
+              ? String(initialData.fechaInicio).split('T')[0]
+              : undefined,
+            fechaFin: initialData.fechaFin
+              ? String(initialData.fechaFin).split('T')[0]
+              : undefined,
+          });
+        })
+        .catch((error) => {
+          console.error('Error cargando asignaciones:', error);
+          // Reset sin responsables en caso de error
+          form.reset({
+            proyectoPadreId: initialData.proyectoPadreId,
+            codigo: initialData.codigo,
+            nombre: initialData.nombre,
+            descripcion: initialData.descripcion || '',
+            clasificacion: initialData.clasificacion ?? undefined,
+            coordinadorId: initialData.coordinadorId ?? undefined,
+            scrumMasterId: initialData.scrumMasterId ?? undefined,
+            patrocinadorId: initialData.patrocinadorId ?? undefined,
+            areaUsuaria: initialData.areaUsuaria || [],
+            responsables: [],
+            coordinacion: initialData.coordinacion ?? undefined,
+            areaResponsable: initialData.areaResponsable ?? undefined,
+            monto: initialData.monto ?? undefined,
+            fechaInicio: initialData.fechaInicio
+              ? String(initialData.fechaInicio).split('T')[0]
+              : undefined,
+            fechaFin: initialData.fechaFin
+              ? String(initialData.fechaFin).split('T')[0]
+              : undefined,
+          });
+        });
     }
   }, [mode, initialData, form]);
 
@@ -184,14 +257,28 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
     try {
       setError(null);
 
+      let subproyectoId: number;
+
       if (mode === 'create') {
-        // No enviar codigo, el backend lo genera automaticamente
-        const { codigo, ...dataWithoutCodigo } = values;
-        await createSubproyecto(dataWithoutCodigo);
+        // Extraer responsables antes de enviar (no es parte del DTO del backend)
+        const { codigo, responsables, ...dataWithoutCodigo } = values;
+        const newSubproyecto = await createSubproyecto(dataWithoutCodigo);
+        subproyectoId = newSubproyecto.id;
+
+        // Sincronizar asignaciones de responsables
+        if (responsables && responsables.length > 0) {
+          await syncAsignacionesSubproyecto(subproyectoId, responsables);
+        }
       } else {
-        // En edicion no se envia el codigo ni proyectoPadreId (no son editables)
-        const { codigo, proyectoPadreId, ...dataWithoutReadonly } = values;
-        await updateSubproyecto(initialData!.id, dataWithoutReadonly);
+        subproyectoId = initialData!.id;
+        // En edicion no se envia el codigo, proyectoPadreId ni responsables
+        const { codigo, proyectoPadreId, responsables, ...dataWithoutReadonly } = values;
+        await updateSubproyecto(subproyectoId, dataWithoutReadonly);
+
+        // Sincronizar asignaciones de responsables
+        if (responsables !== undefined) {
+          await syncAsignacionesSubproyecto(subproyectoId, responsables || []);
+        }
       }
 
       router.push(paths.poi.subproyectos.base);
@@ -480,6 +567,30 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
                 </FormControl>
                 <FormDescription>
                   Patrocinadores asignados al subproyecto como Area Usuaria
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="responsables"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Responsables (Desarrolladores)</FormLabel>
+                <FormControl>
+                  <MultiSelect
+                    options={desarrolladores}
+                    selected={field.value?.map(String) || []}
+                    onChange={(selected) =>
+                      field.onChange(selected.map(Number))
+                    }
+                    placeholder="Seleccionar desarrolladores"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Desarrolladores asignados como responsables del subproyecto
                 </FormDescription>
                 <FormMessage />
               </FormItem>
