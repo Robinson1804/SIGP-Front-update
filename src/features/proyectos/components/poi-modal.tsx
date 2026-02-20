@@ -1094,6 +1094,8 @@ export function POIFullModal({
                             const coordinadorFound = coordinadores.find(c => formatUsuarioNombre(c) === sp.coordinador);
                             // Obtener el siguiente código disponible (formato SUB-001, SUB-002, etc.)
                             const nextCodigo = await getNextSubproyectoCodigo(proyectoId);
+                            // Convertir areaUsuaria de string a number si existe
+                            const areaUsuariaId = sp.areaUsuaria ? parseInt(sp.areaUsuaria, 10) : undefined;
                             const newSubproyecto = await createSubproyecto({
                                 proyectoPadreId: proyectoId,
                                 codigo: nextCodigo,
@@ -1103,7 +1105,7 @@ export function POIFullModal({
                                 monto: sp.amount,
                                 anios: aniosNumeros,
                                 areasFinancieras: sp.financialArea || [],
-                                areaUsuaria: formData.areaUsuaria,
+                                areaUsuariaId: areaUsuariaId,
                                 scrumMasterId: scrumMasterId,
                                 coordinadorId: coordinadorFound?.id,
                                 coordinacion: sp.coordinacion || undefined,
@@ -1132,6 +1134,8 @@ export function POIFullModal({
                             const aniosNumeros = sp.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
                             // Buscar el ID del coordinador por nombre
                             const coordinadorFound = coordinadores.find(c => formatUsuarioNombre(c) === sp.coordinador);
+                            // Convertir areaUsuaria de string a number si existe
+                            const areaUsuariaId = sp.areaUsuaria ? parseInt(sp.areaUsuaria, 10) : undefined;
                             const subproyectoId = parseInt(sp.id, 10);
                             await updateSubproyecto(subproyectoId, {
                                 nombre: sp.name,
@@ -1140,7 +1144,7 @@ export function POIFullModal({
                                 monto: sp.amount,
                                 anios: aniosNumeros,
                                 areasFinancieras: sp.financialArea || [],
-                                areaUsuaria: formData.areaUsuaria,
+                                areaUsuariaId: areaUsuariaId,
                                 scrumMasterId: scrumMasterId,
                                 coordinadorId: coordinadorFound?.id,
                                 coordinacion: sp.coordinacion || undefined,
@@ -1288,6 +1292,7 @@ export function POIFullModal({
                 managementMethod: 'Scrum',
                 financialArea: [],
                 coordinador: '',
+                areaUsuaria: '',
                 coordinacion: '',
                 fechaInicio: '',
                 fechaFin: '',
@@ -1924,6 +1929,26 @@ export function POIFullModal({
                                     </SelectContent>
                                 </Select>
                                 {subProjectErrors.scrumMaster && <p className="text-red-500 text-xs mt-1">{subProjectErrors.scrumMaster}</p>}
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Área Usuaria (Patrocinador)</label>
+                                <Select
+                                    value={subProjectForm.areaUsuaria ? String(subProjectForm.areaUsuaria) : undefined}
+                                    onValueChange={(value) => {
+                                        setSubProjectForm(p => ({ ...p, areaUsuaria: value }));
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar patrocinador" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {patrocinadorOptions.map((option) => (
+                                            <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div>
                                 <label className="text-sm font-medium">Año *</label>

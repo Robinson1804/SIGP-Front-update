@@ -125,6 +125,7 @@ export type SubProject = {
     progress?: number;
     status?: string; // Estado del subproyecto (Pendiente, En planificación, En desarrollo, Finalizado)
     coordinador?: string;    // nombre del coordinador (for display/select)
+    areaUsuaria?: string;    // ID del área usuaria/patrocinador
     coordinacion?: string;   // texto libre
     fechaInicio?: string;    // ISO date string YYYY-MM-DD
     fechaFin?: string;       // ISO date string YYYY-MM-DD
