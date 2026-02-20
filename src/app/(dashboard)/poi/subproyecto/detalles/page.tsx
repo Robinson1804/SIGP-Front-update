@@ -1024,13 +1024,13 @@ function SubprojectDetailsContent() {
           )}
 
           {/* Tab Cronograma */}
-          {activeTab === 'Cronograma' && subproyectoId && (
+          {activeTab === 'Cronograma' && subproyectoId && subproyecto && (
             <CronogramaTabContent
               subproyectoId={subproyectoId}
-              nombre={nombre}
+              nombre={subproyecto.nombre}
               asignaciones={asignaciones}
-              fechaInicio={fechaInicio}
-              fechaFin={fechaFin}
+              fechaInicio={subproyecto.fechaInicio}
+              fechaFin={subproyecto.fechaFin}
             />
           )}
         </div>
