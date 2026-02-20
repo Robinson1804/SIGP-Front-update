@@ -33,9 +33,10 @@ import {
   createSubproyecto,
   updateSubproyecto,
 } from '../services/subproyectos.service';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { apiClient, ENDPOINTS } from '@/lib/api';
 import type { Proyecto } from '@/lib/definitions';
+import { CalendarIcon, InfoIcon } from 'lucide-react';
 
 type FormValues = CreateSubproyectoInput;
 
@@ -49,7 +50,7 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [patrocinadores, setPatrocinadores] = useState<MultiSelectOption[]>([]);
-  const [proyectos, setProyectos] = useState<{ id: number; codigo: string; nombre: string }[]>([]);
+  const [proyectos, setProyectos] = useState<{ id: number; codigo: string; nombre: string; fechaInicio: string | null; fechaFin: string | null }[]>([]);
   const [loadingCodigo, setLoadingCodigo] = useState(false);
 
   // Obtener proyectoPadreId desde query params si existe (para pre-seleccionar)
@@ -71,6 +72,12 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
           coordinacion: initialData.coordinacion ?? undefined,
           areaResponsable: initialData.areaResponsable ?? undefined,
           monto: initialData.monto ?? undefined,
+          fechaInicio: initialData.fechaInicio
+            ? String(initialData.fechaInicio).split('T')[0]
+            : undefined,
+          fechaFin: initialData.fechaFin
+            ? String(initialData.fechaFin).split('T')[0]
+            : undefined,
         }
       : {
           proyectoPadreId: queryProyectoPadreId
@@ -85,6 +92,12 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
 
   const selectedProyectoPadreId = form.watch('proyectoPadreId');
 
+  // Info del proyecto padre seleccionado (incluye fechas para referencia y validación)
+  const proyectoPadreInfo = useMemo(
+    () => proyectos.find((p) => p.id === selectedProyectoPadreId) ?? null,
+    [proyectos, selectedProyectoPadreId],
+  );
+
   // Cargar lista de proyectos para el selector de proyecto padre
   useEffect(() => {
     apiClient
@@ -95,6 +108,8 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
           id: p.id,
           codigo: p.codigo,
           nombre: p.nombre,
+          fechaInicio: p.fechaInicio ? String(p.fechaInicio).split('T')[0] : null,
+          fechaFin: p.fechaFin ? String(p.fechaFin).split('T')[0] : null,
         }));
         setProyectos(proyectosList);
       })
@@ -155,6 +170,12 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
         coordinacion: initialData.coordinacion ?? undefined,
         areaResponsable: initialData.areaResponsable ?? undefined,
         monto: initialData.monto ?? undefined,
+        fechaInicio: initialData.fechaInicio
+          ? String(initialData.fechaInicio).split('T')[0]
+          : undefined,
+        fechaFin: initialData.fechaFin
+          ? String(initialData.fechaFin).split('T')[0]
+          : undefined,
       });
     }
   }, [mode, initialData, form]);
@@ -235,6 +256,33 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               </FormItem>
             )}
           />
+
+          {/* Etiqueta de rango de fechas del proyecto padre */}
+          {proyectoPadreInfo && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Rango de fechas del proyecto:</span>
+              {proyectoPadreInfo.fechaInicio && proyectoPadreInfo.fechaFin ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 px-3 py-0.5 text-xs font-medium text-blue-700">
+                  <CalendarIcon className="h-3 w-3" />
+                  {new Date(proyectoPadreInfo.fechaInicio + 'T12:00:00').toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                  {' — '}
+                  {new Date(proyectoPadreInfo.fechaFin + 'T12:00:00').toLocaleDateString('es-PE', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-3 py-0.5 text-xs font-medium text-amber-700">
+                  Sin fechas definidas
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Informacion basica */}
@@ -437,6 +485,95 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               </FormItem>
             )}
           />
+        </div>
+
+        {/* Fechas del subproyecto */}
+        <div className="space-y-4 p-6 border rounded-lg">
+          <h3 className="font-semibold text-lg">Fechas del Subproyecto</h3>
+
+          {/* Referencia de fechas del proyecto padre */}
+          {proyectoPadreInfo && (
+            <div className="flex items-start gap-2 p-3 rounded-md bg-blue-50 border border-blue-200 text-sm text-blue-800">
+              <InfoIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <span className="font-medium">Rango del proyecto padre:</span>{' '}
+                {proyectoPadreInfo.fechaInicio && proyectoPadreInfo.fechaFin ? (
+                  <>
+                    {new Date(proyectoPadreInfo.fechaInicio + 'T12:00:00').toLocaleDateString(
+                      'es-PE',
+                      { day: '2-digit', month: 'long', year: 'numeric' },
+                    )}{' '}
+                    —{' '}
+                    {new Date(proyectoPadreInfo.fechaFin + 'T12:00:00').toLocaleDateString('es-PE', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </>
+                ) : (
+                  <span className="text-blue-600 italic">Sin fechas definidas en el proyecto padre</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="fechaInicio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    <CalendarIcon className="inline h-3.5 w-3.5 mr-1" />
+                    Fecha de Inicio
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value || ''}
+                      min={proyectoPadreInfo?.fechaInicio ?? undefined}
+                      max={proyectoPadreInfo?.fechaFin ?? undefined}
+                    />
+                  </FormControl>
+                  {proyectoPadreInfo?.fechaInicio && (
+                    <FormDescription>
+                      Mínimo: {new Date(proyectoPadreInfo.fechaInicio + 'T12:00:00').toLocaleDateString('es-PE')}
+                    </FormDescription>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fechaFin"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    <CalendarIcon className="inline h-3.5 w-3.5 mr-1" />
+                    Fecha de Fin
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      value={field.value || ''}
+                      min={form.watch('fechaInicio') || proyectoPadreInfo?.fechaInicio || undefined}
+                      max={proyectoPadreInfo?.fechaFin ?? undefined}
+                    />
+                  </FormControl>
+                  {proyectoPadreInfo?.fechaFin && (
+                    <FormDescription>
+                      Máximo: {new Date(proyectoPadreInfo.fechaFin + 'T12:00:00').toLocaleDateString('es-PE')}
+                    </FormDescription>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
         {/* Informacion adicional */}

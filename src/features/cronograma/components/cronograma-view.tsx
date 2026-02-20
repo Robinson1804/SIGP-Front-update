@@ -59,8 +59,10 @@ function formatDateDisplay(dateStr: string | null | undefined): string {
 }
 
 interface CronogramaViewProps {
-  /** ID del proyecto */
+  /** ID del proyecto o subproyecto */
   proyectoId: number | string;
+  /** Tipo de contenedor: PROYECTO o SUBPROYECTO */
+  tipoContenedor?: 'PROYECTO' | 'SUBPROYECTO';
   /** Nombre del proyecto (para mostrar) */
   proyectoNombre?: string;
   /** Lista de responsables disponibles */
@@ -85,6 +87,7 @@ interface CronogramaViewProps {
  */
 export function CronogramaView({
   proyectoId,
+  tipoContenedor = 'PROYECTO',
   proyectoNombre,
   responsables = [],
   proyectoFechaInicio,
@@ -129,7 +132,7 @@ export function CronogramaView({
     removeDependencia,
     exportar,
     refresh,
-  } = useCronograma({ proyectoId });
+  } = useCronograma({ proyectoId, tipoContenedor });
 
   // Estados en los que se permite editar el cronograma
   const ESTADOS_EDITABLES = ['Borrador', 'Rechazado'];

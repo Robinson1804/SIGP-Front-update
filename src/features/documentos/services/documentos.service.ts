@@ -21,6 +21,7 @@ const DOCUMENTOS_ENDPOINTS = {
   BASE: '/documentos',
   BY_ID: (id: number | string) => `/documentos/${id}`,
   BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/documentos`,
+  BY_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/documentos`,
   DOWNLOAD: (id: number | string) => `/documentos/${id}/download`,
   APROBAR: (id: number | string) => `/documentos/${id}/aprobar`,
   UPLOAD_REQUEST: '/upload/request-url',
@@ -37,6 +38,20 @@ export async function getDocumentosByProyecto(
 ): Promise<Documento[]> {
   const response = await apiClient.get<Documento[]>(
     DOCUMENTOS_ENDPOINTS.BY_PROYECTO(proyectoId),
+    { params: filters }
+  );
+  return response.data;
+}
+
+/**
+ * Obtener documentos de un subproyecto
+ */
+export async function getDocumentosBySubproyecto(
+  subproyectoId: number | string,
+  filters?: DocumentoQueryFilters
+): Promise<Documento[]> {
+  const response = await apiClient.get<Documento[]>(
+    DOCUMENTOS_ENDPOINTS.BY_SUBPROYECTO(subproyectoId),
     { params: filters }
   );
   return response.data;
@@ -119,7 +134,7 @@ export async function downloadDocumento(id: number | string): Promise<void> {
 }
 
 /**
- * Solicitar URL presignada para subida
+ * Solicitar URL presignada para subida (Proyecto)
  */
 export async function requestUploadUrl(
   proyectoId: number | string,
@@ -135,6 +150,33 @@ export async function requestUploadUrl(
     {
       entidadTipo: 'PROYECTO',
       entidadId: proyectoId,
+      categoria: 'documento',
+      nombreArchivo: file.nombre,
+      mimeType: file.mimeType,
+      tamano: file.tamano,
+      metadata,
+    }
+  );
+  return response.data;
+}
+
+/**
+ * Solicitar URL presignada para subida (Subproyecto)
+ */
+export async function requestUploadUrlSubproyecto(
+  subproyectoId: number | string,
+  file: {
+    nombre: string;
+    mimeType: string;
+    tamano: number;
+  },
+  metadata?: Record<string, string>
+): Promise<UploadDocumentoResponse> {
+  const response = await apiClient.post<UploadDocumentoResponse>(
+    DOCUMENTOS_ENDPOINTS.UPLOAD_REQUEST,
+    {
+      entidadTipo: 'SUBPROYECTO',
+      entidadId: subproyectoId,
       categoria: 'documento',
       nombreArchivo: file.nombre,
       mimeType: file.mimeType,

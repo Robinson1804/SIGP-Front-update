@@ -19,7 +19,9 @@ const ENDPOINTS = {
   BASE: '/requerimientos',
   BY_ID: (id: number | string) => `/requerimientos/${id}`,
   BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/requerimientos`,
+  BY_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/requerimientos`,
   FUNCIONALES_BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/requerimientos/funcionales`,
+  FUNCIONALES_BY_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/requerimientos/funcionales`,
 };
 
 /**
@@ -57,6 +59,40 @@ export async function getRequerimientosByProyecto(
 }
 
 /**
+ * Obtener requerimientos de un subproyecto
+ */
+export async function getRequerimientosBySubproyecto(
+  subproyectoId: number | string,
+  filters?: RequerimientoFilters
+): Promise<Requerimiento[]> {
+  const params: Record<string, string> = {};
+
+  if (filters?.tipo) params.tipo = filters.tipo;
+  if (filters?.prioridad) params.prioridad = filters.prioridad;
+  if (filters?.activo !== undefined) params.activo = String(filters.activo);
+
+  const response = await apiClient.get<Requerimiento[]>(
+    ENDPOINTS.BY_SUBPROYECTO(subproyectoId),
+    { params }
+  );
+
+  let data = response.data;
+
+  // Filtrar por búsqueda en cliente (el backend no tiene búsqueda fulltext)
+  if (filters?.search) {
+    const searchLower = filters.search.toLowerCase();
+    data = data.filter(
+      (req) =>
+        req.codigo.toLowerCase().includes(searchLower) ||
+        req.nombre.toLowerCase().includes(searchLower) ||
+        req.descripcion?.toLowerCase().includes(searchLower)
+    );
+  }
+
+  return data;
+}
+
+/**
  * Obtener solo requerimientos funcionales de un proyecto
  * Usado en el formulario de Historias de Usuario
  */
@@ -65,6 +101,19 @@ export async function getRequerimientosFuncionalesByProyecto(
 ): Promise<Requerimiento[]> {
   const response = await apiClient.get<Requerimiento[]>(
     ENDPOINTS.FUNCIONALES_BY_PROYECTO(proyectoId)
+  );
+  return response.data;
+}
+
+/**
+ * Obtener solo requerimientos funcionales de un subproyecto
+ * Usado en el formulario de Historias de Usuario
+ */
+export async function getRequerimientosFuncionalesBySubproyecto(
+  subproyectoId: number | string
+): Promise<Requerimiento[]> {
+  const response = await apiClient.get<Requerimiento[]>(
+    ENDPOINTS.FUNCIONALES_BY_SUBPROYECTO(subproyectoId)
   );
   return response.data;
 }

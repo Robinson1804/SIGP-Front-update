@@ -351,6 +351,7 @@ export const ENDPOINTS = {
     BASE: '/cronogramas',
     BY_ID: (id: number | string) => `/cronogramas/${id}`,
     BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/cronograma`,
+    BY_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/cronograma`,
     TAREAS: (cronogramaId: number | string) => `/cronogramas/${cronogramaId}/tareas`,
     TAREA_BY_ID: (cronogramaId: number | string, tareaId: number | string) =>
       `/cronogramas/${cronogramaId}/tareas/${tareaId}`,

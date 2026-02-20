@@ -11,8 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -104,6 +106,12 @@ export function ActaReunionWizard({
   saving = false,
 }: ActaReunionWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [arrayErrors, setArrayErrors] = useState<{
+    asistentes?: string;
+    agenda?: string;
+    temasDesarrollados?: string;
+    acuerdos?: string;
+  }>({});
 
   // State for complex arrays
   const [asistentes, setAsistentes] = useState<ActaParticipante[]>(
@@ -167,16 +175,61 @@ export function ActaReunionWizard({
     }
   }, [acta, form]);
 
+  const validateArrays = (): boolean => {
+    const errors: typeof arrayErrors = {};
+    let isValid = true;
+
+    const asistentesValidos = asistentes.filter(a => a.nombre?.trim());
+    const agendaValida = agenda.filter(a => a.tema?.trim());
+    const temasValidos = temasDesarrollados.filter(t => t.tema?.trim());
+    const acuerdosValidos = acuerdos.filter(a => a.descripcion?.trim());
+
+    if (asistentesValidos.length === 0) {
+      errors.asistentes = 'Debe incluir al menos un asistente (Paso 2)';
+      isValid = false;
+    }
+    if (agendaValida.length === 0) {
+      errors.agenda = 'Debe incluir al menos un punto de agenda (Paso 3)';
+      isValid = false;
+    }
+    if (temasValidos.length === 0) {
+      errors.temasDesarrollados = 'Debe incluir al menos un tema desarrollado (Paso 4)';
+      isValid = false;
+    }
+    if (acuerdosValidos.length === 0) {
+      errors.acuerdos = 'Debe incluir al menos un acuerdo (Paso 5)';
+      isValid = false;
+    }
+
+    setArrayErrors(errors);
+    return isValid;
+  };
+
   const onSubmit = async (values: FormValues) => {
+    setArrayErrors({});
+
+    if (!validateArrays()) {
+      return;
+    }
+
+    const asistentesValidos = asistentes.filter(a => a.nombre?.trim());
+    const ausentesValidos = ausentes.filter(a => a.nombre?.trim());
+    const agendaValida = agenda.filter(a => a.tema?.trim());
+    const temasValidos = temasDesarrollados.filter(t => t.tema?.trim());
+    const acuerdosValidos = acuerdos.filter(a => a.descripcion?.trim());
+    const proximosPasosValidos = proximosPasos.filter(p => p.descripcion?.trim());
+    const anexosValidos = anexosReferenciados.filter(a => a.nombre?.trim());
+
     await onSave({
       ...values,
-      asistentes,
-      ausentes,
-      agenda,
-      temasDesarrollados,
-      acuerdos,
-      proximosPasos,
-      anexosReferenciados,
+      proximaReunionFecha: values.proximaReunionFecha || null,
+      asistentes: asistentesValidos,
+      ausentes: ausentesValidos,
+      agenda: agendaValida,
+      temasDesarrollados: temasValidos,
+      acuerdos: acuerdosValidos,
+      proximosPasos: proximosPasosValidos,
+      anexosReferenciados: anexosValidos,
     });
   };
 
@@ -581,6 +634,21 @@ export function ActaReunionWizard({
 
         {/* Step Content */}
         <div className="min-h-[300px]">{renderStepContent()}</div>
+
+        {/* Validation errors summary */}
+        {Object.keys(arrayErrors).length > 0 && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <ul className="list-disc list-inside space-y-1">
+                {arrayErrors.asistentes && <li>{arrayErrors.asistentes}</li>}
+                {arrayErrors.agenda && <li>{arrayErrors.agenda}</li>}
+                {arrayErrors.temasDesarrollados && <li>{arrayErrors.temasDesarrollados}</li>}
+                {arrayErrors.acuerdos && <li>{arrayErrors.acuerdos}</li>}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t">

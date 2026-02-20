@@ -21,8 +21,10 @@ import type {
 import * as cronogramaService from '../services/cronograma.service';
 
 interface UseCronogramaOptions {
-  /** ID del proyecto */
+  /** ID del proyecto o subproyecto */
   proyectoId: number | string;
+  /** Tipo de contenedor: PROYECTO o SUBPROYECTO */
+  tipoContenedor?: 'PROYECTO' | 'SUBPROYECTO';
   /** Cargar automaticamente al montar */
   autoFetch?: boolean;
 }
@@ -73,6 +75,7 @@ interface UseCronogramaReturn {
  */
 export function useCronograma({
   proyectoId,
+  tipoContenedor = 'PROYECTO',
   autoFetch = true,
 }: UseCronogramaOptions): UseCronogramaReturn {
   const { toast } = useToast();
@@ -95,7 +98,9 @@ export function useCronograma({
     setError(null);
 
     try {
-      const data = await cronogramaService.getCronogramaByProyecto(proyectoId);
+      const data = tipoContenedor === 'SUBPROYECTO'
+        ? await cronogramaService.getCronogramaBySubproyecto(proyectoId)
+        : await cronogramaService.getCronogramaByProyecto(proyectoId);
       setCronograma(data);
     } catch (err) {
       const error = err as Error;
@@ -108,7 +113,7 @@ export function useCronograma({
     } finally {
       setIsLoading(false);
     }
-  }, [proyectoId, toast]);
+  }, [proyectoId, tipoContenedor, toast]);
 
   // Crear cronograma
   const createCronograma = useCallback(
@@ -117,7 +122,9 @@ export function useCronograma({
 
       setIsLoading(true);
       try {
-        const newCronograma = await cronogramaService.createCronograma(proyectoId, data);
+        const newCronograma = tipoContenedor === 'SUBPROYECTO'
+          ? await cronogramaService.createCronogramaBySubproyecto(proyectoId, data)
+          : await cronogramaService.createCronograma(proyectoId, data);
         setCronograma(newCronograma);
         toast({
           title: 'Exito',
@@ -137,7 +144,7 @@ export function useCronograma({
         setIsLoading(false);
       }
     },
-    [proyectoId, toast]
+    [proyectoId, tipoContenedor, toast]
   );
 
   // Crear tarea
@@ -148,10 +155,15 @@ export function useCronograma({
       // Si no existe cronograma, crearlo automáticamente
       if (!currentCronograma) {
         try {
-          const newCronograma = await cronogramaService.createCronograma(proyectoId, {
-            nombre: `Cronograma del Proyecto`,
-            descripcion: 'Cronograma creado automáticamente',
-          });
+          const newCronograma = tipoContenedor === 'SUBPROYECTO'
+            ? await cronogramaService.createCronogramaBySubproyecto(proyectoId, {
+                nombre: `Cronograma del Subproyecto`,
+                descripcion: 'Cronograma creado automáticamente',
+              })
+            : await cronogramaService.createCronograma(proyectoId, {
+                nombre: `Cronograma del Proyecto`,
+                descripcion: 'Cronograma creado automáticamente',
+              });
           currentCronograma = newCronograma;
           setCronograma(newCronograma);
         } catch (err) {
@@ -191,7 +203,7 @@ export function useCronograma({
         return null;
       }
     },
-    [cronograma, proyectoId, toast]
+    [cronograma, proyectoId, tipoContenedor, toast]
   );
 
   // Actualizar tarea

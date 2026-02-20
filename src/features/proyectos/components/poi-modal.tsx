@@ -774,6 +774,19 @@ export function POIFullModal({
         }
         if (!subProjectForm.years || subProjectForm.years.length === 0) newErrors.years = "El año es requerido.";
 
+        // Validar fechas dentro del rango del proyecto padre
+        const fmtFecha = (iso: string) =>
+            new Date(iso + 'T12:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+        if (subProjectForm.fechaInicio && subProjectForm.fechaFin && subProjectForm.fechaFin < subProjectForm.fechaInicio) {
+            newErrors.fechaFin = 'La fecha fin debe ser posterior a la fecha de inicio.';
+        }
+        if (formData.startDate && subProjectForm.fechaInicio && subProjectForm.fechaInicio < formData.startDate) {
+            newErrors.fechaInicio = `Debe ser igual o posterior al ${fmtFecha(formData.startDate)}.`;
+        }
+        if (formData.endDate && subProjectForm.fechaFin && subProjectForm.fechaFin > formData.endDate) {
+            newErrors.fechaFin = `Debe ser igual o anterior al ${fmtFecha(formData.endDate)}.`;
+        }
+
         setSubProjectErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -1070,10 +1083,15 @@ export function POIFullModal({
 
                         // Obtener IDs de responsables para asignaciones
                         const responsablesIds = sp.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
+                        console.log('[DEBUG] Subproyecto:', sp.name);
+                        console.log('[DEBUG] sp.responsible:', sp.responsible);
+                        console.log('[DEBUG] responsablesIds:', responsablesIds);
 
                         if (isNewSubproject) {
                             // Crear nuevo subproyecto
                             const aniosNumeros = sp.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+                            // Buscar el ID del coordinador por nombre
+                            const coordinadorFound = coordinadores.find(c => formatUsuarioNombre(c) === sp.coordinador);
                             // Obtener el siguiente código disponible (formato SUB-001, SUB-002, etc.)
                             const nextCodigo = await getNextSubproyectoCodigo(proyectoId);
                             const newSubproyecto = await createSubproyecto({
@@ -1081,41 +1099,62 @@ export function POIFullModal({
                                 codigo: nextCodigo,
                                 nombre: sp.name,
                                 descripcion: sp.description,
+                                clasificacion: formData.classification as 'Al ciudadano' | 'Gestion interna' | undefined,
                                 monto: sp.amount,
                                 anios: aniosNumeros,
                                 areasFinancieras: sp.financialArea || [],
+                                areaUsuaria: formData.areaUsuaria,
                                 scrumMasterId: scrumMasterId,
+                                coordinadorId: coordinadorFound?.id,
+                                coordinacion: sp.coordinacion || undefined,
+                                fechaInicio: sp.fechaInicio || undefined,
+                                fechaFin: sp.fechaFin || undefined,
                             });
                             subIndex++;
 
                             // Sincronizar asignaciones para el nuevo subproyecto
+                            console.log('[DEBUG] Verificando sincronización de asignaciones...');
+                            console.log('[DEBUG] newSubproyecto?.id:', newSubproyecto?.id);
+                            console.log('[DEBUG] responsablesIds.length:', responsablesIds.length);
                             if (newSubproyecto?.id && responsablesIds.length > 0) {
                                 try {
+                                    console.log('[DEBUG] Sincronizando asignaciones para subproyecto:', newSubproyecto.id, 'con responsables:', responsablesIds);
                                     await syncAsignacionesSubproyecto(newSubproyecto.id, responsablesIds);
-                                    console.log('Asignaciones de subproyecto sincronizadas:', newSubproyecto.id);
+                                    console.log('[SUCCESS] Asignaciones de subproyecto sincronizadas:', newSubproyecto.id);
                                 } catch (error) {
-                                    console.warn('Error al sincronizar asignaciones del subproyecto:', error);
+                                    console.error('[ERROR] Error al sincronizar asignaciones del subproyecto:', error);
                                 }
+                            } else {
+                                console.warn('[WARNING] No se sincronizaron asignaciones. newSubproyecto?.id:', newSubproyecto?.id, 'responsablesIds.length:', responsablesIds.length);
                             }
                         } else {
                             // Actualizar subproyecto existente
                             const aniosNumeros = sp.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+                            // Buscar el ID del coordinador por nombre
+                            const coordinadorFound = coordinadores.find(c => formatUsuarioNombre(c) === sp.coordinador);
                             const subproyectoId = parseInt(sp.id, 10);
                             await updateSubproyecto(subproyectoId, {
                                 nombre: sp.name,
                                 descripcion: sp.description,
+                                clasificacion: formData.classification as 'Al ciudadano' | 'Gestion interna' | undefined,
                                 monto: sp.amount,
                                 anios: aniosNumeros,
                                 areasFinancieras: sp.financialArea || [],
+                                areaUsuaria: formData.areaUsuaria,
                                 scrumMasterId: scrumMasterId,
+                                coordinadorId: coordinadorFound?.id,
+                                coordinacion: sp.coordinacion || undefined,
+                                fechaInicio: sp.fechaInicio || undefined,
+                                fechaFin: sp.fechaFin || undefined,
                             });
 
                             // Sincronizar asignaciones para subproyecto existente
                             try {
+                                console.log('[DEBUG] Sincronizando asignaciones para subproyecto existente:', subproyectoId, 'con responsables:', responsablesIds);
                                 await syncAsignacionesSubproyecto(subproyectoId, responsablesIds);
-                                console.log('Asignaciones de subproyecto actualizadas:', subproyectoId);
+                                console.log('[SUCCESS] Asignaciones de subproyecto actualizadas:', subproyectoId);
                             } catch (error) {
-                                console.warn('Error al sincronizar asignaciones del subproyecto:', error);
+                                console.error('[ERROR] Error al sincronizar asignaciones del subproyecto:', error);
                             }
                         }
                     }
@@ -1288,22 +1327,12 @@ export function POIFullModal({
     const isEditMode = !!project?.id && project.id !== '';
     const isProyecto = formData.type === 'Proyecto';
 
-    // Opciones de responsables y años para subproyecto
-    // Filtrar solo DESARROLLADORES asignados al proyecto padre para subproyectos
-    const subResponsibleOptions: MultiSelectOption[] = (formData.responsibles && formData.responsibles.length > 0)
-        ? formData.responsibles
-            .filter(id => {
-                // Solo incluir si este personal es un Desarrollador
-                return desarrolladores.some(dev => dev.id.toString() === id);
-            })
-            .map(id => {
-                const personal = personalDisponible.find(p => p.id.toString() === id);
-                return {
-                    label: personal ? formatPersonalNombre(personal) : id,
-                    value: id,
-                };
-            })
-        : []; // Sin fallback - si el proyecto padre no tiene responsables desarrolladores, el subproyecto no puede tener ninguno
+    // Opciones de responsables para subproyecto
+    // Listar TODOS los desarrolladores disponibles
+    const subResponsibleOptions: MultiSelectOption[] = desarrolladores.map(dev => ({
+        label: formatPersonalNombre(dev),
+        value: dev.id.toString(),
+    })); // Sin fallback - si el proyecto padre no tiene responsables desarrolladores, el subproyecto no puede tener ninguno
 
     const subYearOptions: MultiSelectOption[] = (formData.years && formData.years.length > 0)
         ? formData.years.map(y => ({ label: y, value: y }))
@@ -1804,11 +1833,19 @@ export function POIFullModal({
                             {/* Coordinación */}
                             <div>
                                 <label className="text-sm font-medium">Coordinación</label>
-                                <Input
-                                    placeholder="Ingresar coordinación"
+                                <Select
                                     value={subProjectForm.coordinacion || ''}
-                                    onChange={(e) => setSubProjectForm(p => ({ ...p, coordinacion: e.target.value }))}
-                                />
+                                    onValueChange={(value) => setSubProjectForm(p => ({ ...p, coordinacion: value }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar coordinación" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {AREAS_DISPONIBLES.map((area) => (
+                                            <SelectItem key={area} value={area}>{area}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             {/* Coordinador */}
                             <div>
@@ -1928,22 +1965,57 @@ export function POIFullModal({
                                 {subProjectErrors.amount && <p className="text-red-500 text-xs mt-1">{subProjectErrors.amount}</p>}
                             </div>
                             {/* Fechas */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium">Fecha Inicio</label>
-                                    <Input
-                                        type="date"
-                                        value={subProjectForm.fechaInicio || ''}
-                                        onChange={(e) => setSubProjectForm(p => ({ ...p, fechaInicio: e.target.value }))}
-                                    />
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium">Fechas del Subproyecto</span>
+                                    {(formData.startDate || formData.endDate) ? (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                                            Rango del proyecto:{' '}
+                                            {formData.startDate
+                                                ? new Date(formData.startDate + 'T12:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                : '—'}
+                                            {' → '}
+                                            {formData.endDate
+                                                ? new Date(formData.endDate + 'T12:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+                                                : '—'}
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs text-gray-500">
+                                            Sin rango definido en el proyecto
+                                        </span>
+                                    )}
                                 </div>
-                                <div>
-                                    <label className="text-sm font-medium">Fecha Fin</label>
-                                    <Input
-                                        type="date"
-                                        value={subProjectForm.fechaFin || ''}
-                                        onChange={(e) => setSubProjectForm(p => ({ ...p, fechaFin: e.target.value }))}
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm text-muted-foreground">Fecha Inicio</label>
+                                        <Input
+                                            type="date"
+                                            value={subProjectForm.fechaInicio || ''}
+                                            onChange={(e) => {
+                                                setSubProjectForm(p => ({ ...p, fechaInicio: e.target.value }));
+                                                if (subProjectErrors.fechaInicio) setSubProjectErrors(prev => ({...prev, fechaInicio: ''}));
+                                            }}
+                                            min={formData.startDate || undefined}
+                                            max={formData.endDate || undefined}
+                                            className={subProjectErrors.fechaInicio ? 'border-red-500' : ''}
+                                        />
+                                        {subProjectErrors.fechaInicio && <p className="text-red-500 text-xs mt-1">{subProjectErrors.fechaInicio}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="text-sm text-muted-foreground">Fecha Fin</label>
+                                        <Input
+                                            type="date"
+                                            value={subProjectForm.fechaFin || ''}
+                                            onChange={(e) => {
+                                                setSubProjectForm(p => ({ ...p, fechaFin: e.target.value }));
+                                                if (subProjectErrors.fechaFin) setSubProjectErrors(prev => ({...prev, fechaFin: ''}));
+                                            }}
+                                            min={subProjectForm.fechaInicio || formData.startDate || undefined}
+                                            max={formData.endDate || undefined}
+                                            className={subProjectErrors.fechaFin ? 'border-red-500' : ''}
+                                        />
+                                        {subProjectErrors.fechaFin && <p className="text-red-500 text-xs mt-1">{subProjectErrors.fechaFin}</p>}
+                                    </div>
                                 </div>
                             </div>
                             <div>
@@ -2257,11 +2329,13 @@ export function SubProjectModal({
       newErrors.fechaFin = 'La fecha fin debe ser posterior a la fecha de inicio';
     }
     // Validar que fechas estén dentro del rango del proyecto padre
+    const fmtDate = (iso: string) =>
+      new Date(iso + 'T12:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
     if (projectFechaInicio && formData.fechaInicio && formData.fechaInicio < projectFechaInicio) {
-      newErrors.fechaInicio = `La fecha de inicio no puede ser anterior al inicio del proyecto (${projectFechaInicio})`;
+      newErrors.fechaInicio = `Debe ser igual o posterior al ${fmtDate(projectFechaInicio)}`;
     }
     if (projectFechaFin && formData.fechaFin && formData.fechaFin > projectFechaFin) {
-      newErrors.fechaFin = `La fecha fin no puede ser posterior al fin del proyecto (${projectFechaFin})`;
+      newErrors.fechaFin = `Debe ser igual o anterior al ${fmtDate(projectFechaFin)}`;
     }
 
     setErrors(newErrors);
@@ -2288,7 +2362,7 @@ export function SubProjectModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleCancel(); }}>
-      <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
+      <DialogContent className="sm:max-w-2xl p-0" showCloseButton={false}>
         <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
           <DialogTitle>{subProject ? 'EDITAR' : 'REGISTRAR'} SUBPROYECTO</DialogTitle>
           <Button type="button" variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white" onClick={handleCancel}>
@@ -2329,11 +2403,19 @@ export function SubProjectModal({
           {/* Coordinación */}
           <div>
             <label className="text-sm font-medium">Coordinación</label>
-            <Input
-              placeholder="Ingresar coordinación"
+            <Select
               value={formData.coordinacion || ''}
-              onChange={(e) => setFormData(p => ({ ...p, coordinacion: e.target.value }))}
-            />
+              onValueChange={(value) => setFormData(p => ({ ...p, coordinacion: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar coordinación" />
+              </SelectTrigger>
+              <SelectContent>
+                {AREAS_DISPONIBLES.map((area) => (
+                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Coordinador */}
@@ -2459,36 +2541,57 @@ export function SubProjectModal({
           </div>
 
           {/* Fechas */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium">Fecha Inicio</label>
-              <Input
-                type="date"
-                value={formData.fechaInicio || ''}
-                onChange={(e) => {
-                  setFormData(p => ({ ...p, fechaInicio: e.target.value }));
-                  if (errors.fechaInicio) setErrors(prev => ({...prev, fechaInicio: ''}));
-                }}
-                min={projectFechaInicio}
-                max={projectFechaFin}
-                className={errors.fechaInicio ? 'border-red-500' : ''}
-              />
-              {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium">Fechas del Subproyecto</span>
+              {(projectFechaInicio || projectFechaFin) ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                  Rango del proyecto:{' '}
+                  {projectFechaInicio
+                    ? new Date(projectFechaInicio + 'T12:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—'}
+                  {' → '}
+                  {projectFechaFin
+                    ? new Date(projectFechaFin + 'T12:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+                    : '—'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs text-gray-500">
+                  Sin rango definido en el proyecto
+                </span>
+              )}
             </div>
-            <div>
-              <label className="text-sm font-medium">Fecha Fin</label>
-              <Input
-                type="date"
-                value={formData.fechaFin || ''}
-                onChange={(e) => {
-                  setFormData(p => ({ ...p, fechaFin: e.target.value }));
-                  if (errors.fechaFin) setErrors(prev => ({...prev, fechaFin: ''}));
-                }}
-                min={formData.fechaInicio || projectFechaInicio}
-                max={projectFechaFin}
-                className={errors.fechaFin ? 'border-red-500' : ''}
-              />
-              {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm text-muted-foreground">Fecha Inicio</label>
+                <Input
+                  type="date"
+                  value={formData.fechaInicio || ''}
+                  onChange={(e) => {
+                    setFormData(p => ({ ...p, fechaInicio: e.target.value }));
+                    if (errors.fechaInicio) setErrors(prev => ({...prev, fechaInicio: ''}));
+                  }}
+                  min={projectFechaInicio}
+                  max={projectFechaFin}
+                  className={errors.fechaInicio ? 'border-red-500' : ''}
+                />
+                {errors.fechaInicio && <p className="text-red-500 text-xs mt-1">{errors.fechaInicio}</p>}
+              </div>
+              <div>
+                <label className="text-sm text-muted-foreground">Fecha Fin</label>
+                <Input
+                  type="date"
+                  value={formData.fechaFin || ''}
+                  onChange={(e) => {
+                    setFormData(p => ({ ...p, fechaFin: e.target.value }));
+                    if (errors.fechaFin) setErrors(prev => ({...prev, fechaFin: ''}));
+                  }}
+                  min={formData.fechaInicio || projectFechaInicio}
+                  max={projectFechaFin}
+                  className={errors.fechaFin ? 'border-red-500' : ''}
+                />
+                {errors.fechaFin && <p className="text-red-500 text-xs mt-1">{errors.fechaFin}</p>}
+              </div>
             </div>
           </div>
 

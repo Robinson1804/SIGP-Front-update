@@ -87,6 +87,8 @@ const FASES_CONFIG: FaseConfig[] = [
 
 interface DocumentoPhaseAccordionProps {
   proyectoId: number;
+  subproyectoId?: number; // Opcional: para documentos de subproyectos
+  tipoContenedor?: 'PROYECTO' | 'SUBPROYECTO'; // Opcional: por defecto 'PROYECTO'
   documentos: Documento[];
   isLoading?: boolean;
   onRefresh?: () => void;
@@ -95,6 +97,8 @@ interface DocumentoPhaseAccordionProps {
 
 export function DocumentoPhaseAccordion({
   proyectoId,
+  subproyectoId,
+  tipoContenedor = 'PROYECTO',
   documentos,
   isLoading = false,
   onRefresh,
@@ -352,6 +356,8 @@ export function DocumentoPhaseAccordion({
           setEditingDoc(null);
         }}
         proyectoId={proyectoId}
+        subproyectoId={subproyectoId}
+        tipoContenedor={tipoContenedor}
         defaultFase={uploadModalFase}
         documento={editingDoc}
         onSuccess={onRefresh}

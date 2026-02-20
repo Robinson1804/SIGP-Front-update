@@ -65,6 +65,8 @@ interface RequerimientoFormProps {
   isOpen: boolean;
   onClose: () => void;
   proyectoId: number;
+  subproyectoId?: number; // Opcional: para requerimientos de subproyectos
+  tipoContenedor?: 'PROYECTO' | 'SUBPROYECTO'; // Opcional: por defecto 'PROYECTO'
   requerimiento?: Requerimiento | null;
   onSuccess: () => void;
 }
@@ -73,6 +75,8 @@ export function RequerimientoForm({
   isOpen,
   onClose,
   proyectoId,
+  subproyectoId,
+  tipoContenedor = 'PROYECTO',
   requerimiento,
   onSuccess,
 }: RequerimientoFormProps) {
@@ -173,6 +177,7 @@ export function RequerimientoForm({
       } else {
         await createRequerimiento({
           proyectoId,
+          subproyectoId: tipoContenedor === 'SUBPROYECTO' ? subproyectoId : undefined,
           codigo: values.codigo,
           nombre: values.nombre,
           descripcion: values.descripcion || undefined,

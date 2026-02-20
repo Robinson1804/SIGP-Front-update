@@ -46,6 +46,7 @@ import {
 } from '../types';
 import {
   getRequerimientosByProyecto,
+  getRequerimientosBySubproyecto,
   deleteRequerimiento,
 } from '../services';
 import { RequerimientoFiltersComponent } from './requerimiento-filters';
@@ -55,6 +56,8 @@ import { MatrizTrazabilidad } from './matriz-trazabilidad';
 
 interface RequerimientoListProps {
   proyectoId: number;
+  subproyectoId?: number; // Opcional: para requerimientos de subproyectos
+  tipoContenedor?: 'PROYECTO' | 'SUBPROYECTO'; // Opcional: por defecto 'PROYECTO'
   initialData?: Requerimiento[];
 }
 
@@ -73,7 +76,12 @@ function getPrioridadVariant(prioridad: string): 'default' | 'secondary' | 'dest
   }
 }
 
-export function RequerimientoList({ proyectoId, initialData = [] }: RequerimientoListProps) {
+export function RequerimientoList({
+  proyectoId,
+  subproyectoId,
+  tipoContenedor = 'PROYECTO',
+  initialData = []
+}: RequerimientoListProps) {
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -110,7 +118,9 @@ export function RequerimientoList({ proyectoId, initialData = [] }: Requerimient
   const loadRequerimientos = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getRequerimientosByProyecto(proyectoId);
+      const data = tipoContenedor === 'SUBPROYECTO' && subproyectoId
+        ? await getRequerimientosBySubproyecto(subproyectoId)
+        : await getRequerimientosByProyecto(proyectoId);
       setRequerimientos(data);
       applyFilters(data, filters);
     } catch (error) {
@@ -123,7 +133,7 @@ export function RequerimientoList({ proyectoId, initialData = [] }: Requerimient
     } finally {
       setIsLoading(false);
     }
-  }, [proyectoId, toast]);
+  }, [proyectoId, subproyectoId, tipoContenedor, toast]);
 
   useEffect(() => {
     if (initialData.length === 0) {
@@ -360,6 +370,8 @@ export function RequerimientoList({ proyectoId, initialData = [] }: Requerimient
           setEditingRequerimiento(null);
         }}
         proyectoId={proyectoId}
+        subproyectoId={subproyectoId}
+        tipoContenedor={tipoContenedor}
         requerimiento={editingRequerimiento}
         onSuccess={loadRequerimientos}
       />

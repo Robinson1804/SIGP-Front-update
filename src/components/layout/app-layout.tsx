@@ -147,7 +147,7 @@ function AppLayoutContent({
         <div className="flex-1 flex items-center"></div>
         <div className="flex-1 text-center">
           <h1 className="text-xl font-bold">
-            SISTEMA DE ADMINISTRACIÓN DE PROYECTO - OTIN
+            SISTEMA INTEGRAL DE GESTIÓN DE PROYECTO - OTIN
           </h1>
         </div>
         <div className="flex-1 flex justify-end pr-4">

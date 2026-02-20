@@ -45,6 +45,7 @@ import { ROLES } from '@/lib/definitions';
 import { toast } from '@/lib/hooks/use-toast';
 import {
   requestUploadUrl,
+  requestUploadUrlSubproyecto,
   confirmUpload,
   createDocumento,
   updateDocumento,
@@ -84,6 +85,8 @@ interface DocumentoUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   proyectoId: number;
+  subproyectoId?: number; // Opcional: para documentos de subproyectos
+  tipoContenedor?: 'PROYECTO' | 'SUBPROYECTO'; // Opcional: por defecto 'PROYECTO'
   defaultFase?: DocumentoFase;
   documento?: Documento | null; // Para edición
   onSuccess?: () => void;
@@ -112,6 +115,8 @@ export function DocumentoUploadModal({
   isOpen,
   onClose,
   proyectoId,
+  subproyectoId,
+  tipoContenedor = 'PROYECTO',
   defaultFase,
   documento,
   onSuccess,
@@ -252,11 +257,17 @@ export function DocumentoUploadModal({
   const uploadFileToMinIO = async (file: File): Promise<string> => {
     // 1. Solicitar URL presignada
     setUploadProgress(10);
-    const uploadData = await requestUploadUrl(proyectoId, {
-      nombre: file.name,
-      mimeType: file.type,
-      tamano: file.size,
-    });
+    const uploadData = tipoContenedor === 'SUBPROYECTO' && subproyectoId
+      ? await requestUploadUrlSubproyecto(subproyectoId, {
+          nombre: file.name,
+          mimeType: file.type,
+          tamano: file.size,
+        })
+      : await requestUploadUrl(proyectoId, {
+          nombre: file.name,
+          mimeType: file.type,
+          tamano: file.size,
+        });
 
     // 2. Subir archivo a MinIO
     setUploadProgress(30);
@@ -316,7 +327,9 @@ export function DocumentoUploadModal({
       } else {
         // Crear nuevo documento
         const createData: CreateDocumentoInput = {
+          tipoContenedor,
           proyectoId,
+          subproyectoId: tipoContenedor === 'SUBPROYECTO' ? subproyectoId : undefined,
           fase: formData.fase as DocumentoFase,
           nombre: formData.nombre,
           descripcion: formData.descripcion || undefined,

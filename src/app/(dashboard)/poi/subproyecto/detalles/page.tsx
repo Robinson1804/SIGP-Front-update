@@ -14,6 +14,7 @@ import {
   FileText,
   Calendar,
   ExternalLink,
+  ArrowLeft,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -62,8 +63,20 @@ import {
   getScrumMasters,
   getCoordinadores,
   syncAsignacionesSubproyecto,
+  getPersonalDesarrolladores,
+  formatPersonalNombre,
+  getAsignacionesBySubproyecto,
   type Usuario,
+  type Personal,
+  type Asignacion,
 } from '@/lib/services';
+import {
+  DocumentoPhaseAccordion,
+  useDocumentos,
+} from '@/features/documentos';
+import { getDocumentosBySubproyecto } from '@/features/documentos/services/documentos.service';
+import { RequerimientoList } from '@/features/requerimientos';
+import { CronogramaView } from '@/features/cronograma';
 
 // ============================================
 // TIPOS Y HELPERS
@@ -209,6 +222,147 @@ function DeleteConfirmationModal({
 }
 
 // ============================================
+// COMPONENTE DE DOCUMENTOS
+// ============================================
+
+/**
+ * Contenido del Tab Documentos para Subproyectos
+ */
+function DocumentosTabContent({ subproyectoId }: { subproyectoId: number }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [documentos, setDocumentos] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const fetchDocumentos = React.useCallback(async () => {
+    if (!subproyectoId) return;
+
+    setIsLoading(true);
+    try {
+      const data = await getDocumentosBySubproyecto(subproyectoId);
+      setDocumentos(data);
+    } catch (error) {
+      console.error('Error fetching documentos:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los documentos',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [subproyectoId, toast]);
+
+  React.useEffect(() => {
+    fetchDocumentos();
+  }, [fetchDocumentos]);
+
+  // Función para aprobar documentos (adaptada para subproyectos)
+  const aprobarExistingDocumento = async (id: number | string, data: any) => {
+    // Esta función se implementará cuando sea necesario
+    console.log('Aprobar documento:', id, data);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-bold flex items-center gap-2">
+          <FolderOpen className="h-6 w-6 text-gray-700" />
+          Documentos del Subproyecto
+        </h3>
+      </div>
+
+      <DocumentoPhaseAccordion
+        proyectoId={subproyectoId}
+        subproyectoId={subproyectoId}
+        tipoContenedor="SUBPROYECTO"
+        documentos={documentos}
+        isLoading={isLoading}
+        onRefresh={fetchDocumentos}
+        onApprove={aprobarExistingDocumento}
+      />
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE DE REQUERIMIENTOS
+// ============================================
+
+/**
+ * Contenido del Tab Requerimientos para Subproyectos
+ */
+function RequerimientosTabContent({ subproyectoId }: { subproyectoId: number }) {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-bold flex items-center gap-2">
+          <FileText className="h-6 w-6 text-gray-700" />
+          Requerimientos del Subproyecto
+        </h3>
+      </div>
+
+      <RequerimientoList
+        proyectoId={subproyectoId}
+        subproyectoId={subproyectoId}
+        tipoContenedor="SUBPROYECTO"
+      />
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE DE CRONOGRAMA
+// ============================================
+
+/**
+ * Contenido del Tab Cronograma para Subproyectos
+ */
+function CronogramaTabContent({
+  subproyectoId,
+  nombre,
+  asignaciones,
+  fechaInicio,
+  fechaFin
+}: {
+  subproyectoId: number;
+  nombre: string;
+  asignaciones: Asignacion[];
+  fechaInicio: string | null;
+  fechaFin: string | null;
+}) {
+  // Construir lista de responsables con formato esperado por CronogramaView
+  const responsables = React.useMemo(() => {
+    return asignaciones
+      .filter(a => a.activo && a.personalId && a.personal)
+      .map(a => ({
+        id: a.personalId!,
+        nombre: `${a.personal!.nombres} ${a.personal!.apellidos}`.trim()
+      }));
+  }, [asignaciones]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-bold flex items-center gap-2">
+          <Calendar className="h-6 w-6 text-gray-700" />
+          Cronograma del Subproyecto
+        </h3>
+      </div>
+
+      <CronogramaView
+        proyectoId={subproyectoId}
+        tipoContenedor="SUBPROYECTO"
+        proyectoNombre={nombre}
+        responsables={responsables}
+        proyectoFechaInicio={fechaInicio}
+        proyectoFechaFin={fechaFin}
+      />
+    </div>
+  );
+}
+
+// ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
 
@@ -235,6 +389,8 @@ function SubprojectDetailsContent() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [scrumMasters, setScrumMasters] = useState<Usuario[]>([]);
   const [coordinadoresData, setCoordinadoresData] = useState<Usuario[]>([]);
+  const [desarrolladores, setDesarrolladores] = useState<Personal[]>([]);
+  const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
 
   const [progressAnimated, setProgressAnimated] = useState(false);
 
@@ -272,13 +428,15 @@ function SubprojectDetailsContent() {
     setError(null);
 
     try {
-      // Cargar subproyecto y sprints en paralelo
-      const [subproyectoData, sprintsData] = await Promise.all([
+      // Cargar subproyecto, sprints y asignaciones en paralelo
+      const [subproyectoData, sprintsData, asignacionesData] = await Promise.all([
         getSubproyecto(subproyectoId),
         getSprintsBySubproyecto(subproyectoId).catch(() => []),
+        getAsignacionesBySubproyecto(subproyectoId).catch(() => []),
       ]);
 
       setSubproyecto(subproyectoData);
+      setAsignaciones(asignacionesData);
 
       // Mapear sprints con progreso
       const sprintsMapped: SprintWithProgress[] = Array.isArray(sprintsData)
@@ -314,16 +472,18 @@ function SubprojectDetailsContent() {
     }
   }, [subproyectoId, fetchSubprojectData]);
 
-  // Cargar scrum masters y coordinadores
+  // Cargar scrum masters, coordinadores y desarrolladores
   useEffect(() => {
     const loadUsersData = async () => {
       try {
-        const [smData, coordData] = await Promise.all([
+        const [smData, coordData, devData] = await Promise.all([
           getScrumMasters(),
           getCoordinadores(),
+          getPersonalDesarrolladores(),
         ]);
         setScrumMasters(Array.isArray(smData) ? smData : []);
         setCoordinadoresData(Array.isArray(coordData) ? coordData : []);
+        setDesarrolladores(Array.isArray(devData) ? devData : []);
       } catch (err) {
         console.error('Error loading users data:', err);
       }
@@ -382,11 +542,16 @@ function SubprojectDetailsContent() {
       const str = typeof d === 'string' ? d : d.toISOString();
       return str.substring(0, 10);
     };
+    // Obtener IDs de responsables desde asignaciones activas
+    const responsablesIds = asignaciones
+      .filter(a => a.activo && a.personalId)
+      .map(a => a.personalId.toString());
+
     return {
       id: sp.id.toString(),
       name: sp.nombre,
       description: sp.descripcion || '',
-      responsible: [],
+      responsible: responsablesIds,
       scrumMaster: scrumMasterNombreModal,
       years: sp.anios?.map(String) || [],
       amount: sp.monto || 0,
@@ -468,6 +633,12 @@ function SubprojectDetailsContent() {
     window.history.pushState({}, '', newUrl.href);
   };
 
+  // Convert desarrolladores to MultiSelectOption format
+  const responsibleOptions = desarrolladores.map(dev => ({
+    label: formatPersonalNombre(dev),
+    value: dev.id.toString(),
+  }));
+
   // Estado de carga inicial
   if (isLoading) {
     return (
@@ -522,6 +693,11 @@ function SubprojectDetailsContent() {
     ? getUsuarioNombre(subproyecto.coordinador)
     : 'Sin asignar';
 
+  // Obtener nombres de responsables desde asignaciones
+  const responsablesNombres = asignaciones
+    .filter(a => a.activo && a.personal)
+    .map(a => `${a.personal!.nombres} ${a.personal!.apellidos}`.trim());
+
   // Estado mapeado
   const estado = subproyecto.estado || 'Pendiente';
 
@@ -545,9 +721,23 @@ function SubprojectDetailsContent() {
     <>
       <div className="bg-[#D5D5D5] border-b border-t border-[#1A5581]">
         <div className="p-2 flex items-center justify-between w-full">
-          <h2 className="font-bold text-black pl-2">
-            {`${subproyectoCode}: ${subproyecto.nombre}`}
-          </h2>
+          <div className="flex items-center gap-3">
+            {subproyecto.proyectoPadreId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/poi/proyecto/detalles?id=${subproyecto.proyectoPadreId}`)}
+                className="text-[#018CD1] hover:text-[#0177b3] hover:bg-blue-50"
+                title="Volver al proyecto principal"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Proyecto Principal
+              </Button>
+            )}
+            <h2 className="font-bold text-black">
+              {`${subproyectoCode}: ${subproyecto.nombre}`}
+            </h2>
+          </div>
         </div>
       </div>
       <div className="sticky top-[104px] z-10 bg-[#F9F9F9] px-6 pt-4">
@@ -679,6 +869,17 @@ function SubprojectDetailsContent() {
                         <InfoField label="Clasificacion"><p>{subproyecto.clasificacion || 'Sin clasificacion'}</p></InfoField>
                         <InfoField label="Coordinacion"><p>{subproyecto.coordinacion || 'Sin coordinacion'}</p></InfoField>
                         <InfoField label="Coordinador"><p>{coordinadorNombre}</p></InfoField>
+                        <InfoField label="Responsables">
+                          {responsablesNombres.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {responsablesNombres.map((nombre, idx) => (
+                                <Badge key={idx} variant="secondary">{nombre}</Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm">Sin responsables asignados</p>
+                          )}
+                        </InfoField>
                         {subproyecto.areasFinancieras && subproyecto.areasFinancieras.length > 0 && (
                           <InfoField label="Area Financiera">
                             {subproyecto.areasFinancieras.map(area => (
@@ -691,7 +892,7 @@ function SubprojectDetailsContent() {
                         {/* Anos */}
                         {subproyecto.anios && subproyecto.anios.length > 0 && (
                           <div>
-                            <p className="text-sm font-semibold text-gray-500 mb-1">Anos</p>
+                            <p className="text-sm font-semibold text-gray-500 mb-1">Años</p>
                             <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center flex-wrap gap-1">
                               {subproyecto.anios.map(y => {
                                 const isCurrentYear = y.toString() === '2025';
@@ -808,19 +1009,8 @@ function SubprojectDetailsContent() {
           )}
 
           {/* Tab Documentos */}
-          {activeTab === 'Documentos' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <FolderOpen className="h-6 w-6 text-gray-700" />
-                  Documentos del Subproyecto
-                </h3>
-              </div>
-              <div className="text-center py-12 text-muted-foreground">
-                <FolderOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Esta seccion estara disponible proximamente para subproyectos</p>
-              </div>
-            </div>
+          {activeTab === 'Documentos' && subproyectoId && (
+            <DocumentosTabContent subproyectoId={subproyectoId} />
           )}
 
           {/* Tab Actas */}
@@ -829,35 +1019,19 @@ function SubprojectDetailsContent() {
           )}
 
           {/* Tab Requerimientos */}
-          {activeTab === 'Requerimientos' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <FileText className="h-6 w-6 text-gray-700" />
-                  Requerimientos del Subproyecto
-                </h3>
-              </div>
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Esta seccion estara disponible proximamente para subproyectos</p>
-              </div>
-            </div>
+          {activeTab === 'Requerimientos' && subproyectoId && (
+            <RequerimientosTabContent subproyectoId={subproyectoId} />
           )}
 
           {/* Tab Cronograma */}
-          {activeTab === 'Cronograma' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <Calendar className="h-6 w-6 text-gray-700" />
-                  Cronograma del Subproyecto
-                </h3>
-              </div>
-              <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Esta seccion estara disponible proximamente para subproyectos</p>
-              </div>
-            </div>
+          {activeTab === 'Cronograma' && subproyectoId && (
+            <CronogramaTabContent
+              subproyectoId={subproyectoId}
+              nombre={nombre}
+              asignaciones={asignaciones}
+              fechaInicio={fechaInicio}
+              fechaFin={fechaFin}
+            />
           )}
         </div>
       </div>
@@ -878,6 +1052,7 @@ function SubprojectDetailsContent() {
           subProject={mapToSubProject(subproyecto)}
           scrumMasters={scrumMasters}
           coordinadores={coordinadoresData}
+          responsibleOptions={responsibleOptions}
           existingSubProjects={[]}
           projectFechaInicio={proyectoPadreFechaInicio}
           projectFechaFin={proyectoPadreFechaFin}

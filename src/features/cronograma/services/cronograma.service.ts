@@ -201,6 +201,35 @@ export async function getCronogramaByProyecto(
 }
 
 /**
+ * Obtener el cronograma de un subproyecto
+ * Si no existe, devuelve null
+ */
+export async function getCronogramaBySubproyecto(
+  subproyectoId: number | string
+): Promise<Cronograma | null> {
+  try {
+    const response = await apiClient.get<BackendCronograma | BackendCronograma[]>(
+      ENDPOINTS.CRONOGRAMAS.BY_SUBPROYECTO(subproyectoId)
+    );
+
+    // The API might return an array of cronogramas, take the first one
+    const data = Array.isArray(response.data) ? response.data[0] : response.data;
+
+    if (!data) {
+      return null;
+    }
+
+    return transformCronograma(data);
+  } catch (error: any) {
+    // Si es 404, el cronograma no existe aun
+    if (error.response?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
  * Obtener un cronograma por ID
  */
 export async function getCronogramaById(
@@ -221,6 +250,20 @@ export async function createCronograma(
 ): Promise<Cronograma> {
   const response = await apiClient.post<BackendCronograma>(
     ENDPOINTS.CRONOGRAMAS.BY_PROYECTO(proyectoId),
+    data
+  );
+  return transformCronograma(response.data);
+}
+
+/**
+ * Crear un nuevo cronograma para un subproyecto
+ */
+export async function createCronogramaBySubproyecto(
+  subproyectoId: number | string,
+  data: CreateCronogramaInput
+): Promise<Cronograma> {
+  const response = await apiClient.post<BackendCronograma>(
+    ENDPOINTS.CRONOGRAMAS.BY_SUBPROYECTO(subproyectoId),
     data
   );
   return transformCronograma(response.data);
