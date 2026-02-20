@@ -309,7 +309,17 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
         subproyectoId = initialData!.id;
         // En edicion no se envia el codigo, proyectoPadreId ni responsables
         const { codigo, proyectoPadreId, responsables, ...dataWithoutReadonly } = values;
-        await updateSubproyecto(subproyectoId, dataWithoutReadonly);
+        console.log('='.repeat(80));
+        console.log('🔍 FRONTEND DEBUG - DATOS PARA ACTUALIZAR SUBPROYECTO');
+        console.log('='.repeat(80));
+        console.log('Subproyecto ID:', subproyectoId);
+        console.log('Datos completos a enviar:', JSON.stringify(dataWithoutReadonly, null, 2));
+        console.log('coordinadorId:', dataWithoutReadonly.coordinadorId, '(tipo:', typeof dataWithoutReadonly.coordinadorId, ')');
+        console.log('scrumMasterId:', dataWithoutReadonly.scrumMasterId, '(tipo:', typeof dataWithoutReadonly.scrumMasterId, ')');
+        console.log('='.repeat(80));
+
+        const resultado = await updateSubproyecto(subproyectoId, dataWithoutReadonly);
+        console.log('✅ Respuesta del backend:', JSON.stringify(resultado, null, 2));
 
         // Sincronizar asignaciones de responsables
         if (responsables !== undefined) {
@@ -519,7 +529,14 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
                 <FormItem>
                   <FormLabel>Coordinador</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    onValueChange={(value) => {
+                      if (value === '' || value === null || value === undefined) {
+                        field.onChange(null);
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        field.onChange(isNaN(numValue) ? null : numValue);
+                      }
+                    }}
                     value={field.value ? String(field.value) : ''}
                   >
                     <FormControl>
@@ -546,9 +563,16 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
               name="scrumMasterId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Scrum Master</FormLabel>
+                  <FormLabel>Gestor/Scrum Master *</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    onValueChange={(value) => {
+                      if (value === '' || value === null || value === undefined) {
+                        field.onChange(null);
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        field.onChange(isNaN(numValue) ? null : numValue);
+                      }
+                    }}
                     value={field.value ? String(field.value) : ''}
                   >
                     <FormControl>
@@ -577,7 +601,14 @@ export function SubproyectoForm({ initialData, mode }: SubproyectoFormProps) {
                 <FormItem>
                   <FormLabel>Patrocinador</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                    onValueChange={(value) => {
+                      if (value === '' || value === null || value === undefined) {
+                        field.onChange(null);
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        field.onChange(isNaN(numValue) ? null : numValue);
+                      }
+                    }}
                     value={field.value ? String(field.value) : ''}
                   >
                     <FormControl>
