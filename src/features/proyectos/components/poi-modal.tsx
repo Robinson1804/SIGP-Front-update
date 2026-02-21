@@ -2251,6 +2251,7 @@ export function SubProjectModal({
   subProject,
   scrumMasters = [],
   coordinadores = [],
+  patrocinadores = [],
   responsibleOptions = [],
   financialAreaOptions: externalFinancialAreaOptions,
   yearOptions: externalYearOptions,
@@ -2267,6 +2268,7 @@ export function SubProjectModal({
   subProject: SubProject | null;
   scrumMasters?: UsuarioOption[];
   coordinadores?: UsuarioOption[];
+  patrocinadores?: UsuarioOption[];
   responsibleOptions?: SelectOption[];
   financialAreaOptions?: SelectOption[];
   yearOptions?: SelectOption[];
@@ -2316,6 +2318,7 @@ export function SubProjectModal({
           description: '',
           responsible: [],
           scrumMaster: '',
+          areaUsuaria: '',
           years: [],
           amount: 0,
           managementMethod: 'Scrum',
@@ -2526,6 +2529,28 @@ export function SubProjectModal({
               </SelectContent>
             </Select>
             {errors.scrumMaster && <p className="text-red-500 text-xs mt-1">{errors.scrumMaster}</p>}
+          </div>
+
+          {/* Área Usuaria (Patrocinador) */}
+          <div>
+            <label className="text-sm font-medium">Área Usuaria (Patrocinador)</label>
+            <Select
+              value={formData.areaUsuaria || undefined}
+              onValueChange={(value) => {
+                setFormData(p => ({ ...p, areaUsuaria: value }));
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar patrocinador" />
+              </SelectTrigger>
+              <SelectContent>
+                {patrocinadores.map((pat) => (
+                  <SelectItem key={pat.id} value={pat.id}>
+                    {pat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Año */}

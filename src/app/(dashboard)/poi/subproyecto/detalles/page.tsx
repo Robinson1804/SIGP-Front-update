@@ -62,6 +62,7 @@ import { type SubProject } from '@/lib/definitions';
 import {
   getScrumMasters,
   getCoordinadores,
+  getPatrocinadores,
   syncAsignacionesSubproyecto,
   getPersonalDesarrolladores,
   formatPersonalNombre,
@@ -389,6 +390,7 @@ function SubprojectDetailsContent() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [scrumMasters, setScrumMasters] = useState<Usuario[]>([]);
   const [coordinadoresData, setCoordinadoresData] = useState<Usuario[]>([]);
+  const [patrocinadores, setPatrocinadores] = useState<Usuario[]>([]);
   const [desarrolladores, setDesarrolladores] = useState<Personal[]>([]);
   const [asignaciones, setAsignaciones] = useState<Asignacion[]>([]);
 
@@ -472,17 +474,19 @@ function SubprojectDetailsContent() {
     }
   }, [subproyectoId, fetchSubprojectData]);
 
-  // Cargar scrum masters, coordinadores y desarrolladores
+  // Cargar scrum masters, coordinadores, patrocinadores y desarrolladores
   useEffect(() => {
     const loadUsersData = async () => {
       try {
-        const [smData, coordData, devData] = await Promise.all([
+        const [smData, coordData, patData, devData] = await Promise.all([
           getScrumMasters(),
           getCoordinadores(),
+          getPatrocinadores(),
           getPersonalDesarrolladores(),
         ]);
         setScrumMasters(Array.isArray(smData) ? smData : []);
         setCoordinadoresData(Array.isArray(coordData) ? coordData : []);
+        setPatrocinadores(Array.isArray(patData) ? patData : []);
         setDesarrolladores(Array.isArray(devData) ? devData : []);
       } catch (err) {
         console.error('Error loading users data:', err);
@@ -553,6 +557,7 @@ function SubprojectDetailsContent() {
       description: sp.descripcion || '',
       responsible: responsablesIds,
       scrumMaster: scrumMasterNombreModal,
+      areaUsuaria: (sp as any).areaUsuaria?.id?.toString() || (sp as any).areaUsuariaId?.toString() || undefined,
       years: sp.anios?.map(String) || [],
       amount: sp.monto || 0,
       managementMethod: 'Scrum',
@@ -587,6 +592,9 @@ function SubprojectDetailsContent() {
       const aniosNumeros = subProject.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
       const responsablesIds = subProject.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
 
+      // Convert areaUsuaria to number
+      const areaUsuariaId = subProject.areaUsuaria ? parseInt(subProject.areaUsuaria, 10) : undefined;
+
       await updateSubproyecto(subproyectoId, {
         nombre: subProject.name,
         descripcion: subProject.description,
@@ -595,6 +603,7 @@ function SubprojectDetailsContent() {
         areasFinancieras: subProject.financialArea || [],
         scrumMasterId: scrumMasterFound?.id,
         coordinadorId: coordinadorFound?.id,
+        areaUsuariaId: areaUsuariaId,
         coordinacion: subProject.coordinacion || undefined,
         fechaInicio: subProject.fechaInicio || undefined,
         fechaFin: subProject.fechaFin || undefined,
@@ -637,6 +646,12 @@ function SubprojectDetailsContent() {
   const responsibleOptions = desarrolladores.map(dev => ({
     label: formatPersonalNombre(dev),
     value: dev.id.toString(),
+  }));
+
+  // Format patrocinadores for select
+  const patrocinadorOptions = patrocinadores.map(pat => ({
+    id: pat.id.toString(),
+    label: getUsuarioNombre(pat),
   }));
 
   // Estado de carga inicial
@@ -1056,6 +1071,7 @@ function SubprojectDetailsContent() {
           subProject={mapToSubProject(subproyecto)}
           scrumMasters={scrumMasters}
           coordinadores={coordinadoresData}
+          patrocinadores={patrocinadorOptions}
           responsibleOptions={responsibleOptions}
           existingSubProjects={[]}
           projectFechaInicio={proyectoPadreFechaInicio}

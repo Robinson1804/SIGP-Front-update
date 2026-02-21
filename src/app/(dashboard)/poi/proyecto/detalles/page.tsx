@@ -209,6 +209,7 @@ function mapSubproyectoToSubProject(subproyecto: Subproyecto): SubProject {
     scrumMaster: subproyecto.scrumMaster
       ? getUsuarioNombre(subproyecto.scrumMaster)
       : 'Sin asignar',
+    areaUsuaria: (subproyecto as any).areaUsuaria?.id?.toString() || (subproyecto as any).areaUsuariaId?.toString() || undefined,
     years: years,
     amount: monto,
     managementMethod: 'Scrum',
