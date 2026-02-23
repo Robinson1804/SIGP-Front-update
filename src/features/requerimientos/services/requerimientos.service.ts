@@ -180,3 +180,14 @@ export async function countRequerimientosByProyecto(
   const requerimientos = await getRequerimientosByProyecto(proyectoId);
   return requerimientos.length;
 }
+
+/**
+ * Contar total de requerimientos en un subproyecto
+ * Útil para generar códigos automáticos secuenciales (REQ-001, REQ-002, etc.)
+ */
+export async function countRequerimientosBySubproyecto(
+  subproyectoId: number | string
+): Promise<number> {
+  const requerimientos = await getRequerimientosBySubproyecto(subproyectoId);
+  return requerimientos.length;
+}

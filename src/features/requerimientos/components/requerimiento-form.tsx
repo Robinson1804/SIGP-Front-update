@@ -47,6 +47,7 @@ import {
   createRequerimiento,
   updateRequerimiento,
   countRequerimientosByProyecto,
+  countRequerimientosBySubproyecto,
 } from '../services';
 
 // Schema de validación
@@ -101,7 +102,10 @@ export function RequerimientoForm({
   // Generar código inicial para nuevo requerimiento (REQ-001, REQ-002, etc.)
   const generateInitialCodigo = async () => {
     try {
-      const count = await countRequerimientosByProyecto(proyectoId);
+      const count =
+        tipoContenedor === 'SUBPROYECTO' && subproyectoId
+          ? await countRequerimientosBySubproyecto(subproyectoId)
+          : await countRequerimientosByProyecto(proyectoId);
       const codigo = generateCodigo(count);
       form.setValue('codigo', codigo);
     } catch (error) {
@@ -176,7 +180,7 @@ export function RequerimientoForm({
         });
       } else {
         await createRequerimiento({
-          proyectoId,
+          proyectoId: tipoContenedor === 'SUBPROYECTO' ? undefined : proyectoId,
           subproyectoId: tipoContenedor === 'SUBPROYECTO' ? subproyectoId : undefined,
           codigo: values.codigo,
           nombre: values.nombre,
