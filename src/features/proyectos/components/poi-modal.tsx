@@ -2284,11 +2284,8 @@ export function SubProjectModal({
   // Opciones de área financiera (usar externas o default)
   const financialAreaOpts = externalFinancialAreaOptions || financialAreaOptions;
 
-  // Generar opciones de años basadas en el PGD o usar externas
-  const yearOpts = externalYearOptions || generateYearOptions(
-    pgdAnioInicio ?? DEFAULT_YEAR_START,
-    pgdAnioFin ?? DEFAULT_YEAR_END
-  );
+  // Usar solo los años del proyecto padre (externalYearOptions), sin fallback al rango PGD
+  const yearOpts = (externalYearOptions && externalYearOptions.length > 0) ? externalYearOptions : [];
 
   // Formatear nombre de usuario
   const formatUsuarioNombreLocal = (usuario: UsuarioOption): string => {
