@@ -257,7 +257,7 @@ export function HistoriaDetailModal({
           >
             Cerrar
           </Button>
-          {onEdit && (
+          {onEdit && historia.estado !== 'En revisión' && historia.estado !== 'Finalizado' && (
             <Button
               type="button"
               onClick={onEdit}

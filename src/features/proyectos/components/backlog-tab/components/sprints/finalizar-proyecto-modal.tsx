@@ -12,11 +12,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cambiarEstadoProyecto } from '@/features/proyectos/services/proyectos.service';
+import { cambiarEstadoSubproyecto } from '@/features/proyectos/services/subproyectos.service';
 
 interface FinalizarProyectoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   proyectoId: number;
+  /** ID del subproyecto (si aplica) */
+  subproyectoId?: number;
   proyectoNombre?: string;
   onSuccess: (finalized: boolean) => void;
 }
@@ -25,24 +28,31 @@ export function FinalizarProyectoModal({
   open,
   onOpenChange,
   proyectoId,
+  subproyectoId,
   proyectoNombre,
   onSuccess,
 }: FinalizarProyectoModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isSubproyecto = !!subproyectoId;
+
   const handleFinalizarProyecto = async () => {
     try {
       setIsSubmitting(true);
       setError(null);
 
-      await cambiarEstadoProyecto(proyectoId, 'Finalizado');
+      if (isSubproyecto) {
+        await cambiarEstadoSubproyecto(subproyectoId!, 'Finalizado');
+      } else {
+        await cambiarEstadoProyecto(proyectoId, 'Finalizado');
+      }
 
       onSuccess(true);
       onOpenChange(false);
     } catch (err: any) {
-      console.error('Error finalizando proyecto:', err);
-      setError(err.response?.data?.message || 'Error al finalizar el proyecto');
+      console.error('Error finalizando:', err);
+      setError(err.response?.data?.message || `Error al finalizar el ${isSubproyecto ? 'subproyecto' : 'proyecto'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -62,7 +72,7 @@ export function FinalizarProyectoModal({
             Todos los Sprints Finalizados
           </DialogTitle>
           <DialogDescription>
-            Todos los sprints del proyecto han sido finalizados. ¿Desea finalizar el proyecto o continuar creando mas sprints?
+            Todos los sprints del {isSubproyecto ? 'subproyecto' : 'proyecto'} han sido finalizados. ¿Desea finalizar el {isSubproyecto ? 'subproyecto' : 'proyecto'} o continuar creando mas sprints?
           </DialogDescription>
         </DialogHeader>
 
@@ -89,9 +99,9 @@ export function FinalizarProyectoModal({
             >
               <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div>
-                <div className="font-medium text-gray-900">Finalizar Proyecto</div>
+                <div className="font-medium text-gray-900">Finalizar {isSubproyecto ? 'Subproyecto' : 'Proyecto'}</div>
                 <p className="text-sm text-gray-500 mt-1">
-                  El proyecto cambiara a estado &quot;Finalizado&quot; y no se podran crear mas sprints.
+                  El {isSubproyecto ? 'subproyecto' : 'proyecto'} cambiara a estado &quot;Finalizado&quot; y no se podran crear mas sprints.
                 </p>
               </div>
               {isSubmitting && <Loader2 className="h-4 w-4 animate-spin ml-auto" />}
@@ -108,7 +118,7 @@ export function FinalizarProyectoModal({
               <div>
                 <div className="font-medium text-gray-900">Continuar con mas Sprints</div>
                 <p className="text-sm text-gray-500 mt-1">
-                  El proyecto se mantendra en estado &quot;En desarrollo&quot; para crear mas sprints.
+                  El {isSubproyecto ? 'subproyecto' : 'proyecto'} se mantendra en estado &quot;En desarrollo&quot; para crear mas sprints.
                 </p>
               </div>
             </button>

@@ -65,6 +65,7 @@ import { cn } from '@/lib/utils';
 import { usePOIPermissions } from '@/lib/hooks/use-permissions';
 import { useAuth } from '@/stores';
 import { ROLES } from '@/lib/definitions';
+import { useToast } from '@/lib/hooks/use-toast';
 
 // State-driven Navigation Types
 type SubTab = 'backlog' | 'epicas' | 'sprints' | 'tablero' | 'daily' | 'dashboard';
@@ -110,6 +111,7 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
 
   // Check user role for PMO override
   const { user } = useAuth();
+  const { toast } = useToast();
   const isPMO = user?.role === ROLES.PMO;
 
   // Permission-based flags
@@ -150,18 +152,23 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
   // Estado para controlar si el usuario decidió continuar trabajando
   const [userDecidedToContinue, setUserDecidedToContinue] = useState(false);
 
-  // Auto-show finalizar proyecto modal when all sprints are finalized on load
+  // Auto-show finalizar proyecto/subproyecto modal when all sprints are finalized on load
   useEffect(() => {
+    // Para subproyectos: mostrar también si el estado es 'En planificacion' (posible inconsistencia de estado)
+    const estadoHabilitado = subproyectoId
+      ? proyectoEstado !== 'Finalizado' && proyectoEstado !== 'Cancelado'
+      : proyectoEstado === 'En desarrollo';
+
     if (
       !isLoading &&
       sprints.length > 0 &&
-      proyectoEstado === 'En desarrollo' &&
+      estadoHabilitado &&
       sprints.every((s) => s.estado === 'Finalizado') &&
       !userDecidedToContinue  // No mostrar si el usuario ya decidió continuar
     ) {
       setIsFinalizarProyectoModalOpen(true);
     }
-  }, [sprints, isLoading, proyectoEstado, userDecidedToContinue]);
+  }, [sprints, isLoading, proyectoEstado, subproyectoId, userDecidedToContinue]);
 
   // Modal states (for modals that overlay the current view)
   const [isHistoriaModalOpen, setIsHistoriaModalOpen] = useState(false);
@@ -310,6 +317,12 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
   const handleVerDocumento = (historia: HistoriaUsuario) => {
     if (historia.documentoEvidenciasUrl) {
       window.open(historia.documentoEvidenciasUrl, '_blank');
+    } else {
+      toast({
+        title: 'Documento no disponible',
+        description: 'El PDF de evidencias aún no ha sido generado o hubo un error al generarlo.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -611,6 +624,7 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
       {currentSubTab === 'tablero' && (
         <TableroView
           proyectoId={proyectoId}
+          subproyectoId={subproyectoId}
           onCreateHistoria={isViewOnly ? undefined : handleCreateHistoria}
           onEditHistoria={isViewOnly ? undefined : handleEditHistoria}
           onViewHistoria={handleViewHistoria}
@@ -670,7 +684,7 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
           equipo={equipo}
           onEdit={
             isViewOnly || isDeveloperOnly || isProyectoFinalizado ||
-            viewingHistoria.estado === 'Finalizado' || viewingHistoria.estado === 'En revision'
+            viewingHistoria.estado === 'Finalizado' || viewingHistoria.estado === 'En revisión'
               ? undefined
               : () => {
                   setIsDetailModalOpen(false);
@@ -691,11 +705,12 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
         />
       )}
 
-      {/* Modal para preguntar si finalizar el proyecto despues de cerrar sprint */}
+      {/* Modal para preguntar si finalizar el proyecto/subproyecto despues de cerrar sprint */}
       <FinalizarProyectoModal
         open={isFinalizarProyectoModalOpen}
         onOpenChange={setIsFinalizarProyectoModalOpen}
         proyectoId={proyectoId}
+        subproyectoId={subproyectoId}
         onSuccess={handleFinalizarProyectoComplete}
       />
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   getSprintsByProyecto,
+  getSprintsBySubproyecto,
   getSprintHistorias,
   type Sprint,
 } from '@/features/proyectos/services/sprints.service';
@@ -107,7 +108,7 @@ export interface UseTableroDataReturn {
 const COLUMNAS_TABLERO: { id: TareaEstado; nombre: string }[] = [
   { id: 'Por hacer', nombre: 'Por hacer' },
   { id: 'En progreso', nombre: 'En progreso' },
-  { id: 'En revision', nombre: 'En revisión' },
+  { id: 'En revisión', nombre: 'En revisión' },
   { id: 'Finalizado', nombre: 'Finalizado' },
 ];
 
@@ -115,7 +116,7 @@ const COLUMNAS_TABLERO: { id: TareaEstado; nombre: string }[] = [
 const COLUMNAS_HU: { id: HistoriaEstado; nombre: string }[] = [
   { id: 'Por hacer', nombre: 'Por hacer' },
   { id: 'En progreso', nombre: 'En progreso' },
-  { id: 'En revision', nombre: 'En revisión' },
+  { id: 'En revisión', nombre: 'En revisión' },
   { id: 'Finalizado', nombre: 'Finalizado' },
 ];
 
@@ -123,7 +124,7 @@ const COLUMNAS_HU: { id: HistoriaEstado; nombre: string }[] = [
 // HOOK
 // ============================================
 
-export function useTableroData(proyectoId: number): UseTableroDataReturn {
+export function useTableroData(proyectoId: number, subproyectoId?: number): UseTableroDataReturn {
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [selectedSprintId, setSelectedSprintId] = useState<number | null>(null);
   const [tableroData, setTableroData] = useState<TableroData | null>(null);
@@ -138,7 +139,9 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
   const fetchSprints = useCallback(async () => {
     try {
       setIsLoadingSprints(true);
-      const sprintsData = await getSprintsByProyecto(proyectoId);
+      const sprintsData = subproyectoId
+        ? await getSprintsBySubproyecto(subproyectoId)
+        : await getSprintsByProyecto(proyectoId);
 
       // Filtrar sprints activos y planificados (soporta ambos formatos de estado)
       const isEnProgreso = (estado: string) => estado === 'En progreso' || estado === 'Activo';
@@ -168,7 +171,7 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
     } finally {
       setIsLoadingSprints(false);
     }
-  }, [proyectoId, selectedSprintId]);
+  }, [proyectoId, subproyectoId, selectedSprintId]);
 
   /**
    * Cargar datos del tablero para el sprint seleccionado
@@ -395,10 +398,10 @@ export function useTableroData(proyectoId: number): UseTableroDataReturn {
 
   // Cargar sprints al montar
   useEffect(() => {
-    if (proyectoId) {
+    if (proyectoId || subproyectoId) {
       fetchSprints();
     }
-  }, [proyectoId, fetchSprints]);
+  }, [proyectoId, subproyectoId, fetchSprints]);
 
   // Cargar tablero cuando cambia el sprint seleccionado
   useEffect(() => {

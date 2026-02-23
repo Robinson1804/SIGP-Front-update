@@ -83,7 +83,7 @@ const tareaEstadoColors: Record<string, string> = {
 const estadoColors: Record<string, string> = {
   'Por hacer': 'bg-gray-100 text-gray-700',
   'En progreso': 'bg-yellow-100 text-yellow-700',
-  'En revision': 'bg-purple-100 text-purple-700',
+  'En revisión': 'bg-purple-100 text-purple-700',
   'Finalizado': 'bg-green-100 text-green-700',
 };
 
@@ -292,7 +292,8 @@ export function HistoriaTable({
                   className={cn(
                     'hover:bg-gray-50',
                     isSelected && 'bg-blue-50 hover:bg-blue-100',
-                    isExpanded && 'bg-blue-50/50'
+                    isExpanded && historia.estado !== 'Finalizado' && 'bg-blue-50/50',
+                    historia.estado === 'Finalizado' && 'bg-green-50/40 hover:bg-green-50/60'
                   )}
                 >
                   {/* Botón expandir/colapsar - Solo visible si tiene tareas */}
@@ -332,7 +333,12 @@ export function HistoriaTable({
                   <TableCell>
                     <button
                       onClick={() => onView?.(historia)}
-                      className="text-[#018CD1] hover:underline font-medium"
+                      className={cn(
+                        'hover:underline font-medium',
+                        historia.estado === 'Finalizado'
+                          ? 'text-green-700 line-through'
+                          : 'text-[#018CD1]'
+                      )}
                     >
                       {historia.codigo}
                     </button>
@@ -428,14 +434,14 @@ export function HistoriaTable({
                         Ver detalles
                       </DropdownMenuItem>
                       {/* Editar solo si HU NO esta en revision ni finalizada y handler disponible */}
-                      {onEdit && historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
+                      {onEdit && historia.estado !== 'En revisión' && historia.estado !== 'Finalizado' && (
                         <DropdownMenuItem onClick={() => onEdit(historia)}>
                           <Edit className="h-4 w-4 mr-2" />
                           Editar
                         </DropdownMenuItem>
                       )}
                       {/* Crear tarea solo si HU NO esta en revision ni finalizada */}
-                      {onCreateTarea && historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
+                      {onCreateTarea && historia.estado !== 'En revisión' && historia.estado !== 'Finalizado' && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => onCreateTarea(historia.id)}>
@@ -446,10 +452,10 @@ export function HistoriaTable({
                         </>
                       )}
                       {/* Acciones de validacion cuando HU esta "En revision" */}
-                      {historia.estado === 'En revision' && (
+                      {historia.estado === 'En revisión' && (
                         <>
                           <DropdownMenuSeparator />
-                          {historia.documentoEvidenciasUrl && onVerDocumento && (
+                          {onVerDocumento && (
                             <DropdownMenuItem onClick={() => onVerDocumento(historia)}>
                               <FileText className="h-4 w-4 mr-2" />
                               Ver documento
@@ -463,10 +469,16 @@ export function HistoriaTable({
                           )}
                         </>
                       )}
-                      {/* Badge de HU validada cuando esta Finalizado */}
+                      {/* Acciones cuando HU esta Finalizado */}
                       {historia.estado === 'Finalizado' && (
                         <>
                           <DropdownMenuSeparator />
+                          {onVerDocumento && (
+                            <DropdownMenuItem onClick={() => onVerDocumento(historia)}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Ver documento
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem disabled className="text-green-600">
                             <CheckCircle2 className="h-4 w-4 mr-2" />
                             HU Validada
@@ -474,7 +486,7 @@ export function HistoriaTable({
                         </>
                       )}
                       {/* Eliminar solo si HU NO esta en revision ni finalizada y handler disponible */}
-                      {onDelete && historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
+                      {onDelete && historia.estado !== 'En revisión' && historia.estado !== 'Finalizado' && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -509,7 +521,7 @@ export function HistoriaTable({
                               Tareas ({huTareas.length})
                             </span>
                             {/* Nueva tarea solo si HU NO esta en revision ni finalizada */}
-                            {onCreateTarea && historia.estado !== 'En revision' && historia.estado !== 'Finalizado' && (
+                            {onCreateTarea && historia.estado !== 'En revisión' && historia.estado !== 'Finalizado' && (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -538,8 +550,21 @@ export function HistoriaTable({
                               </TableHeader>
                               <TableBody>
                                 {huTareas.map((tarea) => (
-                                  <TableRow key={tarea.id} className="hover:bg-gray-50">
-                                    <TableCell className="text-xs font-mono text-[#018CD1] font-medium">
+                                  <TableRow
+                                    key={tarea.id}
+                                    className={cn(
+                                      'hover:bg-gray-50',
+                                      historia.estado === 'Finalizado' && 'bg-green-50/30 hover:bg-green-50/50'
+                                    )}
+                                  >
+                                    <TableCell
+                                      className={cn(
+                                        'text-xs font-mono font-medium',
+                                        historia.estado === 'Finalizado'
+                                          ? 'text-green-700 line-through'
+                                          : 'text-[#018CD1]'
+                                      )}
+                                    >
                                       {tarea.codigo}
                                     </TableCell>
                                     <TableCell className="text-sm text-gray-700">
@@ -589,7 +614,7 @@ export function HistoriaTable({
                                     </TableCell>
                                     <TableCell>
                                       {/* Si la HU esta en revision, mostrar icono de reloj */}
-                                      {historia.estado === 'En revision' ? (
+                                      {historia.estado === 'En revisión' ? (
                                         <TooltipProvider>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
@@ -598,7 +623,7 @@ export function HistoriaTable({
                                               </div>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                              <p>HU en revision</p>
+                                              <p>HU en revisión</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>
@@ -612,7 +637,7 @@ export function HistoriaTable({
                                               </div>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                              <p>HU finalizada y validada</p>
+                                              <p>HU validada y tareas finalizadas</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>

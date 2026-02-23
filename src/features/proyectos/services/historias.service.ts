@@ -22,7 +22,7 @@ export type Prioridad = 'Alta' | 'Media' | 'Baja';
 export type HistoriaEstado =
   | 'Por hacer'
   | 'En progreso'
-  | 'En revision'
+  | 'En revisión'
   | 'Finalizado';
 
 /**

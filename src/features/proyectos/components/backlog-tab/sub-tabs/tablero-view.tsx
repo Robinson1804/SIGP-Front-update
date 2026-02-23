@@ -2,7 +2,16 @@
 
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { Loader2, AlertCircle, RefreshCw, Plus, MoreHorizontal, Eye, Edit, Trash2, ListTodo } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw, Plus, MoreHorizontal, Eye, Edit, Trash2, ListTodo, Lock } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -28,6 +37,8 @@ import { cn, formatDate as formatDateUtil } from '@/lib/utils';
 
 interface TableroViewProps {
   proyectoId: number;
+  /** ID del subproyecto (si aplica) */
+  subproyectoId?: number;
   onCreateHistoria?: (sprintId?: number) => void;
   onEditHistoria?: (historia: HistoriaUsuario) => void;
   onViewHistoria?: (historia: HistoriaUsuario) => void;
@@ -75,12 +86,16 @@ const prioridadColors: Record<string, string> = {
 const columnColors: Record<HistoriaEstado, { bg: string; border: string; headerBg: string }> = {
   'Por hacer': { bg: 'bg-gray-50', border: 'border-gray-200', headerBg: 'bg-gray-100' },
   'En progreso': { bg: 'bg-blue-50', border: 'border-blue-200', headerBg: 'bg-blue-100' },
-  'En revision': { bg: 'bg-amber-50', border: 'border-amber-200', headerBg: 'bg-amber-100' },
+  'En revisión': { bg: 'bg-amber-50', border: 'border-amber-200', headerBg: 'bg-amber-100' },
   'Finalizado': { bg: 'bg-green-50', border: 'border-green-200', headerBg: 'bg-green-100' },
 };
 
+// Estados bloqueados (no se pueden mover manualmente)
+const ESTADOS_BLOQUEADOS: HistoriaEstado[] = ['En revisión', 'Finalizado'];
+
 export function TableroView({
   proyectoId,
+  subproyectoId,
   onCreateHistoria,
   onEditHistoria,
   onViewHistoria,
@@ -99,12 +114,13 @@ export function TableroView({
     setSelectedSprintId,
     moverHistoriaEnTablero,
     refresh,
-  } = useTableroData(proyectoId);
+  } = useTableroData(proyectoId, subproyectoId);
 
   // Modal states
   const [isHistoriaModalOpen, setIsHistoriaModalOpen] = useState(false);
   const [isTareaModalOpen, setIsTareaModalOpen] = useState(false);
   const [selectedHistoriaForTarea, setSelectedHistoriaForTarea] = useState<number | null>(null);
+  const [lockedWarningEstado, setLockedWarningEstado] = useState<HistoriaEstado | null>(null);
 
   // Get selected sprint
   const selectedSprint = sprints.find((s) => s.id === selectedSprintId);
@@ -133,8 +149,17 @@ export function TableroView({
       return;
     }
 
-    // Mover historia al nuevo estado
+    // Verificar si la historia está en un estado bloqueado
     const historiaId = parseInt(draggableId.replace('historia-', ''));
+    const historia = tableroData?.columnasHU
+      .flatMap((col) => col.historias)
+      .find((h) => h.id === historiaId);
+
+    if (historia && ESTADOS_BLOQUEADOS.includes(historia.estado)) {
+      setLockedWarningEstado(historia.estado);
+      return;
+    }
+
     const nuevoEstado = destination.droppableId as HistoriaEstado;
 
     try {
@@ -348,7 +373,9 @@ export function TableroView({
                               Sin historias
                             </div>
                           ) : (
-                            columna.historias.map((historia, index) => (
+                            columna.historias.map((historia, index) => {
+                              const isLocked = ESTADOS_BLOQUEADOS.includes(historia.estado);
+                              return (
                               <Draggable
                                 key={historia.id}
                                 draggableId={`historia-${historia.id}`}
@@ -361,22 +388,25 @@ export function TableroView({
                                     {...provided.draggableProps}
                                     {...provided.dragHandleProps}
                                     className={cn(
-                                      'bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow',
-                                      !isReadOnly && 'cursor-grab',
-                                      snapshot.isDragging && 'shadow-lg rotate-1 cursor-grabbing'
+                                      'bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow',
+                                      isLocked ? 'border-gray-300 cursor-default' : 'border-gray-200',
+                                      !isReadOnly && !isLocked && 'cursor-grab',
+                                      snapshot.isDragging && !isLocked && 'shadow-lg rotate-1 cursor-grabbing'
                                     )}
                                   >
                                     <HistoriaCard
                                       historia={historia}
+                                      isLocked={isLocked}
                                       onView={onViewHistoria}
-                                      onEdit={isReadOnly ? undefined : onEditHistoria}
-                                      onDelete={isReadOnly ? undefined : onDeleteHistoria}
-                                      onCreateTarea={isReadOnly ? undefined : handleCreateTarea}
+                                      onEdit={isReadOnly || isLocked ? undefined : onEditHistoria}
+                                      onDelete={isReadOnly || isLocked ? undefined : onDeleteHistoria}
+                                      onCreateTarea={isReadOnly || isLocked ? undefined : handleCreateTarea}
                                     />
                                   </div>
                                 )}
                               </Draggable>
-                            ))
+                              );
+                            })
                           )}
                           {provided.placeholder}
                         </div>
@@ -395,6 +425,7 @@ export function TableroView({
         open={isHistoriaModalOpen}
         onOpenChange={setIsHistoriaModalOpen}
         proyectoId={proyectoId}
+        subproyectoId={subproyectoId}
         sprintId={selectedSprintId || undefined}
         onSuccess={handleHistoriaSuccess}
         proyectoFechaInicio={proyectoFechaInicio}
@@ -413,6 +444,28 @@ export function TableroView({
           onSuccess={handleTareaSuccess}
         />
       )}
+
+      {/* Modal de advertencia: HU bloqueada */}
+      <AlertDialog open={!!lockedWarningEstado} onOpenChange={() => setLockedWarningEstado(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-amber-500" />
+              Historia de Usuario bloqueada
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {lockedWarningEstado === 'En revisión'
+                ? 'Esta Historia de Usuario está en estado "En revisión" esperando validación del Scrum Master. No se puede mover a otra columna.'
+                : 'Esta Historia de Usuario ya fue validada y está en estado "Finalizado". No se puede mover a otra columna.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setLockedWarningEstado(null)}>
+              Entendido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -420,13 +473,14 @@ export function TableroView({
 // Componente de tarjeta de historia para el tablero
 interface HistoriaCardProps {
   historia: HistoriaConTareas;
+  isLocked?: boolean;
   onView?: (historia: HistoriaUsuario) => void;
   onEdit?: (historia: HistoriaUsuario) => void;
   onDelete?: (historia: HistoriaUsuario) => void;
   onCreateTarea?: (historiaId: number) => void;
 }
 
-function HistoriaCard({ historia, onView, onEdit, onDelete, onCreateTarea }: HistoriaCardProps) {
+function HistoriaCard({ historia, isLocked, onView, onEdit, onDelete, onCreateTarea }: HistoriaCardProps) {
   // Calcular progreso de tareas
   const totalTareas = historia.tareas?.length || 0;
   const tareasFinalizadas = historia.tareas?.filter((t) => t.estado === 'Finalizado').length || 0;
@@ -437,9 +491,15 @@ function HistoriaCard({ historia, onView, onEdit, onDelete, onCreateTarea }: His
       {/* Header: Code and menu */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono font-medium text-gray-500">
+          <span className={cn(
+            'text-xs font-mono font-medium',
+            historia.estado === 'Finalizado' ? 'text-green-700 line-through' : 'text-gray-500'
+          )}>
             {historia.codigo}
           </span>
+          {isLocked && (
+            <Lock className="h-3 w-3 text-gray-400 flex-shrink-0" />
+          )}
           {historia.prioridad && (
             <Badge
               variant="secondary"

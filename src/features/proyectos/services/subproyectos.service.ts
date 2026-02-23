@@ -129,3 +129,14 @@ export async function getNextSubproyectoCodigo(proyectoId: number | string): Pro
   const response = await apiClient.get(`/proyectos/${proyectoId}/subproyectos/next-codigo`);
   return response.data.data || response.data;
 }
+
+/**
+ * Cambia el estado de un subproyecto
+ */
+export async function cambiarEstadoSubproyecto(
+  id: number | string,
+  nuevoEstado: string,
+): Promise<Subproyecto> {
+  const response = await apiClient.post(`/subproyectos/${id}/cambiar-estado`, { nuevoEstado });
+  return response.data.data || response.data;
+}
