@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Calendar, Users, DollarSign, Target,
-  FileText, FolderOpen, ClipboardList, BarChart, Folder,
+  FileText, FolderOpen, ClipboardList, BarChart, Folder, GanttChartSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -272,6 +272,12 @@ export default async function SubproyectoDetallesPage({
             <Button variant="outline" asChild>
               <Link href={paths.poi.subproyectos.epicas(subproyecto.id)}>
                 Épicas
+              </Link>
+            </Button>
+            <Button variant="outline" asChild className="gap-2">
+              <Link href={paths.poi.subproyectos.cronograma(subproyecto.id)}>
+                <GanttChartSquare className="h-4 w-4" />
+                Cronograma
               </Link>
             </Button>
             <Button variant="outline" asChild className="gap-2">
