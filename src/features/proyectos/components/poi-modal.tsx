@@ -1086,6 +1086,7 @@ export function POIFullModal({
                         console.log('[DEBUG] Subproyecto:', sp.name);
                         console.log('[DEBUG] sp.responsible:', sp.responsible);
                         console.log('[DEBUG] responsablesIds:', responsablesIds);
+                        console.log('[DEBUG] sp.areaUsuaria:', sp.areaUsuaria);
 
                         if (isNewSubproject) {
                             // Crear nuevo subproyecto

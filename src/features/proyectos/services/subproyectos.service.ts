@@ -53,6 +53,7 @@ export interface CreateSubproyectoData {
   coordinadorId?: number;
   coordinacion?: string;
   scrumMasterId?: number;
+  areaUsuariaId?: number;
   fechaInicio?: string;
   fechaFin?: string;
 }
@@ -67,6 +68,7 @@ export interface UpdateSubproyectoData {
   coordinadorId?: number;
   coordinacion?: string;
   scrumMasterId?: number;
+  areaUsuariaId?: number;
   fechaInicio?: string;
   fechaFin?: string;
   estado?: string;

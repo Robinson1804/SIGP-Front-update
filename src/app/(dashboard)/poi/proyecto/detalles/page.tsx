@@ -1023,6 +1023,9 @@ function ProjectDetailsContent() {
             // Convertir responsables de string a number para asignaciones
             const responsablesIds = subProject.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
 
+            // Convertir areaUsuaria de string a number
+            const areaUsuariaId = subProject.areaUsuaria ? parseInt(subProject.areaUsuaria, 10) : undefined;
+
             if (isEditing) {
                 // Actualizar subproyecto existente
                 const subproyectoId = parseInt(editingSubProject.id, 10);
@@ -1034,6 +1037,7 @@ function ProjectDetailsContent() {
                     areasFinancieras: subProject.financialArea || [],
                     scrumMasterId: scrumMaster?.id,
                     coordinadorId: coordinador?.id,
+                    areaUsuariaId: areaUsuariaId,
                     coordinacion: subProject.coordinacion || undefined,
                     fechaInicio: subProject.fechaInicio || undefined,
                     fechaFin: subProject.fechaFin || undefined,
@@ -1061,6 +1065,7 @@ function ProjectDetailsContent() {
                     areasFinancieras: subProject.financialArea || [],
                     scrumMasterId: scrumMaster?.id,
                     coordinadorId: coordinador?.id,
+                    areaUsuariaId: areaUsuariaId,
                     coordinacion: subProject.coordinacion || undefined,
                     fechaInicio: subProject.fechaInicio || undefined,
                     fechaFin: subProject.fechaFin || undefined,
