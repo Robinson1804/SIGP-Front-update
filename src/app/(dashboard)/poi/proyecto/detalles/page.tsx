@@ -330,10 +330,12 @@ const statusColors: { [key: string]: string } = {
 };
 
 const subProjectStatusColors: { [key: string]: string } = {
-    'Pendiente': 'bg-[#FF9F43] text-black',
+    'Pendiente': 'bg-[#FE9F43] text-black',
+    'En planificacion': 'bg-[#FFD700] text-black',
     'En planificación': 'bg-[#FFD700] text-black',
-    'En desarrollo': 'bg-[#54A0FF] text-white',
-    'Finalizado': 'bg-[#2ED573] text-white',
+    'En desarrollo': 'bg-[#559FFE] text-white',
+    'Finalizado': 'bg-[#2FD573] text-white',
+    'Cancelado': 'bg-red-500 text-white',
 };
 
 
@@ -358,13 +360,7 @@ const InfoField = ({ label, children }: { label: string, children: React.ReactNo
 const SubProjectCard = ({ subProject, onEdit, onDelete, canEdit }: { subProject: SubProject, onEdit: () => void, onDelete: () => void, canEdit: boolean }) => {
     const router = useRouter();
     const formatAmount = (amount: number) => {
-        if (amount >= 1000000) {
-            return `S/ ${(amount / 1000000).toFixed(1)}M`;
-        }
-        if (amount >= 1000) {
-            return `S/ ${(amount / 1000).toFixed(0)}k`;
-        }
-        return `S/ ${amount.toLocaleString('es-PE')}`;
+        return `S/ ${amount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
     // Obtener el estado del subproyecto (con fallback)

@@ -1340,9 +1340,7 @@ export function POIFullModal({
         value: dev.id.toString(),
     })); // Sin fallback - si el proyecto padre no tiene responsables desarrolladores, el subproyecto no puede tener ninguno
 
-    const subYearOptions: MultiSelectOption[] = (formData.years && formData.years.length > 0)
-        ? formData.years.map(y => ({ label: y, value: y }))
-        : yearOptions;
+    const subYearOptions: MultiSelectOption[] = formData.years?.map(y => ({ label: y, value: y })) || [];
 
     if (!isOpen) return null;
 
