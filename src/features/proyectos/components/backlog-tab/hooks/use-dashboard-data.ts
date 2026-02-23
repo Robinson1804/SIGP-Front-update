@@ -3,17 +3,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   getSprintsByProyecto,
+  getSprintsBySubproyecto,
   getSprintBurndown,
   type Sprint,
   type BurndownData,
 } from '@/features/proyectos/services/sprints.service';
 import {
   getBacklog,
+  getBacklogBySubproyecto,
   getHistoriasBySprint,
   type HistoriaUsuario,
 } from '@/features/proyectos/services/historias.service';
 import {
   getEpicasByProyecto,
+  getEpicasBySubproyecto,
   type Epica,
 } from '@/features/proyectos/services/epicas.service';
 import { getTareasByHistoria, type Tarea } from '@/features/proyectos/services/tareas.service';
@@ -139,7 +142,7 @@ const prioridadColors: Record<string, string> = {
 // HOOK
 // ============================================
 
-export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
+export function useDashboardData(proyectoId: number, subproyectoId?: number): UseDashboardDataReturn {
   const [summaryCards, setSummaryCards] = useState<SummaryCards>({
     finalizadas: 0,
     enProgreso: 0,
@@ -172,9 +175,9 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
 
       // Cargar datos en paralelo
       const [sprintsData, epicas, backlogData] = await Promise.all([
-        getSprintsByProyecto(proyectoId),
-        getEpicasByProyecto(proyectoId),
-        getBacklog(proyectoId),
+        subproyectoId ? getSprintsBySubproyecto(subproyectoId) : getSprintsByProyecto(proyectoId),
+        subproyectoId ? getEpicasBySubproyecto(subproyectoId) : getEpicasByProyecto(proyectoId),
+        subproyectoId ? getBacklogBySubproyecto(subproyectoId) : getBacklog(proyectoId),
       ]);
 
       // Helper para verificar estados (soporta ambos formatos)
@@ -384,7 +387,7 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [proyectoId]);
+  }, [proyectoId, subproyectoId]);
 
   /**
    * Refrescar datos
@@ -395,10 +398,10 @@ export function useDashboardData(proyectoId: number): UseDashboardDataReturn {
 
   // Cargar datos al montar
   useEffect(() => {
-    if (proyectoId) {
+    if (proyectoId || subproyectoId) {
       calculateDashboardData();
     }
-  }, [proyectoId, calculateDashboardData]);
+  }, [proyectoId, subproyectoId, calculateDashboardData]);
 
   return {
     summaryCards,

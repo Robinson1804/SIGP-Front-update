@@ -639,7 +639,7 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
         <DailyView proyectoId={proyectoId} sprints={sprints} equipo={equipo} />
       )}
 
-      {currentSubTab === 'dashboard' && <DashboardView proyectoId={proyectoId} />}
+      {currentSubTab === 'dashboard' && <DashboardView proyectoId={proyectoId} subproyectoId={subproyectoId} />}
 
       {/* Modals */}
       <HistoriaFormModal

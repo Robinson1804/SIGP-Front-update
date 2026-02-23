@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 
 interface DashboardViewProps {
   proyectoId: number;
+  subproyectoId?: number;
 }
 
 // Colores para avatares
@@ -160,7 +161,7 @@ function HorizontalBar({
   );
 }
 
-export function DashboardView({ proyectoId }: DashboardViewProps) {
+export function DashboardView({ proyectoId, subproyectoId }: DashboardViewProps) {
   const {
     summaryCards,
     estadoStats,
@@ -171,7 +172,7 @@ export function DashboardView({ proyectoId }: DashboardViewProps) {
     isLoading,
     error,
     refresh,
-  } = useDashboardData(proyectoId);
+  } = useDashboardData(proyectoId, subproyectoId);
 
   // Render loading state
   if (isLoading) {

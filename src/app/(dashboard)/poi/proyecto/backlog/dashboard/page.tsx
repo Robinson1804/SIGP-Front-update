@@ -203,12 +203,12 @@ function DashboardContent() {
     { name: 'Terminadas', value: dashboardData.historiasUsuario.terminadas, fill: '#A7F3D0' },
     { name: 'En desarrollo', value: dashboardData.historiasUsuario.enDesarrollo, fill: '#FDE68A' },
     { name: 'Pendientes', value: dashboardData.historiasUsuario.pendientes, fill: '#BFDBFE' },
-    { name: 'En revision', value: dashboardData.historiasUsuario.enRevision, fill: '#A78BFA' },
+    { name: 'En revisión', value: dashboardData.historiasUsuario.enRevision, fill: '#A78BFA' },
   ] : [
     { name: 'Terminadas', value: 0, fill: '#A7F3D0' },
     { name: 'En desarrollo', value: 0, fill: '#FDE68A' },
     { name: 'Pendientes', value: 0, fill: '#BFDBFE' },
-    { name: 'En revision', value: 0, fill: '#A78BFA' },
+    { name: 'En revisión', value: 0, fill: '#A78BFA' },
   ];
 
   // Priority chart data from API

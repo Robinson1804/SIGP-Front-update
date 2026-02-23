@@ -40,6 +40,7 @@ interface HistoriaDetailModalProps {
 const estadoColors: Record<HistoriaEstado, string> = {
   'Por hacer': 'bg-gray-100 text-gray-700',
   'En progreso': 'bg-yellow-100 text-yellow-700',
+  'En revisión': 'bg-purple-100 text-purple-700',
   'Finalizado': 'bg-green-100 text-green-700',
 };
 
