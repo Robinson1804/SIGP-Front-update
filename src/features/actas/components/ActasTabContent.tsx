@@ -47,6 +47,7 @@ import { useAuth } from '@/stores';
 import { ROLES } from '@/lib/definitions';
 import {
   getActasByProyecto,
+  getActasBySubproyecto,
   getActaById,
   saveActaPdf,
   getEstadoLabel,
@@ -84,10 +85,13 @@ type ViewType =
   | 'view-constitucion';
 
 interface ActasTabContentProps {
-  proyectoId: number;
+  proyectoId?: number;
+  subproyectoId?: number;
 }
 
-export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
+export function ActasTabContent({ proyectoId, subproyectoId }: ActasTabContentProps) {
+  const isSubproyecto = !!subproyectoId;
+  const effectiveId = subproyectoId ?? proyectoId;
   const { user } = useAuth();
 
   // Permisos por rol
@@ -133,9 +137,12 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
   const [sendingToReview, setSendingToReview] = useState(false);
 
   const fetchActas = useCallback(async () => {
+    if (!effectiveId) return;
     try {
       setLoading(true);
-      const result = await getActasByProyecto(proyectoId.toString());
+      const result = isSubproyecto
+        ? await getActasBySubproyecto(subproyectoId!.toString())
+        : await getActasByProyecto(proyectoId!.toString());
       setData(result);
     } catch (error) {
       console.error('Error fetching actas:', error);
@@ -147,7 +154,7 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
     } finally {
       setLoading(false);
     }
-  }, [proyectoId]);
+  }, [effectiveId, isSubproyecto, proyectoId, subproyectoId]);
 
   useEffect(() => {
     fetchActas();
@@ -354,10 +361,13 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
       } else {
         // Generar código automático si no existe
         const reunionesCount = data?.reuniones?.length || 0;
-        const codigo = `AR-${proyectoId}-${String(reunionesCount + 1).padStart(3, '0')}`;
+        const codigo = `AR-${effectiveId}-${String(reunionesCount + 1).padStart(3, '0')}`;
         // El moderadorId es el usuario que genera el acta
         const moderadorId = user?.id ? (typeof user.id === 'string' ? parseInt(user.id, 10) : user.id) : undefined;
-        await createActaReunion({ ...formData, proyectoId, codigo, moderadorId });
+        const createPayload = isSubproyecto
+          ? { ...formData, subproyectoId, codigo, moderadorId }
+          : { ...formData, proyectoId, codigo, moderadorId };
+        await createActaReunion(createPayload);
         toast({
           title: 'Acta creada',
           description: 'El acta de reunion se ha creado correctamente',
@@ -387,7 +397,10 @@ export function ActasTabContent({ proyectoId }: ActasTabContentProps) {
           description: 'El acta de constitucion se ha actualizado correctamente',
         });
       } else {
-        await createActaConstitucion({ ...formData, proyectoId });
+        const createPayload = isSubproyecto
+          ? { ...formData, subproyectoId }
+          : { ...formData, proyectoId };
+        await createActaConstitucion(createPayload);
         toast({
           title: 'Acta creada',
           description: 'El acta de constitucion se ha creado correctamente',

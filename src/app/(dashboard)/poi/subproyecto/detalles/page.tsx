@@ -75,7 +75,8 @@ import {
   DocumentoPhaseAccordion,
   useDocumentos,
 } from '@/features/documentos';
-import { getDocumentosBySubproyecto } from '@/features/documentos/services/documentos.service';
+import { getDocumentosBySubproyecto, aprobarDocumento } from '@/features/documentos/services/documentos.service';
+import type { AprobarDocumentoInput, Documento } from '@/features/documentos/types';
 import { RequerimientoList } from '@/features/requerimientos';
 import { CronogramaView } from '@/features/cronograma';
 
@@ -258,10 +259,27 @@ function DocumentosTabContent({ subproyectoId }: { subproyectoId: number }) {
     fetchDocumentos();
   }, [fetchDocumentos]);
 
-  // Función para aprobar documentos (adaptada para subproyectos)
-  const aprobarExistingDocumento = async (id: number | string, data: any) => {
-    // Esta función se implementará cuando sea necesario
-    console.log('Aprobar documento:', id, data);
+  // Función para aprobar/rechazar documentos del subproyecto
+  const aprobarExistingDocumento = async (id: number | string, data: AprobarDocumentoInput): Promise<Documento | null> => {
+    try {
+      const updatedDoc = await aprobarDocumento(id, data);
+      setDocumentos(prev => prev.map((d: any) => d.id === updatedDoc.id ? updatedDoc : d));
+      toast({
+        title: data.estado === 'Aprobado' ? 'Documento aprobado' : 'Documento rechazado',
+        description: data.estado === 'Aprobado'
+          ? 'El documento ha sido aprobado correctamente.'
+          : 'El documento ha sido rechazado.',
+      });
+      return updatedDoc;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al procesar la aprobación';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return null;
+    }
   };
 
   return (
@@ -1040,7 +1058,7 @@ function SubprojectDetailsContent() {
 
           {/* Tab Actas */}
           {activeTab === 'Actas' && subproyectoId && (
-            <ActasTabContent proyectoId={subproyectoId} />
+            <ActasTabContent subproyectoId={subproyectoId} />
           )}
 
           {/* Tab Requerimientos */}

@@ -24,6 +24,7 @@ const ACTAS_ENDPOINTS = {
   BASE: '/actas',
   BY_ID: (id: number | string) => `/actas/${id}`,
   BY_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/actas`,
+  BY_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/actas`,
   REUNION: '/actas/reunion',
   CONSTITUCION: '/actas/constitucion',
   DAILY: '/actas/daily',
@@ -44,6 +45,18 @@ export async function getActasByProyecto(
 ): Promise<ActasByProyectoResponse> {
   const response = await apiClient.get<ActasByProyectoResponse>(
     ACTAS_ENDPOINTS.BY_PROYECTO(proyectoId)
+  );
+  return response.data;
+}
+
+/**
+ * Obtener actas de un subproyecto (separadas por tipo)
+ */
+export async function getActasBySubproyecto(
+  subproyectoId: number | string
+): Promise<ActasByProyectoResponse> {
+  const response = await apiClient.get<ActasByProyectoResponse>(
+    ACTAS_ENDPOINTS.BY_SUBPROYECTO(subproyectoId)
   );
   return response.data;
 }
