@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useToast } from '@/lib/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -41,13 +42,12 @@ import {
   type CriterioAceptacion,
   REQUERIMIENTO_TIPOS,
   REQUERIMIENTO_PRIORIDADES,
-  generateCodigo,
 } from '../types';
 import {
   createRequerimiento,
   updateRequerimiento,
-  countRequerimientosByProyecto,
-  countRequerimientosBySubproyecto,
+  getNextCodigoByProyecto,
+  getNextCodigoBySubproyecto,
 } from '../services';
 
 // Schema de validación
@@ -81,6 +81,7 @@ export function RequerimientoForm({
   requerimiento,
   onSuccess,
 }: RequerimientoFormProps) {
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [criterios, setCriterios] = useState<CriterioAceptacion[]>([]);
   const [newCriterio, setNewCriterio] = useState('');
@@ -100,16 +101,17 @@ export function RequerimientoForm({
   });
 
   // Generar código inicial para nuevo requerimiento (REQ-001, REQ-002, etc.)
+  // Usa max+1 para ser robusto ante eliminaciones y correcto por contenedor
   const generateInitialCodigo = async () => {
     try {
-      const count =
+      const codigo =
         tipoContenedor === 'SUBPROYECTO' && subproyectoId
-          ? await countRequerimientosBySubproyecto(subproyectoId)
-          : await countRequerimientosByProyecto(proyectoId);
-      const codigo = generateCodigo(count);
+          ? await getNextCodigoBySubproyecto(subproyectoId)
+          : await getNextCodigoByProyecto(proyectoId);
       form.setValue('codigo', codigo);
     } catch (error) {
       console.error('Error generando código:', error);
+      form.setValue('codigo', 'REQ-001');
     }
   };
 
@@ -194,8 +196,18 @@ export function RequerimientoForm({
 
       onSuccess();
       handleClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error guardando requerimiento:', error);
+      const msg =
+        error?.response?.data?.error?.message ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Error al guardar el requerimiento';
+      toast({
+        title: 'Error',
+        description: Array.isArray(msg) ? msg.join(', ') : String(msg),
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
     }

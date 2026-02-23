@@ -46,11 +46,12 @@ import {
   createHistoria,
   updateHistoria,
   getNextCodigo,
+  getNextCodigoSubproyecto,
   getHistoriaById,
 } from '@/features/proyectos/services/historias.service';
 import { getEpicasByProyecto, getEpicasBySubproyecto, type Epica } from '@/features/proyectos/services/epicas.service';
 import { getSprintsByProyecto, getSprintsBySubproyecto, type Sprint } from '@/features/proyectos/services/sprints.service';
-import { getRequerimientosFuncionalesByProyecto, type Requerimiento } from '@/features/requerimientos';
+import { getRequerimientosFuncionalesByProyecto, getRequerimientosFuncionalesBySubproyecto, type Requerimiento } from '@/features/requerimientos';
 import { apiClient, ENDPOINTS } from '@/lib/api';
 import { useCurrentUser } from '@/stores/auth.store';
 import { formatDate } from '@/lib/utils';
@@ -400,7 +401,9 @@ export function HistoriaFormModal({
       const [epicasData, sprintsData, requerimientosData, asignacionesResponse] = await Promise.all([
         subproyectoId ? getEpicasBySubproyecto(subproyectoId) : getEpicasByProyecto(proyectoId),
         subproyectoId ? getSprintsBySubproyecto(subproyectoId) : getSprintsByProyecto(proyectoId),
-        getRequerimientosFuncionalesByProyecto(proyectoId).catch(() => []),
+        (subproyectoId
+          ? getRequerimientosFuncionalesBySubproyecto(subproyectoId)
+          : getRequerimientosFuncionalesByProyecto(proyectoId)).catch(() => []),
         apiClient.get(asignacionesEndpoint).catch(() => ({ data: [] })),
       ]);
 
@@ -456,13 +459,13 @@ export function HistoriaFormModal({
   const fetchNextCodigo = async () => {
     try {
       setIsLoadingCodigo(true);
-      // Use subproyectoId or proyectoId for fetching next code
-      const idForCodigo = subproyectoId || proyectoId;
-      const nextCodigo = await getNextCodigo(idForCodigo);
+      const nextCodigo = subproyectoId
+        ? await getNextCodigoSubproyecto(subproyectoId)
+        : await getNextCodigo(proyectoId);
       form.setValue('codigo', nextCodigo);
     } catch (err) {
       console.error('Error fetching next codigo:', err);
-      form.setValue('codigo', `HU-${Date.now().toString().slice(-4)}`);
+      form.setValue('codigo', subproyectoId ? 'HU-001' : `HU-${Date.now().toString().slice(-4)}`);
     } finally {
       setIsLoadingCodigo(false);
     }
@@ -536,6 +539,13 @@ export function HistoriaFormModal({
             return;
           }
         }
+      }
+
+      // Al crear, el requerimiento es obligatorio
+      if (!isEditing && (!values.requerimientoId || values.requerimientoId === '__none__')) {
+        form.setError('requerimientoId', { message: 'Debe seleccionar un requerimiento' });
+        setIsSubmitting(false);
+        return;
       }
 
       if (isEditing) {
@@ -781,21 +791,41 @@ export function HistoriaFormModal({
                 )}
               </div>
 
-              {/* Requerimiento relacionado */}
+              {/* Requerimiento */}
+              {!isEditing && !isLoadingData && requerimientos.length === 0 && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+                  <span>
+                    No hay requerimientos disponibles para este subproyecto. Debe crear al menos un requerimiento antes de agregar historias de usuario.
+                  </span>
+                </div>
+              )}
               <FormField
                 control={form.control}
                 name="requerimientoId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Requerimiento relacionado</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange} disabled={isLoadingData}>
+                    <FormLabel>
+                      Requerimiento{!isEditing && <span className="text-destructive ml-1">*</span>}
+                    </FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isLoadingData || (!isEditing && requerimientos.length === 0)}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar requerimiento" />
+                          <SelectValue placeholder={
+                            requerimientos.length === 0 && !isLoadingData
+                              ? 'Sin requerimientos disponibles'
+                              : 'Seleccionar requerimiento'
+                          } />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="__none__">Sin requerimiento</SelectItem>
+                        {isEditing && (
+                          <SelectItem value="__none__">Sin requerimiento</SelectItem>
+                        )}
                         {requerimientos.map((req) => (
                           <SelectItem key={req.id} value={req.id.toString()}>
                             <div className="flex items-center gap-2">

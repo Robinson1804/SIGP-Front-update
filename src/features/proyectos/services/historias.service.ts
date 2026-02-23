@@ -204,6 +204,29 @@ export async function getNextCodigo(proyectoId: number | string): Promise<string
 }
 
 /**
+ * Obtener el siguiente código de HU para un subproyecto (secuencia independiente).
+ * Calcula el máximo código existente y devuelve el siguiente en formato HU-XXX.
+ */
+export async function getNextCodigoSubproyecto(subproyectoId: number | string): Promise<string> {
+  const response = await apiClient.get<HistoriaUsuario[]>(
+    ENDPOINTS.SUBPROYECTOS.HISTORIAS(subproyectoId)
+  );
+  const historias = Array.isArray(response.data) ? response.data : [];
+
+  let maxNum = 0;
+  for (const historia of historias) {
+    const match = historia.codigo?.match(/HU-(\d+)/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  }
+
+  const nextNum = String(maxNum + 1).padStart(3, '0');
+  return `HU-${nextNum}`;
+}
+
+/**
  * Obtener backlog de un proyecto (historias sin sprint asignado)
  */
 export async function getBacklog(

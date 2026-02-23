@@ -171,8 +171,46 @@ export async function deleteRequerimiento(id: number | string): Promise<void> {
 }
 
 /**
- * Contar total de requerimientos en un proyecto
- * Útil para generar códigos automáticos secuenciales (REQ-001, REQ-002, etc.)
+ * Obtener siguiente código de requerimiento para un proyecto
+ * Usa max+1 para ser robusto ante eliminaciones (REQ-001, REQ-002, ...)
+ */
+export async function getNextCodigoByProyecto(
+  proyectoId: number | string
+): Promise<string> {
+  const requerimientos = await getRequerimientosByProyecto(proyectoId);
+  let maxNum = 0;
+  for (const req of requerimientos) {
+    const match = req.codigo?.match(/REQ-(\d+)/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  }
+  return `REQ-${String(maxNum + 1).padStart(3, '0')}`;
+}
+
+/**
+ * Obtener siguiente código de requerimiento para un subproyecto
+ * Usa max+1 para ser robusto ante eliminaciones (REQ-001, REQ-002, ...)
+ * Scoped al subproyecto: independiente de los requerimientos del proyecto padre
+ */
+export async function getNextCodigoBySubproyecto(
+  subproyectoId: number | string
+): Promise<string> {
+  const requerimientos = await getRequerimientosBySubproyecto(subproyectoId);
+  let maxNum = 0;
+  for (const req of requerimientos) {
+    const match = req.codigo?.match(/REQ-(\d+)/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) maxNum = num;
+    }
+  }
+  return `REQ-${String(maxNum + 1).padStart(3, '0')}`;
+}
+
+/**
+ * @deprecated Usar getNextCodigoByProyecto en su lugar
  */
 export async function countRequerimientosByProyecto(
   proyectoId: number | string
@@ -182,8 +220,7 @@ export async function countRequerimientosByProyecto(
 }
 
 /**
- * Contar total de requerimientos en un subproyecto
- * Útil para generar códigos automáticos secuenciales (REQ-001, REQ-002, etc.)
+ * @deprecated Usar getNextCodigoBySubproyecto en su lugar
  */
 export async function countRequerimientosBySubproyecto(
   subproyectoId: number | string

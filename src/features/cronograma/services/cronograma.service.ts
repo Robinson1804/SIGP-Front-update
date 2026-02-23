@@ -607,9 +607,9 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
     'Mantenimiento': 'MANTENIMIENTO'
   };
 
-  // Separar fases (tipo proyecto) y tareas normales
-  const faseHeaders = tareas.filter(t => t.tipo === 'proyecto');
-  const tareasNormales = tareas.filter(t => t.tipo !== 'proyecto');
+  // Todas las tareas se tratan como filas normales (sin encabezados de fase especiales)
+  const faseHeaders: typeof tareas = [];
+  const tareasNormales = [...tareas];
 
   // Crear lista ordenada: fase seguida de sus tareas
   const tareasOrdenadas: typeof tareas = [];
@@ -659,22 +659,14 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
       doc.setFontSize(7);
     }
 
-    // Fila de fase (negrita y fondo especial azul)
-    if (tarea.tipo === 'proyecto') {
-      doc.setFillColor(0, 66, 114); // Azul INEI
+    // Fila alternada para todas las tareas
+    if (rowIndex % 2 === 0) {
+      doc.setFillColor(250, 250, 250);
       doc.rect(14, y, pageWidth - 28, 7, 'F');
-      doc.setTextColor(255, 255, 255); // Texto blanco
-      doc.setFont('helvetica', 'bold');
-    } else {
-      // Fila alternada para tareas normales
-      if (rowIndex % 2 === 0) {
-        doc.setFillColor(250, 250, 250);
-        doc.rect(14, y, pageWidth - 28, 7, 'F');
-      }
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      rowIndex++;
     }
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    rowIndex++;
 
     x = 14;
     const inicio = new Date(tarea.inicio);
@@ -685,10 +677,9 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
     doc.text((tarea.codigo || '-').substring(0, 12), x + 2, y + 5);
     x += cols[0].width;
 
-    // Nombre (con indentación para tareas bajo una fase)
-    const esFaseHeader = tarea.tipo === 'proyecto';
-    const nombreText = esFaseHeader ? tarea.nombre : `  ${tarea.nombre}`;
-    doc.text(nombreText.substring(0, esFaseHeader ? 40 : 35), x + 2, y + 5);
+    // Nombre
+    const nombreText = `  ${tarea.nombre}`;
+    doc.text(nombreText.substring(0, 35), x + 2, y + 5);
     x += cols[1].width;
 
     // Fase

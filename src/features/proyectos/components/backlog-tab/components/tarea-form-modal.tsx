@@ -224,11 +224,14 @@ export function TareaFormModal({
             .filter((id: number) => !isNaN(id));
 
           // Solo cargar datos del equipo si hay responsables asignados a la HU
-          if (historiaData.proyectoId && asignadoAIds.length > 0) {
+          const contenedorId = historiaData.subproyectoId || historiaData.proyectoId;
+          const asignacionesEndpoint = historiaData.subproyectoId
+            ? ENDPOINTS.RRHH.ASIGNACIONES_SUBPROYECTO(historiaData.subproyectoId)
+            : ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(historiaData.proyectoId);
+
+          if (contenedorId && asignadoAIds.length > 0) {
             try {
-              const asignacionesResponse = await apiClient.get(
-                ENDPOINTS.RRHH.ASIGNACIONES_PROYECTO(historiaData.proyectoId)
-              );
+              const asignacionesResponse = await apiClient.get(asignacionesEndpoint);
               const asignaciones = asignacionesResponse.data || [];
 
               // Filtrar solo los miembros que están asignados a la HU

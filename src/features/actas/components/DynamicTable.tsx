@@ -69,7 +69,11 @@ export function DynamicTable<T extends Record<string, any>>({
   // Normalizar data a array
   const data = useMemo(() => ensureArray<T>(rawData), [rawData]);
   const handleAdd = () => {
-    onChange([...data, { ...emptyRowTemplate, id: crypto.randomUUID() }]);
+    const maxId = data.reduce((max, item) => {
+      const itemId = typeof item.id === 'number' ? item.id : 0;
+      return Math.max(max, itemId);
+    }, 0);
+    onChange([...data, { ...emptyRowTemplate, id: maxId + 1 }]);
   };
 
   const handleRemove = (index: number) => {
