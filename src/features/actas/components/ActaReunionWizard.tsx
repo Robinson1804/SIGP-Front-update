@@ -49,6 +49,12 @@ import type {
   ActaAnexo,
 } from '@/features/documentos/types';
 
+// Helper para normalizar fechas que vienen del backend (pueden ser ISO o solo fecha)
+function normalizeDateStr(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) return '';
+  return String(dateStr).split('T')[0];
+}
+
 const STEPS = [
   { id: 1, title: 'Datos Generales', description: 'Información básica de la reunión' },
   { id: 2, title: 'Asistentes', description: 'Participantes y ausentes' },
@@ -136,7 +142,7 @@ export function ActaReunionWizard({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: acta?.nombre || '',
-      fecha: acta?.fecha || new Date().toISOString().split('T')[0],
+      fecha: normalizeDateStr(acta?.fecha) || new Date().toISOString().split('T')[0],
       tipoReunion: acta?.tipoReunion || '',
       fasePerteneciente: acta?.fasePerteneciente || '',
       horaInicio: acta?.horaInicio || '',
@@ -144,7 +150,7 @@ export function ActaReunionWizard({
       modalidad: acta?.modalidad || '',
       lugarLink: acta?.lugarLink || '',
       observaciones: acta?.observaciones || '',
-      proximaReunionFecha: acta?.proximaReunionFecha || '',
+      proximaReunionFecha: normalizeDateStr(acta?.proximaReunionFecha),
     },
   });
 
@@ -162,7 +168,7 @@ export function ActaReunionWizard({
       // Sincronizar campos del formulario
       form.reset({
         nombre: acta.nombre || '',
-        fecha: acta.fecha || new Date().toISOString().split('T')[0],
+        fecha: normalizeDateStr(acta.fecha) || new Date().toISOString().split('T')[0],
         tipoReunion: acta.tipoReunion || '',
         fasePerteneciente: acta.fasePerteneciente || '',
         horaInicio: acta.horaInicio || '',
@@ -170,7 +176,7 @@ export function ActaReunionWizard({
         modalidad: acta.modalidad || '',
         lugarLink: acta.lugarLink || '',
         observaciones: acta.observaciones || '',
-        proximaReunionFecha: acta.proximaReunionFecha || '',
+        proximaReunionFecha: normalizeDateStr(acta.proximaReunionFecha),
       });
     }
   }, [acta, form]);
@@ -222,6 +228,13 @@ export function ActaReunionWizard({
 
     await onSave({
       ...values,
+      // Convertir strings vacíos a undefined para campos opcionales con enum (evita error 400 del backend)
+      modalidad: values.modalidad || undefined,
+      fasePerteneciente: values.fasePerteneciente || undefined,
+      horaInicio: values.horaInicio || undefined,
+      horaFin: values.horaFin || undefined,
+      lugarLink: values.lugarLink || undefined,
+      observaciones: values.observaciones || undefined,
       proximaReunionFecha: values.proximaReunionFecha || null,
       asistentes: asistentesValidos,
       ausentes: ausentesValidos,

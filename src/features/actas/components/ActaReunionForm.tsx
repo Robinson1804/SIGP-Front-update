@@ -89,6 +89,12 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+// Helper para normalizar fechas que vienen del backend (pueden ser ISO o solo fecha)
+function normalizeDateStr(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) return '';
+  return String(dateStr).split('T')[0];
+}
+
 // Helper para asegurar que un valor sea un array
 function ensureArray<T>(value: T[] | string | null | undefined): T[] {
   if (!value) return [];
@@ -214,7 +220,7 @@ export function ActaReunionForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: acta?.nombre || '',
-      fecha: acta?.fecha || new Date().toISOString().split('T')[0],
+      fecha: normalizeDateStr(acta?.fecha) || new Date().toISOString().split('T')[0],
       tipoReunion: acta?.tipoReunion || '',
       fasePerteneciente: acta?.fasePerteneciente || '',
       horaInicio: acta?.horaInicio || '',
@@ -222,7 +228,7 @@ export function ActaReunionForm({
       modalidad: acta?.modalidad || '',
       lugarLink: acta?.lugarLink || '',
       observaciones: acta?.observaciones || '',
-      proximaReunionFecha: acta?.proximaReunionFecha || '',
+      proximaReunionFecha: normalizeDateStr(acta?.proximaReunionFecha),
     },
   });
 
@@ -240,7 +246,7 @@ export function ActaReunionForm({
       // Sincronizar campos del formulario
       form.reset({
         nombre: acta.nombre || '',
-        fecha: acta.fecha || new Date().toISOString().split('T')[0],
+        fecha: normalizeDateStr(acta.fecha) || new Date().toISOString().split('T')[0],
         tipoReunion: acta.tipoReunion || '',
         fasePerteneciente: acta.fasePerteneciente || '',
         horaInicio: acta.horaInicio || '',
@@ -248,7 +254,7 @@ export function ActaReunionForm({
         modalidad: acta.modalidad || '',
         lugarLink: acta.lugarLink || '',
         observaciones: acta.observaciones || '',
-        proximaReunionFecha: acta.proximaReunionFecha || '',
+        proximaReunionFecha: normalizeDateStr(acta.proximaReunionFecha),
       });
     }
   }, [acta, form]);
@@ -308,7 +314,14 @@ export function ActaReunionForm({
 
     await onSave({
       ...values,
-      // Si proximaReunionFecha está vacío, enviar null en lugar de string vacío
+      // Convertir strings vacíos a undefined para campos opcionales con enum (evita error 400 del backend)
+      modalidad: values.modalidad || undefined,
+      fasePerteneciente: values.fasePerteneciente || undefined,
+      horaInicio: values.horaInicio || undefined,
+      horaFin: values.horaFin || undefined,
+      lugarLink: values.lugarLink || undefined,
+      observaciones: values.observaciones || undefined,
+      // proximaReunionFecha vacío → null para que el backend lo acepte como campo nullable
       proximaReunionFecha: values.proximaReunionFecha || null,
       asistentes: asistentesValidos,
       ausentes: ausentesValidos,
