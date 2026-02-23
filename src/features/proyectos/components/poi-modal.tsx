@@ -2284,8 +2284,10 @@ export function SubProjectModal({
   // Opciones de área financiera (usar externas o default)
   const financialAreaOpts = externalFinancialAreaOptions || financialAreaOptions;
 
-  // Usar solo los años del proyecto padre (externalYearOptions), sin fallback al rango PGD
-  const yearOpts = (externalYearOptions && externalYearOptions.length > 0) ? externalYearOptions : [];
+  // Usar los años del proyecto padre (externalYearOptions) sin fallback al rango PGD completo
+  const yearOpts = (externalYearOptions && externalYearOptions.length > 0)
+    ? externalYearOptions
+    : [{ label: String(new Date().getFullYear()), value: String(new Date().getFullYear()) }];
 
   // Formatear nombre de usuario
   const formatUsuarioNombreLocal = (usuario: UsuarioOption): string => {

@@ -799,6 +799,12 @@ function SubprojectDetailsContent() {
   };
   const proyectoPadreFechaInicio = toDateStr((subproyecto.proyectoPadre as any)?.fechaInicio);
   const proyectoPadreFechaFin = toDateStr((subproyecto.proyectoPadre as any)?.fechaFin);
+  const proyectoPadreAnios: number[] | null = (subproyecto.proyectoPadre as any)?.anios ?? null;
+  const yearOptionsForModal = (proyectoPadreAnios && proyectoPadreAnios.length > 0)
+    ? proyectoPadreAnios.map(y => ({ label: String(y), value: String(y) }))
+    : (subproyecto.anios && subproyecto.anios.length > 0)
+      ? subproyecto.anios.map(y => ({ label: String(y), value: String(y) }))
+      : [{ label: String(new Date().getFullYear()), value: String(new Date().getFullYear()) }];
 
   return (
     <AppLayout
@@ -1073,6 +1079,7 @@ function SubprojectDetailsContent() {
           coordinadores={coordinadoresData}
           patrocinadores={patrocinadorOptions}
           responsibleOptions={responsibleOptions}
+          yearOptions={yearOptionsForModal}
           existingSubProjects={[]}
           projectFechaInicio={proyectoPadreFechaInicio}
           projectFechaFin={proyectoPadreFechaFin}
