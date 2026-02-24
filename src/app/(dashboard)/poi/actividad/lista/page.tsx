@@ -71,7 +71,7 @@ import { useAuth } from '@/stores';
 import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
 import { getTareasByActividad, createTarea, updateTarea, deleteTarea } from '@/features/actividades/services/tareas-kanban.service';
 import { getSubtareasByTarea, createSubtarea, updateSubtarea, deleteSubtarea } from '@/features/actividades/services/subtareas.service';
-import { verificarTareasFinalizadas, finalizarActividad } from '@/features/actividades/services/actividades.service';
+import { verificarTareasFinalizadas, finalizarActividad, getActividadById } from '@/features/actividades/services/actividades.service';
 import type { TareaKanban, Subtarea as SubtareaBackend } from '@/features/actividades/types';
 import { jsPDF } from 'jspdf';
 
@@ -1972,10 +1972,29 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
         const savedProjectData = localStorage.getItem('selectedProject');
         if (savedProjectData) {
             const projectData = JSON.parse(savedProjectData);
-            setProject(projectData);
             if (projectData.type !== 'Actividad') {
                 router.push(paths.poi.base);
+                return;
             }
+            setProject(projectData);
+            // Re-fetch estado actual desde la API para garantizar que la UI refleje
+            // el estado real (ej: si fue finalizada en otra sesión o por otro usuario)
+            getActividadById(projectData.id).then(actividadFresh => {
+                const estadoActual = actividadFresh.estado as string;
+                // Mapear 'En desarrollo' del backend al status del frontend
+                const statusMapped =
+                    estadoActual === 'En desarrollo' ? 'En desarrollo' :
+                    estadoActual === 'Finalizado' ? 'Finalizado' :
+                    estadoActual === 'Pendiente' ? 'Pendiente' :
+                    projectData.status;
+                if (statusMapped !== projectData.status) {
+                    const updated = { ...projectData, status: statusMapped };
+                    setProject(updated);
+                    localStorage.setItem('selectedProject', JSON.stringify(updated));
+                }
+            }).catch(() => {
+                // Si falla la API, usar los datos del localStorage
+            });
         } else {
             router.push(paths.poi.base);
         }
@@ -2722,8 +2741,13 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                     if (project?.id) {
                                         await finalizarActividad(project.id);
                                         setIsFinalizarModalOpen(false);
-                                        // Actualizar el estado del proyecto en la UI
-                                        setProject(prev => prev ? { ...prev, status: 'Finalizado' } : null);
+                                        // Actualizar el estado del proyecto en la UI y en localStorage
+                                        setProject(prev => {
+                                            if (!prev) return null;
+                                            const updated = { ...prev, status: 'Finalizado' as const };
+                                            localStorage.setItem('selectedProject', JSON.stringify(updated));
+                                            return updated;
+                                        });
                                         toast({
                                             title: 'Actividad finalizada',
                                             description: 'La actividad ha sido finalizada exitosamente.',
