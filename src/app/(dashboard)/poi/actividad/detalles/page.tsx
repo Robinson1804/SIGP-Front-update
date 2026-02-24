@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { paths } from '@/lib/paths';
 import { useAuth, usePGD } from '@/stores';
 import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
-import { deleteActividad, getActividadById } from '@/features/actividades/services/actividades.service';
+import { deleteActividad, getActividadById, finalizarActividad } from '@/features/actividades/services/actividades.service';
 import { getSubactividadesByActividad } from '@/features/actividades/services/subactividades.service';
 import type { Subactividad } from '@/features/actividades/types';
 import { useToast } from '@/lib/hooks/use-toast';
@@ -116,6 +116,7 @@ function ActividadDetailsContent() {
     // Estado para los nombres resueltos de responsables
     const [responsablesNombres, setResponsablesNombres] = React.useState<string[]>([]);
     const [subactividades, setSubactividades] = React.useState<Subactividad[]>([]);
+    const [isFinalizarActividadModalOpen, setIsFinalizarActividadModalOpen] = React.useState(false);
 
     // Determinar rol del usuario - ADMIN tiene acceso total
     const userRole = user?.role;
@@ -243,6 +244,10 @@ function ActividadDetailsContent() {
             try {
                 const subs = await getSubactividadesByActividad(project.id);
                 setSubactividades(subs);
+                // Si todas las subactividades están finalizadas y la actividad aún no lo está, mostrar modal
+                if (subs.length > 0 && subs.every(s => s.estado === 'Finalizado') && project?.status !== 'Finalizado') {
+                    setIsFinalizarActividadModalOpen(true);
+                }
             } catch {
                 setSubactividades([]);
             }
@@ -594,6 +599,65 @@ function ActividadDetailsContent() {
                 title="AVISO"
                 message="La Actividad será eliminada"
             />
+
+            {/* Modal de finalización de actividad (cuando todas sus subactividades están finalizadas) */}
+            <Dialog open={isFinalizarActividadModalOpen} onOpenChange={setIsFinalizarActividadModalOpen}>
+                <DialogContent className="sm:max-w-md p-6" showCloseButton={false}>
+                    <DialogHeader className="mb-4">
+                        <DialogTitle className="text-xl font-semibold text-gray-800">
+                            Todas las subactividades están finalizadas
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3 text-sm text-gray-600 mb-6">
+                        <p>Todas las subactividades de esta actividad han sido completadas.</p>
+                        <p className="font-medium">¿Qué desea hacer?</p>
+                        <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li><strong>Continuar:</strong> La actividad permanecerá en estado &quot;En desarrollo&quot; y podrá seguir modificando o creando subactividades.</li>
+                            <li><strong>Finalizar actividad:</strong> La actividad cambiará a estado &quot;Finalizado&quot; y no se podrán crear más subactividades ni tareas.</li>
+                        </ul>
+                    </div>
+                    <DialogFooter className="flex gap-2 sm:justify-end">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsFinalizarActividadModalOpen(false)}
+                            className="flex-1 sm:flex-none"
+                        >
+                            Continuar modificando
+                        </Button>
+                        <Button
+                            variant="default"
+                            onClick={async () => {
+                                try {
+                                    if (project?.id) {
+                                        await finalizarActividad(project.id);
+                                        setIsFinalizarActividadModalOpen(false);
+                                        setProject(prev => {
+                                            if (!prev) return null;
+                                            const updated = { ...prev, status: 'Finalizado' as const };
+                                            localStorage.setItem('selectedProject', JSON.stringify(updated));
+                                            return updated;
+                                        });
+                                        toast({
+                                            title: 'Actividad finalizada',
+                                            description: 'La actividad ha sido finalizada exitosamente.',
+                                        });
+                                    }
+                                } catch (error) {
+                                    console.error('Error al finalizar actividad:', error);
+                                    toast({
+                                        title: 'Error al finalizar',
+                                        description: 'No se pudo finalizar la actividad. Intente de nuevo.',
+                                        variant: 'destructive',
+                                    });
+                                }
+                            }}
+                            className="flex-1 sm:flex-none bg-[#004272] hover:bg-[#003562]"
+                        >
+                            Finalizar actividad
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

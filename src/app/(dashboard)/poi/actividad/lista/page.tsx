@@ -72,7 +72,7 @@ import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service'
 import { getTareasByActividad, createTarea, updateTarea, deleteTarea } from '@/features/actividades/services/tareas-kanban.service';
 import { getSubtareasByTarea, createSubtarea, updateSubtarea, deleteSubtarea } from '@/features/actividades/services/subtareas.service';
 import { verificarTareasFinalizadas, finalizarActividad, getActividadById } from '@/features/actividades/services/actividades.service';
-import { getTareasBySubactividad, verificarTareasFinalizadasSubactividad, finalizarSubactividad } from '@/features/actividades/services/subactividades.service';
+import { getTareasBySubactividad, verificarTareasFinalizadasSubactividad, finalizarSubactividad, getSubactividadesByActividad } from '@/features/actividades/services/subactividades.service';
 import type { TareaKanban, Subtarea as SubtareaBackend } from '@/features/actividades/types';
 import { jsPDF } from 'jspdf';
 
@@ -1950,6 +1950,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
     type Implementador = { usuarioId: number; nombre: string };
     const [implementadores, setImplementadores] = useState<Implementador[]>([]);
     const [loadingTasks, setLoadingTasks] = useState(false);
+    const [hasSubactividades, setHasSubactividades] = useState(false);
 
     const userRole = user?.role;
     const isAdmin = userRole === ROLES.ADMIN;
@@ -2037,6 +2038,14 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
         };
         cargarImplementadores();
     }, [project?.id]);
+
+    // Cargar subactividades para saber si la actividad tiene subactividades (solo en modo actividad, no subactividad)
+    React.useEffect(() => {
+        if (subactividadId || !project?.id) return;
+        getSubactividadesByActividad(project.id)
+            .then(subs => setHasSubactividades(subs.length > 0))
+            .catch(() => setHasSubactividades(false));
+    }, [project?.id, subactividadId]);
 
     // Cargar tareas desde el backend
     React.useEffect(() => {
@@ -2221,8 +2230,8 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
             }
 
             // Verificar si todas las tareas están finalizadas para mostrar modal de finalización
-            // Solo mostrar si la actividad/subactividad NO está ya finalizada
-            if (project?.status !== 'Finalizado') {
+            // Solo mostrar si la actividad/subactividad NO está ya finalizada Y (si es actividad sin subactividades O si es subactividad)
+            if (project?.status !== 'Finalizado' && (subactividadId || !hasSubactividades)) {
                 const verificacion = subactividadId
                     ? await verificarTareasFinalizadasSubactividad(subactividadId)
                     : await verificarTareasFinalizadas(project!.id);
@@ -2315,9 +2324,11 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
             }));
 
             // Verificar si todas las tareas están finalizadas para mostrar modal de finalización
-            if (project?.id && project?.status !== 'Finalizado') {
+            if (project?.status !== 'Finalizado' && (subactividadId || !hasSubactividades)) {
                 try {
-                    const verificacion = await verificarTareasFinalizadas(project.id);
+                    const verificacion = subactividadId
+                        ? await verificarTareasFinalizadasSubactividad(subactividadId)
+                        : await verificarTareasFinalizadas(project!.id);
                     if (verificacion.todasFinalizadas) {
                         setIsFinalizarModalOpen(true);
                     }
@@ -2412,6 +2423,13 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                     </div>
                 </div>
 
+                {(hasSubactividades && !subactividadId) && (
+                    <div className="flex items-center gap-2 mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                        <span>Esta actividad tiene subactividades. Las tareas se gestionan desde cada subactividad.</span>
+                    </div>
+                )}
+
                 {/* Tabla de tareas */}
                 <div className="flex-1 overflow-y-auto max-h-[calc(100vh-320px)]">
                     <div className="bg-white rounded-lg border">
@@ -2434,7 +2452,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                                     filteredTasks.map(task => (
                                         <React.Fragment key={task.id}>
                                             {/* Fila de Tarea */}
-                                            <TableRow className="bg-white hover:bg-gray-50">
+                                            <TableRow className={cn("hover:bg-gray-50", task.state === 'Finalizado' ? "bg-green-50" : "bg-white")}>
                                                 <TableCell className="w-12">
                                                     {task.subtasks.length > 0 ? (
                                                         <Button
@@ -2453,7 +2471,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                                                         <div className="w-8" />
                                                     )}
                                                 </TableCell>
-                                                <TableCell className={cn("font-medium", task.state === 'Finalizado' && "line-through text-gray-500")}>
+                                                <TableCell className={cn("font-medium", task.state === 'Finalizado' && "line-through text-green-700")}>
                                                     {task.id}
                                                 </TableCell>
                                                 <TableCell className={cn(task.state === 'Finalizado' && "line-through text-gray-500")}>
@@ -2482,7 +2500,6 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
-                                                                {/* Si la tarea está Finalizada: Ver documento, Editar, Eliminar (sin Crear Subtarea) */}
                                                                 {task.state === 'Finalizado' ? (
                                                                     <>
                                                                         {/* Ver documento - disponible para Admin, Coordinador e Implementador asignado */}
@@ -2495,29 +2512,14 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                                                                                 Ver documento
                                                                             </DropdownMenuItem>
                                                                         )}
-                                                                        {/* Editar - solo Scrum Master */}
-                                                                        {canManageTasks && (
-                                                                            <DropdownMenuItem onClick={() => setTimeout(() => {
-                                                                                setEditingTask(task);
-                                                                                setIsTaskModalOpen(true);
-                                                                            }, 0)}>
-                                                                                <Pencil className="h-4 w-4 mr-2" />
-                                                                                Editar
-                                                                            </DropdownMenuItem>
-                                                                        )}
-                                                                        {/* Eliminar - solo Scrum Master */}
-                                                                        {canManageTasks && (
-                                                                            <DropdownMenuItem
-                                                                                className="text-red-500"
-                                                                                onClick={() => setTimeout(() => {
-                                                                                    setTaskToDelete({ id: task.id, type: 'tarea' });
-                                                                                    setIsDeleteModalOpen(true);
-                                                                                }, 0)}
-                                                                            >
-                                                                                <Trash2 className="h-4 w-4 mr-2" />
-                                                                                Eliminar
-                                                                            </DropdownMenuItem>
-                                                                        )}
+                                                                        {/* Ver detalles - abre el modal en modo solo lectura */}
+                                                                        <DropdownMenuItem onClick={() => setTimeout(() => {
+                                                                            setEditingTask(task);
+                                                                            setIsTaskModalOpen(true);
+                                                                        }, 0)}>
+                                                                            <FileText className="h-4 w-4 mr-2" />
+                                                                            Ver detalles
+                                                                        </DropdownMenuItem>
                                                                     </>
                                                                 ) : (
                                                                     <>
@@ -2595,10 +2597,18 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
                                                                 <DropdownMenuContent align="end">
-                                                                    {project?.status !== 'Finalizado' && (
+                                                                    {subtask.state === 'Finalizado' ? (
+                                                                        <DropdownMenuItem onClick={() => setTimeout(() => {
+                                                                            setParentTaskForSubtask(task);
+                                                                            setEditingSubtaskFromTable(subtask);
+                                                                            setIsSubtaskModalOpen(true);
+                                                                        }, 0)}>
+                                                                            <Eye className="h-4 w-4 mr-2" />
+                                                                            Ver detalle
+                                                                        </DropdownMenuItem>
+                                                                    ) : project?.status !== 'Finalizado' ? (
                                                                         <>
                                                                             <DropdownMenuItem onClick={() => setTimeout(() => {
-                                                                                // Editar subtarea - abrir modal de subtarea
                                                                                 setParentTaskForSubtask(task);
                                                                                 setEditingSubtaskFromTable(subtask);
                                                                                 setIsSubtaskModalOpen(true);
@@ -2614,8 +2624,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                                                                                 Eliminar
                                                                             </DropdownMenuItem>
                                                                         </>
-                                                                    )}
-                                                                    {project?.status === 'Finalizado' && (
+                                                                    ) : (
                                                                         <div className="px-2 py-1.5 text-sm text-gray-500">
                                                                             No disponible - Actividad finalizada
                                                                         </div>
@@ -2638,7 +2647,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                             </TableBody>
 
                             {/* Botón Agregar tarea - solo Scrum Master */}
-                            {canManageTasks && (
+                            {canManageTasks && !(hasSubactividades && !subactividadId) && (
                                 <tfoot className="border-t">
                                     <TableRow>
                                         <TableCell colSpan={9}>
@@ -2746,7 +2755,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                             onClick={() => setIsFinalizarModalOpen(false)}
                             className="flex-1 sm:flex-none"
                         >
-                            Continuar creando tareas
+                            Continuar {subactividadId ? 'creando/modificando tareas' : 'creando tareas'}
                         </Button>
                         <Button
                             variant="default"
