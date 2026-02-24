@@ -63,6 +63,14 @@ import {
   type Subproyecto,
 } from "../services/subproyectos.service";
 import {
+  createSubactividad,
+  getSubactividadesByActividad,
+  updateSubactividad,
+  deleteSubactividad as deleteSubactividadService,
+  getNextSubactividadCodigo,
+} from "@/features/actividades/services/subactividades.service";
+import type { Subactividad as SubactividadBackend } from "@/features/actividades/types";
+import {
   getAccionesEstrategicas,
   getAccionesEstrategicasByPGD,
   getPGDs,
@@ -139,6 +147,23 @@ const AREAS_DISPONIBLES = [
   "Oficina de Tecnologías de la Información (OTIN)",
   "Oficina de Recursos Humanos",
 ];
+
+/** Representación local de una subactividad pendiente de guardar o ya guardada */
+type SubActividadItem = {
+  id: string; // Temporal: 'sa-<timestamp>', persistido: string del número backend
+  name: string;
+  description?: string;
+  gestorId?: number;
+  gestor?: string; // nombre a mostrar
+  coordinadorId?: number;
+  coordinador?: string;
+  coordinacion?: string;
+  financialArea?: string[];
+  years?: string[];
+  amount?: number;
+  fechaInicio?: string;
+  fechaFin?: string;
+};
 
 /**
  * Genera opciones de años basadas en el rango del PGD
@@ -380,8 +405,8 @@ export function POIFullModal({
 }) {
     const { toast } = useToast();
 
-    // Vista actual: 'main' o 'subproject'
-    const [currentView, setCurrentView] = useState<'main' | 'subproject'>('main');
+    // Vista actual: 'main', 'subproject' o 'subactividad'
+    const [currentView, setCurrentView] = useState<'main' | 'subproject' | 'subactividad'>('main');
     const [formData, setFormData] = useState<Partial<Project> & { accionEstrategicaId?: number; coordinadorId?: number; scrumMasterId?: number; areaUsuaria?: number }>({});
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [subProjects, setSubProjects] = useState<SubProject[]>([]);
@@ -389,6 +414,12 @@ export function POIFullModal({
     const [subProjectForm, setSubProjectForm] = useState<Partial<SubProject>>({});
     const [subProjectErrors, setSubProjectErrors] = useState<{[key: string]: string}>({});
     const [isSaving, setIsSaving] = useState(false);
+
+    // Estado para subactividades (solo visible cuando type === 'Actividad')
+    const [subActividades, setSubActividades] = useState<SubActividadItem[]>([]);
+    const [editingSubActividad, setEditingSubActividad] = useState<SubActividadItem | null>(null);
+    const [subActividadForm, setSubActividadForm] = useState<Partial<SubActividadItem>>({});
+    const [subActividadErrors, setSubActividadErrors] = useState<{[key: string]: string}>({});
 
     // Estado para el modal de error/advertencia
     const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string }>({
@@ -606,6 +637,32 @@ export function POIFullModal({
                     areaUsuaria: (project as any).areaUsuaria?.id || (project as any).areaUsuariaId || undefined,
                 });
                 setSubProjects(project.subProjects || []);
+
+                // Cargar subactividades existentes si es tipo Actividad
+                if (project.type === 'Actividad' && project.id) {
+                    try {
+                        const existingSubs = await getSubactividadesByActividad(project.id);
+                        setSubActividades(existingSubs.map((s: SubactividadBackend) => ({
+                            id: s.id.toString(),
+                            name: s.nombre,
+                            description: s.descripcion || undefined,
+                            gestorId: s.gestorId || undefined,
+                            gestor: s.gestor ? `${s.gestor.nombre} ${s.gestor.apellido}`.trim() : undefined,
+                            coordinadorId: s.coordinadorId || undefined,
+                            coordinador: s.coordinador ? `${s.coordinador.nombre} ${s.coordinador.apellido}`.trim() : undefined,
+                            coordinacion: s.coordinacion || undefined,
+                            financialArea: s.areasFinancieras || [],
+                            years: s.anios?.map(String) || [],
+                            amount: s.montoAnual || undefined,
+                            fechaInicio: s.fechaInicio ? s.fechaInicio.split('T')[0] : undefined,
+                            fechaFin: s.fechaFin ? s.fechaFin.split('T')[0] : undefined,
+                        })));
+                    } catch {
+                        setSubActividades([]);
+                    }
+                } else {
+                    setSubActividades([]);
+                }
             } else {
                 setFormData({
                     id: '',
@@ -631,12 +688,16 @@ export function POIFullModal({
                     areaUsuaria: undefined,
                 });
                 setSubProjects([]);
+                setSubActividades([]);
             }
             setErrors({});
             setCurrentView('main');
             setEditingSubProject(null);
             setSubProjectForm({});
             setSubProjectErrors({});
+            setEditingSubActividad(null);
+            setSubActividadForm({});
+            setSubActividadErrors({});
         };
 
         initialize();
@@ -788,6 +849,41 @@ export function POIFullModal({
         }
 
         setSubProjectErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const validateSubActividad = () => {
+        const newErrors: {[key: string]: string} = {};
+        if (!subActividadForm.name) newErrors.name = "El nombre es requerido.";
+        if (!subActividadForm.gestorId) newErrors.gestor = "El gestor es requerido.";
+        if (!subActividadForm.years || subActividadForm.years.length === 0) newErrors.years = "El año es requerido.";
+        if (!subActividadForm.amount) {
+            newErrors.amount = "El monto es requerido.";
+        } else {
+            const montoActividad = formData.annualAmount || 0;
+            const montoSubactividad = subActividadForm.amount || 0;
+            const sumOtros = subActividades
+                .filter(sa => sa.id !== editingSubActividad?.id)
+                .reduce((sum, sa) => sum + (sa.amount || 0), 0);
+            if (montoSubactividad > montoActividad) {
+                newErrors.amount = `El monto no puede exceder el monto de la actividad (S/ ${montoActividad.toLocaleString('es-PE')}).`;
+            } else if (sumOtros + montoSubactividad > montoActividad) {
+                const disponible = montoActividad - sumOtros;
+                newErrors.amount = `El monto excede el disponible. Disponible: S/ ${disponible.toLocaleString('es-PE')}.`;
+            }
+        }
+        const fmtFecha = (iso: string) =>
+            new Date(iso + 'T12:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+        if (subActividadForm.fechaInicio && subActividadForm.fechaFin && subActividadForm.fechaFin < subActividadForm.fechaInicio) {
+            newErrors.fechaFin = 'La fecha fin debe ser posterior a la fecha de inicio.';
+        }
+        if (formData.startDate && subActividadForm.fechaInicio && subActividadForm.fechaInicio < formData.startDate) {
+            newErrors.fechaInicio = `Debe ser igual o posterior al ${fmtFecha(formData.startDate)}.`;
+        }
+        if (formData.endDate && subActividadForm.fechaFin && subActividadForm.fechaFin > formData.endDate) {
+            newErrors.fechaFin = `Debe ser igual o anterior al ${fmtFecha(formData.endDate)}.`;
+        }
+        setSubActividadErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
@@ -1169,6 +1265,70 @@ export function POIFullModal({
                 }
             }
 
+            // Guardar subactividades si es tipo Actividad
+            const actividadId = savedResult?.id || (project?.id ? parseInt(project.id, 10) : null);
+            if (formData.type === 'Actividad' && actividadId) {
+                try {
+                    // Obtener subactividades existentes del backend
+                    const existingSubs = isEditMode
+                        ? await getSubactividadesByActividad(actividadId)
+                        : [];
+                    const currentSubIds = subActividades
+                        .filter(sa => !sa.id.startsWith('sa-'))
+                        .map(sa => parseInt(sa.id, 10));
+
+                    // Eliminar las que ya no están
+                    for (const exSub of existingSubs) {
+                        if (!currentSubIds.includes(exSub.id)) {
+                            await deleteSubactividadService(exSub.id);
+                        }
+                    }
+
+                    // Crear o actualizar
+                    for (const sa of subActividades) {
+                        const isNew = sa.id.startsWith('sa-');
+                        const aniosNumeros = sa.years?.map(y => parseInt(y, 10)).filter(n => !isNaN(n)) || [];
+                        const gestorFound = scrumMasters.find(sm => sm.id === sa.gestorId);
+                        const coordinadorFound = coordinadores.find(c => c.id === sa.coordinadorId);
+
+                        if (isNew) {
+                            await createSubactividad({
+                                actividadPadreId: actividadId,
+                                nombre: sa.name,
+                                descripcion: sa.description,
+                                clasificacion: formData.classification as 'Al ciudadano' | 'Gestion interna' | undefined,
+                                accionEstrategicaId: formData.accionEstrategicaId,
+                                gestorId: gestorFound?.id,
+                                coordinadorId: coordinadorFound?.id,
+                                coordinacion: sa.coordinacion,
+                                areasFinancieras: sa.financialArea,
+                                montoAnual: sa.amount,
+                                anios: aniosNumeros,
+                                fechaInicio: sa.fechaInicio,
+                                fechaFin: sa.fechaFin,
+                            });
+                        } else {
+                            const subId = parseInt(sa.id, 10);
+                            await updateSubactividad(subId, {
+                                nombre: sa.name,
+                                descripcion: sa.description,
+                                gestorId: gestorFound?.id,
+                                coordinadorId: coordinadorFound?.id,
+                                coordinacion: sa.coordinacion,
+                                areasFinancieras: sa.financialArea,
+                                montoAnual: sa.amount,
+                                anios: aniosNumeros,
+                                fechaInicio: sa.fechaInicio,
+                                fechaFin: sa.fechaFin,
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Error al guardar subactividades:', error);
+                    // No bloquear el guardado principal
+                }
+            }
+
             // Crear objeto Project para callback con los datos actualizados del backend
             const savedProject: Project = {
                 ...formData as Project,
@@ -1332,6 +1492,63 @@ export function POIFullModal({
 
     const isEditMode = !!project?.id && project.id !== '';
     const isProyecto = formData.type === 'Proyecto';
+    const isActividad = formData.type === 'Actividad';
+
+    // Años disponibles para subactividades (subconjunto de la actividad padre)
+    const subActividadYearOptions: MultiSelectOption[] = formData.years?.map(y => ({ label: y, value: y })) || [];
+
+    // Subactividad handlers
+    const openSubActividadForm = (sa?: SubActividadItem) => {
+        if (sa) {
+            setEditingSubActividad(sa);
+            setSubActividadForm({ ...sa });
+        } else {
+            setEditingSubActividad(null);
+            setSubActividadForm({
+                id: '',
+                name: '',
+                description: '',
+                gestorId: undefined,
+                gestor: '',
+                coordinadorId: undefined,
+                coordinador: '',
+                coordinacion: '',
+                financialArea: [],
+                years: [],
+                amount: 0,
+                fechaInicio: '',
+                fechaFin: '',
+            });
+        }
+        setSubActividadErrors({});
+        setCurrentView('subactividad');
+    };
+
+    const saveSubActividad = () => {
+        if (!validateSubActividad()) return;
+        if (editingSubActividad) {
+            setSubActividades(prev => prev.map(sa =>
+                sa.id === editingSubActividad.id ? { ...subActividadForm as SubActividadItem, id: sa.id } : sa
+            ));
+        } else {
+            setSubActividades(prev => [...prev, { ...subActividadForm as SubActividadItem, id: `sa-${Date.now()}` }]);
+        }
+        setCurrentView('main');
+        setEditingSubActividad(null);
+        setSubActividadForm({});
+    };
+
+    const cancelSubActividad = () => {
+        setCurrentView('main');
+        setEditingSubActividad(null);
+        setSubActividadForm({});
+        setSubActividadErrors({});
+    };
+
+    const deleteSubActividad = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setSubActividades(prev => prev.filter(sa => sa.id !== id));
+    };
 
     // Opciones de responsables para subproyecto
     // Listar TODOS los desarrolladores disponibles
@@ -1461,6 +1678,60 @@ export function POIFullModal({
                                                                     </TableCell>
                                                                 </TableRow>);
                                                             })}
+                                                        </TableBody>
+                                                    </Table>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Sección de subactividades - solo para tipo Actividad */}
+                                        {isActividad && (
+                                            <div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <label className="text-sm font-medium">Agregar subactividades</label>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        className="h-8 px-3 bg-[#018CD1] hover:bg-[#0177b3] text-white"
+                                                        onClick={() => openSubActividadForm()}
+                                                    >
+                                                        <Plus className="h-4 w-4 mr-1" />
+                                                        Agregar
+                                                    </Button>
+                                                </div>
+                                                {subActividades.length > 0 && (
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Subactividad</TableHead>
+                                                                <TableHead>Monto</TableHead>
+                                                                <TableHead>Gestor</TableHead>
+                                                                <TableHead className="w-10"></TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {subActividades.map((sa) => (
+                                                                <TableRow
+                                                                    key={sa.id}
+                                                                    className="cursor-pointer hover:bg-gray-100"
+                                                                    onClick={() => openSubActividadForm(sa)}
+                                                                >
+                                                                    <TableCell>{sa.name}</TableCell>
+                                                                    <TableCell>S/ {sa.amount?.toLocaleString('es-PE')}</TableCell>
+                                                                    <TableCell>{sa.gestor}</TableCell>
+                                                                    <TableCell>
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                                            onClick={(e) => deleteSubActividad(sa.id, e)}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
                                                         </TableBody>
                                                     </Table>
                                                 )}
@@ -1808,6 +2079,217 @@ export function POIFullModal({
                                  {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                                  Guardar
                              </Button>
+                        </DialogFooter>
+                    </>
+                ) : currentView === 'subactividad' ? (
+                    /* Vista de Subactividad */
+                    <>
+                        <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+                            <DialogTitle>{editingSubActividad ? 'EDITAR' : 'REGISTRAR'} SUBACTIVIDAD</DialogTitle>
+                            <Button type="button" variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white" onClick={cancelSubActividad}>
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </DialogHeader>
+                        <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            <div>
+                                <label className="text-sm font-medium">Nombre *</label>
+                                <Input
+                                    placeholder="Ingresar nombre"
+                                    value={subActividadForm.name || ''}
+                                    onChange={(e) => {
+                                        setSubActividadForm(p => ({ ...p, name: e.target.value }));
+                                        if (subActividadErrors.name) setSubActividadErrors(prev => ({...prev, name: ''}));
+                                    }}
+                                    className={subActividadErrors.name ? 'border-red-500' : ''}
+                                />
+                                {subActividadErrors.name && <p className="text-red-500 text-xs mt-1">{subActividadErrors.name}</p>}
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Descripción</label>
+                                <Textarea
+                                    placeholder="Ingresar descripción"
+                                    value={subActividadForm.description || ''}
+                                    onChange={(e) => setSubActividadForm(p => ({ ...p, description: e.target.value }))}
+                                    className="min-h-[80px]"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Coordinación</label>
+                                <Select
+                                    value={subActividadForm.coordinacion || ''}
+                                    onValueChange={(value) => setSubActividadForm(p => ({ ...p, coordinacion: value }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar coordinación" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {AREAS_DISPONIBLES.map((area) => (
+                                            <SelectItem key={area} value={area}>{area}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Coordinador</label>
+                                <Select
+                                    value={subActividadForm.coordinadorId?.toString() || ''}
+                                    onValueChange={(value) => {
+                                        const found = coordinadores.find(c => c.id.toString() === value);
+                                        setSubActividadForm(p => ({
+                                            ...p,
+                                            coordinadorId: found?.id,
+                                            coordinador: found ? formatUsuarioNombre(found) : '',
+                                        }));
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar coordinador" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {coordinadores.map((c) => (
+                                            <SelectItem key={c.id} value={c.id.toString()}>
+                                                {formatUsuarioNombre(c)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Gestor *</label>
+                                <Select
+                                    value={subActividadForm.gestorId?.toString() || ''}
+                                    onValueChange={(value) => {
+                                        const found = scrumMasters.find(sm => sm.id.toString() === value);
+                                        setSubActividadForm(p => ({
+                                            ...p,
+                                            gestorId: found?.id,
+                                            gestor: found ? formatUsuarioNombre(found) : '',
+                                        }));
+                                        if (subActividadErrors.gestor) setSubActividadErrors(prev => ({...prev, gestor: ''}));
+                                    }}
+                                >
+                                    <SelectTrigger className={subActividadErrors.gestor ? 'border-red-500' : ''}>
+                                        <SelectValue placeholder="Seleccionar gestor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {scrumMasters.map((sm) => (
+                                            <SelectItem key={sm.id} value={sm.id.toString()}>
+                                                {formatUsuarioNombre(sm)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {subActividadErrors.gestor && <p className="text-red-500 text-xs mt-1">{subActividadErrors.gestor}</p>}
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Área Financiera</label>
+                                <MultiSelect
+                                    options={financialAreaOptions}
+                                    selected={subActividadForm.financialArea || []}
+                                    onChange={(selected) => setSubActividadForm(p => ({ ...p, financialArea: selected }))}
+                                    placeholder="Seleccionar área(s)"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Año *</label>
+                                <MultiSelect
+                                    options={subActividadYearOptions}
+                                    selected={subActividadForm.years || []}
+                                    onChange={(selected) => {
+                                        setSubActividadForm(p => ({ ...p, years: selected }));
+                                        if (subActividadErrors.years) setSubActividadErrors(prev => ({...prev, years: ''}));
+                                    }}
+                                    className={subActividadErrors.years ? 'border-red-500' : ''}
+                                    placeholder="Seleccionar año(s)"
+                                />
+                                {subActividadErrors.years && <p className="text-red-500 text-xs mt-1">{subActividadErrors.years}</p>}
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Monto anual *</label>
+                                {formData.annualAmount && (
+                                    <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded border border-blue-200 mb-2">
+                                        <div className="flex justify-between">
+                                            <span>Monto de la actividad:</span>
+                                            <span className="font-semibold">S/ {(formData.annualAmount || 0).toLocaleString('es-PE')}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Asignado a subactividades:</span>
+                                            <span className="font-semibold">S/ {subActividades
+                                                .filter(sa => sa.id !== editingSubActividad?.id)
+                                                .reduce((sum, sa) => sum + (sa.amount || 0), 0)
+                                                .toLocaleString('es-PE')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-green-700 font-medium border-t border-blue-300 pt-1 mt-1">
+                                            <span>Disponible:</span>
+                                            <span>S/ {((formData.annualAmount || 0) - subActividades
+                                                .filter(sa => sa.id !== editingSubActividad?.id)
+                                                .reduce((sum, sa) => sum + (sa.amount || 0), 0))
+                                                .toLocaleString('es-PE')}</span>
+                                        </div>
+                                    </div>
+                                )}
+                                <Input
+                                    type="number"
+                                    placeholder="Ingresar monto anual"
+                                    value={subActividadForm.amount || ''}
+                                    onChange={(e) => {
+                                        setSubActividadForm(p => ({ ...p, amount: Number(e.target.value) }));
+                                        if (subActividadErrors.amount) setSubActividadErrors(prev => ({...prev, amount: ''}));
+                                    }}
+                                    className={subActividadErrors.amount ? 'border-red-500' : ''}
+                                />
+                                {subActividadErrors.amount && <p className="text-red-500 text-xs mt-1">{subActividadErrors.amount}</p>}
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-medium">Fechas de la Subactividad</span>
+                                    {(formData.startDate || formData.endDate) && (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                                            Rango de la actividad: {formData.startDate || '—'} a {formData.endDate || '—'}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm text-muted-foreground">Fecha Inicio</label>
+                                        <Input
+                                            type="date"
+                                            value={subActividadForm.fechaInicio || ''}
+                                            onChange={(e) => {
+                                                setSubActividadForm(p => ({ ...p, fechaInicio: e.target.value }));
+                                                if (subActividadErrors.fechaInicio) setSubActividadErrors(prev => ({...prev, fechaInicio: ''}));
+                                            }}
+                                            min={formData.startDate || undefined}
+                                            max={formData.endDate || undefined}
+                                            className={subActividadErrors.fechaInicio ? 'border-red-500' : ''}
+                                        />
+                                        {subActividadErrors.fechaInicio && <p className="text-red-500 text-xs mt-1">{subActividadErrors.fechaInicio}</p>}
+                                    </div>
+                                    <div>
+                                        <label className="text-sm text-muted-foreground">Fecha Fin</label>
+                                        <Input
+                                            type="date"
+                                            value={subActividadForm.fechaFin || ''}
+                                            onChange={(e) => {
+                                                setSubActividadForm(p => ({ ...p, fechaFin: e.target.value }));
+                                                if (subActividadErrors.fechaFin) setSubActividadErrors(prev => ({...prev, fechaFin: ''}));
+                                            }}
+                                            min={subActividadForm.fechaInicio || formData.startDate || undefined}
+                                            max={formData.endDate || undefined}
+                                            className={subActividadErrors.fechaFin ? 'border-red-500' : ''}
+                                        />
+                                        {subActividadErrors.fechaFin && <p className="text-red-500 text-xs mt-1">{subActividadErrors.fechaFin}</p>}
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Método de Gestión</label>
+                                <Input value="Kanban" readOnly className="bg-gray-100" />
+                            </div>
+                        </div>
+                        <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={cancelSubActividad} style={{borderColor: '#CFD6DD', color: 'black'}}>Cancelar</Button>
+                            <Button type="button" onClick={saveSubActividad} style={{backgroundColor: '#018CD1', color: 'white'}}>Guardar</Button>
                         </DialogFooter>
                     </>
                 ) : (

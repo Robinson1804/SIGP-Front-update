@@ -94,6 +94,10 @@ export const paths = {
         informes: '/poi/actividad/informes',
         informeDetalle: (informeId: number | string) => `/poi/actividad/informes/${informeId}`,
         informeNuevo: '/poi/actividad/informes/nuevo',
+    },
+    subactividad: {
+        base: '/poi/subactividad',
+        detalles: '/poi/subactividad/detalles',
     }
   },
   aprobaciones: {

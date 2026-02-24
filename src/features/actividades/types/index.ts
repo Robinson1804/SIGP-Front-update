@@ -254,7 +254,8 @@ export interface CreateTareaKanbanInput {
   codigo?: string;
   nombre: string;
   descripcion?: string;
-  actividadId: number;
+  actividadId?: number;
+  subactividadId?: number;
   prioridad?: TareaPrioridad;
   asignadoA?: number;
   /**
@@ -479,6 +480,62 @@ export interface TableroKanban {
 // ============================================
 // MÉTRICAS - Analytics Types
 // ============================================
+
+// ============================================
+// SUBACTIVIDAD - Entity Types
+// ============================================
+
+/**
+ * Interfaz completa de Subactividad basada en backend schema
+ */
+export interface Subactividad {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion: string | null;
+  actividadPadreId: number;
+  accionEstrategicaId: number | null;
+  clasificacion: ActividadClasificacion | null;
+  metodoGestion: 'Kanban';
+  coordinadorId: number | null;
+  gestorId: number | null;
+  coordinacion: string | null;
+  areasFinancieras: string[] | null;
+  montoAnual: number | null;
+  anios: number[] | null;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+  estado: ActividadEstado;
+  activo: boolean;
+  createdAt: string;
+  updatedAt: string;
+  coordinador?: { id: number; nombre: string; apellido: string };
+  gestor?: { id: number; nombre: string; apellido: string };
+  actividadPadre?: { id: number; codigo: string; nombre: string; anios?: number[] };
+  tareasCount?: number;
+  tareasCompletadas?: number;
+}
+
+export interface CreateSubactividadInput {
+  actividadPadreId: number;
+  nombre: string;
+  descripcion?: string;
+  clasificacion?: ActividadClasificacion;
+  accionEstrategicaId?: number;
+  coordinadorId?: number;
+  gestorId?: number;
+  coordinacion?: string;
+  areasFinancieras?: string[];
+  montoAnual?: number;
+  anios?: number[];
+  fechaInicio?: string;
+  fechaFin?: string;
+}
+
+export interface UpdateSubactividadInput extends Partial<Omit<CreateSubactividadInput, 'actividadPadreId'>> {
+  estado?: ActividadEstado;
+  activo?: boolean;
+}
 
 /**
  * Métricas Kanban de una Actividad

@@ -95,6 +95,20 @@ export const ENDPOINTS = {
   },
 
   // ============================================
+  // SUBACTIVIDADES - Gestión de Subactividades Kanban
+  // ============================================
+  SUBACTIVIDADES: {
+    BASE: '/subactividades',
+    BY_ID: (id: number | string) => `/subactividades/${id}`,
+    BY_ACTIVIDAD: (actividadId: number | string) => `/actividades/${actividadId}/subactividades`,
+    NEXT_CODIGO: (actividadId: number | string) => `/actividades/${actividadId}/subactividades/next-codigo`,
+    FINALIZAR: (id: number | string) => `/subactividades/${id}/finalizar`,
+    VERIFICAR_TAREAS: (id: number | string) => `/subactividades/${id}/verificar-tareas-finalizadas`,
+    TAREAS: (id: number | string) => `/subactividades/${id}/tareas`,
+    METRICAS: (id: number | string) => `/subactividades/${id}/metricas`,
+  },
+
+  // ============================================
   // ACTIVIDADES - Gestión de Actividades Kanban
   // ============================================
   ACTIVIDADES: {

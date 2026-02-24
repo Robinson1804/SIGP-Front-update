@@ -28,6 +28,8 @@ import { paths } from '@/lib/paths';
 import { useAuth, usePGD } from '@/stores';
 import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
 import { deleteActividad, getActividadById } from '@/features/actividades/services/actividades.service';
+import { getSubactividadesByActividad } from '@/features/actividades/services/subactividades.service';
+import type { Subactividad } from '@/features/actividades/types';
 import { useToast } from '@/lib/hooks/use-toast';
 import {
   DashboardTabContent,
@@ -113,6 +115,7 @@ function ActividadDetailsContent() {
 
     // Estado para los nombres resueltos de responsables
     const [responsablesNombres, setResponsablesNombres] = React.useState<string[]>([]);
+    const [subactividades, setSubactividades] = React.useState<Subactividad[]>([]);
 
     // Determinar rol del usuario - ADMIN tiene acceso total
     const userRole = user?.role;
@@ -232,6 +235,19 @@ function ActividadDetailsContent() {
         };
 
         cargarResponsables();
+    }, [project?.id]);
+
+    React.useEffect(() => {
+        const cargarSubactividades = async () => {
+            if (!project?.id) return;
+            try {
+                const subs = await getSubactividadesByActividad(project.id);
+                setSubactividades(subs);
+            } catch {
+                setSubactividades([]);
+            }
+        };
+        cargarSubactividades();
     }, [project?.id]);
 
     const formatDate = (dateString: string) => {
@@ -460,6 +476,81 @@ function ActividadDetailsContent() {
                                 </CardContent>
                             </Card>
                         </div>
+
+                        {/* Subactividades */}
+                        {subactividades.length > 0 && (
+                            <div className="mt-6">
+                                <h4 className="text-lg font-semibold mb-4">Subactividades</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                    {subactividades.map((sub) => {
+                                        const progreso = sub.tareasCount && sub.tareasCount > 0
+                                            ? Math.round(((sub.tareasCompletadas || 0) / sub.tareasCount) * 100)
+                                            : 0;
+                                        const gestor = sub.gestor
+                                            ? `${sub.gestor.nombre} ${sub.gestor.apellido}`.trim()
+                                            : 'Sin asignar';
+                                        return (
+                                            <Card
+                                                key={sub.id}
+                                                className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200"
+                                                onClick={() => {
+                                                    localStorage.setItem('selectedSubactividad', JSON.stringify({
+                                                        id: sub.id.toString(),
+                                                        code: sub.codigo,
+                                                        name: sub.nombre,
+                                                        type: 'Subactividad',
+                                                        status: sub.estado,
+                                                        description: sub.descripcion || '',
+                                                        classification: sub.clasificacion || '',
+                                                        scrumMaster: gestor,
+                                                        gestor: gestor,
+                                                        coordinator: sub.coordinador
+                                                            ? `${sub.coordinador.nombre} ${sub.coordinador.apellido}`.trim()
+                                                            : '',
+                                                        annualAmount: sub.montoAnual || 0,
+                                                        years: sub.anios?.map(String) || [],
+                                                        responsibles: [],
+                                                        financialArea: sub.areasFinancieras || [],
+                                                        managementMethod: 'Kanban',
+                                                        subProjects: [],
+                                                        startDate: sub.fechaInicio ? sub.fechaInicio.split('T')[0] : '',
+                                                        endDate: sub.fechaFin ? sub.fechaFin.split('T')[0] : '',
+                                                    }));
+                                                    router.push(`${paths.poi.subactividad.detalles}?id=${sub.id}`);
+                                                }}
+                                            >
+                                                <CardContent className="p-4">
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <p className="font-semibold text-sm leading-tight line-clamp-2">{sub.nombre}</p>
+                                                        <Badge className={cn('ml-2 flex-shrink-0 text-xs',
+                                                            sub.estado === 'Finalizado' ? 'bg-[#2FD573] text-white' :
+                                                            sub.estado === 'En desarrollo' ? 'bg-[#559FFE] text-white' :
+                                                            'bg-[#FE9F43] text-black'
+                                                        )}>{sub.estado}</Badge>
+                                                    </div>
+                                                    <div className="mt-3 mb-1 flex items-center justify-between text-xs text-gray-500">
+                                                        <span>Progreso</span>
+                                                        <span className="font-medium">{progreso}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                                                        <div
+                                                            className="bg-[#018CD1] h-2 rounded-full transition-all"
+                                                            style={{ width: `${progreso}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 space-y-1">
+                                                        <p><span className="font-medium">Gestor:</span> {gestor}</p>
+                                                        {sub.montoAnual && (
+                                                            <p><span className="font-medium">Monto:</span> S/ {sub.montoAnual.toLocaleString('es-PE')}</p>
+                                                        )}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

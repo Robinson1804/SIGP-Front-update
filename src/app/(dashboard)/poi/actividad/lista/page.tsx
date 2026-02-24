@@ -64,7 +64,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/lib/hooks/use-toast';
 import { Project, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
@@ -72,6 +72,7 @@ import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service'
 import { getTareasByActividad, createTarea, updateTarea, deleteTarea } from '@/features/actividades/services/tareas-kanban.service';
 import { getSubtareasByTarea, createSubtarea, updateSubtarea, deleteSubtarea } from '@/features/actividades/services/subtareas.service';
 import { verificarTareasFinalizadas, finalizarActividad, getActividadById } from '@/features/actividades/services/actividades.service';
+import { getTareasBySubactividad, verificarTareasFinalizadasSubactividad, finalizarSubactividad } from '@/features/actividades/services/subactividades.service';
 import type { TareaKanban, Subtarea as SubtareaBackend } from '@/features/actividades/types';
 import { jsPDF } from 'jspdf';
 
@@ -1914,9 +1915,10 @@ function SubtaskModal({
 // ==================== COMPONENTE PRINCIPAL ====================
 interface ListaContentProps {
     embedded?: boolean; // When true, renders without AppLayout and tabs (used in detalles page)
+    subactividadId?: number; // When provided, loads tasks from subactividad instead of actividad
 }
 
-export function ListaContent({ embedded = false }: ListaContentProps) {
+export function ListaContent({ embedded = false, subactividadId }: ListaContentProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [project, setProject] = useState<Project | null>(null);
@@ -1969,6 +1971,14 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
     const currentUser = user?.name || 'Scrum Master';
 
     React.useEffect(() => {
+        if (subactividadId) {
+            // Mode: subactividad — load from selectedSubactividad in localStorage
+            const savedData = localStorage.getItem('selectedSubactividad');
+            if (savedData) {
+                setProject(JSON.parse(savedData));
+            }
+            return;
+        }
         const savedProjectData = localStorage.getItem('selectedProject');
         if (savedProjectData) {
             const projectData = JSON.parse(savedProjectData);
@@ -1998,7 +2008,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
         } else {
             router.push(paths.poi.base);
         }
-    }, [router]);
+    }, [router, subactividadId]);
 
     // Cargar implementadores (responsables) desde las asignaciones de la actividad
     React.useEffect(() => {
@@ -2034,7 +2044,9 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
             if (!project?.id) return;
             setLoadingTasks(true);
             try {
-                const tareasBackend = await getTareasByActividad(project.id);
+                const tareasBackend = subactividadId
+                    ? await getTareasBySubactividad(subactividadId)
+                    : await getTareasByActividad(project.id);
                 const tareasConSubtareas: Task[] = await Promise.all(
                     tareasBackend.map(async (tarea) => {
                         // Load subtasks for each task
@@ -2102,7 +2114,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
             }
         };
         cargarTareas();
-    }, [project?.id]);
+    }, [project?.id, subactividadId]);
 
     const handleTabClick = (tabName: string) => {
         // Navigate directly to detalles with only tab parameter (actividadId is in localStorage)
@@ -2195,7 +2207,7 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 const codigo = `TAR-${String(maxId + 1).padStart(3, '0')}`;
 
                 const created = await createTarea({
-                    actividadId: project!.id,
+                    ...(subactividadId ? { subactividadId } : { actividadId: project!.id }),
                     codigo,
                     nombre: task.title,
                     descripcion: task.description || undefined,
@@ -2209,9 +2221,11 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
             }
 
             // Verificar si todas las tareas están finalizadas para mostrar modal de finalización
-            // Solo mostrar si la actividad NO está ya finalizada
-            if (project?.id && project?.status !== 'Finalizado') {
-                const verificacion = await verificarTareasFinalizadas(project.id);
+            // Solo mostrar si la actividad/subactividad NO está ya finalizada
+            if (project?.status !== 'Finalizado') {
+                const verificacion = subactividadId
+                    ? await verificarTareasFinalizadasSubactividad(subactividadId)
+                    : await verificarTareasFinalizadas(project!.id);
                 if (verificacion.todasFinalizadas) {
                     setIsFinalizarModalOpen(true);
                 }
@@ -2710,20 +2724,20 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 task={taskForDocumentPreview}
             />
 
-            {/* Modal de finalización de actividad */}
+            {/* Modal de finalización de actividad/subactividad */}
             <Dialog open={isFinalizarModalOpen} onOpenChange={setIsFinalizarModalOpen}>
                 <DialogContent className="sm:max-w-md p-6" showCloseButton={false}>
                     <DialogHeader className="mb-4">
                         <DialogTitle className="text-xl font-semibold text-gray-800">
-                            ¿Desea finalizar la actividad?
+                            ¿Desea finalizar la {subactividadId ? 'subactividad' : 'actividad'}?
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-3 text-sm text-gray-600 mb-6">
                         <p>Todas las tareas han sido completadas.</p>
                         <p className="font-medium">Opciones:</p>
                         <ul className="list-disc list-inside space-y-1 ml-2">
-                            <li><strong>Continuar creando tareas:</strong> La actividad permanecerá en estado "En desarrollo" y podrá seguir agregando nuevas tareas.</li>
-                            <li><strong>Finalizar actividad:</strong> La actividad cambiará a estado "Finalizado" y no se podrán crear más tareas ni subtareas.</li>
+                            <li><strong>Continuar creando tareas:</strong> La {subactividadId ? 'subactividad' : 'actividad'} permanecerá en estado &quot;En desarrollo&quot; y podrá seguir agregando nuevas tareas.</li>
+                            <li><strong>Finalizar {subactividadId ? 'subactividad' : 'actividad'}:</strong> Cambiará a estado &quot;Finalizado&quot; y no se podrán crear más tareas ni subtareas.</li>
                         </ul>
                     </div>
                     <DialogFooter className="flex gap-2 sm:justify-end">
@@ -2738,10 +2752,22 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                             variant="default"
                             onClick={async () => {
                                 try {
-                                    if (project?.id) {
+                                    if (subactividadId) {
+                                        await finalizarSubactividad(subactividadId);
+                                        setIsFinalizarModalOpen(false);
+                                        setProject(prev => {
+                                            if (!prev) return null;
+                                            const updated = { ...prev, status: 'Finalizado' as const };
+                                            localStorage.setItem('selectedSubactividad', JSON.stringify(updated));
+                                            return updated;
+                                        });
+                                        toast({
+                                            title: 'Subactividad finalizada',
+                                            description: 'La subactividad ha sido finalizada exitosamente.',
+                                        });
+                                    } else if (project?.id) {
                                         await finalizarActividad(project.id);
                                         setIsFinalizarModalOpen(false);
-                                        // Actualizar el estado del proyecto en la UI y en localStorage
                                         setProject(prev => {
                                             if (!prev) return null;
                                             const updated = { ...prev, status: 'Finalizado' as const };
@@ -2754,16 +2780,17 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                         });
                                     }
                                 } catch (error) {
-                                    console.error('Error al finalizar actividad:', error);
+                                    console.error('Error al finalizar:', error);
                                     toast({
                                         title: 'Error al finalizar',
-                                        description: 'No se pudo finalizar la actividad. Intente de nuevo.',
+                                        description: `No se pudo finalizar la ${subactividadId ? 'subactividad' : 'actividad'}. Intente de nuevo.`,
                                         variant: 'destructive',
                                     });
+                                }
                             }}
                             className="flex-1 sm:flex-none bg-[#004272] hover:bg-[#003562]"
                         >
-                            Finalizar actividad
+                            Finalizar {subactividadId ? 'subactividad' : 'actividad'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
