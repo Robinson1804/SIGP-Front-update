@@ -64,6 +64,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
 import { Project, ROLES } from '@/lib/definitions';
 import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
@@ -1917,6 +1918,7 @@ interface ListaContentProps {
 
 export function ListaContent({ embedded = false }: ListaContentProps) {
     const { user } = useAuth();
+    const { toast } = useToast();
     const [project, setProject] = useState<Project | null>(null);
     const [activeTab, setActiveTab] = useState('Lista');
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
@@ -2278,6 +2280,18 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                 }
                 return t;
             }));
+
+            // Verificar si todas las tareas están finalizadas para mostrar modal de finalización
+            if (project?.id && project?.status !== 'Finalizado') {
+                try {
+                    const verificacion = await verificarTareasFinalizadas(project.id);
+                    if (verificacion.todasFinalizadas) {
+                        setIsFinalizarModalOpen(true);
+                    }
+                } catch {
+                    // No bloquear el flujo si falla la verificación
+                }
+            }
         }
         setIsSubtaskModalOpen(false);
         setParentTaskForSubtask(null);
@@ -2710,13 +2724,18 @@ export function ListaContent({ embedded = false }: ListaContentProps) {
                                         setIsFinalizarModalOpen(false);
                                         // Actualizar el estado del proyecto en la UI
                                         setProject(prev => prev ? { ...prev, status: 'Finalizado' } : null);
-                                        // Opcional: mostrar mensaje de éxito
-                                        alert('Actividad finalizada exitosamente');
+                                        toast({
+                                            title: 'Actividad finalizada',
+                                            description: 'La actividad ha sido finalizada exitosamente.',
+                                        });
                                     }
                                 } catch (error) {
                                     console.error('Error al finalizar actividad:', error);
-                                    alert('Error al finalizar la actividad');
-                                }
+                                    toast({
+                                        title: 'Error al finalizar',
+                                        description: 'No se pudo finalizar la actividad. Intente de nuevo.',
+                                        variant: 'destructive',
+                                    });
                             }}
                             className="flex-1 sm:flex-none bg-[#004272] hover:bg-[#003562]"
                         >

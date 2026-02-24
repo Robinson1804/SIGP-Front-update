@@ -56,7 +56,7 @@ import {
   EditDailyModal,
   ImpedimentosPanel,
 } from '@/features/daily-meetings/components';
-import type { Impedimento } from '@/features/daily-meetings/components';
+import type { Impedimento, ImpedimentoInput } from '@/features/daily-meetings/components';
 import {
   createDailyMeeting,
   registrarParticipacion,
@@ -340,7 +340,7 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
       ausenciMotivo?: string;
       queHiceAyer: string;
       queHareHoy: string;
-      impedimentos: string;
+      impedimento: ImpedimentoInput | null;
     }[];
   }) => {
     try {
@@ -365,7 +365,7 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
         // Solo incluir respuestas si asistió
         queHiceAyer: p.asistio ? (p.queHiceAyer || undefined) : undefined,
         queHareHoy: p.asistio ? (p.queHareHoy || undefined) : undefined,
-        impedimentos: p.asistio ? (p.impedimentos || undefined) : undefined,
+        impedimentos: p.asistio ? (p.impedimento?.descripcion || undefined) : undefined,
       }));
 
       // Crear la daily meeting con todos los campos requeridos
@@ -385,6 +385,31 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
         title: 'Daily registrada',
         description: 'La daily meeting se registró correctamente',
       });
+
+      // Auto-crear impedimentos formales para participantes que los registraron
+      const impedimentosACrear = data.participantes.filter(
+        (p) => p.asistio && p.impedimento !== null && p.impedimento.descripcion.trim()
+      );
+      for (const p of impedimentosACrear) {
+        try {
+          await createImpedimento({
+            descripcion: p.impedimento!.descripcion,
+            prioridad: p.impedimento!.prioridad,
+            fechaLimite: p.impedimento!.fechaLimite || undefined,
+            proyectoId: proyectoId,
+            sprintId: parseInt(selectedSprintId),
+            dailyMeetingId: newDaily.id,
+            reportadoPorId: p.usuarioId,
+          });
+        } catch {
+          // No bloquear si falla uno
+        }
+      }
+
+      // Recargar impedimentos si se crearon nuevos
+      if (impedimentosACrear.length > 0) {
+        await loadImpedimentos();
+      }
 
       // Recargar los datos del backend
       const freshData = await getSprintDailyMeetings(selectedSprintId);
@@ -441,10 +466,11 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
     notas?: string;
     participantes?: {
       id: number;
+      usuarioId?: number;
       asistio: boolean;
       ayer: string;
       hoy: string;
-      impedimentos: string;
+      impedimento: ImpedimentoInput | null;
     }[];
   }) => {
     if (!dailyToEdit) return;
@@ -464,8 +490,33 @@ export function DailyView({ proyectoId, sprints, equipo: equipoProyecto }: Daily
             asistio: p.asistio,
             queHiceAyer: p.ayer,
             queHareHoy: p.hoy,
-            impedimentos: p.impedimentos,
+            impedimentos: p.impedimento?.descripcion || undefined,
           });
+        }
+      }
+
+      // Auto-crear impedimentos formales para participantes que los registraron
+      if (data.participantes && dailyToEdit) {
+        const impedimentosACrear = data.participantes.filter(
+          (p) => p.asistio && p.impedimento !== null && p.impedimento.descripcion.trim() && p.usuarioId
+        );
+        for (const p of impedimentosACrear) {
+          try {
+            await createImpedimento({
+              descripcion: p.impedimento!.descripcion,
+              prioridad: p.impedimento!.prioridad,
+              fechaLimite: p.impedimento!.fechaLimite || undefined,
+              proyectoId: proyectoId,
+              sprintId: parseInt(selectedSprintId),
+              dailyMeetingId: dailyToEdit.id,
+              reportadoPorId: p.usuarioId!,
+            });
+          } catch {
+            // No bloquear si falla uno
+          }
+        }
+        if (impedimentosACrear.length > 0) {
+          await loadImpedimentos();
         }
       }
 

@@ -38,6 +38,8 @@ interface BackendTarea {
   prioridad?: string;
   porcentajeAvance?: number;
   asignadoA?: string; // 'Scrum Master' | 'Desarrolladores' | 'Todo el equipo'
+  responsableId?: number;
+  responsable?: { id: number; nombre?: string; apellido?: string };
   tareaPadreId?: number;
   orden?: number;
   dependencias?: number[];
@@ -137,6 +139,14 @@ function transformTarea(backendTarea: BackendTarea): TareaCronograma {
     descripcion: backendTarea.descripcion,
     esHito: backendTarea.esHito,
     fase: backendTarea.fase as TareaCronograma['fase'],
+    responsable: backendTarea.responsable
+      ? {
+          id: backendTarea.responsable.id,
+          nombre: [backendTarea.responsable.nombre, backendTarea.responsable.apellido]
+            .filter(Boolean)
+            .join(' ') || 'Sin nombre',
+        }
+      : undefined,
   };
 }
 
@@ -531,10 +541,7 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
   // Resumen
   const tareas = cronograma.tareas || [];
   const totalTareas = tareas.length;
-  const tareasCompletadas = tareas.filter(t => t.progreso >= 100).length;
-  const progresoGeneral = totalTareas > 0
-    ? Math.round(tareas.reduce((sum, t) => sum + t.progreso, 0) / totalTareas)
-    : 0;
+  const tareasCompletadas = tareas.filter(t => t.estado === 'Completado').length;
 
   // Caja de resumen
   doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
@@ -548,18 +555,8 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(0, 0, 0);
   doc.text(`Total Tareas: ${totalTareas}`, 50, 47);
-  doc.text(`Completadas: ${tareasCompletadas}`, 100, 47);
-  doc.text(`En Progreso: ${totalTareas - tareasCompletadas}`, 150, 47);
-  doc.text(`Avance General: ${progresoGeneral}%`, 200, 47);
-
-  // Barra de progreso
-  doc.setDrawColor(200, 200, 200);
-  doc.setFillColor(230, 230, 230);
-  doc.rect(250, 44, 30, 5, 'FD');
-  doc.setFillColor(ineiBLUE[0], ineiBLUE[1], ineiBLUE[2]);
-  if (progresoGeneral > 0) {
-    doc.rect(250, 44, 30 * (progresoGeneral / 100), 5, 'F');
-  }
+  doc.text(`Completadas: ${tareasCompletadas}`, 110, 47);
+  doc.text(`Pendientes: ${totalTareas - tareasCompletadas}`, 180, 47);
 
   // Tabla de tareas
   let y = 65;
@@ -572,8 +569,8 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
     { header: 'Inicio', width: 28 },
     { header: 'Fin', width: 28 },
     { header: 'Duración', width: 22 },
-    { header: 'Avance', width: 20 },
-    { header: 'Responsable', width: 45 },
+    { header: 'Estado', width: 25 },
+    { header: 'Responsable', width: 40 },
   ];
 
   doc.setFillColor(ineiBLUE[0], ineiBLUE[1], ineiBLUE[2]);
@@ -648,7 +645,7 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
       doc.setFont('helvetica', 'bold');
 
       let xh = 14;
-      cols.forEach(col => {
+      cols.forEach((col) => {
         doc.text(col.header, xh + 2, y + 5.5);
         xh += col.width;
       });
@@ -699,12 +696,13 @@ async function exportToPDF(cronograma: Cronograma): Promise<ExportacionResponse>
     doc.text(`${duracion} días`, x + 2, y + 5);
     x += cols[5].width;
 
-    // Avance
-    doc.text(`${tarea.progreso}%`, x + 2, y + 5);
+    // Estado
+    doc.text((tarea.estado || 'Por hacer').substring(0, 15), x + 2, y + 5);
     x += cols[6].width;
 
     // Responsable
-    doc.text((tarea.responsable?.nombre || 'Sin asignar').substring(0, 25), x + 2, y + 5);
+    const respNombrePDF = tarea.responsable?.nombre || tarea.asignadoA || 'Sin asignar';
+    doc.text(respNombrePDF.substring(0, 22), x + 2, y + 5);
 
     y += 7;
   });
@@ -753,12 +751,9 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
 
   // Calcular estadísticas - usar TODAS las tareas, no filtrar por tipo
   const totalTareas = tareas.length;
-  const tareasCompletadas = tareas.filter(t => (t.progreso || 0) >= 100).length;
-  const tareasEnProgreso = tareas.filter(t => (t.progreso || 0) > 0 && (t.progreso || 0) < 100).length;
-  const tareasPendientes = tareas.filter(t => (t.progreso || 0) === 0).length;
-  const progresoGeneral = totalTareas > 0
-    ? Math.round(tareas.reduce((sum, t) => sum + (t.progreso || 0), 0) / totalTareas)
-    : 0;
+  const tareasCompletadas = tareas.filter(t => t.estado === 'Completado').length;
+  const tareasEnProgreso = tareas.filter(t => t.estado === 'En progreso').length;
+  const tareasPendientes = tareas.filter(t => !t.estado || t.estado === 'Por hacer').length;
 
   // =============== HOJA RESUMEN ===============
   const wsResumen = wb.addWorksheet('Resumen');
@@ -803,7 +798,6 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
     ['Tareas Completadas:', tareasCompletadas],
     ['Tareas en Progreso:', tareasEnProgreso],
     ['Tareas Pendientes:', tareasPendientes],
-    ['Avance General:', `${progresoGeneral}%`],
   ];
 
   resumenData.forEach((row, idx) => {
@@ -831,12 +825,11 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
   fases.forEach((fase, idx) => {
     const tareasFase = tareas.filter(t => t.fase === fase);
     if (tareasFase.length > 0) {
-      const progresoFase = Math.round(tareasFase.reduce((sum, t) => sum + (t.progreso || 0), 0) / tareasFase.length);
       const cellA = wsResumen.getCell(`A${faseRow}`);
       const cellB = wsResumen.getCell(`B${faseRow}`);
       cellA.value = `${fasesLabels[fase]}:`;
       cellA.font = { bold: true };
-      cellB.value = `${tareasFase.length} tareas - ${progresoFase}% completado`;
+      cellB.value = `${tareasFase.length} tareas`;
       if (idx % 2 === 0) {
         cellA.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
         cellB.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerBg } };
@@ -855,7 +848,7 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
   const wsTareas = wb.addWorksheet('Tareas');
 
   // Headers
-  const headers = ['CÓDIGO', 'NOMBRE', 'TIPO', 'FASE', 'FECHA INICIO', 'FECHA FIN', 'DURACIÓN (DÍAS)', 'AVANCE (%)', 'RESPONSABLE', 'DESCRIPCIÓN'];
+  const headers = ['CÓDIGO', 'NOMBRE', 'TIPO', 'FASE', 'FECHA INICIO', 'FECHA FIN', 'DURACIÓN (DÍAS)', 'ESTADO', 'RESPONSABLE', 'DESCRIPCIÓN'];
   const headerRow = wsTareas.addRow(headers);
   headerRow.font = { bold: true, color: { argb: 'FFFFFF' } };
   headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
@@ -916,8 +909,8 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
       inicio.toLocaleDateString('es-PE'),
       fin.toLocaleDateString('es-PE'),
       duracion,
-      tarea.progreso || 0,
-      tarea.responsable?.nombre || 'Sin asignar',
+      tarea.estado || 'Por hacer',
+      tarea.responsable?.nombre || tarea.asignadoA || 'Sin asignar',
       tarea.descripcion || ''
     ]);
 
@@ -1009,7 +1002,7 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
   }
 
   // Fila 1: Encabezados de columnas + Meses
-  const ganttHeaderRow = wsGantt.addRow(['Código', 'Tarea', 'Inicio', 'Fin', '%']);
+  const ganttHeaderRow = wsGantt.addRow(['Código', 'Tarea', 'Inicio', 'Fin', 'Estado']);
   ganttHeaderRow.height = 20;
 
   // Fila 2: Celdas vacías para columnas 1-5 + Días del mes
@@ -1080,15 +1073,14 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
   tareasOrdenadas.forEach((tarea) => {
     const inicio = new Date(tarea.inicio);
     const fin = new Date(tarea.fin);
-    const esFase = tarea.tipo === 'proyecto';
     const esHito = tarea.tipo === 'hito' || tarea.esHito;
 
     const rowData: (string | number)[] = [
       tarea.codigo || '',
-      esFase ? `★ ${tarea.nombre}` : (esHito ? `◆ ${tarea.nombre}` : `   ${tarea.nombre}`),
-      inicio.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }),
-      fin.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' }),
-      tarea.progreso || 0
+      esHito ? `◆ ${tarea.nombre}` : tarea.nombre,
+      inicio.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      fin.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      tarea.estado || 'Por hacer'
     ];
 
     // Agregar celdas vacías para el Gantt
@@ -1099,61 +1091,34 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
     const row = wsGantt.addRow(rowData);
     row.height = 20;
 
-    // Estilo de la fila según tipo
-    if (esFase) {
-      row.font = { bold: true, size: 9, color: { argb: 'FFFFFF' } };
-      row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
-      row.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
-      row.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
-      row.getCell(4).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
-      row.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
-    } else if (esHito) {
+    // Estilo de la fila según tipo (solo hitos con color especial; tareas sin fondo azul)
+    if (esHito) {
       row.font = { bold: true, size: 9, color: { argb: 'B8860B' } };
     } else {
       row.font = { size: 9 };
     }
 
-    // Dibujar barra de Gantt
-    const tareaColor = faseColors[tarea.fase || ''] || '4A90D9';
+    // Dibujar barra de Gantt — color sólido por fase, sin diferenciación de progreso
+    const barColor = esHito ? 'FFD700' : (faseColors[tarea.fase || ''] || 'BFBFBF');
     currentDate = new Date(startDate);
 
     for (let day = 0; day < totalDays; day++) {
       const cellDate = new Date(currentDate);
       const cell = row.getCell(6 + day);
 
-      // Verificar si la fecha está en el rango de la tarea
       if (cellDate >= inicio && cellDate <= fin) {
-        if (esHito && cellDate.getTime() === inicio.getTime()) {
-          // Hito: solo un día con diamante
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD700' } };
-          cell.font = { bold: true };
-        } else if (!esHito) {
-          // Tarea normal: barra completa
-          if (esFase) {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
-          } else {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: tareaColor } };
+        if (esHito) {
+          // Hito: solo el día de inicio marcado
+          if (cellDate.getTime() === inicio.getTime()) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD700' } };
+            cell.font = { bold: true };
           }
-
-          // Mostrar progreso con degradado (parte completada más oscura)
-          const dayIndex = Math.floor((cellDate.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
-          const totalTaskDays = Math.ceil((fin.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-          const progressDays = Math.floor(totalTaskDays * (tarea.progreso || 0) / 100);
-
-          if (dayIndex < progressDays) {
-            // Parte completada - color más intenso
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: esFase ? '002244' : tareaColor } };
-          } else if (!esFase) {
-            // Parte pendiente - color más claro
-            const lightColor = tareaColor.split('').map((c, i) => {
-              if (i % 2 === 0) return 'D';
-              return c;
-            }).join('');
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `${lightColor.substring(0, 6)}` } };
-          }
+        } else {
+          // Tarea: barra con el color de la fase
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: barColor } };
         }
       } else {
-        // Colorear fines de semana
+        // Colorear fines de semana fuera del rango
         const dayOfWeek = cellDate.getDay();
         if (dayOfWeek === 0 || dayOfWeek === 6) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F5F5F5' } };
@@ -1175,9 +1140,9 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
   // Configurar anchos de columna para Gantt
   wsGantt.getColumn(1).width = 10;  // Código
   wsGantt.getColumn(2).width = 35;  // Tarea
-  wsGantt.getColumn(3).width = 10;  // Inicio
-  wsGantt.getColumn(4).width = 10;  // Fin
-  wsGantt.getColumn(5).width = 5;   // %
+  wsGantt.getColumn(3).width = 13;  // Inicio
+  wsGantt.getColumn(4).width = 13;  // Fin
+  wsGantt.getColumn(5).width = 14;  // Estado
 
   // Columnas de días (ancho pequeño para simular barras)
   for (let i = 6; i <= 5 + totalDays; i++) {
@@ -1215,7 +1180,7 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
       const wsFase = wb.addWorksheet(fasesLabels[fase].substring(0, 31));
 
       // Headers
-      const faseHeadersRow = wsFase.addRow(['CÓDIGO', 'NOMBRE', 'TIPO', 'FECHA INICIO', 'FECHA FIN', 'DURACIÓN', 'AVANCE (%)', 'RESPONSABLE']);
+      const faseHeadersRow = wsFase.addRow(['CÓDIGO', 'NOMBRE', 'TIPO', 'FECHA INICIO', 'FECHA FIN', 'DURACIÓN', 'ESTADO', 'RESPONSABLE']);
       faseHeadersRow.font = { bold: true, color: { argb: 'FFFFFF' } };
       faseHeadersRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ineiBLUE } };
       faseHeadersRow.height = 25;
@@ -1242,8 +1207,8 @@ async function exportToExcel(cronograma: Cronograma): Promise<ExportacionRespons
           inicio.toLocaleDateString('es-PE'),
           fin.toLocaleDateString('es-PE'),
           duracion,
-          tarea.progreso || 0,
-          tarea.responsable?.nombre || 'Sin asignar',
+          tarea.estado || 'Por hacer',
+          tarea.responsable?.nombre || tarea.asignadoA || 'Sin asignar',
         ]);
 
         // Determinar color de fondo

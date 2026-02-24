@@ -215,6 +215,7 @@ export function useDashboardData(proyectoId: number, subproyectoId?: number): Us
       const enUnaSemana = new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       const tareasFinalizadas = allTareas.filter((t) => t.estado === 'Finalizado').length;
+      const husFinalizadas = allHistorias.filter((h) => h.estado === 'Finalizado').length;
       const husEnProgreso = allHistorias.filter(
         (h) => h.estado === 'En progreso' || h.estado === 'En revisión'
       ).length;
@@ -229,7 +230,7 @@ export function useDashboardData(proyectoId: number, subproyectoId?: number): Us
       }).length;
 
       setSummaryCards({
-        finalizadas: tareasFinalizadas,
+        finalizadas: husFinalizadas,
         enProgreso: husEnProgreso,
         creadas: tareasCreadasHoy,
         porVencer: tareasPorVencer,

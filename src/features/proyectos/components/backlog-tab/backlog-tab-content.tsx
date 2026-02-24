@@ -320,7 +320,7 @@ export function BacklogTabContent({ proyectoId, subproyectoId, proyectoFechaInic
     } else {
       toast({
         title: 'Documento no disponible',
-        description: 'El PDF de evidencias aún no ha sido generado o hubo un error al generarlo.',
+        description: 'El PDF de evidencias aún no ha sido generado.',
         variant: 'destructive',
       });
     }

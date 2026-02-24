@@ -39,7 +39,15 @@ import {
   MessageSquare,
   Save,
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn, parseLocalDate } from '@/lib/utils';
+import type { ImpedimentoInput } from './CreateDailyModal';
 
 interface Participante {
   id: number;
@@ -48,7 +56,7 @@ interface Participante {
   asistio: boolean;
   ayer: string;
   hoy: string;
-  impedimentos: string;
+  impedimento: ImpedimentoInput | null;
 }
 
 interface DailyMeeting {
@@ -79,10 +87,11 @@ interface EditDailyModalProps {
     notas?: string;
     participantes?: {
       id: number;
+      usuarioId?: number;
       asistio: boolean;
       ayer: string;
       hoy: string;
-      impedimentos: string;
+      impedimento: ImpedimentoInput | null;
     }[];
   }) => Promise<void>;
 }
@@ -114,7 +123,10 @@ export function EditDailyModal({
           asistio: p.asistio ?? false,
           ayer: p.ayer || '',
           hoy: p.hoy || '',
-          impedimentos: p.impedimentos || '',
+          // Convertir texto existente a estructura; si hay texto → impedimento con prioridad Media
+          impedimento: p.impedimentos
+            ? { descripcion: p.impedimentos, prioridad: 'Media' as const, fechaLimite: '' }
+            : null,
         }))
       );
     }
@@ -132,6 +144,33 @@ export function EditDailyModal({
     );
   };
 
+  const toggleImpedimento = (id: number, hasImpedimento: boolean) => {
+    setParticipantes((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        return {
+          ...p,
+          impedimento: hasImpedimento
+            ? { descripcion: '', prioridad: 'Media' as const, fechaLimite: '' }
+            : null,
+        };
+      })
+    );
+  };
+
+  const updateImpedimentoField = (
+    id: number,
+    field: keyof ImpedimentoInput,
+    value: string
+  ) => {
+    setParticipantes((prev) =>
+      prev.map((p) => {
+        if (p.id !== id || !p.impedimento) return p;
+        return { ...p, impedimento: { ...p.impedimento, [field]: value } };
+      })
+    );
+  };
+
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
@@ -141,10 +180,11 @@ export function EditDailyModal({
         notas: notas || undefined,
         participantes: participantes.map((p) => ({
           id: p.id,
+          usuarioId: p.usuarioId,
           asistio: p.asistio,
           ayer: p.ayer,
           hoy: p.hoy,
-          impedimentos: p.impedimentos,
+          impedimento: p.impedimento,
         })),
       });
       onOpenChange(false);
@@ -167,7 +207,7 @@ export function EditDailyModal({
 
   const asistentes = participantes.filter((p) => p.asistio).length;
   const conImpedimentos = participantes.filter(
-    (p) => p.asistio && p.impedimentos.trim()
+    (p) => p.asistio && p.impedimento !== null
   ).length;
 
   // Usar parseLocalDate para evitar problemas de zona horaria
@@ -285,7 +325,7 @@ export function EditDailyModal({
                             <Badge variant="secondary" className="text-xs">
                               Ausente
                             </Badge>
-                          ) : participante.impedimentos.trim() ? (
+                          ) : participante.impedimento !== null ? (
                             <Badge variant="destructive" className="text-xs">
                               <AlertCircle className="h-3 w-3 mr-1" />
                               Impedimento
@@ -370,27 +410,83 @@ export function EditDailyModal({
                             </div>
 
                             {/* Impedimentos */}
-                            <div className="space-y-2">
-                              <Label className="text-sm flex items-center gap-2">
-                                <AlertCircle className="h-4 w-4 text-red-500" />
-                                Tienes algun impedimento?
-                              </Label>
-                              <Textarea
-                                placeholder="Describe cualquier bloqueo o impedimento que necesite resolverse..."
-                                value={participante.impedimentos}
-                                onChange={(e) =>
-                                  updateParticipante(
-                                    participante.id,
-                                    'impedimentos',
-                                    e.target.value
-                                  )
-                                }
-                                className={cn(
-                                  'min-h-[60px]',
-                                  participante.impedimentos.trim() &&
-                                    'border-red-300 bg-red-50'
-                                )}
-                              />
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                  <Label className="text-sm font-medium flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4 text-red-500" />
+                                    ¿Tiene algún impedimento?
+                                  </Label>
+                                  <p className="text-xs text-gray-500">
+                                    Registra un bloqueo formal
+                                  </p>
+                                </div>
+                                <Switch
+                                  checked={participante.impedimento !== null}
+                                  onCheckedChange={(checked) =>
+                                    toggleImpedimento(participante.id, checked)
+                                  }
+                                />
+                              </div>
+
+                              {participante.impedimento !== null && (
+                                <div className="space-y-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                                  <div className="space-y-2">
+                                    <Label className="text-sm">Descripción del impedimento</Label>
+                                    <Textarea
+                                      placeholder="Describe el bloqueo o impedimento..."
+                                      value={participante.impedimento.descripcion}
+                                      onChange={(e) =>
+                                        updateImpedimentoField(
+                                          participante.id,
+                                          'descripcion',
+                                          e.target.value
+                                        )
+                                      }
+                                      className="min-h-[60px] bg-white border-red-200"
+                                    />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-2">
+                                      <Label className="text-sm">Prioridad</Label>
+                                      <Select
+                                        value={participante.impedimento.prioridad}
+                                        onValueChange={(value) =>
+                                          updateImpedimentoField(
+                                            participante.id,
+                                            'prioridad',
+                                            value
+                                          )
+                                        }
+                                      >
+                                        <SelectTrigger className="bg-white border-red-200">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Alta">Alta</SelectItem>
+                                          <SelectItem value="Media">Media</SelectItem>
+                                          <SelectItem value="Baja">Baja</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label className="text-sm">Fecha límite (opcional)</Label>
+                                      <Input
+                                        type="date"
+                                        value={participante.impedimento.fechaLimite}
+                                        onChange={(e) =>
+                                          updateImpedimentoField(
+                                            participante.id,
+                                            'fechaLimite',
+                                            e.target.value
+                                          )
+                                        }
+                                        className="bg-white border-red-200"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </>
                         )}

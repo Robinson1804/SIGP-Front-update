@@ -112,6 +112,7 @@ export interface TareaCronograma {
   enRutaCritica?: boolean;
   tieneConflicto?: boolean;
   conflictoDescripcion?: string;
+  responsable?: { id: number; nombre: string };
 }
 
 /**
