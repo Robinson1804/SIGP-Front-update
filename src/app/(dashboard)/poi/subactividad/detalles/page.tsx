@@ -352,19 +352,19 @@ function SubactividadDetailsContent() {
                                         <InfoField label="Gestor"><p>{project.gestor || project.scrumMaster}</p></InfoField>
                                     </div>
                                     <div className="md:col-span-2 mb-4">
-                                        <InfoField label="Descripcion"><p>{project.description}</p></InfoField>
+                                        <InfoField label="Descripción"><p>{project.description}</p></InfoField>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                         <div className="space-y-4">
-                                            <InfoField label="Clasificacion"><p>{project.classification}</p></InfoField>
-                                            <InfoField label="Area Financiera">
+                                            <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
+                                            <InfoField label="Área Financiera">
                                                 {project.financialArea && project.financialArea.length > 0
                                                     ? project.financialArea.map(area => <Badge key={area} variant="secondary">{area}</Badge>)
                                                     : <span className="text-gray-400">Sin asignar</span>
                                                 }
                                             </InfoField>
                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                            <InfoField label="Coordinacion"><p>{project.coordination || ''}</p></InfoField>
+                                            <InfoField label="Coordinación"><p>{project.coordination || ''}</p></InfoField>
                                             {/* Actividad Padre */}
                                             <div>
                                                 <p className="text-sm font-semibold text-gray-500 mb-1">Actividad Padre</p>
@@ -393,7 +393,7 @@ function SubactividadDetailsContent() {
                                         </div>
                                         <div className="space-y-4">
                                             <div>
-                                                <p className="text-sm font-semibold text-gray-500 mb-1">Anios</p>
+                                                <p className="text-sm font-semibold text-gray-500 mb-1">Años</p>
                                                 <div className="text-sm p-2 bg-gray-50 rounded-md border min-h-[38px] flex items-center flex-wrap gap-1">
                                                     {project.years?.map(y => {
                                                         const isCurrentYear = y === new Date().getFullYear().toString();
@@ -426,7 +426,7 @@ function SubactividadDetailsContent() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <InfoField label="Metodo de Gestion"><p>Kanban</p></InfoField>
+                                            <InfoField label="Método de Gestión"><p>Kanban</p></InfoField>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -442,7 +442,7 @@ function SubactividadDetailsContent() {
 
                 {/* Tablero Tab */}
                 {activeTab === 'Tablero' && project?.id && (
-                    <TableroTabContent actividadId={Number(project.id)} />
+                    <TableroTabContent subactividadId={Number(project.id)} />
                 )}
 
                 {/* Dashboard Tab */}

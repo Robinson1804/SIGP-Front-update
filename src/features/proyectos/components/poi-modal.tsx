@@ -1330,13 +1330,18 @@ export function POIFullModal({
             }
 
             // Crear objeto Project para callback con los datos actualizados del backend
-            const savedProject: Project = {
+            const savedProject: Project & { gestorId?: number; coordinadorId?: number; accionEstrategicaId?: number } = {
                 ...formData as Project,
                 id: savedResult?.id?.toString() || formData.id || Date.now().toString(),
                 name: savedResult?.nombre || formData.name || '',
                 description: savedResult?.descripcion || formData.description || '',
                 scrumMaster: formData.scrumMaster || '',
+                gestor: formData.type === 'Actividad' ? (formData.scrumMaster || '') : undefined,
                 subProjects: subProjects,
+                // Preservar IDs para que el modal de edición pueda recuperarlos
+                gestorId: formData.type === 'Actividad' ? formData.scrumMasterId : undefined,
+                coordinadorId: formData.coordinadorId,
+                accionEstrategicaId: formData.accionEstrategicaId,
             };
 
             // Blur active element before closing
@@ -2159,7 +2164,8 @@ export function POIFullModal({
                                 <Select
                                     value={subActividadForm.gestorId?.toString() || ''}
                                     onValueChange={(value) => {
-                                        const found = scrumMasters.find(sm => sm.id.toString() === value);
+                                        const gestorList = [...coordinadores, ...scrumMasters.filter(sm => !coordinadores.some(c => c.id === sm.id))];
+                                        const found = gestorList.find(u => u.id.toString() === value);
                                         setSubActividadForm(p => ({
                                             ...p,
                                             gestorId: found?.id,
@@ -2172,9 +2178,9 @@ export function POIFullModal({
                                         <SelectValue placeholder="Seleccionar gestor" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {scrumMasters.map((sm) => (
-                                            <SelectItem key={sm.id} value={sm.id.toString()}>
-                                                {formatUsuarioNombre(sm)}
+                                        {[...coordinadores, ...scrumMasters.filter(sm => !coordinadores.some(c => c.id === sm.id))].map((usuario) => (
+                                            <SelectItem key={usuario.id} value={usuario.id.toString()}>
+                                                {formatUsuarioNombre(usuario)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

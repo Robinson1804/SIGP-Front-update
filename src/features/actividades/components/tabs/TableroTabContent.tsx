@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import type { DropResult } from '@hello-pangea/dnd';
 import type { DndTask, TareaEstado as DndTareaEstado, TareaPrioridad } from '@/components/dnd';
 import { moverTarea, getTareasByActividad, getTareaById } from '@/features/actividades/services/tareas-kanban.service';
+import { getTareasBySubactividad, getSubactividadMetricas } from '@/features/actividades/services/subactividades.service';
 import { getActividadMetricas } from '@/features/actividades/services/actividades.service';
 import type { TareaKanban, TareaEstado, ActividadMetricas } from '@/features/actividades/types';
 import {
@@ -84,10 +85,11 @@ const initialFilters: TaskFiltersState = {
 };
 
 interface TableroTabContentProps {
-  actividadId: number;
+  actividadId?: number;
+  subactividadId?: number;
 }
 
-export function TableroTabContent({ actividadId }: TableroTabContentProps) {
+export function TableroTabContent({ actividadId, subactividadId }: TableroTabContentProps) {
   const { toast } = useToast();
 
   // State
@@ -106,15 +108,23 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
     try {
       if (showLoading) setIsLoading(true);
 
-      // Fetch tasks (required)
-      const tareasData = await getTareasByActividad(actividadId);
+      // Fetch tasks (required) - use subactividad endpoint when subactividadId is provided
+      const tareasData = subactividadId
+        ? await getTareasBySubactividad(subactividadId)
+        : actividadId
+          ? await getTareasByActividad(actividadId)
+          : [];
       setAllTareas(tareasData);
       const mappedTasks = tareasData.map(mapToKanbanDndTask);
       setTasks(mappedTasks);
 
       // Fetch metrics (optional - may not exist in production backend yet)
       try {
-        const metricas = await getActividadMetricas(actividadId);
+        const metricas = subactividadId
+          ? await getSubactividadMetricas(subactividadId)
+          : actividadId
+            ? await getActividadMetricas(actividadId)
+            : null;
         setMetricsData(metricas);
       } catch {
         // Metrics endpoint not available, use null (fallback to local calculation)
@@ -133,7 +143,7 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
     } finally {
       if (showLoading) setIsLoading(false);
     }
-  }, [actividadId, toast]);
+  }, [actividadId, subactividadId, toast]);
 
   // Initial data load
   useEffect(() => {
@@ -258,7 +268,11 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
 
       // Refresh metrics after task move (optional - may not exist in production)
       try {
-        const metricas = await getActividadMetricas(actividadId);
+        const metricas = subactividadId
+          ? await getSubactividadMetricas(subactividadId)
+          : actividadId
+            ? await getActividadMetricas(actividadId)
+            : null;
         setMetricsData(metricas);
       } catch {
         // Metrics endpoint not available, ignore
@@ -277,7 +291,11 @@ export function TableroTabContent({ actividadId }: TableroTabContentProps) {
       });
 
       // Re-fetch to restore correct state
-      const tareasData = await getTareasByActividad(actividadId);
+      const tareasData = subactividadId
+        ? await getTareasBySubactividad(subactividadId)
+        : actividadId
+          ? await getTareasByActividad(actividadId)
+          : [];
       setAllTareas(tareasData);
       const mappedTasks = tareasData.map(mapToKanbanDndTask);
       setTasks(mappedTasks);

@@ -2116,6 +2116,23 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                     })
                 );
                 setTasks(tareasConSubtareas);
+
+                // Verificar finalización al cargar: si todas las tareas están Finalizadas → mostrar modal
+                if (project?.status !== 'Finalizado' && tareasConSubtareas.length > 0) {
+                    const allFinalized = tareasConSubtareas.every(t => t.state === 'Finalizado');
+                    if (allFinalized) {
+                        if (subactividadId) {
+                            setIsFinalizarModalOpen(true);
+                        } else {
+                            try {
+                                const subs = await getSubactividadesByActividad(project!.id);
+                                if (!subs || subs.length === 0) {
+                                    setIsFinalizarModalOpen(true);
+                                }
+                            } catch { /* ignore */ }
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error al cargar tareas:', error);
             } finally {
@@ -2379,7 +2396,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
         );
     }
 
-    const projectCode = `ACT Nº${project.id}`;
+    const projectCode = project.code || `ACT Nº${project.id}`;
 
     const breadcrumbs = [
         { label: 'POI', href: paths.poi.base },
@@ -2422,13 +2439,6 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                         />
                     </div>
                 </div>
-
-                {(hasSubactividades && !subactividadId) && (
-                    <div className="flex items-center gap-2 mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                        <span>Esta actividad tiene subactividades. Las tareas se gestionan desde cada subactividad.</span>
-                    </div>
-                )}
 
                 {/* Tabla de tareas */}
                 <div className="flex-1 overflow-y-auto max-h-[calc(100vh-320px)]">
@@ -2647,7 +2657,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                             </TableBody>
 
                             {/* Botón Agregar tarea - solo Scrum Master */}
-                            {canManageTasks && !(hasSubactividades && !subactividadId) && (
+                            {canManageTasks && (
                                 <tfoot className="border-t">
                                     <TableRow>
                                         <TableCell colSpan={9}>
