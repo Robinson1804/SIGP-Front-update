@@ -165,8 +165,34 @@ export function TaskDetailPanel({
     }
   };
 
-  const handleSubtareasChange = (updatedSubtareas: Subtarea[]) => {
+  const handleSubtareasChange = async (updatedSubtareas: Subtarea[]) => {
     setSubtareas(updatedSubtareas);
+    if (!tarea) return;
+    // Si todas las subtareas están finalizadas, auto-finalizar la tarea
+    if (updatedSubtareas.length > 0 && updatedSubtareas.every(s => s.estado === 'Finalizado') && estado !== 'Finalizado') {
+      try {
+        const updatedTarea = await updateTarea(tarea.id, { estado: 'Finalizado' });
+        setEstado('Finalizado');
+        setHasChanges(false);
+        onUpdate?.(updatedTarea);
+      } catch {
+        // Si falla, notificar con mensaje visual de cambio pendiente
+        setEstado('Finalizado');
+        setHasChanges(true);
+      }
+    }
+    // Si una subtarea vuelve a estar pendiente y la tarea estaba finalizada, revertir
+    else if (updatedSubtareas.some(s => s.estado !== 'Finalizado') && estado === 'Finalizado') {
+      try {
+        const updatedTarea = await updateTarea(tarea.id, { estado: 'En progreso' });
+        setEstado('En progreso');
+        setHasChanges(false);
+        onUpdate?.(updatedTarea);
+      } catch {
+        setEstado('En progreso');
+        setHasChanges(true);
+      }
+    }
   };
 
   if (!tarea) return null;

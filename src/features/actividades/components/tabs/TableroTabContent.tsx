@@ -212,7 +212,9 @@ export function TableroTabContent({ actividadId, subactividadId }: TableroTabCon
       prev.map((t) => (t.id === updatedTarea.id ? updatedTarea : t))
     );
     setSelectedTarea(updatedTarea);
-  }, []);
+    // Refrescar en background para confirmar estado real del backend
+    loadData(false);
+  }, [loadData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle task delete from panel
   const handleTaskDelete = useCallback((tareaId: number) => {
@@ -282,6 +284,8 @@ export function TableroTabContent({ actividadId, subactividadId }: TableroTabCon
         title: 'Tarea actualizada',
         description: `La tarea se movió a "${destColumn?.title}"`,
       });
+      // Refrescar en background para confirmar estado real del backend
+      loadData(false);
     } catch (error) {
       console.error('Error moving task:', error);
       toast({
@@ -289,16 +293,8 @@ export function TableroTabContent({ actividadId, subactividadId }: TableroTabCon
         description: 'No se pudo actualizar el estado de la tarea',
         variant: 'destructive',
       });
-
       // Re-fetch to restore correct state
-      const tareasData = subactividadId
-        ? await getTareasBySubactividad(subactividadId)
-        : actividadId
-          ? await getTareasByActividad(actividadId)
-          : [];
-      setAllTareas(tareasData);
-      const mappedTasks = tareasData.map(mapToKanbanDndTask);
-      setTasks(mappedTasks);
+      loadData(false);
     }
   };
 

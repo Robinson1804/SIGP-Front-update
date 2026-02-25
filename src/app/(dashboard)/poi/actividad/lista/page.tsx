@@ -70,10 +70,12 @@ import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
 import { getAsignacionesActividad } from '@/features/rrhh/services/rrhh.service';
 import { getTareasByActividad, createTarea, updateTarea, deleteTarea } from '@/features/actividades/services/tareas-kanban.service';
-import { getSubtareasByTarea, createSubtarea, updateSubtarea, deleteSubtarea } from '@/features/actividades/services/subtareas.service';
+import { getSubtareasByTarea, createSubtarea, updateSubtarea, deleteSubtarea, getEvidenciasSubtarea, agregarEvidenciaBackend, eliminarEvidenciaSubtarea } from '@/features/actividades/services/subtareas.service';
 import { verificarTareasFinalizadas, finalizarActividad, getActividadById } from '@/features/actividades/services/actividades.service';
 import { getTareasBySubactividad, verificarTareasFinalizadasSubactividad, finalizarSubactividad, getSubactividadesByActividad } from '@/features/actividades/services/subactividades.service';
 import type { TareaKanban, Subtarea as SubtareaBackend } from '@/features/actividades/types';
+import { uploadFile, getArchivoDownloadUrl } from '@/lib/api/storage.service';
+import { apiClient } from '@/lib/api';
 import { jsPDF } from 'jspdf';
 
 // ==================== TIPOS ====================
@@ -86,6 +88,10 @@ type TaskAttachment = {
     size: number;
     type: string;
     url?: string;
+    file?: File;        // Archivo original para subir a MinIO (solo en sesión actual)
+    backendId?: number; // EvidenciaSubtarea.id del backend
+    archivoId?: string; // Archivo.id (UUID) para URL de descarga proxy
+    uploaded?: boolean; // true = ya subido a MinIO
 };
 
 type TaskComment = {
@@ -295,33 +301,50 @@ function TaskDocumentPreviewModal({
     }, [isOpen, task]);
 
     // Función auxiliar para cargar imagen como base64 con sus dimensiones
-    const loadImageWithDimensions = (url: string): Promise<{ data: string; width: number; height: number } | null> => {
-        return new Promise((resolve) => {
-            const img = new window.Image();
-            // Solo usar crossOrigin para URLs remotas, no para blob:
-            if (!url.startsWith('blob:')) {
-                img.crossOrigin = 'anonymous';
+    // Para URLs del backend (proxy autenticado), descarga el blob primero
+    const loadImageWithDimensions = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+        let objectUrl = url;
+        let createdBlobUrl = false;
+        try {
+            // Si no es blob ni data URI, descargar via API autenticada
+            if (!url.startsWith('blob:') && !url.startsWith('data:')) {
+                try {
+                    const response = await apiClient.get<Blob>(url, { responseType: 'blob' });
+                    objectUrl = URL.createObjectURL(response.data);
+                    createdBlobUrl = true;
+                } catch {
+                    return null;
+                }
             }
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    ctx.drawImage(img, 0, 0);
-                    try {
-                        const data = canvas.toDataURL('image/jpeg', 0.8);
-                        resolve({ data, width: img.width, height: img.height });
-                    } catch {
+            return new Promise((resolve) => {
+                const img = new window.Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0);
+                        try {
+                            const data = canvas.toDataURL('image/jpeg', 0.8);
+                            resolve({ data, width: img.width, height: img.height });
+                        } catch {
+                            resolve(null);
+                        }
+                    } else {
                         resolve(null);
                     }
-                } else {
+                    if (createdBlobUrl) URL.revokeObjectURL(objectUrl);
+                };
+                img.onerror = () => {
+                    if (createdBlobUrl) URL.revokeObjectURL(objectUrl);
                     resolve(null);
-                }
-            };
-            img.onerror = () => resolve(null);
-            img.src = url;
-        });
+                };
+                img.src = objectUrl;
+            });
+        } catch {
+            return null;
+        }
     };
 
     const generatePdfDocument = async (taskData: Task) => {
@@ -1323,6 +1346,8 @@ function SubtaskModal({
                     size: file.size,
                     type: file.type,
                     url: URL.createObjectURL(file),
+                    file: file,
+                    uploaded: false,
                 });
             }
         }
@@ -2047,38 +2072,55 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
             .catch(() => setHasSubactividades(false));
     }, [project?.id, subactividadId]);
 
-    // Cargar tareas desde el backend
-    React.useEffect(() => {
-        const cargarTareas = async () => {
-            if (!project?.id) return;
-            setLoadingTasks(true);
-            try {
-                const tareasBackend = subactividadId
-                    ? await getTareasBySubactividad(subactividadId)
-                    : await getTareasByActividad(project.id);
+    // Cargar tareas desde el backend (useCallback para poder llamarla fuera del useEffect)
+    const cargarTareas = React.useCallback(async (showLoading = true) => {
+        if (!project?.id) return;
+        if (showLoading) setLoadingTasks(true);
+        try {
+            const tareasBackend = subactividadId
+                ? await getTareasBySubactividad(subactividadId)
+                : await getTareasByActividad(project.id);
                 const tareasConSubtareas: Task[] = await Promise.all(
                     tareasBackend.map(async (tarea) => {
                         // Load subtasks for each task
                         let subtareasLocal: Subtask[] = [];
                         try {
                             const subtareasBackend = await getSubtareasByTarea(tarea.id);
-                            subtareasLocal = subtareasBackend.map(sub => ({
-                                id: sub.codigo || `SUB-${String(sub.id).padStart(3, '0')}`,
-                                backendId: sub.id,
-                                title: sub.nombre,
-                                description: sub.descripcion || '',
-                                state: sub.estado as TaskStatus,
-                                responsibles: sub.responsable
-                                    ? [`${sub.responsable.nombre} ${sub.responsable.apellido}`.trim()]
-                                    : [],
-                                priority: sub.prioridad as Priority,
-                                startDate: sub.fechaInicio ? sub.fechaInicio.split('T')[0].split('-').reverse().join('/') : '',
-                                endDate: sub.fechaFin ? sub.fechaFin.split('T')[0].split('-').reverse().join('/') : '',
-                                informer: sub.creator ? `${sub.creator.nombre} ${sub.creator.apellido}`.trim() : '',
-                                parentTaskId: tarea.codigo || `TAR-${String(tarea.id).padStart(3, '0')}`,
-                                attachments: [],
-                                comments: [],
-                                history: [],
+                            subtareasLocal = await Promise.all(subtareasBackend.map(async (sub) => {
+                                // Cargar evidencias guardadas en MinIO
+                                let attachments: TaskAttachment[] = [];
+                                try {
+                                    const evidencias = await getEvidenciasSubtarea(sub.id);
+                                    attachments = evidencias.map(ev => ({
+                                        id: `ev-${ev.id}`,
+                                        backendId: ev.id,
+                                        name: ev.nombre,
+                                        size: ev.tamanoBytes || 0,
+                                        type: ev.tipo || 'image/jpeg',
+                                        url: ev.url,
+                                        uploaded: true,
+                                    }));
+                                } catch {
+                                    // No bloquear si falla la carga de evidencias
+                                }
+                                return {
+                                    id: sub.codigo || `SUB-${String(sub.id).padStart(3, '0')}`,
+                                    backendId: sub.id,
+                                    title: sub.nombre,
+                                    description: sub.descripcion || '',
+                                    state: sub.estado as TaskStatus,
+                                    responsibles: sub.responsable
+                                        ? [`${sub.responsable.nombre} ${sub.responsable.apellido}`.trim()]
+                                        : [],
+                                    priority: sub.prioridad as Priority,
+                                    startDate: sub.fechaInicio ? sub.fechaInicio.split('T')[0].split('-').reverse().join('/') : '',
+                                    endDate: sub.fechaFin ? sub.fechaFin.split('T')[0].split('-').reverse().join('/') : '',
+                                    informer: sub.creator ? `${sub.creator.nombre} ${sub.creator.apellido}`.trim() : '',
+                                    parentTaskId: tarea.codigo || `TAR-${String(tarea.id).padStart(3, '0')}`,
+                                    attachments,
+                                    comments: [],
+                                    history: [],
+                                };
                             }));
                         } catch (e) {
                             console.error(`Error loading subtasks for task ${tarea.id}:`, e);
@@ -2136,11 +2178,14 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
             } catch (error) {
                 console.error('Error al cargar tareas:', error);
             } finally {
-                setLoadingTasks(false);
+                if (showLoading) setLoadingTasks(false);
             }
-        };
+    }, [project?.id, subactividadId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Carga inicial de tareas (se re-ejecuta cuando cambia el proyecto o subactividad)
+    React.useEffect(() => {
         cargarTareas();
-    }, [project?.id, subactividadId]);
+    }, [cargarTareas]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleTabClick = (tabName: string) => {
         // Navigate directly to detalles with only tab parameter (actividadId is in localStorage)
@@ -2256,6 +2301,8 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                     setIsFinalizarModalOpen(true);
                 }
             }
+            // Refrescar tareas en background para confirmar el estado real del backend
+            cargarTareas(false);
         } catch (error) {
             console.error('Error al guardar tarea:', error);
             // Fallback to local state to not lose data
@@ -2293,6 +2340,10 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                 if (editingSubtaskFromTable && subtask.backendId) {
                     // Update existing subtask
                     const responsibleId = namesToUserIds(subtask.responsibles)[0];
+                    // Obtener adjuntos anteriores para detectar eliminados
+                    const oldSubtask = parentTaskForSubtask.subtasks.find(s => s.id === subtask.id);
+                    const oldAttachments = oldSubtask?.attachments || [];
+
                     await updateSubtarea(subtask.backendId, {
                         nombre: subtask.title,
                         descripcion: subtask.description || undefined,
@@ -2302,6 +2353,40 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                         fechaFin: toISODate(subtask.endDate),
                         estado: subtask.state,
                     });
+
+                    // Eliminar evidencias que fueron removidas por el usuario
+                    const removedAttachments = oldAttachments.filter(
+                        old => old.backendId && !subtask.attachments.some(a => a.backendId === old.backendId)
+                    );
+                    for (const removed of removedAttachments) {
+                        try {
+                            await eliminarEvidenciaSubtarea(subtask.backendId!, removed.backendId!);
+                        } catch { /* continuar */ }
+                    }
+
+                    // Subir nuevas evidencias a MinIO
+                    const newAttachments: TaskAttachment[] = [];
+                    for (const att of subtask.attachments) {
+                        if (!att.uploaded && att.file) {
+                            try {
+                                const archivo = await uploadFile(att.file, 'SUBTAREA', subtask.backendId!, 'evidencia');
+                                const downloadUrl = getArchivoDownloadUrl(archivo.id);
+                                const evidencia = await agregarEvidenciaBackend(subtask.backendId!, {
+                                    nombre: att.name,
+                                    url: downloadUrl,
+                                    tipo: att.type,
+                                    tamanoBytes: att.size,
+                                });
+                                newAttachments.push({ ...att, url: downloadUrl, backendId: evidencia.id, archivoId: archivo.id, uploaded: true, file: undefined });
+                            } catch (err) {
+                                console.error('Error subiendo evidencia:', err);
+                                newAttachments.push(att);
+                            }
+                        } else {
+                            newAttachments.push(att);
+                        }
+                    }
+                    subtask = { ...subtask, attachments: newAttachments };
                 } else if (parentBackendId) {
                     // Create new subtask
                     const responsibleId = namesToUserIds(subtask.responsibles)[0];
@@ -2316,6 +2401,30 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                         fechaFin: toISODate(subtask.endDate),
                     });
                     subtask = { ...subtask, backendId: created.id, id: created.codigo || subtask.id };
+
+                    // Subir evidencias de la nueva subtarea a MinIO
+                    const newAttachments: TaskAttachment[] = [];
+                    for (const att of subtask.attachments) {
+                        if (!att.uploaded && att.file && subtask.backendId) {
+                            try {
+                                const archivo = await uploadFile(att.file, 'SUBTAREA', subtask.backendId, 'evidencia');
+                                const downloadUrl = getArchivoDownloadUrl(archivo.id);
+                                const evidencia = await agregarEvidenciaBackend(subtask.backendId, {
+                                    nombre: att.name,
+                                    url: downloadUrl,
+                                    tipo: att.type,
+                                    tamanoBytes: att.size,
+                                });
+                                newAttachments.push({ ...att, url: downloadUrl, backendId: evidencia.id, archivoId: archivo.id, uploaded: true, file: undefined });
+                            } catch (err) {
+                                console.error('Error subiendo evidencia:', err);
+                                newAttachments.push(att);
+                            }
+                        } else {
+                            newAttachments.push(att);
+                        }
+                    }
+                    subtask = { ...subtask, attachments: newAttachments };
                 }
             } catch (error) {
                 console.error('Error al guardar subtarea:', error);
@@ -2353,6 +2462,8 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
                     // No bloquear el flujo si falla la verificación
                 }
             }
+            // Refrescar tareas en background para confirmar el estado real del backend
+            cargarTareas(false);
         }
         setIsSubtaskModalOpen(false);
         setParentTaskForSubtask(null);
