@@ -23,7 +23,7 @@ export function PaginationControls({ page, totalPages, total, limit, onPageChang
       <span className="text-sm text-gray-500">
         Mostrando {from}-{to} de {total} {total === 1 ? 'notificación' : 'notificaciones'}
       </span>
-      {totalPages >= 1 && (
+      {totalPages > 1 && (
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
@@ -33,17 +33,36 @@ export function PaginationControls({ page, totalPages, total, limit, onPageChang
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <Button
-              key={p}
-              variant={p === page ? 'default' : 'outline'}
-              size="sm"
-              className={p === page ? 'bg-[#018CD1] text-white' : ''}
-              onClick={() => onPageChange(p)}
-            >
-              {p}
-            </Button>
-          ))}
+          {(() => {
+            // Show at most 7 page buttons with ellipsis for large page counts
+            const pages: (number | '...')[] = [];
+            if (totalPages <= 7) {
+              for (let i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+              pages.push(1);
+              if (page > 3) pages.push('...');
+              for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+                pages.push(i);
+              }
+              if (page < totalPages - 2) pages.push('...');
+              pages.push(totalPages);
+            }
+            return pages.map((p, idx) =>
+              p === '...' ? (
+                <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">…</span>
+              ) : (
+                <Button
+                  key={p}
+                  variant={p === page ? 'default' : 'outline'}
+                  size="sm"
+                  className={p === page ? 'bg-[#018CD1] text-white' : ''}
+                  onClick={() => onPageChange(p as number)}
+                >
+                  {p}
+                </Button>
+              )
+            );
+          })()}
           <Button
             variant="outline"
             size="sm"

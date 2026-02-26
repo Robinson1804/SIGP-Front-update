@@ -128,8 +128,8 @@ function AppLayoutContent({
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await getNotificaciones({ leida: false });
-      setUnreadNotifCount(response.noLeidas);
+      const response = await getNotificaciones({ leida: false, limit: 1 });
+      setUnreadNotifCount(response.total);
     } catch {
       // silently ignore
     }
@@ -187,9 +187,7 @@ function AppLayoutContent({
                   <item.icon className={cn("h-5 w-5 mr-3", !isActive ? 'text-[#004272]' : '')} />
                   <span className="flex-1">{item.label}</span>
                   {item.module === MODULES.NOTIFICACIONES && unreadNotifCount > 0 && (
-                    <span className="flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold">
-                      {unreadNotifCount > 99 ? '99+' : unreadNotifCount}
-                    </span>
+                    <span className="h-2.5 w-2.5 rounded-full bg-red-500 shrink-0" />
                   )}
                 </Link>
               )})}

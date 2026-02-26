@@ -48,6 +48,7 @@ import {
 } from '@/features/proyectos/services';
 import {
   getSprintsByProyecto,
+  getSprintsBySubproyecto,
   type Sprint,
 } from '@/features/proyectos/services';
 import {
@@ -735,16 +736,16 @@ function ProjectDetailsContent() {
 
             setSprints(sprintsMapped);
 
-            // Mapear subproyectos y cargar sus asignaciones
+            // Mapear subproyectos y cargar sus asignaciones + sprints para progreso
             let subproyectosMapped: SubProject[] = [];
             if (Array.isArray(subproyectosData) && subproyectosData.length > 0) {
-                // Cargar asignaciones de todos los subproyectos en paralelo
-                const asignacionesPromises = subproyectosData.map(sp =>
-                    getAsignacionesBySubproyecto(sp.id).catch(() => [])
-                );
-                const asignacionesPorSubproyecto = await Promise.all(asignacionesPromises);
+                // Cargar asignaciones y sprints de todos los subproyectos en paralelo
+                const [asignacionesPorSubproyecto, sprintsPorSubproyecto] = await Promise.all([
+                    Promise.all(subproyectosData.map(sp => getAsignacionesBySubproyecto(sp.id).catch(() => []))),
+                    Promise.all(subproyectosData.map(sp => getSprintsBySubproyecto(sp.id).catch(() => []))),
+                ]);
 
-                // Mapear subproyectos con sus responsables desde asignaciones
+                // Mapear subproyectos con sus responsables y progreso basado en sprints
                 subproyectosMapped = subproyectosData.map((sp, index) => {
                     const asignaciones = asignacionesPorSubproyecto[index];
                     const responsablesIds = asignaciones.map(a => a.personalId.toString());
@@ -755,11 +756,22 @@ function ProjectDetailsContent() {
                         }
                         return `Personal #${a.personalId}`;
                     });
+                    // Calcular progreso general igual que en Subproyecto Detalles
+                    const sprints = sprintsPorSubproyecto[index] as Sprint[];
+                    const sprintProgressValues = sprints.map((s: Sprint) => {
+                        if (s.estado === 'Finalizado' || s.estado === 'Completado') return 100;
+                        if (s.estado === 'Activo' || s.estado === 'En progreso') return 50;
+                        return 0;
+                    });
+                    const generalProgress = sprints.length > 0
+                        ? Math.round(sprintProgressValues.reduce((a: number, b: number) => a + b, 0) / sprints.length)
+                        : 0;
                     const mapped = mapSubproyectoToSubProject(sp);
                     return {
                         ...mapped,
                         responsible: responsablesIds,
                         responsibleNames: responsablesNombres, // Agregar nombres para mostrar
+                        progress: generalProgress,
                     };
                 });
             }
@@ -876,16 +888,16 @@ function ProjectDetailsContent() {
 
             setSprints(sprintsMapped);
 
-            // Mapear subproyectos y cargar sus asignaciones
+            // Mapear subproyectos y cargar sus asignaciones + sprints para progreso
             let subproyectosMapped: SubProject[] = [];
             if (Array.isArray(subproyectosData) && subproyectosData.length > 0) {
-                // Cargar asignaciones de todos los subproyectos en paralelo
-                const asignacionesPromises = subproyectosData.map(sp =>
-                    getAsignacionesBySubproyecto(sp.id).catch(() => [])
-                );
-                const asignacionesPorSubproyecto = await Promise.all(asignacionesPromises);
+                // Cargar asignaciones y sprints de todos los subproyectos en paralelo
+                const [asignacionesPorSubproyecto, sprintsPorSubproyecto] = await Promise.all([
+                    Promise.all(subproyectosData.map(sp => getAsignacionesBySubproyecto(sp.id).catch(() => []))),
+                    Promise.all(subproyectosData.map(sp => getSprintsBySubproyecto(sp.id).catch(() => []))),
+                ]);
 
-                // Mapear subproyectos con sus responsables desde asignaciones
+                // Mapear subproyectos con sus responsables y progreso basado en sprints
                 subproyectosMapped = subproyectosData.map((sp, index) => {
                     const asignaciones = asignacionesPorSubproyecto[index];
                     const responsablesIds = asignaciones.map(a => a.personalId.toString());
@@ -895,11 +907,22 @@ function ProjectDetailsContent() {
                         }
                         return `Personal #${a.personalId}`;
                     });
+                    // Calcular progreso general igual que en Subproyecto Detalles
+                    const sprints = sprintsPorSubproyecto[index] as Sprint[];
+                    const sprintProgressValues = sprints.map((s: Sprint) => {
+                        if (s.estado === 'Finalizado' || s.estado === 'Completado') return 100;
+                        if (s.estado === 'Activo' || s.estado === 'En progreso') return 50;
+                        return 0;
+                    });
+                    const generalProgress = sprints.length > 0
+                        ? Math.round(sprintProgressValues.reduce((a: number, b: number) => a + b, 0) / sprints.length)
+                        : 0;
                     const mapped = mapSubproyectoToSubProject(sp);
                     return {
                         ...mapped,
                         responsible: responsablesIds,
                         responsibleNames: responsablesNombres,
+                        progress: generalProgress,
                     };
                 });
             }
@@ -1078,17 +1101,17 @@ function ProjectDetailsContent() {
                 }
             }
 
-            // Recargar subproyectos desde el backend con sus asignaciones
+            // Recargar subproyectos desde el backend con sus asignaciones y sprints
             const subproyectosData = await getSubproyectosByProyecto(proyectoId);
             let subproyectosMapped: SubProject[] = [];
             if (Array.isArray(subproyectosData) && subproyectosData.length > 0) {
-                // Cargar asignaciones de todos los subproyectos en paralelo
-                const asignacionesPromises = subproyectosData.map(sp =>
-                    getAsignacionesBySubproyecto(sp.id).catch(() => [])
-                );
-                const asignacionesPorSubproyecto = await Promise.all(asignacionesPromises);
+                // Cargar asignaciones y sprints de todos los subproyectos en paralelo
+                const [asignacionesPorSubproyecto, sprintsPorSubproyecto] = await Promise.all([
+                    Promise.all(subproyectosData.map(sp => getAsignacionesBySubproyecto(sp.id).catch(() => []))),
+                    Promise.all(subproyectosData.map(sp => getSprintsBySubproyecto(sp.id).catch(() => []))),
+                ]);
 
-                // Mapear subproyectos con sus responsables desde asignaciones
+                // Mapear subproyectos con sus responsables y progreso basado en sprints
                 subproyectosMapped = subproyectosData.map((sp, index) => {
                     const asignaciones = asignacionesPorSubproyecto[index];
                     const responsablesIds = asignaciones.map(a => a.personalId.toString());
@@ -1098,11 +1121,22 @@ function ProjectDetailsContent() {
                         }
                         return `Personal #${a.personalId}`;
                     });
+                    // Calcular progreso general igual que en Subproyecto Detalles
+                    const sprints = sprintsPorSubproyecto[index] as Sprint[];
+                    const sprintProgressValues = sprints.map((s: Sprint) => {
+                        if (s.estado === 'Finalizado' || s.estado === 'Completado') return 100;
+                        if (s.estado === 'Activo' || s.estado === 'En progreso') return 50;
+                        return 0;
+                    });
+                    const generalProgress = sprints.length > 0
+                        ? Math.round(sprintProgressValues.reduce((a: number, b: number) => a + b, 0) / sprints.length)
+                        : 0;
                     const mapped = mapSubproyectoToSubProject(sp);
                     return {
                         ...mapped,
                         responsible: responsablesIds,
                         responsibleNames: responsablesNombres,
+                        progress: generalProgress,
                     };
                 });
             }

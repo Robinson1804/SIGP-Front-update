@@ -90,15 +90,11 @@ type OtherNavLevel =
   | { level: 'sprints'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string }
   | { level: 'notificaciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string; sprintId?: number; sprintNombre?: string };
 
-// Navigation state types for DESARROLLADOR (simpler: just proyectos → tareas)
-type DeveloperNavLevel =
-  | { level: 'proyectos' }
-  | { level: 'tareas'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string };
+// Flat tab types for DESARROLLADOR (4 sections)
+type DeveloperTabName = 'Proyectos' | 'Tareas' | 'Historias de usuario' | 'Validaciones';
 
-// Navigation state types for IMPLEMENTADOR (simpler: just actividades → subtareas)
-type ImplementadorNavLevel =
-  | { level: 'actividades' }
-  | { level: 'subtareas'; actividadId: number; actividadNombre: string; actividadCodigo: string };
+// Flat tab types for IMPLEMENTADOR (3 sections)
+type ImplementadorTabName = 'Actividades' | 'Tarea' | 'Subtareas';
 
 // Tab definitions for non-PMO roles
 interface TabDefinition {
@@ -161,8 +157,14 @@ export default function NotificationsPage() {
   const [pmoNavStack, setPmoNavStack] = useState<PmoNavLevel>({ level: 'proyectos' });
   const [pmoActividadNavStack, setPmoActividadNavStack] = useState<PmoActividadNavLevel>({ level: 'actividades' });
   const [otherNavStack, setOtherNavStack] = useState<OtherNavLevel>({ level: 'proyectos' });
-  const [developerNavStack, setDeveloperNavStack] = useState<DeveloperNavLevel>({ level: 'proyectos' });
-  const [implementadorNavStack, setImplementadorNavStack] = useState<ImplementadorNavLevel>({ level: 'actividades' });
+  const [developerActiveTab, setDeveloperActiveTab] = useState<DeveloperTabName>('Proyectos');
+  const [implementadorActiveTab, setImplementadorActiveTab] = useState<ImplementadorTabName>('Actividades');
+  const [developerNotifications, setDeveloperNotifications] = useState<LocalNotification[]>([]);
+  const [developerPage, setDeveloperPage] = useState(1);
+  const [developerTotalItems, setDeveloperTotalItems] = useState(0);
+  const [implementadorNotifications, setImplementadorNotifications] = useState<LocalNotification[]>([]);
+  const [implementadorPage, setImplementadorPage] = useState(1);
+  const [implementadorTotalItems, setImplementadorTotalItems] = useState(0);
 
   // Data state
   const [proyectoGroups, setProyectoGroups] = useState<ProyectoGroup[]>([]);
@@ -270,45 +272,44 @@ export default function NotificationsPage() {
           }
         }
       } else if (isDeveloper) {
-        // DESARROLLADOR Navigation Flow (specialized view)
-        if (developerNavStack.level === 'proyectos') {
-          // Show project blocks with task notifications count
-          const groups = await getNotificacionesAgrupadasPorProyecto();
-          setProyectoGroups(groups);
-        } else if (developerNavStack.level === 'tareas') {
-          // Show task notifications for selected project
-          const response = await getNotificaciones({
-            proyectoId: developerNavStack.proyectoId,
-            tipo: 'Tareas',
-            page,
-            limit: PAGE_SIZE,
-          });
-          const mapped = response.notificaciones
-            .map(mapBackendNotification)
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-          setNotifications(mapped);
-          setTotalItems(response.total);
-        }
+        // DESARROLLADOR Flat Tab Flow (4 sections)
+        const developerTipoMap: Record<DeveloperTabName, { tipo: string; entidadTipo?: string }> = {
+          'Proyectos': { tipo: 'Proyectos' },
+          'Tareas': { tipo: 'Tareas' },
+          'Historias de usuario': { tipo: 'Tareas', entidadTipo: 'historia' },
+          'Validaciones': { tipo: 'Aprobaciones' },
+        };
+        const { tipo: devTipo, entidadTipo: devEntidadTipo } = developerTipoMap[developerActiveTab];
+        const devResponse = await getNotificaciones({
+          tipo: devTipo,
+          entidadTipo: devEntidadTipo,
+          page: developerPage,
+          limit: PAGE_SIZE,
+        });
+        const devMapped = devResponse.notificaciones
+          .map(mapBackendNotification)
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setDeveloperNotifications(devMapped);
+        setDeveloperTotalItems(devResponse.total);
       } else if (isImplementador) {
-        // IMPLEMENTADOR Navigation Flow (specialized view)
-        if (implementadorNavStack.level === 'actividades') {
-          // Show activity blocks with subtask notifications count
-          const groups = await getNotificacionesAgrupadasPorActividad();
-          setActividadGroups(groups);
-        } else if (implementadorNavStack.level === 'subtareas') {
-          // Show subtask notifications for selected activity (type: Tareas)
-          const response = await getNotificaciones({
-            actividadId: implementadorNavStack.actividadId,
-            tipo: 'Tareas',
-            page,
-            limit: PAGE_SIZE,
-          });
-          const mapped = response.notificaciones
-            .map(mapBackendNotification)
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-          setNotifications(mapped);
-          setTotalItems(response.total);
-        }
+        // IMPLEMENTADOR Flat Tab Flow (3 sections)
+        const implementadorTipoMap: Record<ImplementadorTabName, { tipo: string; entidadTipo?: string }> = {
+          'Actividades': { tipo: 'Proyectos' },
+          'Tarea': { tipo: 'Tareas', entidadTipo: 'tarea' },
+          'Subtareas': { tipo: 'Tareas', entidadTipo: 'subtarea' },
+        };
+        const { tipo: implTipo, entidadTipo: implEntidadTipo } = implementadorTipoMap[implementadorActiveTab];
+        const implResponse = await getNotificaciones({
+          tipo: implTipo,
+          entidadTipo: implEntidadTipo,
+          page: implementadorPage,
+          limit: PAGE_SIZE,
+        });
+        const implMapped = implResponse.notificaciones
+          .map(mapBackendNotification)
+          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        setImplementadorNotifications(implMapped);
+        setImplementadorTotalItems(implResponse.total);
       } else {
         // Non-PMO Navigation Flow (existing logic)
         if (currentNonPmoTab?.drillDown === 'flat') {
@@ -354,7 +355,7 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [usePmoFlow, isDeveloper, isImplementador, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, developerNavStack, implementadorNavStack, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
+  }, [usePmoFlow, isDeveloper, isImplementador, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, developerActiveTab, implementadorActiveTab, developerPage, implementadorPage, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
 
   useEffect(() => {
     loadData();
@@ -532,32 +533,18 @@ export default function NotificationsPage() {
     setSelectedNotificationIds(new Set());
   };
 
-  // DESARROLLADOR Navigation handlers
-  const handleDeveloperProyectoClick = (proyectoId: number, proyectoNombre: string, proyectoCodigo: string) => {
-    setDeveloperNavStack({ level: 'tareas', proyectoId, proyectoNombre, proyectoCodigo });
-    setPage(1);
+  // DESARROLLADOR tab change handler
+  const handleDeveloperTabChange = (tab: DeveloperTabName) => {
+    setDeveloperActiveTab(tab);
+    setDeveloperPage(1);
     setDeleteMode(false);
     setSelectedNotificationIds(new Set());
   };
 
-  const handleDeveloperBack = () => {
-    setDeveloperNavStack({ level: 'proyectos' });
-    setPage(1);
-    setDeleteMode(false);
-    setSelectedNotificationIds(new Set());
-  };
-
-  // IMPLEMENTADOR Navigation handlers
-  const handleImplementadorActividadClick = (actividadId: number, actividadNombre: string, actividadCodigo: string) => {
-    setImplementadorNavStack({ level: 'subtareas', actividadId, actividadNombre, actividadCodigo });
-    setPage(1);
-    setDeleteMode(false);
-    setSelectedNotificationIds(new Set());
-  };
-
-  const handleImplementadorBack = () => {
-    setImplementadorNavStack({ level: 'actividades' });
-    setPage(1);
+  // IMPLEMENTADOR tab change handler
+  const handleImplementadorTabChange = (tab: ImplementadorTabName) => {
+    setImplementadorActiveTab(tab);
+    setImplementadorPage(1);
     setDeleteMode(false);
     setSelectedNotificationIds(new Set());
   };
@@ -652,8 +639,6 @@ export default function NotificationsPage() {
   const handleMarkAllReadByProject = async () => {
     const proyectoId = usePmoFlow
       ? (pmoNavStack.level === 'notificaciones' ? pmoNavStack.proyectoId : null)
-      : isDeveloper
-      ? (developerNavStack.level === 'tareas' ? developerNavStack.proyectoId : null)
       : (otherNavStack.level === 'notificaciones' ? otherNavStack.proyectoId : null);
 
     if (!proyectoId) return;
@@ -721,7 +706,12 @@ export default function NotificationsPage() {
   };
 
   const selectAllNotifications = () => {
-    const allIds = new Set(notifications.map(n => n.id));
+    const source = isDeveloper
+      ? developerNotifications
+      : isImplementador
+      ? implementadorNotifications
+      : notifications;
+    const allIds = new Set(source.map(n => n.id));
     setSelectedNotificationIds(allIds);
   };
 
@@ -731,10 +721,6 @@ export default function NotificationsPage() {
       // Determine current level based on role and navigation
       const currentLevel = usePmoFlow
         ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
-        : isDeveloper
-        ? developerNavStack.level
-        : isImplementador
-        ? implementadorNavStack.level
         : otherNavStack.level;
 
       if (usePmoFlow && activeTab === 'Actividades') {
@@ -749,15 +735,17 @@ export default function NotificationsPage() {
           toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
           loadData();
         }
+      } else if ((isDeveloper || isImplementador) && selectedNotificationIds.size > 0) {
+        // Developer/Implementador: flat notification deletion
+        const ids = Array.from(selectedNotificationIds).map(Number);
+        await bulkDeleteNotificaciones(ids);
+        toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
+        loadData();
       } else if (currentLevel === 'proyectos' && selectedProyectoIds.size > 0) {
         await bulkDeleteByProyectos(Array.from(selectedProyectoIds));
         setProyectoGroups(prev => prev.filter(g => !selectedProyectoIds.has(g.proyectoId)));
         toast({ title: 'Listo', description: `${selectedProyectoIds.size} proyecto(s) eliminados` });
-      } else if (isImplementador && currentLevel === 'actividades' && selectedActividadIds.size > 0) {
-        await bulkDeleteByActividades(Array.from(selectedActividadIds));
-        setActividadGroups(prev => prev.filter(g => !selectedActividadIds.has(g.actividadId)));
-        toast({ title: 'Listo', description: `${selectedActividadIds.size} actividad(es) eliminadas` });
-      } else if ((currentLevel === 'notificaciones' || currentLevel === 'tareas' || currentLevel === 'subtareas' || (!usePmoFlow && !isDeveloper && !isImplementador && currentNonPmoTab?.drillDown === 'flat')) && selectedNotificationIds.size > 0) {
+      } else if ((currentLevel === 'notificaciones' || (!usePmoFlow && !isDeveloper && !isImplementador && currentNonPmoTab?.drillDown === 'flat')) && selectedNotificationIds.size > 0) {
         const ids = Array.from(selectedNotificationIds).map(Number);
         await bulkDeleteNotificaciones(ids);
         toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
@@ -778,20 +766,13 @@ export default function NotificationsPage() {
   // Count selected items for toolbar
   const currentLevel = usePmoFlow
     ? (activeTab === 'Actividades' ? pmoActividadNavStack.level : pmoNavStack.level)
-    : isDeveloper
-    ? developerNavStack.level
-    : isImplementador
-    ? implementadorNavStack.level
     : otherNavStack.level;
   const selectedCount = (() => {
     if (usePmoFlow && activeTab === 'Actividades') {
       return currentLevel === 'actividades' ? selectedActividadIds.size : selectedNotificationIds.size;
     }
-    if (isDeveloper) {
-      return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
-    }
-    if (isImplementador) {
-      return currentLevel === 'actividades' ? selectedActividadIds.size : selectedNotificationIds.size;
+    if (isDeveloper || isImplementador) {
+      return selectedNotificationIds.size; // Always flat notifications
     }
     return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
   })();
@@ -818,9 +799,9 @@ export default function NotificationsPage() {
         }
       }
     } else if (isDeveloper) {
-      return 0; // Developer handles count separately
+      return developerNotifications.filter(n => !n.read).length;
     } else if (isImplementador) {
-      return 0; // Implementador handles count separately
+      return implementadorNotifications.filter(n => !n.read).length;
     } else {
       if (otherNavStack.level === 'proyectos') {
         return proyectoGroups.reduce((sum, g) => sum + g.noLeidas, 0);
@@ -978,6 +959,7 @@ export default function NotificationsPage() {
             onSeccionClick={handleSeccionClick}
             onBack={handlePmoBack}
             onDeleteSeccion={handleDeleteSeccion}
+            allowedSections={isCoordinador ? ['asignaciones', 'sprints'] : undefined}
           />
         );
       }
@@ -1045,228 +1027,86 @@ export default function NotificationsPage() {
       }
     }
 
-    // DESARROLLADOR View (specialized)
+    // DESARROLLADOR View (4 flat tabs)
     if (isDeveloper) {
-      if (developerNavStack.level === 'proyectos') {
-        // Show project blocks
-        return (
-          <ProyectoBlockList
-            groups={proyectoGroups}
-            loading={isLoading}
-            deleteMode={false}
-            selectedIds={new Set()}
-            onToggleSelect={() => {}}
-            onProyectoClick={handleDeveloperProyectoClick}
-          />
-        );
-      }
-
-      if (developerNavStack.level === 'tareas') {
-        // Show task notifications for selected project
-        return (
-          <div>
-            {/* Custom header for developer task list */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleDeveloperBack} className="gap-1">
-                  <span className="mr-1">&larr;</span>
-                  Volver
-                </Button>
-                <nav className="text-sm text-gray-500">
-                  <span className="text-gray-400">Proyectos</span>
-                  <span className="mx-1 text-gray-400">&gt;</span>
-                  <span className="font-medium text-gray-700">{developerNavStack.proyectoCodigo}: {developerNavStack.proyectoNombre}</span>
-                </nav>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {deleteMode && (
-                  <Button variant="outline" size="sm" onClick={selectAllNotifications}>
-                    Seleccionar todas
-                  </Button>
-                )}
-                {!deleteMode && (
-                  <>
-                    {notifications.some(n => !n.read) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            await marcarTodasLeidasPorProyecto(developerNavStack.proyectoId);
-                            toast({ title: 'Listo', description: 'Todas las notificaciones marcadas como leídas' });
-                            loadData();
-                          } catch (err) {
-                            console.error('Error marking all as read:', err);
-                            toast({ title: 'Error', description: 'No se pudieron marcar como leídas', variant: 'destructive' });
-                          }
-                        }}
-                      >
-                        Marcar todas como leídas
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={toggleDeleteMode}>
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Eliminar
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-                      <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
-                      Actualizar
-                    </Button>
-                  </>
-                )}
-              </div>
+      const developerTotalPages = Math.ceil(developerTotalItems / PAGE_SIZE);
+      return (
+        <div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
             </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+          ) : developerNotifications.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              No hay notificaciones en esta sección.
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {developerNotifications.map((notification) => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    onClick={handleNotificationClick}
+                    onViewObservacion={setViewingObservacion}
+                    checkbox={deleteMode}
+                    checked={selectedNotificationIds.has(notification.id)}
+                    onCheckChange={() => toggleNotificationSelect(notification.id)}
+                  />
+                ))}
               </div>
-            ) : notifications.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-                No hay notificaciones de tareas.
-              </div>
-            ) : (
-              <>
-                <div className="space-y-3">
-                  {notifications.map((notification) => (
-                    <NotificationCard
-                      key={notification.id}
-                      notification={notification}
-                      onClick={handleNotificationClick}
-                      onViewObservacion={setViewingObservacion}
-                      checkbox={deleteMode}
-                      checked={selectedNotificationIds.has(notification.id)}
-                      onCheckChange={() => toggleNotificationSelect(notification.id)}
-                    />
-                  ))}
-                </div>
-                <PaginationControls
-                  page={page}
-                  totalPages={drillTotalPages}
-                  total={totalItems}
-                  limit={PAGE_SIZE}
-                  onPageChange={handlePageChange}
-                />
-              </>
-            )}
-          </div>
-        );
-      }
-
-      return null;
+              <PaginationControls
+                page={developerPage}
+                totalPages={developerTotalPages}
+                total={developerTotalItems}
+                limit={PAGE_SIZE}
+                onPageChange={(p) => { setDeveloperPage(p); setSelectedNotificationIds(new Set()); }}
+              />
+            </>
+          )}
+        </div>
+      );
     }
 
-    // IMPLEMENTADOR View (specialized)
+    // IMPLEMENTADOR View (3 flat tabs)
     if (isImplementador) {
-      if (implementadorNavStack.level === 'actividades') {
-        // Show activity blocks
-        return (
-          <ActividadBlockList
-            groups={actividadGroups}
-            loading={isLoading}
-            deleteMode={false}
-            selectedIds={new Set()}
-            onToggleSelect={() => {}}
-            onActividadClick={handleImplementadorActividadClick}
-          />
-        );
-      }
-
-      if (implementadorNavStack.level === 'subtareas') {
-        // Show subtask notifications for selected activity
-        return (
-          <div>
-            {/* Custom header for implementador subtask list */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleImplementadorBack} className="gap-1">
-                  <span className="mr-1">&larr;</span>
-                  Volver
-                </Button>
-                <nav className="text-sm text-gray-500">
-                  <span className="text-gray-400">Actividades</span>
-                  <span className="mx-1 text-gray-400">&gt;</span>
-                  <span className="font-medium text-gray-700">{implementadorNavStack.actividadCodigo}: {implementadorNavStack.actividadNombre}</span>
-                </nav>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {deleteMode && (
-                  <Button variant="outline" size="sm" onClick={selectAllNotifications}>
-                    Seleccionar todas
-                  </Button>
-                )}
-                {!deleteMode && (
-                  <>
-                    {notifications.some(n => !n.read) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          try {
-                            await marcarTodasLeidasPorActividad(implementadorNavStack.actividadId);
-                            toast({ title: 'Listo', description: 'Todas las notificaciones marcadas como leídas' });
-                            loadData();
-                          } catch (err) {
-                            console.error('Error marking all as read:', err);
-                            toast({ title: 'Error', description: 'No se pudieron marcar como leídas', variant: 'destructive' });
-                          }
-                        }}
-                      >
-                        Marcar todas como leídas
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={toggleDeleteMode}>
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Eliminar
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={loadData} disabled={isLoading}>
-                      <RefreshCw className={cn("h-4 w-4 mr-1", isLoading && "animate-spin")} />
-                      Actualizar
-                    </Button>
-                  </>
-                )}
-              </div>
+      const implementadorTotalPages = Math.ceil(implementadorTotalItems / PAGE_SIZE);
+      return (
+        <div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
             </div>
-
-            {isLoading ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+          ) : implementadorNotifications.length === 0 ? (
+            <div className="text-center py-10 text-gray-500">
+              No hay notificaciones en esta sección.
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {implementadorNotifications.map((notification) => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    onClick={handleNotificationClick}
+                    onViewObservacion={setViewingObservacion}
+                    checkbox={deleteMode}
+                    checked={selectedNotificationIds.has(notification.id)}
+                    onCheckChange={() => toggleNotificationSelect(notification.id)}
+                  />
+                ))}
               </div>
-            ) : notifications.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-                No hay notificaciones de subtareas.
-              </div>
-            ) : (
-              <>
-                <div className="space-y-3">
-                  {notifications.map((notification) => (
-                    <NotificationCard
-                      key={notification.id}
-                      notification={notification}
-                      onClick={handleNotificationClick}
-                      onViewObservacion={setViewingObservacion}
-                      checkbox={deleteMode}
-                      checked={selectedNotificationIds.has(notification.id)}
-                      onCheckChange={() => toggleNotificationSelect(notification.id)}
-                    />
-                  ))}
-                </div>
-                <PaginationControls
-                  page={page}
-                  totalPages={drillTotalPages}
-                  total={totalItems}
-                  limit={PAGE_SIZE}
-                  onPageChange={handlePageChange}
-                />
-              </>
-            )}
-          </div>
-        );
-      }
-
-      return null;
+              <PaginationControls
+                page={implementadorPage}
+                totalPages={implementadorTotalPages}
+                total={implementadorTotalItems}
+                limit={PAGE_SIZE}
+                onPageChange={(p) => { setImplementadorPage(p); setSelectedNotificationIds(new Set()); }}
+              />
+            </>
+          )}
+        </div>
+      );
     }
 
     // Non-PMO View (existing logic)
@@ -1371,13 +1211,15 @@ export default function NotificationsPage() {
   };
 
   // Determine which tabs to show
-  const showFlatTabUnreadCount = !usePmoFlow && !isDeveloper && !isImplementador && currentNonPmoTab?.drillDown === 'flat' && currentUnreadCount > 0;
+  const showFlatTabUnreadCount = (
+    (!usePmoFlow && !isDeveloper && !isImplementador && currentNonPmoTab?.drillDown === 'flat') ||
+    isDeveloper ||
+    isImplementador
+  ) && currentUnreadCount > 0;
   const showHeaderUnreadBadge = usePmoFlow
     ? (pmoNavStack.level === 'proyectos' || (activeTab === 'Actividades' && pmoActividadNavStack.level === 'actividades'))
-    : isDeveloper
-    ? developerNavStack.level === 'proyectos'
-    : isImplementador
-    ? implementadorNavStack.level === 'actividades'
+    : isDeveloper || isImplementador
+    ? true // Always show header for flat views
     : (otherNavStack.level === 'proyectos' || currentNonPmoTab?.drillDown === 'flat');
 
   return (
@@ -1432,12 +1274,11 @@ export default function NotificationsPage() {
 
         <div className="flex-1 flex flex-col bg-[#F9F9F9] p-6">
           {/* Tabs */}
-          {!isDeveloper && !isImplementador && (
-            <div className="flex items-center mb-6 gap-2">
-              {usePmoFlow ? (
-                // PMO/COORDINADOR/SCRUM_MASTER Tabs + PGD Filter
-                <>
-                  {PMO_TABS.map(tabName => (
+          <div className="flex items-center mb-6 gap-2 flex-wrap">
+            {usePmoFlow ? (
+              // PMO/COORDINADOR/SCRUM_MASTER Tabs + PGD Filter
+              <>
+                {PMO_TABS.map(tabName => (
                   <Button
                     key={tabName}
                     size="sm"
@@ -1484,8 +1325,42 @@ export default function NotificationsPage() {
                   </div>
                 )}
               </>
+            ) : isDeveloper ? (
+              // DESARROLLADOR 4 flat tabs
+              (['Proyectos', 'Tareas', 'Historias de usuario', 'Validaciones'] as DeveloperTabName[]).map(tabName => (
+                <Button
+                  key={tabName}
+                  size="sm"
+                  onClick={() => handleDeveloperTabChange(tabName)}
+                  className={cn(
+                    developerActiveTab === tabName
+                      ? 'bg-[#018CD1] text-white'
+                      : 'bg-white text-black border-gray-300'
+                  )}
+                  variant={developerActiveTab === tabName ? 'default' : 'outline'}
+                >
+                  {tabName}
+                </Button>
+              ))
+            ) : isImplementador ? (
+              // IMPLEMENTADOR 3 flat tabs
+              (['Actividades', 'Tarea', 'Subtareas'] as ImplementadorTabName[]).map(tabName => (
+                <Button
+                  key={tabName}
+                  size="sm"
+                  onClick={() => handleImplementadorTabChange(tabName)}
+                  className={cn(
+                    implementadorActiveTab === tabName
+                      ? 'bg-[#018CD1] text-white'
+                      : 'bg-white text-black border-gray-300'
+                  )}
+                  variant={implementadorActiveTab === tabName ? 'default' : 'outline'}
+                >
+                  {tabName}
+                </Button>
+              ))
             ) : (
-              // Non-PMO Tabs
+              // Non-PMO Tabs (PATROCINADOR)
               NON_PMO_TABS.map(tab => (
                 <Button
                   key={tab.name}
@@ -1501,9 +1376,8 @@ export default function NotificationsPage() {
                   {tab.name}
                 </Button>
               ))
-              )}
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Header with count */}
           {showHeaderUnreadBadge && (

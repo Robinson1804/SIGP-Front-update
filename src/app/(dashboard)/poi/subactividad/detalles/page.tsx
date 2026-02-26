@@ -9,6 +9,8 @@ import {
   X,
   ArrowLeft,
   ExternalLink,
+  Pencil,
+  Loader2,
 } from 'lucide-react';
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -26,8 +28,19 @@ import { Project, ROLES } from '@/lib/definitions';
 import { cn } from '@/lib/utils';
 import { paths } from '@/lib/paths';
 import { useAuth } from '@/stores';
-import { getSubactividadById, deleteSubactividad } from '@/features/actividades/services/subactividades.service';
+import { getSubactividadById, deleteSubactividad, updateSubactividad } from '@/features/actividades/services/subactividades.service';
 import type { Subactividad } from '@/features/actividades/types';
+import { getCoordinadores, getScrumMasters, type Usuario, formatUsuarioNombre } from '@/lib/services';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { MultiSelect, type MultiSelectOption } from '@/components/ui/multi-select';
 import { useToast } from '@/lib/hooks/use-toast';
 import {
   DashboardTabContent,
@@ -35,6 +48,31 @@ import {
   TableroTabContent,
 } from '@/features/actividades/components/tabs';
 import { ListaContent } from '@/app/(dashboard)/poi/actividad/lista/page';
+
+// Constants for edit modal (mirror poi-modal.tsx)
+const AREAS_DISPONIBLES = [
+  "Oficina Técnica de Administración (OTA)",
+  "Dirección de Censos y Encuestas (DNCE)",
+  "Dirección Técnica de Indicadores (DTI)",
+  "Oficina de Administración y Finanzas (OAF)",
+  "Oficina de Gestión Documental (OGD)",
+  "Oficina de Planificación y Presupuesto (OPP)",
+  "Oficina de Formación Ciudadana e Identidad",
+  "Oficina de Tecnologías de la Información (OTIN)",
+  "Oficina de Recursos Humanos",
+];
+
+const financialAreaOptions: MultiSelectOption[] = [
+  { label: 'OTA - Oficina Técnica de Administración', value: 'Oficina Técnica de Administración (OTA)' },
+  { label: 'DNCE - Dirección de Censos y Encuestas', value: 'Dirección de Censos y Encuestas (DNCE)' },
+  { label: 'DTI - Dirección Técnica de Indicadores', value: 'Dirección Técnica de Indicadores (DTI)' },
+  { label: 'OAF - Oficina de Administración y Finanzas', value: 'Oficina de Administración y Finanzas (OAF)' },
+  { label: 'OGD - Oficina de Gestión Documental', value: 'Oficina de Gestión Documental (OGD)' },
+  { label: 'OPP - Oficina de Planificación y Presupuesto', value: 'Oficina de Planificación y Presupuesto (OPP)' },
+  { label: 'Oficina de Formación Ciudadana e Identidad', value: 'Oficina de Formación Ciudadana e Identidad' },
+  { label: 'OTIN - Oficina de Tecnologías de la Información', value: 'Oficina de Tecnologías de la Información (OTIN)' },
+  { label: 'ORH - Oficina de Recursos Humanos', value: 'Oficina de Recursos Humanos' },
+];
 
 // Types
 type SubactividadTab = 'Detalles' | 'Lista' | 'Tablero' | 'Dashboard' | 'Informes';
@@ -110,6 +148,23 @@ function SubactividadDetailsContent() {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
 
+    const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+    const [isSavingEdit, setIsSavingEdit] = React.useState(false);
+    const [gestores, setGestores] = React.useState<Usuario[]>([]); // coordinadores + scrumMasters merged
+    const [coordinadoresList, setCoordinadoresList] = React.useState<Usuario[]>([]);
+    const [editForm, setEditForm] = React.useState({
+        nombre: '',
+        descripcion: '',
+        coordinacion: '',
+        coordinadorId: '',
+        gestorId: '',
+        financialArea: [] as string[],
+        years: [] as string[],
+        montoAnual: '',
+        fechaInicio: '',
+        fechaFin: '',
+    });
+
     // Determinar rol del usuario
     const userRole = user?.role;
     const isAdmin = userRole === ROLES.ADMIN;
@@ -125,6 +180,7 @@ function SubactividadDetailsContent() {
     }, [isDesarrollador, router]);
 
     // ADMIN puede todo; SCRUM MASTER e IMPLEMENTADOR solo pueden ver, no editar ni eliminar
+    const canEdit = isAdmin || (!isScrumMaster && !isImplementador && !isDesarrollador);
     const canDelete = isAdmin || (!isScrumMaster && !isImplementador && !isDesarrollador);
 
     React.useEffect(() => {
@@ -194,6 +250,78 @@ function SubactividadDetailsContent() {
             return date.toLocaleString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
         } catch {
             return dateString;
+        }
+    };
+
+    const handleOpenEdit = async () => {
+        if (!subactividadData) return;
+        try {
+            const [coords, sms] = await Promise.all([getCoordinadores(), getScrumMasters()]);
+            const merged = [...coords, ...sms.filter(sm => !coords.some(c => c.id === sm.id))];
+            setCoordinadoresList(coords);
+            setGestores(merged);
+            setEditForm({
+                nombre: subactividadData.nombre || '',
+                descripcion: subactividadData.descripcion || '',
+                coordinacion: subactividadData.coordinacion || '',
+                coordinadorId: subactividadData.coordinadorId?.toString() || '',
+                gestorId: subactividadData.gestorId?.toString() || '',
+                financialArea: subactividadData.areasFinancieras || [],
+                years: subactividadData.anios?.map(String) || [],
+                montoAnual: subactividadData.montoAnual?.toString() || '',
+                fechaInicio: subactividadData.fechaInicio ? subactividadData.fechaInicio.split('T')[0] : '',
+                fechaFin: subactividadData.fechaFin ? subactividadData.fechaFin.split('T')[0] : '',
+            });
+            setIsEditModalOpen(true);
+        } catch (error) {
+            console.error('Error cargando datos para edición:', error);
+            toast({ title: 'Error', description: 'No se pudo cargar los datos para edición', variant: 'destructive' });
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        if (!subactividadData) return;
+        setIsSavingEdit(true);
+        try {
+            const updated = await updateSubactividad(subactividadData.id, {
+                nombre: editForm.nombre,
+                descripcion: editForm.descripcion || undefined,
+                coordinacion: editForm.coordinacion || undefined,
+                coordinadorId: editForm.coordinadorId ? parseInt(editForm.coordinadorId) : undefined,
+                gestorId: editForm.gestorId ? parseInt(editForm.gestorId) : undefined,
+                areasFinancieras: editForm.financialArea.length > 0 ? editForm.financialArea : undefined,
+                anios: editForm.years.length > 0 ? editForm.years.map(Number) : undefined,
+                montoAnual: editForm.montoAnual ? parseFloat(editForm.montoAnual) : undefined,
+                fechaInicio: editForm.fechaInicio || undefined,
+                fechaFin: editForm.fechaFin || undefined,
+            });
+            setSubactividadData(updated);
+            // Update gestor display using the gestores list (backend may return stale relation)
+            const newGestor = gestores.find(g => g.id.toString() === editForm.gestorId);
+            const newCoordinador = gestores.find(g => g.id.toString() === editForm.coordinadorId);
+            const gestorName = newGestor ? formatUsuarioNombre(newGestor) : (updated.gestor ? `${updated.gestor.nombre} ${updated.gestor.apellido}`.trim() : '');
+            const coordinadorName = newCoordinador ? formatUsuarioNombre(newCoordinador) : (updated.coordinador ? `${updated.coordinador.nombre} ${updated.coordinador.apellido}`.trim() : '');
+            setProject(prev => prev ? {
+                ...prev,
+                name: updated.nombre,
+                description: updated.descripcion || '',
+                coordinator: coordinadorName,
+                coordination: editForm.coordinacion || updated.coordinacion || '',
+                gestor: gestorName,
+                scrumMaster: gestorName,
+                financialArea: editForm.financialArea,
+                years: editForm.years,
+                annualAmount: updated.montoAnual || 0,
+                startDate: updated.fechaInicio ? updated.fechaInicio.split('T')[0] : '',
+                endDate: updated.fechaFin ? updated.fechaFin.split('T')[0] : '',
+            } : null);
+            setIsEditModalOpen(false);
+            toast({ title: 'Subactividad actualizada', description: 'Los cambios se guardaron correctamente' });
+        } catch (error) {
+            console.error('Error actualizando subactividad:', error);
+            toast({ title: 'Error', description: 'No se pudo actualizar la subactividad', variant: 'destructive' });
+        } finally {
+            setIsSavingEdit(false);
         }
     };
 
@@ -338,6 +466,18 @@ function SubactividadDetailsContent() {
                                     <Trash2 className="mr-2 h-4 w-4" />
                                     Eliminar
                                 </Button>
+                                <Button
+                                    size="sm"
+                                    className={cn(
+                                        "bg-[#018CD1] text-white hover:bg-[#0170A8]",
+                                        !canEdit && "opacity-50 cursor-not-allowed"
+                                    )}
+                                    onClick={() => canEdit && handleOpenEdit()}
+                                    disabled={!canEdit}
+                                >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Editar
+                                </Button>
                             </div>
                         </div>
 
@@ -463,6 +603,173 @@ function SubactividadDetailsContent() {
                 title="AVISO"
                 message="La Subactividad sera eliminada"
             />
+
+            {/* Edit Modal */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="sm:max-w-lg p-0" showCloseButton={false}>
+                    <DialogHeader className="p-4 bg-[#004272] text-white rounded-t-lg flex flex-row items-center justify-between">
+                        <DialogTitle>EDITAR SUBACTIVIDAD</DialogTitle>
+                        <Button type="button" variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-white" onClick={() => setIsEditModalOpen(false)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </DialogHeader>
+                    <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                        {/* Nombre */}
+                        <div>
+                            <label className="text-sm font-medium">Nombre *</label>
+                            <Input
+                                placeholder="Ingresar nombre"
+                                value={editForm.nombre}
+                                onChange={e => setEditForm(p => ({ ...p, nombre: e.target.value }))}
+                            />
+                        </div>
+                        {/* Descripción */}
+                        <div>
+                            <label className="text-sm font-medium">Descripción</label>
+                            <Textarea
+                                placeholder="Ingresar descripción"
+                                value={editForm.descripcion}
+                                onChange={e => setEditForm(p => ({ ...p, descripcion: e.target.value }))}
+                                className="min-h-[80px]"
+                            />
+                        </div>
+                        {/* Coordinación */}
+                        <div>
+                            <label className="text-sm font-medium">Coordinación</label>
+                            <Select
+                                value={editForm.coordinacion}
+                                onValueChange={v => setEditForm(p => ({ ...p, coordinacion: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar coordinación" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {AREAS_DISPONIBLES.map(area => (
+                                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {/* Coordinador */}
+                        <div>
+                            <label className="text-sm font-medium">Coordinador</label>
+                            <Select
+                                value={editForm.coordinadorId}
+                                onValueChange={v => setEditForm(p => ({ ...p, coordinadorId: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar coordinador" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {coordinadoresList.map(c => (
+                                        <SelectItem key={c.id} value={c.id.toString()}>
+                                            {formatUsuarioNombre(c)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {/* Gestor */}
+                        <div>
+                            <label className="text-sm font-medium">Gestor *</label>
+                            <Select
+                                value={editForm.gestorId}
+                                onValueChange={v => setEditForm(p => ({ ...p, gestorId: v }))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar gestor" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {gestores.map(u => (
+                                        <SelectItem key={u.id} value={u.id.toString()}>
+                                            {formatUsuarioNombre(u)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {/* Área Financiera */}
+                        <div>
+                            <label className="text-sm font-medium">Área Financiera</label>
+                            <MultiSelect
+                                options={financialAreaOptions}
+                                selected={editForm.financialArea}
+                                onChange={selected => setEditForm(p => ({ ...p, financialArea: selected }))}
+                                placeholder="Seleccionar área(s)"
+                            />
+                        </div>
+                        {/* Año */}
+                        <div>
+                            <label className="text-sm font-medium">Año *</label>
+                            <MultiSelect
+                                options={
+                                    subactividadData?.actividadPadre?.anios && subactividadData.actividadPadre.anios.length > 0
+                                        ? subactividadData.actividadPadre.anios.map(y => ({ label: String(y), value: String(y) }))
+                                        : editForm.years.map(y => ({ label: y, value: y }))
+                                }
+                                selected={editForm.years}
+                                onChange={selected => setEditForm(p => ({ ...p, years: selected }))}
+                                placeholder="Seleccionar año(s)"
+                            />
+                        </div>
+                        {/* Monto Anual */}
+                        <div>
+                            <label className="text-sm font-medium">Monto anual *</label>
+                            <Input
+                                type="number"
+                                placeholder="Ingresar monto anual"
+                                value={editForm.montoAnual}
+                                onChange={e => setEditForm(p => ({ ...p, montoAnual: e.target.value }))}
+                            />
+                        </div>
+                        {/* Fechas */}
+                        <div className="space-y-2">
+                            <span className="text-sm font-medium">Fechas de la Subactividad</span>
+                            {(subactividadData?.actividadPadre?.fechaInicio || subactividadData?.actividadPadre?.fechaFin) && (
+                                <p className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1">
+                                    Rango permitido: {subactividadData.actividadPadre?.fechaInicio ? new Date(subactividadData.actividadPadre.fechaInicio).toLocaleDateString('es-PE') : '—'} → {subactividadData.actividadPadre?.fechaFin ? new Date(subactividadData.actividadPadre.fechaFin).toLocaleDateString('es-PE') : '—'}
+                                </p>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm text-muted-foreground">Fecha Inicio</label>
+                                    <Input
+                                        type="date"
+                                        value={editForm.fechaInicio}
+                                        onChange={e => setEditForm(p => ({ ...p, fechaInicio: e.target.value }))}
+                                        min={subactividadData?.actividadPadre?.fechaInicio?.split('T')[0] || undefined}
+                                        max={subactividadData?.actividadPadre?.fechaFin?.split('T')[0] || undefined}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-sm text-muted-foreground">Fecha Fin</label>
+                                    <Input
+                                        type="date"
+                                        value={editForm.fechaFin}
+                                        onChange={e => setEditForm(p => ({ ...p, fechaFin: e.target.value }))}
+                                        min={editForm.fechaInicio || subactividadData?.actividadPadre?.fechaInicio?.split('T')[0] || undefined}
+                                        max={subactividadData?.actividadPadre?.fechaFin?.split('T')[0] || undefined}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        {/* Método de Gestión */}
+                        <div>
+                            <label className="text-sm font-medium">Método de Gestión</label>
+                            <Input value="Kanban" readOnly className="bg-gray-100" />
+                        </div>
+                    </div>
+                    <DialogFooter className="px-6 pb-6 flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsEditModalOpen(false)} disabled={isSavingEdit} style={{ borderColor: '#CFD6DD', color: 'black' }}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleSaveEdit} disabled={isSavingEdit || !editForm.nombre.trim()} style={{ backgroundColor: '#018CD1', color: 'white' }}>
+                            {isSavingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Guardar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

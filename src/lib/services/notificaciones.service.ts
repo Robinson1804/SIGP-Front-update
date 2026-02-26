@@ -39,6 +39,7 @@ export interface NotificacionFilters {
   proyectoId?: number;
   actividadId?: number;
   entidadId?: number;
+  entidadTipo?: string;
 }
 
 export interface ProyectoGroup {
@@ -88,30 +89,36 @@ export async function getNotificaciones(
       { params: filters }
     );
     const raw = response.data;
-    // Backend returns { data: [...], meta: { total, page, limit } }
+
+    // Case 1: Backend returned { data: [...], meta: {...} } (findAll wraps in object)
+    // After the interceptor unwraps the outer envelope, raw = { data: [...], meta: {...} }
+    if (raw && !Array.isArray(raw) && Array.isArray(raw.data)) {
+      const meta = raw.meta || {};
+      return {
+        notificaciones: raw.data,
+        total: meta.total ?? raw.data.length,
+        noLeidas: raw.data.filter((n: any) => !n.leida).length,
+        page: meta.page ?? 1,
+        limit: meta.limit ?? 20,
+      };
+    }
+
+    // Case 2: Direct array response (interceptor extracted data.data directly)
     if (raw && Array.isArray(raw)) {
-      // Direct array response (from interceptor extracting data.data)
       const meta = (response as any).meta || {};
       return {
         notificaciones: raw,
         total: meta.total ?? raw.length,
         noLeidas: raw.filter((n: any) => !n.leida).length,
         page: meta.page ?? 1,
-        limit: meta.limit ?? 10,
+        limit: meta.limit ?? 20,
       };
     }
-    // Fallback: wrapped response
-    const notificaciones = Array.isArray(raw) ? raw : [];
-    return {
-      notificaciones,
-      total: notificaciones.length,
-      noLeidas: notificaciones.filter((n: any) => !n.leida).length,
-      page: 1,
-      limit: 10,
-    };
+
+    return { notificaciones: [], total: 0, noLeidas: 0, page: 1, limit: 20 };
   } catch (error) {
     console.error('Error fetching notificaciones:', error);
-    return { notificaciones: [], total: 0, noLeidas: 0, page: 1, limit: 10 };
+    return { notificaciones: [], total: 0, noLeidas: 0, page: 1, limit: 20 };
   }
 }
 

@@ -511,8 +511,9 @@ export interface Subactividad {
   updatedAt: string;
   coordinador?: { id: number; nombre: string; apellido: string };
   gestor?: { id: number; nombre: string; apellido: string };
-  actividadPadre?: { id: number; codigo: string; nombre: string; anios?: number[] };
+  actividadPadre?: { id: number; codigo: string; nombre: string; anios?: number[]; fechaInicio?: string; fechaFin?: string };
   tareasCount?: number;
+  tareasEnProgreso?: number;
   tareasCompletadas?: number;
 }
 

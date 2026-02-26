@@ -305,7 +305,7 @@ export async function desasignarSubtarea(
 // ============================================
 
 /**
- * Agregar evidencia a una subtarea
+ * Agregar evidencia a una subtarea (campo simple evidenciaUrl)
  *
  * @param id - ID de la subtarea
  * @param evidenciaUrl - URL de la evidencia
@@ -316,6 +316,66 @@ export async function agregarEvidenciaSubtarea(
   evidenciaUrl: string
 ): Promise<Subtarea> {
   return updateSubtarea(id, { evidenciaUrl });
+}
+
+// ============================================
+// Evidencias (EvidenciaSubtarea entity)
+// ============================================
+
+export interface EvidenciaSubtareaBackend {
+  id: number;
+  subtareaId: number;
+  nombre: string;
+  descripcion?: string;
+  url: string;
+  tipo?: string;
+  tamanoBytes?: number;
+  subidoPor?: number;
+  createdAt: string;
+}
+
+export interface CreateEvidenciaInput {
+  nombre: string;
+  descripcion?: string;
+  url: string;
+  tipo?: string;
+  tamanoBytes?: number;
+}
+
+/**
+ * Obtener todas las evidencias de una subtarea
+ */
+export async function getEvidenciasSubtarea(
+  subtareaId: number | string
+): Promise<EvidenciaSubtareaBackend[]> {
+  const response = await apiClient.get<EvidenciaSubtareaBackend[]>(
+    `/subtareas/${subtareaId}/evidencias`
+  );
+  return response.data;
+}
+
+/**
+ * Agregar evidencia (archivo subido a MinIO) a una subtarea
+ */
+export async function agregarEvidenciaBackend(
+  subtareaId: number | string,
+  data: CreateEvidenciaInput
+): Promise<EvidenciaSubtareaBackend> {
+  const response = await apiClient.post<EvidenciaSubtareaBackend>(
+    `/subtareas/${subtareaId}/evidencias`,
+    data
+  );
+  return response.data;
+}
+
+/**
+ * Eliminar una evidencia de una subtarea
+ */
+export async function eliminarEvidenciaSubtarea(
+  subtareaId: number | string,
+  evidenciaId: number | string
+): Promise<void> {
+  await apiClient.delete(`/subtareas/${subtareaId}/evidencias/${evidenciaId}`);
 }
 
 // ============================================

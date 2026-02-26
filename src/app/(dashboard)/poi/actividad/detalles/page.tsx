@@ -238,22 +238,41 @@ function ActividadDetailsContent() {
         cargarResponsables();
     }, [project?.id]);
 
+    const cargarSubactividades = React.useCallback(async () => {
+        if (!project?.id) return;
+        try {
+            const subs = await getSubactividadesByActividad(project.id);
+            setSubactividades(subs);
+            // Si todas las subactividades están finalizadas y la actividad aún no lo está, mostrar modal
+            if (subs.length > 0 && subs.every(s => s.estado === 'Finalizado') && project?.status !== 'Finalizado') {
+                setIsFinalizarActividadModalOpen(true);
+            }
+        } catch {
+            setSubactividades([]);
+        }
+    }, [project?.id, project?.status]); // eslint-disable-line
+
     React.useEffect(() => {
-        const cargarSubactividades = async () => {
-            if (!project?.id) return;
-            try {
-                const subs = await getSubactividadesByActividad(project.id);
-                setSubactividades(subs);
-                // Si todas las subactividades están finalizadas y la actividad aún no lo está, mostrar modal
-                if (subs.length > 0 && subs.every(s => s.estado === 'Finalizado') && project?.status !== 'Finalizado') {
-                    setIsFinalizarActividadModalOpen(true);
-                }
-            } catch {
-                setSubactividades([]);
+        cargarSubactividades();
+    }, [cargarSubactividades]);
+
+    // Refrescar subactividades cuando la ventana recupera el foco (después de cambios de estado en otras tabs)
+    React.useEffect(() => {
+        const handleFocus = () => {
+            if (activeTab === 'Detalles') {
+                cargarSubactividades();
             }
         };
-        cargarSubactividades();
-    }, [project?.id]);
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [cargarSubactividades, activeTab]);
+
+    // Refrescar subactividades al volver al tab Detalles
+    React.useEffect(() => {
+        if (activeTab === 'Detalles') {
+            cargarSubactividades();
+        }
+    }, [activeTab]); // eslint-disable-line
 
     const formatDate = (dateString: string) => {
         if (!dateString) return '';
@@ -488,8 +507,11 @@ function ActividadDetailsContent() {
                                 <h4 className="text-lg font-semibold mb-4">Subactividades</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                     {subactividades.map((sub) => {
-                                        const progreso = sub.tareasCount && sub.tareasCount > 0
-                                            ? Math.round(((sub.tareasCompletadas || 0) / sub.tareasCount) * 100)
+                                        const total = sub.tareasCount || 0;
+                                        const progreso = total > 0
+                                            ? Math.round(
+                                                ((sub.tareasEnProgreso || 0) * 50 + (sub.tareasCompletadas || 0) * 100) / total
+                                              )
                                             : 0;
                                         const gestor = sub.gestor
                                             ? `${sub.gestor.nombre} ${sub.gestor.apellido}`.trim()

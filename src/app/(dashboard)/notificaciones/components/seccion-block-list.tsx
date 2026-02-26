@@ -17,6 +17,7 @@ interface SeccionBlockListProps {
   onSeccionClick: (seccion: SeccionName) => void;
   onBack: () => void;
   onDeleteSeccion?: (seccion: SeccionName) => Promise<void>;
+  allowedSections?: SeccionName[];
 }
 
 const SECCION_CONFIG: {
@@ -59,6 +60,7 @@ export function SeccionBlockList({
   onSeccionClick,
   onBack,
   onDeleteSeccion,
+  allowedSections,
 }: SeccionBlockListProps) {
   const [deletingSeccion, setDeletingSeccion] = useState<SeccionName | null>(null);
   const [confirmSeccion, setConfirmSeccion] = useState<SeccionName | null>(null);
@@ -71,8 +73,13 @@ export function SeccionBlockList({
     );
   }
 
-  const totalNotificaciones = Object.values(counts).reduce(
-    (sum, c) => sum + c.total,
+  // Filter sections based on allowedSections prop (for role-based restrictions)
+  const visibleSections = allowedSections
+    ? SECCION_CONFIG.filter(s => allowedSections.includes(s.key))
+    : SECCION_CONFIG;
+
+  const totalNotificaciones = visibleSections.reduce(
+    (sum, s) => sum + (counts[s.key]?.total ?? 0),
     0
   );
 
@@ -141,7 +148,7 @@ export function SeccionBlockList({
 
       {/* Section grid 2x2 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
+        {visibleSections.map(({ key, label, icon: Icon, description }) => {
           const seccionData = counts[key];
           const hasUnread = seccionData.noLeidas > 0;
           const total = seccionData.total;
