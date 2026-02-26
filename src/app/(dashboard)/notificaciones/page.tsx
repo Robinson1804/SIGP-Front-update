@@ -125,14 +125,15 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const isAdmin = user?.role === ROLES.ADMIN;
   const isPmo = user?.role === ROLES.PMO;
   const isCoordinador = user?.role === ROLES.COORDINADOR;
   const isScrumMaster = user?.role === ROLES.SCRUM_MASTER;
   const isDeveloper = user?.role === ROLES.DESARROLLADOR;
   const isImplementador = user?.role === ROLES.IMPLEMENTADOR;
 
-  // COORDINADOR and SCRUM_MASTER use PMO-like flow (tabs + sections)
-  const usePmoFlow = isPmo || isCoordinador || isScrumMaster;
+  // ADMIN, COORDINADOR and SCRUM_MASTER use PMO-like flow (tabs + sections)
+  const usePmoFlow = isAdmin || isPmo || isCoordinador || isScrumMaster;
 
   // PGD filter state (PMO only) - defaults to "Todos" (undefined), user selects explicitly
   const { initializePGD, pgds } = usePGD();
