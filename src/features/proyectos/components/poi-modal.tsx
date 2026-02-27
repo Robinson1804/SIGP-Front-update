@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Select,
@@ -414,6 +414,7 @@ export function POIFullModal({
     const [subProjectForm, setSubProjectForm] = useState<Partial<SubProject>>({});
     const [subProjectErrors, setSubProjectErrors] = useState<{[key: string]: string}>({});
     const [isSaving, setIsSaving] = useState(false);
+    const isSavingRef = useRef(false); // Guard síncrono contra doble-clic
 
     // Estado para subactividades (solo visible cuando type === 'Actividad')
     const [subActividades, setSubActividades] = useState<SubActividadItem[]>([]);
@@ -946,13 +947,19 @@ export function POIFullModal({
     };
 
     const handleSave = async () => {
+        // Guard síncrono: previene doble envío aunque el botón no haya re-renderizado aún
+        if (isSavingRef.current) return;
+        isSavingRef.current = true;
+
         if (!validate()) {
+            isSavingRef.current = false;
             return;
         }
 
         // PRIMERO: Verificar sobrecarga ANTES de intentar guardar
         const haySobrecarga = await verificarSobrecargaAntesDeGuardar();
         if (haySobrecarga) {
+            isSavingRef.current = false;
             return; // Detener el guardado, el modal ya se mostró
         }
 
@@ -1359,11 +1366,14 @@ export function POIFullModal({
                     message: `El proyecto se guardó correctamente, pero los siguientes responsables no pudieron ser asignados:\n\n• ${syncErrorMessages.join('\n• ')}\n\nEstos usuarios no serán asignados al proyecto.`,
                 });
                 setIsSaving(false);
+                isSavingRef.current = false;
                 return; // El cierre se manejará cuando el usuario cierre el AlertDialog
             }
 
             // Primero cerrar el modal, luego notificar al padre
             // Esto evita problemas de estado
+            setIsSaving(false);
+            isSavingRef.current = false;
             onClose();
 
             // Notificar al padre después de cerrar - el padre recargará desde API
@@ -1405,6 +1415,7 @@ export function POIFullModal({
             });
 
             setIsSaving(false);
+            isSavingRef.current = false;
         }
     }
 
