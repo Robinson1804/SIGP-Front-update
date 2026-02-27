@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
@@ -52,8 +53,6 @@ import {
   type CreatePGDInput,
   type UpdatePGDInput,
 } from "@/features/planning";
-
-const years = Array.from({ length: 11 }, (_, i) => new Date().getFullYear() - 5 + i);
 
 function PGDModal({
   isOpen,
@@ -93,7 +92,7 @@ function PGDModal({
     setErrorMessage(null);
 
     if (!startYear || !endYear) {
-      setErrorMessage("Debe seleccionar el año de inicio y fin.");
+      setErrorMessage("Debe ingresar el año de inicio y fin.");
       return;
     }
 
@@ -102,9 +101,10 @@ function PGDModal({
       return;
     }
 
-    // Validar exactamente 4 años (ej: 2021-2024 = diferencia de 3)
-    if (endYear - startYear !== 3) {
-      setErrorMessage("El PGD debe tener exactamente 4 años (ejemplo: 2021-2024).");
+    // Validar 3 o 4 años (diferencia de 2 o 3)
+    const diff = endYear - startYear;
+    if (diff < 2 || diff > 3) {
+      setErrorMessage("El PGD debe tener 3 o 4 años (ejemplo: 2025-2027 o 2025-2028).");
       return;
     }
 
@@ -157,11 +157,11 @@ function PGDModal({
             </DialogClose>
           </DialogHeader>
           <div className="p-6 space-y-4">
-            {/* Advertencia sobre el rango de 4 años */}
-            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-700 font-medium">
-                El PGD debe tener exactamente 4 años (ejemplo: 2021-2024).
+            {/* Advertencia sobre el rango permitido */}
+            <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-700 font-medium">
+                El PGD debe tener 3 o 4 años (ejemplo: 2025-2027 o 2025-2028).
                 Los años no pueden solaparse con otros PGD existentes.
               </p>
             </div>
@@ -171,65 +171,54 @@ function PGDModal({
                 <label htmlFor="startYear" className="block text-sm font-medium text-gray-700 mb-1">
                   Año Inicio:
                 </label>
-                <Select
-                  onValueChange={(value) => {
-                    setStartYear(Number(value));
-                    setErrorMessage(null); // Limpiar error al cambiar
+                <Input
+                  id="startYear"
+                  type="number"
+                  placeholder="Ej: 2025"
+                  value={startYear ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value ? parseInt(e.target.value) : undefined;
+                    setStartYear(val);
+                    setErrorMessage(null);
                   }}
-                  value={startYear?.toString()}
-                >
-                  <SelectTrigger id="startYear">
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
               <div>
                 <label htmlFor="endYear" className="block text-sm font-medium text-gray-700 mb-1">
                   Año Final:
                 </label>
-                <Select
-                  onValueChange={(value) => {
-                    setEndYear(Number(value));
-                    setErrorMessage(null); // Limpiar error al cambiar
+                <Input
+                  id="endYear"
+                  type="number"
+                  placeholder="Ej: 2028"
+                  value={endYear ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value ? parseInt(e.target.value) : undefined;
+                    setEndYear(val);
+                    setErrorMessage(null);
                   }}
-                  value={endYear?.toString()}
-                >
-                  <SelectTrigger id="endYear">
-                    <SelectValue placeholder="Seleccionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {years.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               </div>
             </div>
 
             {/* Mostrar el rango seleccionado si es válido */}
             {startYear && endYear && (
-              <div className={`text-sm p-2 rounded ${
-                endYear - startYear === 3
-                  ? 'bg-green-50 text-green-700'
-                  : 'bg-red-50 text-red-700'
-              }`}>
-                {endYear - startYear === 3 ? (
-                  <span>✓ Rango válido: {startYear}, {startYear + 1}, {startYear + 2}, {endYear} (4 años)</span>
-                ) : endYear <= startYear ? (
-                  <span>✗ El año final debe ser mayor al año de inicio</span>
-                ) : (
-                  <span>✗ El rango debe ser exactamente 4 años (actualmente: {endYear - startYear + 1} años)</span>
-                )}
-              </div>
+              (() => {
+                const diff = endYear - startYear;
+                const isValid = diff === 2 || diff === 3;
+                const years = Array.from({ length: diff + 1 }, (_, i) => startYear + i);
+                return (
+                  <div className={`text-sm p-2 rounded ${isValid ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {endYear <= startYear ? (
+                      <span>✗ El año final debe ser mayor al año de inicio</span>
+                    ) : isValid ? (
+                      <span>✓ Rango válido: {years.join(', ')} ({diff + 1} años)</span>
+                    ) : (
+                      <span>✗ El rango debe ser de 3 o 4 años (actualmente: {diff + 1} años)</span>
+                    )}
+                  </div>
+                );
+              })()
             )}
 
             {/* Mostrar mensaje de error del backend (solapamiento, etc.) */}
