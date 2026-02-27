@@ -95,7 +95,7 @@ export function RequerimientoList({
   const isCoordinador = user?.role === ROLES.COORDINADOR;
   const isPmo = user?.role === ROLES.PMO;
   const isPatrocinador = user?.role === ROLES.PATROCINADOR;
-  const canManage = isAdmin || isScrumMaster || isCoordinador || isPmo; // crear, editar, eliminar
+  const canManage = isAdmin || isScrumMaster || isCoordinador; // crear, editar, eliminar
   const canViewDetail = isAdmin || isScrumMaster || isCoordinador || isPmo || isPatrocinador; // ver detalle
 
   const [requerimientos, setRequerimientos] = useState<Requerimiento[]>(initialData);

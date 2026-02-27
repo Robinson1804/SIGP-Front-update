@@ -35,6 +35,8 @@ import {
 import type { Sprint } from '@/features/proyectos/types';
 import { getSprintsByProyecto } from '@/features/proyectos/services/sprints.service';
 import { parseLocalDate, formatDate } from '@/lib/utils';
+import { useAuth } from '@/stores';
+import { ROLES } from '@/lib/definitions';
 
 interface SprintsViewProps {
   proyectoId: number;
@@ -87,6 +89,8 @@ export function SprintsView({
   onRefresh,
   isReadOnly = false,
 }: SprintsViewProps) {
+  const { user } = useAuth();
+  const isPmo = user?.role === ROLES.PMO;
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
   const [isLoading, setIsLoading] = useState(initialLoading);
   const [estadoFiltro, setEstadoFiltro] = useState<string>('todos');
@@ -188,6 +192,7 @@ export function SprintsView({
               onEdit={isReadOnly ? () => {} : () => onEditSprint(sprintActivo)}
               onDelete={isReadOnly ? () => {} : () => onDeleteSprint(sprintActivo)}
               isReadOnly={isReadOnly}
+              hidePlanning={isPmo}
             />
           )}
 
@@ -207,6 +212,7 @@ export function SprintsView({
                   onEdit={isReadOnly ? () => {} : () => onEditSprint(sprint)}
                   onDelete={isReadOnly ? () => {} : () => onDeleteSprint(sprint)}
                   isReadOnly={isReadOnly}
+                  hidePlanning={isPmo}
                 />
               ))}
             </div>
@@ -284,6 +290,7 @@ interface SprintTimelineItemProps {
   onEdit: () => void;
   onDelete: () => void;
   isReadOnly?: boolean;
+  hidePlanning?: boolean;
 }
 
 function SprintTimelineItem({
@@ -296,6 +303,7 @@ function SprintTimelineItem({
   onEdit,
   onDelete,
   isReadOnly = false,
+  hidePlanning = false,
 }: SprintTimelineItemProps) {
   const colors = ESTADO_COLORS[sprint.estado] || ESTADO_COLORS.Planificado;
   const porcentaje =
@@ -388,15 +396,17 @@ function SprintTimelineItem({
               )}
               {(sprint.estado === 'Por hacer' || sprint.estado === 'Planificado') && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onPlanning}
-                    className="gap-1"
-                  >
-                    <LayoutList className="h-3.5 w-3.5" />
-                    Planning
-                  </Button>
+                  {!hidePlanning && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onPlanning}
+                      className="gap-1"
+                    >
+                      <LayoutList className="h-3.5 w-3.5" />
+                      Planning
+                    </Button>
+                  )}
                   {!isReadOnly && (
                     <Button size="sm" onClick={onIniciar} className="gap-1">
                       <Play className="h-3.5 w-3.5" />
@@ -407,15 +417,17 @@ function SprintTimelineItem({
               )}
               {(sprint.estado === 'En progreso' || sprint.estado === 'Activo') && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onPlanning}
-                    className="gap-1"
-                  >
-                    <LayoutList className="h-3.5 w-3.5" />
-                    Ver Planning
-                  </Button>
+                  {!hidePlanning && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onPlanning}
+                      className="gap-1"
+                    >
+                      <LayoutList className="h-3.5 w-3.5" />
+                      Ver Planning
+                    </Button>
+                  )}
                   {!isReadOnly && (
                     <Button
                       size="sm"

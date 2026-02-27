@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/stores';
+import { ROLES } from '@/lib/definitions';
 import {
   Loader2,
   ArrowRight,
@@ -84,6 +86,8 @@ export function SprintPlanningView({
   backlogHistorias,
   onSuccess,
 }: SprintPlanningViewProps) {
+  const { user } = useAuth();
+  const isPmo = user?.role === ROLES.PMO;
   const [sprintHistorias, setSprintHistorias] = useState<HistoriaUsuario[]>([]);
   const [availableHistorias, setAvailableHistorias] = useState<HistoriaUsuario[]>(
     backlogHistorias
@@ -253,10 +257,12 @@ export function SprintPlanningView({
               </span>
             )}
           </div>
-          <Button onClick={onSuccess} variant="outline" className="gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Finalizar Planning
-          </Button>
+          {!isPmo && (
+            <Button onClick={onSuccess} variant="outline" className="gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Finalizar Planning
+            </Button>
+          )}
         </div>
       </div>
 
@@ -318,25 +324,29 @@ export function SprintPlanningView({
 
         {/* Action buttons */}
         <div className="flex flex-col items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={moveToSprint}
-            disabled={selectedBacklog.length === 0 || isSaving || hasDateConflicts}
-            className="h-10 w-10"
-            title={hasDateConflicts ? 'No se puede mover: hay historias con fechas fuera del rango del sprint' : 'Mover al sprint'}
-          >
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={moveToBacklog}
-            disabled={selectedSprint.length === 0 || isSaving}
-            className="h-10 w-10"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          {!isPmo && (
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={moveToSprint}
+                disabled={selectedBacklog.length === 0 || isSaving || hasDateConflicts}
+                className="h-10 w-10"
+                title={hasDateConflicts ? 'No se puede mover: hay historias con fechas fuera del rango del sprint' : 'Mover al sprint'}
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={moveToBacklog}
+                disabled={selectedSprint.length === 0 || isSaving}
+                className="h-10 w-10"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Sprint column */}
