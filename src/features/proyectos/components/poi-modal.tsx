@@ -894,118 +894,68 @@ export function POIFullModal({
     };
 
     /**
-     * Verificación de sobrecarga antes de guardar.
-     * La validación de personas al 100% ya ocurre al seleccionar (handleResponsiblesChange).
-     * Aquí solo se hace una verificación de seguridad usando el cache existente.
-     * Si alguien al 100% logró quedar en la selección (ej: modo edición), se elimina silenciosamente.
-     * El backend también valida y retornará error si hay conflicto.
+     * Verifica si hay responsables seleccionados con carga al 100% antes de guardar.
+     * Si los hay, los elimina de la selección, muestra el modal "Advertencia de Asignación"
+     * y devuelve true para detener el guardado (el POI modal permanece abierto).
      */
     const verificarSobrecargaAntesDeGuardar = async (): Promise<boolean> => {
         if (!formData.responsibles || formData.responsibles.length === 0) return false;
 
-        // Filtrar silenciosamente cualquier persona al 100% que haya quedado en la selección
+        const listaBase = formData.type === 'Proyecto'
+            ? desarrolladores
+            : formData.type === 'Actividad'
+                ? implementadores
+                : personalDisponible;
+
+        // Detectar responsables seleccionados que están al 100% de capacidad
         const bloqueados = formData.responsibles.filter(idStr => {
             const personalId = parseInt(idStr, 10);
             return (cargaTrabajoCache.get(personalId) ?? 0) >= 100;
         });
 
-        if (bloqueados.length > 0) {
-            const listaBase = formData.type === 'Proyecto'
-                ? desarrolladores
-                : formData.type === 'Actividad'
-                    ? implementadores
-                    : personalDisponible;
+        if (bloqueados.length === 0) return false; // Todos tienen capacidad, continuar guardado
 
-            const sobrecargadosEncontrados = bloqueados.map(idStr => {
-                const personalId = parseInt(idStr, 10);
-                const personal = listaBase.find(p => p.id === personalId);
-                return {
-                    id: personalId,
-                    nombre: personal ? formatPersonalNombre(personal) : `Personal ID ${personalId}`,
-                    porcentaje: cargaTrabajoCache.get(personalId) ?? 100,
-                };
-            });
+        // Construir lista de bloqueados con nombre y porcentaje
+        const sobrecargadosEncontrados = bloqueados.map(idStr => {
+            const personalId = parseInt(idStr, 10);
+            const personal = listaBase.find(p => p.id === personalId)
+                || personalDisponible.find(p => p.id === personalId);
+            const sobrecargadoEnCache = sobrecargadosCache.find(s => s.personalId === personalId);
+            return {
+                id: personalId,
+                nombre: personal
+                    ? formatPersonalNombre(personal)
+                    : sobrecargadoEnCache
+                        ? `${sobrecargadoEnCache.nombres} ${sobrecargadoEnCache.apellidos}`
+                        : `Personal ID ${personalId}`,
+                porcentaje: cargaTrabajoCache.get(personalId) ?? 100,
+            };
+        });
 
-            const disponibles = listaBase
-                .filter(p => (cargaTrabajoCache.get(p.id) ?? 0) < 100)
-                .map(p => ({
-                    id: p.id,
-                    nombre: formatPersonalNombre(p),
-                    porcentajeActual: cargaTrabajoCache.get(p.id) ?? 0,
-                }))
-                .sort((a, b) => a.porcentajeActual - b.porcentajeActual);
+        // Lista de disponibles (< 100%) con porcentaje real, ordenados de menor a mayor
+        const disponibles = listaBase
+            .filter(p => (cargaTrabajoCache.get(p.id) ?? 0) < 100)
+            .map(p => ({
+                id: p.id,
+                nombre: formatPersonalNombre(p),
+                porcentajeActual: cargaTrabajoCache.get(p.id) ?? 0,
+            }))
+            .sort((a, b) => a.porcentajeActual - b.porcentajeActual);
 
-            const idsToRemove = new Set(bloqueados);
-            setFormData(p => ({ ...p, responsibles: p.responsibles?.filter(id => !idsToRemove.has(id)) ?? [] }));
-            setSeleccionSobrecargaModal({ isOpen: true, sobrecargados: sobrecargadosEncontrados, disponibles });
-            return true; // Detener guardado, el modal ya se abrió
-        }
+        // Quitar los bloqueados de la selección para que el usuario reasigne
+        const idsToRemove = new Set(bloqueados);
+        setFormData(p => ({ ...p, responsibles: p.responsibles?.filter(id => !idsToRemove.has(id)) ?? [] }));
 
-        return false;
+        // Mostrar modal de advertencia — el POI modal permanece abierto al cerrarlo
+        setSeleccionSobrecargaModal({ isOpen: true, sobrecargados: sobrecargadosEncontrados, disponibles });
+        return true; // Detener guardado
     };
 
     /**
-     * Verifica sobrecarga en tiempo real al seleccionar responsables.
-     * Si algún responsable nuevo está al 100% de capacidad, lo elimina de la selección
-     * y muestra el modal "Advertencia de Asignación" con lista de disponibles y sus % reales.
+     * Actualiza la selección de responsables sin restricciones.
+     * La verificación de capacidad ocurre al dar clic en Guardar.
      */
     const handleResponsiblesChange = (newSelected: string[]) => {
-        const oldSelected = formData.responsibles || [];
-        const newlyAdded = newSelected.filter(id => !oldSelected.includes(id));
-
-        if (newlyAdded.length > 0) {
-            const sobrecargadosEncontrados: Array<{id: number; nombre: string; porcentaje: number}> = [];
-
-            for (const idStr of newlyAdded) {
-                const personalId = parseInt(idStr, 10);
-                // Usar cargaTrabajoCache (datos reales de TODOS) y también sobrecargadosCache (>100%)
-                const cargaReal = cargaTrabajoCache.get(personalId);
-                const sobrecargadoEnCache = sobrecargadosCache.find(s => s.personalId === personalId);
-                const porcentajeActual = cargaReal !== undefined
-                    ? cargaReal
-                    : sobrecargadoEnCache ? sobrecargadoEnCache.porcentajeTotal : 0;
-
-                if (porcentajeActual >= 100) {
-                    const personal = personalDisponible.find(p => p.id === personalId)
-                        || desarrolladores.find(p => p.id === personalId)
-                        || implementadores.find(p => p.id === personalId);
-                    const nombre = personal
-                        ? formatPersonalNombre(personal)
-                        : sobrecargadoEnCache
-                            ? `${sobrecargadoEnCache.nombres} ${sobrecargadoEnCache.apellidos}`
-                            : `Personal ID ${personalId}`;
-                    sobrecargadosEncontrados.push({ id: personalId, nombre, porcentaje: porcentajeActual });
-                }
-            }
-
-            if (sobrecargadosEncontrados.length > 0) {
-                const listaBase = formData.type === 'Proyecto'
-                    ? desarrolladores
-                    : formData.type === 'Actividad'
-                        ? implementadores
-                        : personalDisponible;
-
-                // Mostrar TODOS los disponibles (< 100%) con su porcentaje REAL
-                const disponibles = listaBase
-                    .filter(p => (cargaTrabajoCache.get(p.id) ?? 0) < 100)
-                    .map(p => ({
-                        id: p.id,
-                        nombre: formatPersonalNombre(p),
-                        porcentajeActual: cargaTrabajoCache.get(p.id) ?? 0,
-                    }))
-                    .sort((a, b) => a.porcentajeActual - b.porcentajeActual); // de menor a mayor carga
-
-                // Eliminar sobrecargados de la selección
-                const idsToRemove = new Set(sobrecargadosEncontrados.map(s => s.id.toString()));
-                const filteredSelected = newSelected.filter(id => !idsToRemove.has(id));
-                setFormData(p => ({ ...p, responsibles: filteredSelected }));
-
-                setSeleccionSobrecargaModal({ isOpen: true, sobrecargados: sobrecargadosEncontrados, disponibles });
-                if (errors.responsibles) setErrors(prev => ({ ...prev, responsibles: '' }));
-                return;
-            }
-        }
-
         setFormData(p => ({ ...p, responsibles: newSelected }));
         if (errors.responsibles) setErrors(prev => ({ ...prev, responsibles: '' }));
     };
