@@ -20,6 +20,7 @@ import {
   type Epica,
 } from '@/features/proyectos/services/epicas.service';
 import { getTareasByHistoria, type Tarea } from '@/features/proyectos/services/tareas.service';
+import { getProyectoEquipo } from '@/features/proyectos/services/proyectos.service';
 
 // ============================================
 // TIPOS
@@ -174,11 +175,15 @@ export function useDashboardData(proyectoId: number, subproyectoId?: number): Us
       setError(null);
 
       // Cargar datos en paralelo
-      const [sprintsData, epicas, backlogData] = await Promise.all([
+      const [sprintsData, epicas, backlogData, equipo] = await Promise.all([
         subproyectoId ? getSprintsBySubproyecto(subproyectoId) : getSprintsByProyecto(proyectoId),
         subproyectoId ? getEpicasBySubproyecto(subproyectoId) : getEpicasByProyecto(proyectoId),
         subproyectoId ? getBacklogBySubproyecto(subproyectoId) : getBacklog(proyectoId),
+        getProyectoEquipo(proyectoId).catch(() => [] as { id: number; nombre: string }[]),
       ]);
+
+      // Mapa rápido de usuarioId → nombre completo
+      const equipoMap = new Map<number, string>(equipo.map((m) => [m.id, m.nombre]));
 
       // Helper para verificar estados (soporta ambos formatos)
       const isEnProgreso = (estado: string) => estado === 'En progreso' || estado === 'Activo';
@@ -329,6 +334,12 @@ export function useDashboardData(proyectoId: number, subproyectoId?: number): Us
           historia.estado === 'En revisión' ? 'ha enviado a revisión' :
           new Date(historia.createdAt).getTime() === new Date(historia.updatedAt).getTime() ? 'ha creado' : 'ha actualizado';
 
+        // Resolver nombre del primer asignado desde el equipo
+        const primerAsignadoId = Array.isArray(historia.asignadoA) && historia.asignadoA.length > 0
+          ? Number(historia.asignadoA[0])
+          : null;
+        const huUsuario = primerAsignadoId ? (equipoMap.get(primerAsignadoId) || 'Sin asignar') : 'Sin asignar';
+
         recentActivities.push({
           id: historia.id,
           tipo: 'historia',
@@ -336,7 +347,7 @@ export function useDashboardData(proyectoId: number, subproyectoId?: number): Us
           objeto: historia.titulo,
           codigo: historia.codigo || `HU-${historia.id}`,
           estado: historia.estado,
-          usuario: historia.asignadoANombre || 'Usuario',
+          usuario: huUsuario,
           fecha: historia.updatedAt,
         });
       });
@@ -353,6 +364,11 @@ export function useDashboardData(proyectoId: number, subproyectoId?: number): Us
           tarea.estado === 'En revisión' ? 'ha enviado a revisión' :
           new Date(tarea.createdAt).getTime() === new Date(tarea.updatedAt).getTime() ? 'ha creado' : 'ha actualizado';
 
+        // Usar asignado (tiene nombre + apellido) si está disponible
+        const tareaUsuario = tarea.asignado
+          ? `${tarea.asignado.nombre} ${tarea.asignado.apellido}`.trim()
+          : tarea.responsable?.nombre || 'Sin asignar';
+
         recentActivities.push({
           id: tarea.id,
           tipo: 'tarea',
@@ -360,7 +376,7 @@ export function useDashboardData(proyectoId: number, subproyectoId?: number): Us
           objeto: tarea.nombre,
           codigo: tarea.codigo || `T-${tarea.id}`,
           estado: tarea.estado,
-          usuario: tarea.responsable?.nombre || 'Usuario',
+          usuario: tareaUsuario,
           fecha: tarea.updatedAt,
         });
       });

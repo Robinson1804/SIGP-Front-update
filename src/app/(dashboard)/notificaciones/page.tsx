@@ -99,15 +99,24 @@ type ImplementadorTabName = 'Actividades' | 'Tarea' | 'Subtareas';
 // Tab definitions for non-PMO roles
 interface TabDefinition {
   name: OtherTabName;
-  types?: NotificationType[];
+  types?: string[]; // Backend TipoNotificacion enum values (e.g. 'Validaciones', 'Aprobaciones')
   drillDown: 'project-only' | 'project-sprint' | 'flat';
 }
 
 const TAB_DEFINITIONS: TabDefinition[] = [
   { name: 'Proyectos', drillDown: 'project-only' },
   { name: 'Sprints', drillDown: 'project-sprint' },
-  { name: 'Aprobaciones', types: ['aprobacion'], drillDown: 'flat' },
-  { name: 'Validaciones', types: ['validacion', 'hu_revision', 'hu_validated', 'hu_rejected'], drillDown: 'flat' },
+  { name: 'Aprobaciones', types: ['Aprobaciones'], drillDown: 'flat' },
+  { name: 'Validaciones', types: ['Validaciones'], drillDown: 'flat' },
+];
+
+// Tabs específicos para PATROCINADOR:
+// - "Aprobaciones" = cosas pendientes de su aprobación (tipo VALIDACIONES del backend)
+// - "Validaciones" = respuestas/resultados de aprobaciones (tipo APROBACIONES del backend)
+const PATROCINADOR_TAB_DEFINITIONS: TabDefinition[] = [
+  { name: 'Proyectos', drillDown: 'project-only' },
+  { name: 'Aprobaciones', types: ['Validaciones'], drillDown: 'flat' },
+  { name: 'Validaciones', types: ['Aprobaciones'], drillDown: 'flat' },
 ];
 
 function getTabsForNonPmo(role?: string): TabDefinition[] {
@@ -115,7 +124,7 @@ function getTabsForNonPmo(role?: string): TabDefinition[] {
     return TAB_DEFINITIONS;
   }
   if (role === ROLES.PATROCINADOR) {
-    return TAB_DEFINITIONS.filter(tab => tab.name !== 'Sprints');
+    return PATROCINADOR_TAB_DEFINITIONS;
   }
   return TAB_DEFINITIONS.filter(tab => tab.name === 'Proyectos');
 }

@@ -90,7 +90,7 @@ export function SprintsView({
   isReadOnly = false,
 }: SprintsViewProps) {
   const { user } = useAuth();
-  const isPmo = user?.role === ROLES.PMO;
+  const isPmo = user?.role === ROLES.PMO || user?.role === ROLES.PATROCINADOR;
   const [sprints, setSprints] = useState<Sprint[]>(initialSprints);
   const [isLoading, setIsLoading] = useState(initialLoading);
   const [estadoFiltro, setEstadoFiltro] = useState<string>('todos');

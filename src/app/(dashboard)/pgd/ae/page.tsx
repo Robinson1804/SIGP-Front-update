@@ -548,9 +548,14 @@ function AeDashboardPageContent() {
       }
     } catch (err: any) {
       console.error("Error deleting AE:", err);
+      const backendMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        "Error al eliminar la acción estratégica";
       toast({
-        title: "Error",
-        description: err.message || "Error al eliminar la acción estratégica",
+        title: "No se puede eliminar",
+        description: backendMessage,
         variant: "destructive",
       });
     } finally {

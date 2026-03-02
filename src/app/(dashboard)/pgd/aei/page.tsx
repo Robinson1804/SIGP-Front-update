@@ -627,9 +627,14 @@ export default function AeiDashboardPage() {
       handleCloseDeleteModal();
     } catch (err: any) {
       console.error("Error deleting AEI:", err);
+      const backendMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        "Error al eliminar la AEI";
       toast({
-        title: "Error",
-        description: err.message || "Error al eliminar la AEI",
+        title: "No se puede eliminar",
+        description: backendMessage,
         variant: "destructive",
       });
     } finally {

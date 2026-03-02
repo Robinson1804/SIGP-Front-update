@@ -454,6 +454,17 @@ export function POIFullModal({
         todosDesarrolladores: [],
     });
 
+    // Estado para modal de advertencia de asignación al seleccionar responsable sobrecargado
+    const [seleccionSobrecargaModal, setSeleccionSobrecargaModal] = useState<{
+        isOpen: boolean;
+        sobrecargados: Array<{id: number; nombre: string; porcentaje: number}>;
+        disponibles: Array<{id: number; nombre: string; porcentajeActual: number}>;
+    }>({
+        isOpen: false,
+        sobrecargados: [],
+        disponibles: [],
+    });
+
     // Datos cargados desde la API
     const [accionesEstrategicas, setAccionesEstrategicas] = useState<AccionEstrategica[]>([]);
     const [coordinadores, setCoordinadores] = useState<Usuario[]>([]);
@@ -462,6 +473,7 @@ export function POIFullModal({
     const [desarrolladores, setDesarrolladores] = useState<Personal[]>([]);
     const [implementadores, setImplementadores] = useState<Personal[]>([]);
     const [patrocinadores, setPatrocinadores] = useState<Personal[]>([]);
+    const [sobrecargadosCache, setSobrecargadosCache] = useState<PersonalSobrecargado[]>([]);
     const [loadingData, setLoadingData] = useState(false);
 
     // Estado del PGD para generar años válidos
@@ -499,7 +511,7 @@ export function POIFullModal({
                 ? getAccionesEstrategicasByPGD(pgdId).catch(() => [])
                 : getAccionesEstrategicas().catch(() => []);
 
-            const [aes, coords, sms, personal, devs, impls, pats, pgds] = await Promise.all([
+            const [aes, coords, sms, personal, devs, impls, pats, pgds, sobrecargados] = await Promise.all([
                 aesPromise,
                 getCoordinadores().catch(() => []),
                 getScrumMasters().catch(() => []), // Solo usuarios con rol SCRUM_MASTER
@@ -508,6 +520,7 @@ export function POIFullModal({
                 getPersonalImplementadores().catch(() => []), // Personal con rol Implementador
                 getPersonalPatrocinadores().catch(() => []), // Personal con rol Patrocinador
                 pgdPromise,
+                getPersonalSobrecargado().catch(() => ({ data: [], total: 0, umbralAlerta: 100 })),
             ]);
             setAccionesEstrategicas(aes);
             setCoordinadores(coords);
@@ -516,6 +529,7 @@ export function POIFullModal({
             setDesarrolladores(devs);
             setImplementadores(impls);
             setPatrocinadores(pats);
+            setSobrecargadosCache(sobrecargados.data || []);
 
             // Si cargamos PGD, actualizar los años
             if (pgds && pgds.length > 0) {
@@ -973,6 +987,65 @@ export function POIFullModal({
         }
 
         return false; // No hay sobrecarga, continuar
+    };
+
+    /**
+     * Verifica sobrecarga en tiempo real al seleccionar responsables
+     * Si algún nuevo responsable está al 100%, lo elimina de la selección y muestra advertencia
+     */
+    const handleResponsiblesChange = (newSelected: string[]) => {
+        const oldSelected = formData.responsibles || [];
+        const newlyAdded = newSelected.filter(id => !oldSelected.includes(id));
+
+        if (newlyAdded.length > 0 && sobrecargadosCache.length > 0) {
+            const sobrecargadosEncontrados: Array<{id: number; nombre: string; porcentaje: number}> = [];
+
+            for (const idStr of newlyAdded) {
+                const personalId = parseInt(idStr, 10);
+                const sobrecargado = sobrecargadosCache.find(
+                    s => s.personalId === personalId && s.porcentajeTotal >= 100
+                );
+                if (sobrecargado) {
+                    const personal = personalDisponible.find(p => p.id === personalId)
+                        || desarrolladores.find(p => p.id === personalId)
+                        || implementadores.find(p => p.id === personalId);
+                    const nombre = personal
+                        ? formatPersonalNombre(personal)
+                        : `${sobrecargado.nombres} ${sobrecargado.apellidos}`;
+                    sobrecargadosEncontrados.push({ id: personalId, nombre, porcentaje: sobrecargado.porcentajeTotal });
+                }
+            }
+
+            if (sobrecargadosEncontrados.length > 0) {
+                const listaBase = formData.type === 'Proyecto'
+                    ? desarrolladores
+                    : formData.type === 'Actividad'
+                        ? implementadores
+                        : personalDisponible;
+
+                const disponibles = listaBase
+                    .filter(p => {
+                        const sob = sobrecargadosCache.find(s => s.personalId === p.id);
+                        return !sob || sob.porcentajeTotal < 100;
+                    })
+                    .map(p => {
+                        const sob = sobrecargadosCache.find(s => s.personalId === p.id);
+                        return { id: p.id, nombre: formatPersonalNombre(p), porcentajeActual: sob ? sob.porcentajeTotal : 0 };
+                    });
+
+                // Eliminar sobrecargados de la selección
+                const idsToRemove = new Set(sobrecargadosEncontrados.map(s => s.id.toString()));
+                const filteredSelected = newSelected.filter(id => !idsToRemove.has(id));
+                setFormData(p => ({ ...p, responsibles: filteredSelected }));
+
+                setSeleccionSobrecargaModal({ isOpen: true, sobrecargados: sobrecargadosEncontrados, disponibles });
+                if (errors.responsibles) setErrors(prev => ({ ...prev, responsibles: '' }));
+                return;
+            }
+        }
+
+        setFormData(p => ({ ...p, responsibles: newSelected }));
+        if (errors.responsibles) setErrors(prev => ({ ...prev, responsibles: '' }));
     };
 
     const handleSave = async () => {
@@ -1954,10 +2027,7 @@ export function POIFullModal({
                                             <MultiSelect
                                                 options={responsibleOptions}
                                                 selected={formData.responsibles || []}
-                                                onChange={(selected) => {
-                                                    setFormData(p => ({...p, responsibles: selected}));
-                                                    if (errors.responsibles) setErrors(prev => ({...prev, responsibles: ''}));
-                                                }}
+                                                onChange={handleResponsiblesChange}
                                                 placeholder="Seleccionar responsable(s)"
                                                 className={errors.responsibles ? 'border-red-500' : ''}
                                             />
@@ -2646,6 +2716,73 @@ export function POIFullModal({
                         className="bg-[#018CD1] hover:bg-[#0177b3] text-white"
                     >
                         Entendido
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Modal de Advertencia de Asignación al seleccionar responsable */}
+        <AlertDialog open={seleccionSobrecargaModal.isOpen} onOpenChange={(open) => {
+            if (!open) setSeleccionSobrecargaModal({ isOpen: false, sobrecargados: [], disponibles: [] });
+        }}>
+            <AlertDialogContent className="max-w-2xl">
+                <AlertDialogHeader>
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                            <AlertTriangle className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <AlertDialogTitle className="text-xl font-semibold text-gray-900">
+                            Advertencia de Asignación
+                        </AlertDialogTitle>
+                    </div>
+                </AlertDialogHeader>
+
+                <div className="space-y-4 py-2">
+                    <div>
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                            El {formData.type === 'Actividad' ? 'actividad' : 'proyecto'} no puede asignar a los siguientes responsables:
+                        </p>
+                        <ul className="space-y-1 pl-2">
+                            {seleccionSobrecargaModal.sobrecargados.map(s => (
+                                <li key={s.id} className="text-sm text-gray-900">
+                                    • {s.nombre}: <span className="font-semibold text-red-600">Carga de trabajo al {s.porcentaje.toFixed(0)}%</span>
+                                </li>
+                            ))}
+                        </ul>
+                        <p className="text-xs text-red-600 mt-2">
+                            Estos usuarios no serán asignados al {formData.type === 'Actividad' ? 'actividad' : 'proyecto'}.
+                        </p>
+                    </div>
+
+                    {seleccionSobrecargaModal.disponibles.length > 0 && (
+                        <div>
+                            <p className="text-sm font-medium text-gray-700 mb-2">
+                                Se cuenta con usuarios disponibles:
+                            </p>
+                            <ul className="space-y-1 pl-2">
+                                {seleccionSobrecargaModal.disponibles.slice(0, 6).map(d => (
+                                    <li key={d.id} className="text-sm text-gray-900">
+                                        • {d.nombre}: <span className="font-semibold text-green-600">
+                                            {d.porcentajeActual > 0 ? `Carga de trabajo ${d.porcentajeActual.toFixed(0)}%` : 'Disponible (0%)'}
+                                        </span>
+                                    </li>
+                                ))}
+                                {seleccionSobrecargaModal.disponibles.length > 6 && (
+                                    <li className="text-xs text-gray-500 pl-1">
+                                        ...y {seleccionSobrecargaModal.disponibles.length - 6} más disponibles
+                                    </li>
+                                )}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+
+                <AlertDialogFooter>
+                    <AlertDialogAction
+                        onClick={() => setSeleccionSobrecargaModal({ isOpen: false, sobrecargados: [], disponibles: [] })}
+                        className="bg-[#018CD1] hover:bg-[#0177b3] text-white"
+                    >
+                        Reasignar
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

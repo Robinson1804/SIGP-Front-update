@@ -47,12 +47,14 @@ import { usePGD } from "@/stores";
 import {
   getPGDs,
   getOEIsByPGD,
+  getAEIsByOEI,
   createOEI,
   updateOEI,
   deleteOEI,
   getNextOEICodigo,
   type PGD,
   type OEI,
+  type AEI,
   type CreateOEIInput,
   type UpdateOEIInput,
   type MetaAnual,
@@ -376,15 +378,21 @@ function DeleteConfirmationModal({
   onClose,
   onConfirm,
   title,
+  aeis,
+  isLoadingAeis,
   isLoading,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title: string;
+  aeis?: AEI[];
+  isLoadingAeis?: boolean;
   isLoading?: boolean;
 }) {
   if (!isOpen) return null;
+
+  const hasAeis = aeis && aeis.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -401,12 +409,32 @@ function DeleteConfirmationModal({
           <AlertTriangle className="h-16 w-16 text-amber-500 mb-4" strokeWidth={1.5} />
           <p className="font-bold text-lg">¿Estás seguro?</p>
           <p className="text-muted-foreground">{title}</p>
+          {isLoadingAeis && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Verificando dependencias...
+            </div>
+          )}
+          {hasAeis && !isLoadingAeis && (
+            <div className="mt-4 w-full bg-amber-50 border border-amber-200 rounded-md p-3 text-left">
+              <p className="text-sm font-semibold text-amber-800 mb-2">
+                Este OEI tiene {aeis.length} AEI{aeis.length > 1 ? "s" : ""} que también serán eliminadas:
+              </p>
+              <ul className="space-y-1 max-h-32 overflow-y-auto">
+                {aeis.map((aei) => (
+                  <li key={aei.id} className="text-xs text-amber-700">
+                    • <span className="font-medium">{aei.codigo}</span> — {aei.nombre}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <DialogFooter className="justify-center px-6 pb-6 flex gap-4">
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm} disabled={isLoading} style={{ backgroundColor: "#018CD1" }}>
+          <Button onClick={onConfirm} disabled={isLoading || isLoadingAeis} style={{ backgroundColor: "#018CD1" }}>
             {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Sí, eliminar
           </Button>
@@ -474,6 +502,8 @@ export default function OeiDashboardPage() {
   const [editingOei, setEditingOei] = useState<OEI | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingOei, setDeletingOei] = useState<OEI | null>(null);
+  const [deletingOeiAeis, setDeletingOeiAeis] = useState<AEI[]>([]);
+  const [isLoadingDeleteAeis, setIsLoadingDeleteAeis] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { toast } = useToast();
@@ -574,14 +604,27 @@ export default function OeiDashboardPage() {
     }
   };
 
-  const handleOpenDeleteModal = (oei: OEI) => {
+  const handleOpenDeleteModal = async (oei: OEI) => {
     setDeletingOei(oei);
+    setDeletingOeiAeis([]);
     setIsDeleteModalOpen(true);
+
+    // Cargar AEIs del OEI para mostrar advertencia
+    setIsLoadingDeleteAeis(true);
+    try {
+      const aeis = await getAEIsByOEI(oei.id);
+      setDeletingOeiAeis(aeis);
+    } catch {
+      setDeletingOeiAeis([]);
+    } finally {
+      setIsLoadingDeleteAeis(false);
+    }
   };
 
   const handleCloseDeleteModal = () => {
     setIsDeleteModalOpen(false);
     setDeletingOei(null);
+    setDeletingOeiAeis([]);
   };
 
   const handleDeleteOei = async () => {
@@ -595,9 +638,14 @@ export default function OeiDashboardPage() {
       handleCloseDeleteModal();
     } catch (err: any) {
       console.error("Error deleting OEI:", err);
+      const backendMessage =
+        err?.response?.data?.message ||
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        "Error al eliminar el OEI";
       toast({
         title: "Error",
-        description: err.message || "Error al eliminar el OEI",
+        description: backendMessage,
         variant: "destructive",
       });
     } finally {
@@ -704,7 +752,9 @@ export default function OeiDashboardPage() {
           isOpen={isDeleteModalOpen}
           onClose={handleCloseDeleteModal}
           onConfirm={handleDeleteOei}
-          title={`El OEI "${deletingOei?.codigo}" será eliminado`}
+          title={`El OEI "${deletingOei?.codigo}" será eliminado permanentemente.`}
+          aeis={deletingOeiAeis}
+          isLoadingAeis={isLoadingDeleteAeis}
           isLoading={isDeleting}
         />
       </AppLayout>

@@ -646,6 +646,58 @@ export function ActasTabContent({ proyectoId, subproyectoId }: ActasTabContentPr
             </div>
           </div>
 
+          {/* Progreso de aprobación */}
+          {selectedActa.estado === 'En revisión' && (
+            <div className="p-3 border border-amber-200 bg-amber-50 rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Acta de Constitución pendiente de aprobación
+                  </p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Requiere aprobación de PMO y Patrocinador para quedar aprobada.
+                  </p>
+                </div>
+                <div className="flex gap-5 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    {selectedActa.aprobadoPorPmo ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border-2 border-amber-400" />
+                    )}
+                    <span className={`text-xs font-medium ${selectedActa.aprobadoPorPmo ? 'text-green-700' : 'text-amber-700'}`}>
+                      PMO
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {selectedActa.aprobadoPorPatrocinador ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border-2 border-amber-400" />
+                    )}
+                    <span className={`text-xs font-medium ${selectedActa.aprobadoPorPatrocinador ? 'text-green-700' : 'text-amber-700'}`}>
+                      Patrocinador
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rechazo */}
+          {selectedActa.estado === 'Borrador' && selectedActa.comentarioRechazo && (
+            <div className="p-3 border border-red-200 bg-red-50 rounded-lg">
+              <p className="text-sm font-medium text-red-800 flex items-center gap-2">
+                <XCircle className="h-4 w-4" />
+                Acta rechazada — requiere correcciones antes de volver a enviar
+              </p>
+              <p className="text-xs text-red-700 mt-1">
+                <strong>Motivo del rechazo:</strong> {selectedActa.comentarioRechazo}
+              </p>
+            </div>
+          )}
+
           {/* Vista del acta */}
           <ActaConstitucionView acta={selectedActa} />
         </div>
@@ -697,95 +749,149 @@ export function ActasTabContent({ proyectoId, subproyectoId }: ActasTabContentPr
         </CardHeader>
         <CardContent>
           {data?.constitucion ? (
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
-              <div className="flex items-center gap-4">
-                <div className="p-2 rounded-full bg-primary/10">
-                  <FileText className="h-6 w-6 text-primary" />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-full bg-primary/10">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{data.constitucion.nombre}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{data.constitucion.codigo}</span>
+                      <span>-</span>
+                      <span>{formatDate(data.constitucion.fecha)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">{data.constitucion.nombre}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{data.constitucion.codigo}</span>
-                    <span>-</span>
-                    <span>{formatDate(data.constitucion.fecha)}</span>
+                <div className="flex items-center gap-3">
+                  <Badge variant={getEstadoLabel(data.constitucion.estado).variant}>
+                    {estadoIcons[data.constitucion.estado]}
+                    <span className="ml-1">{getEstadoLabel(data.constitucion.estado).label}</span>
+                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => goToViewConstitucion(data.constitucion!)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {canManageActas && data.constitucion.estado === 'Borrador' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => goToEditConstitucion(data.constitucion!)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDownloadPdf(data.constitucion!)}
+                      disabled={downloadingPdf === data.constitucion.id}
+                    >
+                      {downloadingPdf === data.constitucion.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </Button>
+                    {/* Botón Enviar a Revisión: solo SCRUM_MASTER/COORDINADOR cuando estado = Borrador */}
+                    {canManageActas && data.constitucion.estado === 'Borrador' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEnviarARevision(data.constitucion!)}
+                        disabled={sendingToReview}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        title="Enviar a revisión"
+                      >
+                        {sendingToReview ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                    {/* Botón Validar: solo PMO/PATROCINADOR cuando estado = En revisión y no hayan aprobado aún */}
+                    {canCurrentUserApproveActa(data.constitucion) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setApprovingActa(data.constitucion!)}
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                        title="Validar acta"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {canManageActas && data.constitucion.estado === 'Borrador' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeletingActa(data.constitucion!)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Badge variant={getEstadoLabel(data.constitucion.estado).variant}>
-                  {estadoIcons[data.constitucion.estado]}
-                  <span className="ml-1">{getEstadoLabel(data.constitucion.estado).label}</span>
-                </Badge>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => goToViewConstitucion(data.constitucion!)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  {canManageActas && data.constitucion.estado === 'Borrador' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => goToEditConstitucion(data.constitucion!)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDownloadPdf(data.constitucion!)}
-                    disabled={downloadingPdf === data.constitucion.id}
-                  >
-                    {downloadingPdf === data.constitucion.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
-                  </Button>
-                  {/* Botón Enviar a Revisión: solo SCRUM_MASTER/COORDINADOR cuando estado = Borrador */}
-                  {canManageActas && data.constitucion.estado === 'Borrador' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEnviarARevision(data.constitucion!)}
-                      disabled={sendingToReview}
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      title="Enviar a revisión"
-                    >
-                      {sendingToReview ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                  {/* Botón Validar: solo PMO/PATROCINADOR cuando estado = En revisión y no hayan aprobado aún */}
-                  {canCurrentUserApproveActa(data.constitucion) && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setApprovingActa(data.constitucion!)}
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                      title="Validar acta"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {canManageActas && data.constitucion.estado === 'Borrador' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeletingActa(data.constitucion!)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+
+              {/* Progreso de aprobación dual cuando está En revisión */}
+              {data.constitucion.estado === 'En revisión' && (
+                <div className="p-3 border border-amber-200 bg-amber-50 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Acta de Constitución pendiente de aprobación
+                      </p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Requiere aprobación de PMO y Patrocinador para quedar aprobada.
+                      </p>
+                    </div>
+                    <div className="flex gap-5 shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        {data.constitucion.aprobadoPorPmo ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <div className="h-4 w-4 rounded-full border-2 border-amber-400" />
+                        )}
+                        <span className={`text-xs font-medium ${data.constitucion.aprobadoPorPmo ? 'text-green-700' : 'text-amber-700'}`}>
+                          PMO
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {data.constitucion.aprobadoPorPatrocinador ? (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <div className="h-4 w-4 rounded-full border-2 border-amber-400" />
+                        )}
+                        <span className={`text-xs font-medium ${data.constitucion.aprobadoPorPatrocinador ? 'text-green-700' : 'text-amber-700'}`}>
+                          Patrocinador
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Aviso de rechazo cuando volvió a Borrador con comentario de rechazo */}
+              {data.constitucion.estado === 'Borrador' && data.constitucion.comentarioRechazo && (
+                <div className="p-3 border border-red-200 bg-red-50 rounded-lg">
+                  <p className="text-sm font-medium text-red-800 flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    Acta rechazada — requiere correcciones antes de volver a enviar
+                  </p>
+                  <p className="text-xs text-red-700 mt-1">
+                    <strong>Motivo del rechazo:</strong> {data.constitucion.comentarioRechazo}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
