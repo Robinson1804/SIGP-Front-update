@@ -1785,12 +1785,22 @@ export function POIFullModal({
                                                 <SelectTrigger className={errors.strategicAction ? 'border-red-500' : ''}>
                                                     <SelectValue placeholder="Seleccionar AE" />
                                                 </SelectTrigger>
-                                                <SelectContent>
-                                                    {accionesEstrategicas.map((ae) => (
-                                                        <SelectItem key={ae.id} value={ae.id.toString()}>
-                                                            {ae.codigo} - {ae.nombre}
-                                                        </SelectItem>
-                                                    ))}
+                                                <SelectContent className="max-h-[300px]">
+                                                    {accionesEstrategicas.map((ae) => {
+                                                        const ogd = (ae as any).oegd?.ogd;
+                                                        return (
+                                                            <SelectItem key={ae.id} value={ae.id.toString()}>
+                                                                <span className="flex items-center gap-2 w-full">
+                                                                    <span className="flex-1">{ae.codigo} - {ae.nombre}</span>
+                                                                    {ogd && (
+                                                                        <span className="ml-2 shrink-0 inline-flex items-center rounded-full border border-blue-300 bg-blue-50 px-2 py-0.5 text-xs font-normal text-blue-700 whitespace-nowrap">
+                                                                            {ogd.codigo}
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </SelectItem>
+                                                        );
+                                                    })}
                                                 </SelectContent>
                                             </Select>
                                             {errors.strategicAction && <p className="text-red-500 text-xs mt-1">{errors.strategicAction}</p>}
