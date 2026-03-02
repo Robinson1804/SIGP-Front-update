@@ -278,6 +278,7 @@ export const ENDPOINTS = {
     ASIGNACIONES: '/asignaciones',
     ASIGNACION_BY_ID: (id: number | string) => `/asignaciones/${id}`,
     ASIGNACIONES_ALERTAS: '/asignaciones/alertas/sobrecarga',
+    ASIGNACIONES_RESUMEN_CARGA: '/asignaciones/resumen-carga',
     ASIGNACIONES_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/asignaciones`,
     ASIGNACIONES_ACTIVIDAD: (actividadId: number | string) => `/actividades/${actividadId}/asignaciones`,
     ASIGNACIONES_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/asignaciones`,

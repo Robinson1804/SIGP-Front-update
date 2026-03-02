@@ -97,7 +97,7 @@ import {
   type AsignacionError,
   formatUsuarioNombre,
 } from "@/lib/services";
-import { verificarSobrecarga, getPersonalSobrecargado, type PersonalSobrecargado } from "@/features/rrhh/services/asignaciones.service";
+import { getPersonalSobrecargado, getResumenCargaPersonal, type PersonalSobrecargado } from "@/features/rrhh/services/asignaciones.service";
 import { paths } from "@/lib/paths";
 
 // Opciones predefinidas para áreas financieras
@@ -431,29 +431,6 @@ export function POIFullModal({
     // Estado para guardar el proyecto cuando hay advertencias de asignación pendientes
     const [pendingSaveProject, setPendingSaveProject] = useState<Project | null>(null);
 
-    // Estado para modal de advertencia de sobrecarga
-    const [sobrecargaModal, setSobrecargaModal] = useState<{
-        isOpen: boolean;
-        personalSobrecargado: Array<{
-            id: number;
-            nombre: string;
-            porcentajeActual: number;
-            porcentajeNuevo: number;
-            porcentajeTotal: number;
-        }>;
-        todosDesarrolladores: Array<{
-            id: number;
-            nombre: string;
-            porcentajeActual: number;
-            esSobrecargado: boolean;
-            esSeleccionado: boolean;
-        }>;
-    }>({
-        isOpen: false,
-        personalSobrecargado: [],
-        todosDesarrolladores: [],
-    });
-
     // Estado para modal de advertencia de asignación al seleccionar responsable sobrecargado
     const [seleccionSobrecargaModal, setSeleccionSobrecargaModal] = useState<{
         isOpen: boolean;
@@ -474,6 +451,8 @@ export function POIFullModal({
     const [implementadores, setImplementadores] = useState<Personal[]>([]);
     const [patrocinadores, setPatrocinadores] = useState<Personal[]>([]);
     const [sobrecargadosCache, setSobrecargadosCache] = useState<PersonalSobrecargado[]>([]);
+    // Mapa personalId → porcentajeTotal de TODOS los desarrolladores (incl. 0%)
+    const [cargaTrabajoCache, setCargaTrabajoCache] = useState<Map<number, number>>(new Map());
     const [loadingData, setLoadingData] = useState(false);
 
     // Estado del PGD para generar años válidos
@@ -511,7 +490,7 @@ export function POIFullModal({
                 ? getAccionesEstrategicasByPGD(pgdId).catch(() => [])
                 : getAccionesEstrategicas().catch(() => []);
 
-            const [aes, coords, sms, personal, devs, impls, pats, pgds, sobrecargados] = await Promise.all([
+            const [aes, coords, sms, personal, devs, impls, pats, pgds, sobrecargados, resumenCarga] = await Promise.all([
                 aesPromise,
                 getCoordinadores().catch(() => []),
                 getScrumMasters().catch(() => []), // Solo usuarios con rol SCRUM_MASTER
@@ -521,6 +500,7 @@ export function POIFullModal({
                 getPersonalPatrocinadores().catch(() => []), // Personal con rol Patrocinador
                 pgdPromise,
                 getPersonalSobrecargado().catch(() => ({ data: [], total: 0, umbralAlerta: 100 })),
+                getResumenCargaPersonal().catch(() => []),
             ]);
             setAccionesEstrategicas(aes);
             setCoordinadores(coords);
@@ -530,6 +510,9 @@ export function POIFullModal({
             setImplementadores(impls);
             setPatrocinadores(pats);
             setSobrecargadosCache(sobrecargados.data || []);
+            // Construir mapa personalId → porcentajeTotal con datos reales
+            const cargaMap = new Map<number, number>(resumenCarga.map(r => [r.personalId, r.porcentajeTotal]));
+            setCargaTrabajoCache(cargaMap);
 
             // Si cargamos PGD, actualizar los años
             if (pgds && pgds.length > 0) {
@@ -911,108 +894,87 @@ export function POIFullModal({
     };
 
     /**
-     * Verifica si hay personal sobrecargado ANTES de guardar
-     * Devuelve true si hay sobrecarga, false si todo está ok
+     * Verificación de sobrecarga antes de guardar.
+     * La validación de personas al 100% ya ocurre al seleccionar (handleResponsiblesChange).
+     * Aquí solo se hace una verificación de seguridad usando el cache existente.
+     * Si alguien al 100% logró quedar en la selección (ej: modo edición), se elimina silenciosamente.
+     * El backend también valida y retornará error si hay conflicto.
      */
     const verificarSobrecargaAntesDeGuardar = async (): Promise<boolean> => {
-        if (!formData.responsibles || formData.responsibles.length === 0) {
-            return false; // No hay responsables, continuar normalmente
-        }
+        if (!formData.responsibles || formData.responsibles.length === 0) return false;
 
-        // Obtener lista de todos los sobrecargados en una sola llamada
-        let sobrecargadosList: PersonalSobrecargado[] = [];
-        try {
-            const alertas = await getPersonalSobrecargado();
-            sobrecargadosList = alertas.data || [];
-        } catch (error) {
-            console.error('Error fetching overloaded staff list:', error);
-        }
+        // Filtrar silenciosamente cualquier persona al 100% que haya quedado en la selección
+        const bloqueados = formData.responsibles.filter(idStr => {
+            const personalId = parseInt(idStr, 10);
+            return (cargaTrabajoCache.get(personalId) ?? 0) >= 100;
+        });
 
-        const porcentajeNuevo = 50; // Porcentaje que se asignará por defecto
-
-        const personalSobrecargado: Array<{
-            id: number;
-            nombre: string;
-            porcentajeActual: number;
-            porcentajeNuevo: number;
-            porcentajeTotal: number;
-        }> = [];
-
-        // Verificar cada responsable seleccionado
-        for (const responsibleId of formData.responsibles) {
-            const personalId = parseInt(responsibleId, 10);
-            if (isNaN(personalId)) continue;
-
-            const sobrecargado = sobrecargadosList.find(s => s.personalId === personalId);
-            if (sobrecargado && (100 - sobrecargado.porcentajeTotal) < porcentajeNuevo) {
-                const personal = personalDisponible.find(p => p.id === personalId);
-                const nombrePersonal = personal ? formatPersonalNombre(personal) : `Personal ID ${personalId}`;
-                personalSobrecargado.push({
-                    id: personalId,
-                    nombre: nombrePersonal,
-                    porcentajeActual: sobrecargado.porcentajeTotal,
-                    porcentajeNuevo: porcentajeNuevo,
-                    porcentajeTotal: sobrecargado.porcentajeTotal + porcentajeNuevo,
-                });
-            }
-        }
-
-        if (personalSobrecargado.length > 0) {
-            // Construir lista completa de desarrolladores con su estado de carga
+        if (bloqueados.length > 0) {
             const listaBase = formData.type === 'Proyecto'
                 ? desarrolladores
                 : formData.type === 'Actividad'
                     ? implementadores
                     : personalDisponible;
 
-            const todosDesarrolladores = listaBase.map(p => {
-                const sobrecargado = sobrecargadosList.find(s => s.personalId === p.id);
+            const sobrecargadosEncontrados = bloqueados.map(idStr => {
+                const personalId = parseInt(idStr, 10);
+                const personal = listaBase.find(p => p.id === personalId);
                 return {
-                    id: p.id,
-                    nombre: formatPersonalNombre(p),
-                    porcentajeActual: sobrecargado ? sobrecargado.porcentajeTotal : 0,
-                    esSobrecargado: sobrecargado
-                        ? (100 - sobrecargado.porcentajeTotal) < porcentajeNuevo
-                        : false,
-                    esSeleccionado: formData.responsibles.includes(p.id.toString()),
+                    id: personalId,
+                    nombre: personal ? formatPersonalNombre(personal) : `Personal ID ${personalId}`,
+                    porcentaje: cargaTrabajoCache.get(personalId) ?? 100,
                 };
             });
 
-            setSobrecargaModal({
-                isOpen: true,
-                personalSobrecargado,
-                todosDesarrolladores,
-            });
-            return true; // Hay sobrecarga, detener el guardado
+            const disponibles = listaBase
+                .filter(p => (cargaTrabajoCache.get(p.id) ?? 0) < 100)
+                .map(p => ({
+                    id: p.id,
+                    nombre: formatPersonalNombre(p),
+                    porcentajeActual: cargaTrabajoCache.get(p.id) ?? 0,
+                }))
+                .sort((a, b) => a.porcentajeActual - b.porcentajeActual);
+
+            const idsToRemove = new Set(bloqueados);
+            setFormData(p => ({ ...p, responsibles: p.responsibles?.filter(id => !idsToRemove.has(id)) ?? [] }));
+            setSeleccionSobrecargaModal({ isOpen: true, sobrecargados: sobrecargadosEncontrados, disponibles });
+            return true; // Detener guardado, el modal ya se abrió
         }
 
-        return false; // No hay sobrecarga, continuar
+        return false;
     };
 
     /**
-     * Verifica sobrecarga en tiempo real al seleccionar responsables
-     * Si algún nuevo responsable está al 100%, lo elimina de la selección y muestra advertencia
+     * Verifica sobrecarga en tiempo real al seleccionar responsables.
+     * Si algún responsable nuevo está al 100% de capacidad, lo elimina de la selección
+     * y muestra el modal "Advertencia de Asignación" con lista de disponibles y sus % reales.
      */
     const handleResponsiblesChange = (newSelected: string[]) => {
         const oldSelected = formData.responsibles || [];
         const newlyAdded = newSelected.filter(id => !oldSelected.includes(id));
 
-        if (newlyAdded.length > 0 && sobrecargadosCache.length > 0) {
+        if (newlyAdded.length > 0) {
             const sobrecargadosEncontrados: Array<{id: number; nombre: string; porcentaje: number}> = [];
 
             for (const idStr of newlyAdded) {
                 const personalId = parseInt(idStr, 10);
-                const sobrecargado = sobrecargadosCache.find(
-                    s => s.personalId === personalId && s.porcentajeTotal >= 100
-                );
-                if (sobrecargado) {
+                // Usar cargaTrabajoCache (datos reales de TODOS) y también sobrecargadosCache (>100%)
+                const cargaReal = cargaTrabajoCache.get(personalId);
+                const sobrecargadoEnCache = sobrecargadosCache.find(s => s.personalId === personalId);
+                const porcentajeActual = cargaReal !== undefined
+                    ? cargaReal
+                    : sobrecargadoEnCache ? sobrecargadoEnCache.porcentajeTotal : 0;
+
+                if (porcentajeActual >= 100) {
                     const personal = personalDisponible.find(p => p.id === personalId)
                         || desarrolladores.find(p => p.id === personalId)
                         || implementadores.find(p => p.id === personalId);
                     const nombre = personal
                         ? formatPersonalNombre(personal)
-                        : `${sobrecargado.nombres} ${sobrecargado.apellidos}`;
-                    sobrecargadosEncontrados.push({ id: personalId, nombre, porcentaje: sobrecargado.porcentajeTotal });
+                        : sobrecargadoEnCache
+                            ? `${sobrecargadoEnCache.nombres} ${sobrecargadoEnCache.apellidos}`
+                            : `Personal ID ${personalId}`;
+                    sobrecargadosEncontrados.push({ id: personalId, nombre, porcentaje: porcentajeActual });
                 }
             }
 
@@ -1023,15 +985,15 @@ export function POIFullModal({
                         ? implementadores
                         : personalDisponible;
 
+                // Mostrar TODOS los disponibles (< 100%) con su porcentaje REAL
                 const disponibles = listaBase
-                    .filter(p => {
-                        const sob = sobrecargadosCache.find(s => s.personalId === p.id);
-                        return !sob || sob.porcentajeTotal < 100;
-                    })
-                    .map(p => {
-                        const sob = sobrecargadosCache.find(s => s.personalId === p.id);
-                        return { id: p.id, nombre: formatPersonalNombre(p), porcentajeActual: sob ? sob.porcentajeTotal : 0 };
-                    });
+                    .filter(p => (cargaTrabajoCache.get(p.id) ?? 0) < 100)
+                    .map(p => ({
+                        id: p.id,
+                        nombre: formatPersonalNombre(p),
+                        porcentajeActual: cargaTrabajoCache.get(p.id) ?? 0,
+                    }))
+                    .sort((a, b) => a.porcentajeActual - b.porcentajeActual); // de menor a mayor carga
 
                 // Eliminar sobrecargados de la selección
                 const idsToRemove = new Set(sobrecargadosEncontrados.map(s => s.id.toString()));
@@ -2721,14 +2683,14 @@ export function POIFullModal({
             </AlertDialogContent>
         </AlertDialog>
 
-        {/* Modal de Advertencia de Asignación al seleccionar responsable */}
+        {/* Modal de Advertencia de Asignación al seleccionar responsable sobrecargado */}
         <AlertDialog open={seleccionSobrecargaModal.isOpen} onOpenChange={(open) => {
             if (!open) setSeleccionSobrecargaModal({ isOpen: false, sobrecargados: [], disponibles: [] });
         }}>
-            <AlertDialogContent className="max-w-2xl">
+            <AlertDialogContent className="max-w-lg">
                 <AlertDialogHeader>
                     <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100">
                             <AlertTriangle className="h-6 w-6 text-amber-600" />
                         </div>
                         <AlertDialogTitle className="text-xl font-semibold text-gray-900">
@@ -2738,14 +2700,21 @@ export function POIFullModal({
                 </AlertDialogHeader>
 
                 <div className="space-y-4 py-2">
+                    {/* Responsables bloqueados */}
                     <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">
+                        <p className="text-sm text-gray-700 mb-2">
                             El {formData.type === 'Actividad' ? 'actividad' : 'proyecto'} no puede asignar a los siguientes responsables:
                         </p>
-                        <ul className="space-y-1 pl-2">
+                        <ul className="space-y-1 pl-1">
                             {seleccionSobrecargaModal.sobrecargados.map(s => (
-                                <li key={s.id} className="text-sm text-gray-900">
-                                    • {s.nombre}: <span className="font-semibold text-red-600">Carga de trabajo al {s.porcentaje.toFixed(0)}%</span>
+                                <li key={s.id} className="flex items-start gap-1 text-sm text-gray-900">
+                                    <span className="text-gray-500 shrink-0">•</span>
+                                    <span>
+                                        {s.nombre}:{' '}
+                                        <span className="font-semibold text-red-600">
+                                            Carga de trabajo al {s.porcentaje.toFixed(0)}%
+                                        </span>
+                                    </span>
                                 </li>
                             ))}
                         </ul>
@@ -2754,26 +2723,34 @@ export function POIFullModal({
                         </p>
                     </div>
 
+                    {/* Usuarios disponibles con porcentaje real */}
                     {seleccionSobrecargaModal.disponibles.length > 0 && (
                         <div>
-                            <p className="text-sm font-medium text-gray-700 mb-2">
+                            <p className="text-sm text-gray-700 mb-2">
                                 Se cuenta con usuarios disponibles:
                             </p>
-                            <ul className="space-y-1 pl-2">
-                                {seleccionSobrecargaModal.disponibles.slice(0, 6).map(d => (
-                                    <li key={d.id} className="text-sm text-gray-900">
-                                        • {d.nombre}: <span className="font-semibold text-green-600">
-                                            {d.porcentajeActual > 0 ? `Carga de trabajo ${d.porcentajeActual.toFixed(0)}%` : 'Disponible (0%)'}
-                                        </span>
-                                    </li>
-                                ))}
-                                {seleccionSobrecargaModal.disponibles.length > 6 && (
-                                    <li className="text-xs text-gray-500 pl-1">
-                                        ...y {seleccionSobrecargaModal.disponibles.length - 6} más disponibles
-                                    </li>
-                                )}
-                            </ul>
+                            <div className="max-h-48 overflow-y-auto rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
+                                <ul className="space-y-1">
+                                    {seleccionSobrecargaModal.disponibles.map(d => (
+                                        <li key={d.id} className="flex items-start gap-1 text-sm text-gray-900">
+                                            <span className="text-gray-500 shrink-0">•</span>
+                                            <span>
+                                                {d.nombre}:{' '}
+                                                <span className={`font-semibold ${d.porcentajeActual === 0 ? 'text-green-600' : 'text-amber-600'}`}>
+                                                    Carga de trabajo {d.porcentajeActual.toFixed(0)}%
+                                                </span>
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
+                    )}
+
+                    {seleccionSobrecargaModal.disponibles.length === 0 && (
+                        <p className="text-sm text-amber-700 bg-amber-50 rounded-md px-3 py-2 border border-amber-200">
+                            No hay {formData.type === 'Actividad' ? 'implementadores' : 'desarrolladores'} con disponibilidad en este momento.
+                        </p>
                     )}
                 </div>
 
@@ -2788,149 +2765,6 @@ export function POIFullModal({
             </AlertDialogContent>
         </AlertDialog>
 
-        {/* Modal de Advertencia de Personal Sobrecargado */}
-        <AlertDialog open={sobrecargaModal.isOpen} onOpenChange={(open) => {
-            if (!open) {
-                setSobrecargaModal({ isOpen: false, personalSobrecargado: [], todosDesarrolladores: [] });
-                setIsSaving(false);
-            }
-        }}>
-            <AlertDialogContent className="max-w-3xl">
-                <AlertDialogHeader>
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                            <AlertTriangle className="h-6 w-6 text-red-600" />
-                        </div>
-                        <div>
-                            <AlertDialogTitle className="text-xl font-semibold text-red-900">
-                                Personal con Sobrecarga de Asignaciones
-                            </AlertDialogTitle>
-                            <AlertDialogDescription className="text-sm text-red-700 mt-1">
-                                No se puede guardar el {formData.type === 'Actividad' ? 'actividad' : 'proyecto'}
-                            </AlertDialogDescription>
-                        </div>
-                    </div>
-                </AlertDialogHeader>
-
-                <div className="space-y-4 py-4">
-                    {/* Mensaje explicativo */}
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="text-sm text-red-800">
-                            <strong>⚠️ Advertencia:</strong> El siguiente personal ya tiene el 100% de su capacidad asignada o la excedería con esta nueva asignación (50% por defecto).
-                        </p>
-                    </div>
-
-                    {/* Lista de personal sobrecargado */}
-                    <div className="space-y-2">
-                        <h4 className="text-sm font-semibold text-gray-700">
-                            Personal que excede el límite:
-                        </h4>
-                        {sobrecargaModal.personalSobrecargado.map((personal, idx) => (
-                            <div
-                                key={personal.id}
-                                className="p-4 bg-gray-50 border border-gray-200 rounded-lg"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                        <p className="font-medium text-gray-900">{personal.nombre}</p>
-                                        <div className="mt-2 space-y-1 text-sm">
-                                            <p className="text-gray-600">
-                                                Asignación actual: <span className="font-semibold text-amber-600">{personal.porcentajeActual.toFixed(0)}%</span>
-                                            </p>
-                                            <p className="text-gray-600">
-                                                Nueva asignación: <span className="font-semibold text-blue-600">+{personal.porcentajeNuevo.toFixed(0)}%</span>
-                                            </p>
-                                            <p className="text-gray-900 font-semibold border-t border-gray-300 pt-1">
-                                                Total proyectado: <span className="text-red-600 text-lg">{personal.porcentajeTotal.toFixed(0)}%</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="ml-4 text-right">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Excede {(personal.porcentajeTotal - 100).toFixed(0)}%
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Lista completa de desarrolladores */}
-                    {sobrecargaModal.todosDesarrolladores.length > 0 && (
-                        <div className="space-y-2">
-                            <h4 className="text-sm font-semibold text-gray-700">
-                                Carga de trabajo de todos los {formData.type === 'Actividad' ? 'implementadores' : 'desarrolladores'}:
-                            </h4>
-                            <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-200">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-100 sticky top-0">
-                                        <tr>
-                                            <th className="text-left px-3 py-2 font-medium text-gray-600">Nombre</th>
-                                            <th className="text-center px-3 py-2 font-medium text-gray-600">Asignación</th>
-                                            <th className="text-center px-3 py-2 font-medium text-gray-600">Estado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {sobrecargaModal.todosDesarrolladores.map(dev => (
-                                            <tr
-                                                key={dev.id}
-                                                className={dev.esSeleccionado ? 'bg-yellow-50' : ''}
-                                            >
-                                                <td className="px-3 py-2 text-gray-900">
-                                                    {dev.nombre}
-                                                    {dev.esSeleccionado && (
-                                                        <span className="ml-1 text-xs text-yellow-700 font-medium">(seleccionado)</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-3 py-2 text-center font-semibold">
-                                                    {dev.esSobrecargado ? (
-                                                        <span className="text-red-600">{dev.porcentajeActual.toFixed(0)}%</span>
-                                                    ) : dev.porcentajeActual > 0 ? (
-                                                        <span className="text-amber-600">{dev.porcentajeActual.toFixed(0)}%</span>
-                                                    ) : (
-                                                        <span className="text-green-600">Disponible</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-3 py-2 text-center">
-                                                    {dev.esSobrecargado ? (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                            Sobrecargado
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                            Disponible
-                                                        </span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Recomendación */}
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                            <strong>💡 Recomendación:</strong> Por favor, deselecciona al personal mencionado y elige otros miembros con disponibilidad suficiente. Al cerrar este modal, podrás modificar la selección de responsables.
-                        </p>
-                    </div>
-                </div>
-
-                <AlertDialogFooter>
-                    <AlertDialogAction
-                        onClick={() => {
-                            setSobrecargaModal({ isOpen: false, personalSobrecargado: [], todosDesarrolladores: [] });
-                            setIsSaving(false);
-                        }}
-                        className="bg-[#018CD1] hover:bg-[#0177b3] text-white"
-                    >
-                        Entendido, Volver al Formulario
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </>
     );
 }

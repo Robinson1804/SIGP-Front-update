@@ -43,6 +43,27 @@ export async function getPersonalSobrecargado(): Promise<AlertaSobrecargaRespons
 }
 
 /**
+ * Resumen de carga de trabajo de todo el personal con asignaciones activas
+ */
+export interface ResumenCargaItem {
+  personalId: number;
+  nombres: string;
+  apellidos: string;
+  porcentajeTotal: number;
+}
+
+/**
+ * Obtener carga de trabajo actual de TODO el personal activo (no solo sobrecargados).
+ * Retorna solo quienes tienen al menos una asignación activa. Los demás tienen 0%.
+ */
+export async function getResumenCargaPersonal(): Promise<ResumenCargaItem[]> {
+  const response = await apiClient.get<ResumenCargaItem[]>(
+    ENDPOINTS.RRHH.ASIGNACIONES_RESUMEN_CARGA
+  );
+  return response.data;
+}
+
+/**
  * Verificar si un personal específico está sobrecargado
  */
 export async function verificarSobrecarga(personalId: number): Promise<{
