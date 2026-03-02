@@ -15,6 +15,7 @@ import {
   ClipboardCheck,
   CheckCircle2,
   Clock,
+  Info,
 } from 'lucide-react';
 import {
   Table,
@@ -461,10 +462,17 @@ export function HistoriaTable({
                               Ver documento
                             </DropdownMenuItem>
                           )}
-                          {onValidarHu && (
+                          {onValidarHu ? (
                             <DropdownMenuItem onClick={() => onValidarHu(historia)}>
                               <ClipboardCheck className="h-4 w-4 mr-2" />
                               Validar HU
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem disabled className="text-amber-600 opacity-100">
+                              <Info className="h-4 w-4 mr-2 shrink-0" />
+                              <span className="text-xs leading-tight">
+                                Asigna la HU a un sprint para validarla
+                              </span>
                             </DropdownMenuItem>
                           )}
                         </>

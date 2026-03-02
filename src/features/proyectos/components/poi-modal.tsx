@@ -897,6 +897,8 @@ export function POIFullModal({
      * Verifica si hay responsables seleccionados con carga al 100% antes de guardar.
      * Si los hay, los elimina de la selección, muestra el modal "Advertencia de Asignación"
      * y devuelve true para detener el guardado (el POI modal permanece abierto).
+     * Siempre obtiene datos frescos de la API para garantizar que la verificación
+     * funcione tanto al crear como al editar un POI.
      */
     const verificarSobrecargaAntesDeGuardar = async (): Promise<boolean> => {
         if (!formData.responsibles || formData.responsibles.length === 0) return false;
@@ -907,10 +909,22 @@ export function POIFullModal({
                 ? implementadores
                 : personalDisponible;
 
+        // Obtener datos frescos de carga de trabajo en el momento de guardar.
+        // Esto garantiza que la verificación funcione al crear un POI (donde el
+        // cache puede estar vacío o desactualizado) igual que al editar.
+        let cargaActual = cargaTrabajoCache;
+        try {
+            const resumenFresco = await getResumenCargaPersonal();
+            cargaActual = new Map<number, number>(resumenFresco.map(r => [r.personalId, r.porcentajeTotal]));
+            setCargaTrabajoCache(cargaActual);
+        } catch {
+            // Si falla la recarga, usar el cache existente como respaldo
+        }
+
         // Detectar responsables seleccionados que están al 100% de capacidad
         const bloqueados = formData.responsibles.filter(idStr => {
             const personalId = parseInt(idStr, 10);
-            return (cargaTrabajoCache.get(personalId) ?? 0) >= 100;
+            return (cargaActual.get(personalId) ?? 0) >= 100;
         });
 
         if (bloqueados.length === 0) return false; // Todos tienen capacidad, continuar guardado
@@ -928,17 +942,17 @@ export function POIFullModal({
                     : sobrecargadoEnCache
                         ? `${sobrecargadoEnCache.nombres} ${sobrecargadoEnCache.apellidos}`
                         : `Personal ID ${personalId}`,
-                porcentaje: cargaTrabajoCache.get(personalId) ?? 100,
+                porcentaje: cargaActual.get(personalId) ?? 100,
             };
         });
 
         // Lista de disponibles (< 100%) con porcentaje real, ordenados de menor a mayor
         const disponibles = listaBase
-            .filter(p => (cargaTrabajoCache.get(p.id) ?? 0) < 100)
+            .filter(p => (cargaActual.get(p.id) ?? 0) < 100)
             .map(p => ({
                 id: p.id,
                 nombre: formatPersonalNombre(p),
-                porcentajeActual: cargaTrabajoCache.get(p.id) ?? 0,
+                porcentajeActual: cargaActual.get(p.id) ?? 0,
             }))
             .sort((a, b) => a.porcentajeActual - b.porcentajeActual);
 

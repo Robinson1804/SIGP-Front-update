@@ -227,6 +227,18 @@ export async function getNextCodigoSubproyecto(subproyectoId: number | string): 
 }
 
 /**
+ * Obtener todas las historias de usuario de un proyecto (incluye las asignadas a sprints)
+ */
+export async function getHistoriasByProyecto(
+  proyectoId: number | string,
+): Promise<HistoriaUsuario[]> {
+  const response = await apiClient.get<HistoriaUsuario[]>(
+    ENDPOINTS.PROYECTOS.HISTORIAS(proyectoId)
+  );
+  return Array.isArray(response.data) ? response.data : [];
+}
+
+/**
  * Obtener backlog de un proyecto (historias sin sprint asignado)
  */
 export async function getBacklog(

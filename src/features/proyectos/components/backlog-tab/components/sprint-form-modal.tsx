@@ -309,7 +309,6 @@ export function SprintFormModal({
         await createSprint({
           nombre: values.nombre,
           sprintGoal: values.objetivo || undefined,
-          estado: values.estado,
           fechaInicio: values.fechaInicio || undefined,
           fechaFin: values.fechaFin || undefined,
           capacidadEquipo: values.velocidadPlanificada || undefined,
@@ -383,30 +382,33 @@ export function SprintFormModal({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="estado"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estado</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar estado" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {SPRINT_ESTADOS.map((estado) => (
-                        <SelectItem key={estado.value} value={estado.value}>
-                          {estado.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Estado: solo editable al modificar un sprint existente */}
+            {isEditing && (
+              <FormField
+                control={form.control}
+                name="estado"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar estado" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {SPRINT_ESTADOS.map((estado) => (
+                          <SelectItem key={estado.value} value={estado.value}>
+                            {estado.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Mostrar error de solapamiento */}
             {overlapError && (

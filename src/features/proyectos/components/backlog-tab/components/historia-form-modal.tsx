@@ -80,7 +80,7 @@ const historiaSchema = z.object({
   epicaId: z.string().optional(),
   requerimientoId: z.string().optional(),
   asignadoA: z.array(z.number()).min(1, 'Seleccione al menos un responsable'),
-  estado: z.enum(['Por hacer', 'En progreso', 'Finalizado']).optional(),
+  estado: z.enum(['Por hacer', 'En progreso', 'En revisión', 'Finalizado']).optional(),
   prioridad: z.enum(['Alta', 'Media', 'Baja']).optional(),
   fechaInicio: z.string().optional(),
   fechaFin: z.string().optional(),
@@ -168,9 +168,17 @@ interface HistoriaFormModalProps {
   proyectoFechaFin?: string | null;
 }
 
+// Solo "Por hacer" es el estado inicial válido al crear una HU.
+// Los demás estados son gestionados automáticamente por el flujo de trabajo.
 const estadoOptions = [
   { value: 'Por hacer', label: 'Por hacer' },
+];
+
+// Opciones completas para mostrar el estado actual en modo edición (solo lectura)
+const estadoAllOptions = [
+  { value: 'Por hacer', label: 'Por hacer' },
   { value: 'En progreso', label: 'En progreso' },
+  { value: 'En revisión', label: 'En revisión' },
   { value: 'Finalizado', label: 'Finalizado' },
 ];
 
@@ -242,8 +250,14 @@ export function HistoriaFormModal({
       // Forzar reset de campos al abrir para nueva historia
       form.setValue('prioridad', undefined);
       form.setValue('storyPoints', undefined);
+      // Pre-seleccionar el sprint si se abrió desde dentro de un sprint
+      if (initialSprintId) {
+        form.setValue('sprintId', initialSprintId.toString());
+      } else {
+        form.setValue('sprintId', '__backlog__');
+      }
     }
-  }, [open, historia, form]);
+  }, [open, historia, form, initialSprintId]);
 
   // Obtener rango de fechas dinámico basado en sprint seleccionado
   const selectedSprintId = form.watch('sprintId');
@@ -979,20 +993,29 @@ export function HistoriaFormModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Estado</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={isEditing}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Seleccionar estado" />
+                              <SelectValue placeholder="Por hacer" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {estadoOptions.map((option) => (
+                            {(isEditing ? estadoAllOptions : estadoOptions).map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        {isEditing && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            El estado es gestionado automáticamente por el flujo de trabajo
+                          </p>
+                        )}
                       </FormItem>
                     )}
                   />

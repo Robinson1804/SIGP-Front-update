@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, memo } from 'react';
-import { ChevronDown, ChevronRight, Plus, Play, Pencil, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, Play, Pencil, Trash2, Lock, Clock } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,6 +9,12 @@ import {
 } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { type Sprint } from '@/features/proyectos/services/sprints.service';
 import { type HistoriaUsuario } from '@/features/proyectos/services/historias.service';
 import { type Tarea } from '@/features/proyectos/services/tareas.service';
@@ -26,6 +32,8 @@ interface SprintSectionProps {
   equipo?: MiembroEquipo[];
   onAddHistoria?: () => void;
   onIniciarSprint?: () => void;
+  /** Nombre del sprint actualmente activo (bloquea el inicio de este sprint) */
+  sprintActivoNombre?: string;
   onEditSprint?: () => void;
   onDeleteSprint?: () => void;
   onViewHistoria?: (historia: HistoriaUsuario) => void;
@@ -63,6 +71,7 @@ export const SprintSection = memo(function SprintSection({
   equipo = [],
   onAddHistoria,
   onIniciarSprint,
+  sprintActivoNombre,
   onEditSprint,
   onDeleteSprint,
   onViewHistoria,
@@ -118,7 +127,7 @@ export const SprintSection = memo(function SprintSection({
 
               <div className="flex items-center gap-3">
                 <span className="font-semibold text-gray-900">
-                  Tablero Sprint {sprint.numero}
+                  {sprint.nombre || `Tablero Sprint ${sprint.numero ?? sprint.id}`}
                 </span>
 
                 <span className="text-sm text-gray-500">
@@ -167,15 +176,43 @@ export const SprintSection = memo(function SprintSection({
                   Eliminar
                 </Button>
               )}
-              {canIniciar && onIniciarSprint && (
-                <Button
-                  size="sm"
-                  className="bg-[#018CD1] hover:bg-[#0179b5] text-white"
-                  onClick={onIniciarSprint}
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  Iniciar Sprint
-                </Button>
+              {/* Botón Iniciar Sprint: habilitado solo si es el turno de este sprint */}
+              {canIniciar && (
+                sprintActivoNombre ? (
+                  // Otro sprint está activo — mostrar deshabilitado con explicación
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button
+                            size="sm"
+                            disabled
+                            className="bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed gap-1"
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                            Iniciar Sprint
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-xs text-center">
+                        <p className="text-xs">
+                          <strong>{sprintActivoNombre}</strong> está activo.
+                          <br />
+                          Debe finalizar primero para iniciar este sprint.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : onIniciarSprint ? (
+                  <Button
+                    size="sm"
+                    className="bg-[#018CD1] hover:bg-[#0179b5] text-white"
+                    onClick={onIniciarSprint}
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    Iniciar Sprint
+                  </Button>
+                ) : null
               )}
             </div>
           </div>
@@ -184,15 +221,29 @@ export const SprintSection = memo(function SprintSection({
         {/* Content */}
         <CollapsibleContent>
           <div className="p-4 pt-0">
+            {/* Banner informativo cuando el sprint está en espera */}
+            {sprintActivoNombre && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
+                <Clock className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-semibold text-amber-800">Sprint en espera</p>
+                  <p className="text-amber-700 mt-0.5">
+                    <strong>{sprintActivoNombre}</strong> está activo. Este sprint no puede iniciarse
+                    ni recibir nuevas tareas hasta que el sprint activo finalice.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <HistoriaTable
               historias={historias}
               equipo={equipo}
               onView={onViewHistoria}
               onEdit={onEditHistoria}
               onDelete={onDeleteHistoria}
-              onCreateTarea={onCreateTarea}
-              onEditTarea={onEditTarea}
-              onDeleteTarea={onDeleteTarea}
+              onCreateTarea={sprintActivoNombre ? undefined : onCreateTarea}
+              onEditTarea={sprintActivoNombre ? undefined : onEditTarea}
+              onDeleteTarea={sprintActivoNombre ? undefined : onDeleteTarea}
               showSprintAction={false}
               tareasRefreshKey={tareasRefreshKey}
               onVerDocumento={onVerDocumento}

@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { AlertCircle, CheckCircle2, Info, LinkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,23 +21,30 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { type Requerimiento } from '../types';
 
+interface HuResumen {
+  id: number;
+  codigo: string;
+  titulo: string;
+}
+
+interface Vinculacion {
+  requerimientoId: number;
+  historiaUsuarioId: number;
+}
+
 interface MatrizTrazabilidadProps {
   requerimientos: Requerimiento[];
   proyectoId: number;
-  // Cuando se implemente HUs, se agregará:
-  // historiasUsuario?: HistoriaUsuario[];
-  // vinculaciones?: { requerimientoId: number; historiaUsuarioId: number }[];
+  historiasUsuario?: HuResumen[];
+  vinculaciones?: Vinculacion[];
 }
 
 export function MatrizTrazabilidad({
   requerimientos,
-  proyectoId,
+  proyectoId: _proyectoId,
+  historiasUsuario = [],
+  vinculaciones = [],
 }: MatrizTrazabilidadProps) {
-  // Por ahora no hay HUs implementadas, mostraremos un estado preparado
-
-  // Simulación de datos (cuando se integren las HUs, esto vendrá del backend)
-  const historiasUsuario: { id: number; codigo: string; titulo: string }[] = [];
-  const vinculaciones: { requerimientoId: number; historiaUsuarioId: number }[] = [];
 
   // Calcular métricas
   const totalRequerimientos = requerimientos.length;
@@ -119,14 +125,14 @@ export function MatrizTrazabilidad({
         </Card>
       </div>
 
-      {/* Alerta si no hay HUs */}
+      {/* Alerta si no hay HUs vinculadas */}
       {historiasUsuario.length === 0 && (
         <Alert>
           <Info className="h-4 w-4" />
-          <AlertTitle>Historias de Usuario no disponibles</AlertTitle>
+          <AlertTitle>Sin historias de usuario</AlertTitle>
           <AlertDescription>
-            El módulo de Historias de Usuario aún no está integrado. Cuando se implemente,
-            aquí podrás ver la relación entre requerimientos y las HUs que los implementan.
+            No se encontraron historias de usuario en este proyecto. Crea HUs en la pestaña
+            Backlog y vincula cada una a un requerimiento para verlas aquí.
           </AlertDescription>
         </Alert>
       )}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus,
   Pencil,
@@ -49,6 +49,10 @@ import {
   getRequerimientosBySubproyecto,
   deleteRequerimiento,
 } from '../services';
+import {
+  getHistoriasByProyecto,
+  type HistoriaUsuario,
+} from '@/features/proyectos/services/historias.service';
 import { RequerimientoFiltersComponent } from './requerimiento-filters';
 import { RequerimientoForm } from './requerimiento-form';
 import { RequerimientoDetailModal } from './requerimiento-detail-modal';
@@ -103,6 +107,7 @@ export function RequerimientoList({
   const [filters, setFilters] = useState<RequerimientoFilters>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showMatriz, setShowMatriz] = useState(false);
+  const [historiasParaMatriz, setHistoriasParaMatriz] = useState<HistoriaUsuario[]>([]);
 
   // Modal de formulario
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -140,6 +145,23 @@ export function RequerimientoList({
       loadRequerimientos();
     }
   }, []);
+
+  // Cargar HUs cuando se abre la matriz (solo para proyectos, no subproyectos)
+  useEffect(() => {
+    if (showMatriz && tipoContenedor === 'PROYECTO') {
+      getHistoriasByProyecto(proyectoId)
+        .then(setHistoriasParaMatriz)
+        .catch(() => setHistoriasParaMatriz([]));
+    }
+  }, [showMatriz, proyectoId, tipoContenedor]);
+
+  // Vinculaciones: HUs que tienen un requerimiento asignado
+  const vinculacionesMatriz = useMemo(() =>
+    historiasParaMatriz
+      .filter((hu) => hu.requerimientoId != null)
+      .map((hu) => ({ requerimientoId: hu.requerimientoId!, historiaUsuarioId: hu.id })),
+    [historiasParaMatriz]
+  );
 
   // Aplicar filtros
   const applyFilters = useCallback(
@@ -350,6 +372,8 @@ export function RequerimientoList({
         <MatrizTrazabilidad
           requerimientos={requerimientos}
           proyectoId={proyectoId}
+          historiasUsuario={historiasParaMatriz}
+          vinculaciones={vinculacionesMatriz}
         />
       ) : (
         <div className="space-y-4">

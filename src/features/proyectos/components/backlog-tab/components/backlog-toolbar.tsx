@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 import { type Epica } from '@/features/proyectos/services/epicas.service';
 
 interface SprintCounts {
@@ -34,6 +35,7 @@ interface BacklogToolbarProps {
   selectedSprintEstado?: string;
   onSprintEstadoChange?: (estado: string) => void;
   sprintCounts?: SprintCounts;
+  onOpenSprintInfo?: () => void;
 }
 
 export function BacklogToolbar({
@@ -45,6 +47,7 @@ export function BacklogToolbar({
   selectedSprintEstado = 'todos',
   onSprintEstadoChange,
   sprintCounts,
+  onOpenSprintInfo,
 }: BacklogToolbarProps) {
   return (
     <div className="flex items-center gap-4 mb-6">
@@ -107,22 +110,22 @@ export function BacklogToolbar({
         </div>
       )}
 
-      {/* Help tooltip */}
+      {/* Help: sprint management info */}
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button className="text-gray-400 hover:text-gray-600">
-              <HelpCircle className="h-5 w-5" />
-            </button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-gray-600 hover:text-[#018CD1] hover:border-[#018CD1]"
+              onClick={onOpenSprintInfo}
+            >
+              <HelpCircle className="h-4 w-4" />
+              ¿Cómo funcionan los Sprints?
+            </Button>
           </TooltipTrigger>
-          <TooltipContent side="left" className="max-w-xs">
-            <p className="text-sm">
-              <strong>Product Backlog</strong>
-              <br />
-              Gestiona las historias de usuario del proyecto.
-              Las historias sin sprint asignado aparecen en la seccion &quot;Backlog&quot;.
-              Usa los checkboxes para seleccionar y asignar multiples historias a un sprint.
-            </p>
+          <TooltipContent side="left">
+            <p className="text-xs">Ver guía de gestión de sprints e HUs</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

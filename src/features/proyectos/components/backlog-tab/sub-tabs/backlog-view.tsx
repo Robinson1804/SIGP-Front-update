@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { BacklogToolbar } from '../components/backlog-toolbar';
 import { SprintSection } from '../components/sprint-section';
 import { BacklogSection } from '../components/backlog-section';
+import { SprintInfoModal } from '../components/sprint-info-modal';
 import { type SprintWithHistorias } from '../hooks/use-backlog-data';
 import { type HistoriaUsuario } from '@/features/proyectos/services/historias.service';
 import { type Tarea } from '@/features/proyectos/services/tareas.service';
@@ -82,11 +83,18 @@ export function BacklogView({
   const [selectedEpicaId, setSelectedEpicaId] = useState('all');
   const [selectedBacklogIds, setSelectedBacklogIds] = useState<number[]>([]);
   const [selectedSprintEstado, setSelectedSprintEstado] = useState('todos');
+  const [isSprintInfoOpen, setIsSprintInfoOpen] = useState(false);
 
   // Helpers para identificar estados de sprint (soporta formatos nuevos y antiguos)
   const isActivo = (estado: string) => estado === 'En progreso' || estado === 'Activo';
   const isPlanificado = (estado: string) => estado === 'Por hacer' || estado === 'Planificado';
   const isFinalizado = (estado: string) => estado === 'Finalizado' || estado === 'Completado';
+
+  // Sprint activo actual (si existe)
+  const sprintActivo = useMemo(
+    () => sprints.find((s) => isActivo(s.estado)) ?? null,
+    [sprints],
+  );
 
   // Contadores de sprints por estado
   const sprintCounts = useMemo(() => ({
@@ -185,41 +193,49 @@ export function BacklogView({
         selectedSprintEstado={selectedSprintEstado}
         onSprintEstadoChange={setSelectedSprintEstado}
         sprintCounts={sprintCounts}
+        onOpenSprintInfo={() => setIsSprintInfoOpen(true)}
       />
 
       {/* Sprint sections */}
-      {filteredSprints.map((sprint) => (
-        <SprintSection
-          key={sprint.id}
-          sprint={sprint}
-          historias={sprint.historias}
-          equipo={equipo}
-          onAddHistoria={isReadOnly || !onCreateHistoria ? undefined : () => onCreateHistoria(sprint.id)}
-          onIniciarSprint={
-            isReadOnly || !onIniciarSprint ? undefined :
-            (sprint.estado === 'Por hacer' || sprint.estado === 'Planificado')
-              ? () => onIniciarSprint(sprint.id)
-              : undefined
-          }
-          onEditSprint={isReadOnly || !onEditSprint ? undefined : () => onEditSprint(sprint)}
-          onDeleteSprint={isReadOnly || !onDeleteSprint ? undefined : () => onDeleteSprint(sprint)}
-          onViewHistoria={onViewHistoria}
-          onEditHistoria={isReadOnly ? undefined : onEditHistoria}
-          onDeleteHistoria={isReadOnly ? undefined : onDeleteHistoria}
-          onCreateTarea={isReadOnly ? undefined : onCreateTarea}
-          onEditTarea={isReadOnly ? undefined : onEditTarea}
-          onDeleteTarea={isReadOnly ? undefined : onDeleteTarea}
-          defaultOpen={sprint.estado === 'En progreso' || sprint.estado === 'Activo'}
-          tareasRefreshKey={tareasRefreshKey}
-          onVerDocumento={onVerDocumento}
-          onValidarHu={isReadOnly ? undefined : onValidarHu}
-          isReadOnly={isReadOnly}
-          currentUserId={currentUserId}
-          isDeveloperOnly={isDeveloperOnly}
-        />
-      ))}
+      {filteredSprints.map((sprint) => {
+        const isPorHacer = sprint.estado === 'Por hacer' || sprint.estado === 'Planificado';
+        // El sprint está bloqueado si es "Por hacer" y hay otro sprint activo distinto
+        const bloqueadoPor = isPorHacer && sprintActivo && sprintActivo.id !== sprint.id
+          ? sprintActivo.nombre
+          : undefined;
 
-      {/* Backlog section - Sin opción de crear tareas (solo en Sprints) */}
+        return (
+          <SprintSection
+            key={sprint.id}
+            sprint={sprint}
+            historias={sprint.historias}
+            equipo={equipo}
+            onAddHistoria={isReadOnly || !onCreateHistoria ? undefined : () => onCreateHistoria(sprint.id)}
+            onIniciarSprint={
+              isReadOnly || !onIniciarSprint ? undefined :
+              isPorHacer ? () => onIniciarSprint(sprint.id) : undefined
+            }
+            sprintActivoNombre={isReadOnly ? undefined : bloqueadoPor}
+            onEditSprint={isReadOnly || !onEditSprint ? undefined : () => onEditSprint(sprint)}
+            onDeleteSprint={isReadOnly || !onDeleteSprint ? undefined : () => onDeleteSprint(sprint)}
+            onViewHistoria={onViewHistoria}
+            onEditHistoria={isReadOnly ? undefined : onEditHistoria}
+            onDeleteHistoria={isReadOnly ? undefined : onDeleteHistoria}
+            onCreateTarea={isReadOnly ? undefined : onCreateTarea}
+            onEditTarea={isReadOnly ? undefined : onEditTarea}
+            onDeleteTarea={isReadOnly ? undefined : onDeleteTarea}
+            defaultOpen={sprint.estado === 'En progreso' || sprint.estado === 'Activo'}
+            tareasRefreshKey={tareasRefreshKey}
+            onVerDocumento={onVerDocumento}
+            onValidarHu={isReadOnly ? undefined : onValidarHu}
+            isReadOnly={isReadOnly}
+            currentUserId={currentUserId}
+            isDeveloperOnly={isDeveloperOnly}
+          />
+        );
+      })}
+
+      {/* Backlog section - Sin opción de crear tareas ni validar HU (solo en Sprints) */}
       <BacklogSection
         historias={filteredBacklog}
         equipo={equipo}
@@ -233,8 +249,14 @@ export function BacklogView({
         onDeleteHistoria={isReadOnly ? undefined : onDeleteHistoria}
         onAssignHistoriaToSprint={isReadOnly || !onAssignToSprint ? undefined : (h) => onAssignToSprint([h.id])}
         onVerDocumento={onVerDocumento}
-        onValidarHu={isReadOnly ? undefined : onValidarHu}
+        onValidarHu={undefined}
         isReadOnly={isReadOnly}
+      />
+
+      {/* Modal informativo de gestión de sprints */}
+      <SprintInfoModal
+        open={isSprintInfoOpen}
+        onOpenChange={setIsSprintInfoOpen}
       />
     </div>
   );
