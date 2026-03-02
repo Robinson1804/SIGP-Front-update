@@ -121,9 +121,14 @@ function ActividadDetailsContent() {
     // Determinar rol del usuario - ADMIN tiene acceso total
     const userRole = user?.role;
     const isAdmin = userRole === ROLES.ADMIN;
+    const isCoordinador = userRole === ROLES.COORDINADOR;
     const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
     const isImplementador = userRole === ROLES.IMPLEMENTADOR;
     const isDesarrollador = userRole === ROLES.DESARROLLADOR;
+
+    // SM es Gestor de esta actividad cuando su usuario ID coincide con el gestorId de la actividad.
+    // Concede permisos adicionales: crear informes y funciones de tablero equivalentes a Coordinador.
+    const isGestor = isScrumMaster && !!project && Number(user?.id) === (project as any)?.gestorId;
 
     // DESARROLLADOR no tiene acceso a Actividades (solo a Proyectos/Scrum)
     React.useEffect(() => {
@@ -133,7 +138,8 @@ function ActividadDetailsContent() {
     }, [isDesarrollador, router]);
 
     // ADMIN puede todo; SCRUM MASTER e IMPLEMENTADOR solo pueden ver, no editar ni eliminar la actividad
-    const canEdit = isAdmin || (!isScrumMaster && !isImplementador && !isDesarrollador);
+    // (excepto SM que es Gestor, que puede editar la actividad)
+    const canEdit = isAdmin || isGestor || (!isScrumMaster && !isImplementador && !isDesarrollador);
     const canDelete = isAdmin || (!isScrumMaster && !isImplementador && !isDesarrollador);
 
     React.useEffect(() => {
@@ -598,7 +604,10 @@ function ActividadDetailsContent() {
 
                 {/* Informes Tab */}
                 {activeTab === 'Informes' && project?.id && (
-                    <InformesTabContent actividadId={Number(project.id)} />
+                    <InformesTabContent
+                        actividadId={Number(project.id)}
+                        canManage={isAdmin || isCoordinador || isGestor}
+                    />
                 )}
             </div>
 

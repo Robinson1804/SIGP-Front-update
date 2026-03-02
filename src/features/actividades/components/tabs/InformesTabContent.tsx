@@ -36,9 +36,11 @@ const estadoBadgeColors: Record<string, string> = {
 
 interface InformesTabContentProps {
   actividadId: number;
+  /** Si es true, el usuario puede crear nuevos informes (Admin, Coordinador o SM asignado como Gestor) */
+  canManage?: boolean;
 }
 
-export function InformesTabContent({ actividadId }: InformesTabContentProps) {
+export function InformesTabContent({ actividadId, canManage = false }: InformesTabContentProps) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -112,10 +114,12 @@ export function InformesTabContent({ actividadId }: InformesTabContentProps) {
             Informes periódicos de avance de la actividad
           </p>
         </div>
-        <Button onClick={() => router.push(`/poi/actividad/informes/nuevo${queryParams}`)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Informe
-        </Button>
+        {canManage && (
+          <Button onClick={() => router.push(`/poi/actividad/informes/nuevo${queryParams}`)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Informe
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -172,13 +176,17 @@ export function InformesTabContent({ actividadId }: InformesTabContentProps) {
           {informes.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No hay informes de actividad creados aún.
-              <br />
-              <Button
-                variant="link"
-                onClick={() => router.push(`/poi/actividad/informes/nuevo${queryParams}`)}
-              >
-                Crear el primer informe
-              </Button>
+              {canManage && (
+                <>
+                  <br />
+                  <Button
+                    variant="link"
+                    onClick={() => router.push(`/poi/actividad/informes/nuevo${queryParams}`)}
+                  >
+                    Crear el primer informe
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <Table>

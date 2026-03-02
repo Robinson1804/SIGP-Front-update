@@ -1980,6 +1980,7 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
     const userRole = user?.role;
     const isAdmin = userRole === ROLES.ADMIN;
     const isCoordinador = userRole === ROLES.COORDINADOR;
+    const isScrumMaster = userRole === ROLES.SCRUM_MASTER;
     const isImplementador = userRole === ROLES.IMPLEMENTADOR;
     const isDesarrollador = userRole === ROLES.DESARROLLADOR;
 
@@ -1990,10 +1991,10 @@ export function ListaContent({ embedded = false, subactividadId }: ListaContentP
         }
     }, [isDesarrollador, router]);
 
-    // ADMIN y COORDINADOR pueden gestionar tareas (crear, editar, eliminar)
-    const canManageTasks = isAdmin || isCoordinador;
-    // ADMIN, COORDINADOR e IMPLEMENTADOR pueden gestionar subtareas
-    const canManageSubtasks = isAdmin || isCoordinador || isImplementador;
+    // SM siempre puede crear, editar y eliminar tareas y subtareas en actividades (Kanban)
+    const canManageTasks = isAdmin || isCoordinador || isScrumMaster;
+    // ADMIN, COORDINADOR, SM e IMPLEMENTADOR pueden gestionar subtareas
+    const canManageSubtasks = isAdmin || isCoordinador || isScrumMaster || isImplementador;
     const currentUser = user?.name || 'Scrum Master';
 
     React.useEffect(() => {
