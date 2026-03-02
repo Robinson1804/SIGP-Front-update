@@ -6,6 +6,7 @@ import { useAuthStore, useHasHydrated } from '@/stores';
 import { paths } from '@/lib/paths';
 // AppLayout se maneja en cada página individual para permitir breadcrumbs personalizados
 import { WebSocketProvider } from '@/contexts/websocket-context';
+import { SidebarProvider } from '@/contexts/sidebar-context';
 
 /**
  * Layout para rutas protegidas del dashboard
@@ -74,8 +75,10 @@ export default function DashboardLayout({
   // Renderizar con WebSocket para tiempo real
   // AppLayout se maneja en cada página individual para permitir breadcrumbs personalizados
   return (
-    <WebSocketProvider>
-      {children}
-    </WebSocketProvider>
+    <SidebarProvider>
+      <WebSocketProvider>
+        {children}
+      </WebSocketProvider>
+    </SidebarProvider>
   );
 }

@@ -29,7 +29,7 @@ import { paths } from "@/lib/paths";
 import { MODULES, type Role, ROLES } from "@/lib/definitions";
 import { canAccessModule } from "@/lib/permissions";
 import { useAuth } from "@/stores";
-import { SidebarProvider, useSidebar } from "@/contexts/sidebar-context";
+import { useSidebar } from "@/contexts/sidebar-context";
 import { getNotificaciones } from "@/lib/services/notificaciones.service";
 
 
@@ -241,9 +241,5 @@ function AppLayoutContent({
 }
 
 export default function AppLayout(props: AppLayoutProps) {
-  return (
-    <SidebarProvider>
-      <AppLayoutContent {...props} />
-    </SidebarProvider>
-  );
+  return <AppLayoutContent {...props} />;
 }
