@@ -31,6 +31,12 @@ import { DynamicTable, ColumnDefinition } from './DynamicTable';
 import type { Acta, ActaEntregable, ActaRiesgo, ActaHito, ActaMiembroEquipo } from '@/features/documentos/types';
 import { getAsignacionesByProyecto, type Asignacion } from '@/lib/services/asignaciones.service';
 
+// Normaliza cualquier formato de fecha a 'YYYY-MM-DD' para el input type="date"
+function normalizeDateStr(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) return '';
+  return String(dateStr).split('T')[0];
+}
+
 const formSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
   fecha: z.string().min(1, 'La fecha es requerida'),
@@ -126,7 +132,7 @@ export function ActaConstitucionForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nombre: acta?.nombre || 'Acta de Constitución del Proyecto',
-      fecha: acta?.fecha || new Date().toISOString().split('T')[0],
+      fecha: normalizeDateStr(acta?.fecha) || new Date().toISOString().split('T')[0],
       objetivoSmart: acta?.objetivoSmart || '',
       justificacion: acta?.justificacion || '',
       alcance: acta?.alcance || [],

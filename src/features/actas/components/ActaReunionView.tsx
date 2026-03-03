@@ -20,7 +20,9 @@ interface ActaReunionViewProps {
 export function ActaReunionView({ acta }: ActaReunionViewProps) {
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('es-PE', {
+    const datePart = String(dateStr).split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
