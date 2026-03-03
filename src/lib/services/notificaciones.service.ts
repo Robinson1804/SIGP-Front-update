@@ -68,6 +68,7 @@ export interface ActividadGroup {
 export interface ActividadSeccionCounts {
   asignaciones: { total: number; noLeidas: number };
   tareas: { total: number; noLeidas: number };
+  subtareas: { total: number; noLeidas: number };
 }
 
 export interface SeccionCounts {

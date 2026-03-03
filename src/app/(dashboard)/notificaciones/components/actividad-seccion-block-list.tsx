@@ -1,12 +1,12 @@
 "use client";
 
 import React from 'react';
-import { ArrowLeft, Loader2, FolderKanban, ListTodo } from 'lucide-react';
+import { ArrowLeft, Loader2, FolderKanban, ListTodo, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ActividadSeccionCounts } from '@/lib/services/notificaciones.service';
 
-export type ActividadSeccionName = 'asignaciones' | 'tareas';
+export type ActividadSeccionName = 'asignaciones' | 'tareas' | 'subtareas';
 
 interface ActividadSeccionBlockListProps {
   actividadId: number;
@@ -35,6 +35,12 @@ const ACTIVIDAD_SECCION_CONFIG: {
     label: 'Tareas',
     icon: ListTodo,
     description: 'Tareas creadas y estados',
+  },
+  {
+    key: 'subtareas',
+    label: 'Subtareas',
+    icon: GitBranch,
+    description: 'Subtareas asignadas y estados',
   },
 ];
 
@@ -100,8 +106,8 @@ export function ActividadSeccionBlockList({
         {actividadCodigo}: {actividadNombre}
       </h3>
 
-      {/* Section grid 1x2 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Section grid 1x3 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {ACTIVIDAD_SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
           const seccionData = counts[key];
           const hasUnread = seccionData.noLeidas > 0;

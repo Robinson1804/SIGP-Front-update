@@ -53,18 +53,19 @@ import { PaginationControls } from './components/pagination-controls';
 
 const PAGE_SIZE = 5;
 
-// Mapeo seccion → tipo backend (for projects)
-const SECCION_TO_TIPO: Record<SeccionName, string> = {
-  asignaciones: 'Proyectos',
-  sprints: 'Sprints',
-  aprobaciones: 'Aprobaciones',
-  validaciones: 'Validaciones',
+// Mapeo seccion → filtros backend (tipo + entidadTipo) para proyectos
+const SECCION_TO_FILTROS: Record<SeccionName, { tipo: string; entidadTipo: string }> = {
+  asignaciones: { tipo: 'Proyecto', entidadTipo: 'Asignaciones' },
+  sprints:      { tipo: 'Proyecto', entidadTipo: 'Sprints' },
+  aprobaciones: { tipo: 'Proyecto', entidadTipo: 'Aprobaciones' },
+  validaciones: { tipo: 'Proyecto', entidadTipo: 'Validaciones' },
 };
 
-// Mapeo seccion → tipo backend (for activities)
-const ACTIVIDAD_SECCION_TO_TIPO: Record<ActividadSeccionName, string> = {
-  asignaciones: 'Proyectos', // Activity assignments use same type
-  tareas: 'Tareas',
+// Mapeo seccion → filtros backend (tipo + entidadTipo) para actividades
+const ACTIVIDAD_SECCION_TO_FILTROS: Record<ActividadSeccionName, { tipo: string; entidadTipo: string }> = {
+  asignaciones: { tipo: 'Actividad', entidadTipo: 'Asignaciones' },
+  tareas:       { tipo: 'Actividad', entidadTipo: 'Tareas' },
+  subtareas:    { tipo: 'Actividad', entidadTipo: 'Subtareas' },
 };
 
 // Tab types - PMO has Proyectos/Actividades, others have different tabs
@@ -99,24 +100,27 @@ type ImplementadorTabName = 'Actividades' | 'Tarea' | 'Subtareas';
 // Tab definitions for non-PMO roles
 interface TabDefinition {
   name: OtherTabName;
-  types?: string[]; // Backend TipoNotificacion enum values (e.g. 'Validaciones', 'Aprobaciones')
+  tipo?: string;        // Backend TipoNotificacion enum value ('Proyecto' | 'Actividad')
+  entidadTipo?: string; // Backend entidadTipo filter ('Asignaciones' | 'Sprints' | 'Validaciones' | 'Aprobaciones' | 'Tareas')
   drillDown: 'project-only' | 'project-sprint' | 'flat';
+  // Legacy field kept for compatibility
+  types?: string[];
 }
 
 const TAB_DEFINITIONS: TabDefinition[] = [
   { name: 'Proyectos', drillDown: 'project-only' },
   { name: 'Sprints', drillDown: 'project-sprint' },
-  { name: 'Aprobaciones', types: ['Aprobaciones'], drillDown: 'flat' },
-  { name: 'Validaciones', types: ['Validaciones'], drillDown: 'flat' },
+  { name: 'Aprobaciones', tipo: 'Proyecto', entidadTipo: 'Aprobaciones', drillDown: 'flat' },
+  { name: 'Validaciones', tipo: 'Proyecto', entidadTipo: 'Validaciones', drillDown: 'flat' },
 ];
 
 // Tabs específicos para PATROCINADOR:
-// - "Aprobaciones" = cosas pendientes de su aprobación (tipo VALIDACIONES del backend)
-// - "Validaciones" = respuestas/resultados de aprobaciones (tipo APROBACIONES del backend)
+// - "Aprobaciones" = cosas pendientes de su aprobación (entidadTipo=Validaciones del backend)
+// - "Validaciones" = respuestas/resultados de aprobaciones (entidadTipo=Aprobaciones del backend)
 const PATROCINADOR_TAB_DEFINITIONS: TabDefinition[] = [
   { name: 'Proyectos', drillDown: 'project-only' },
-  { name: 'Aprobaciones', types: ['Validaciones'], drillDown: 'flat' },
-  { name: 'Validaciones', types: ['Aprobaciones'], drillDown: 'flat' },
+  { name: 'Aprobaciones', tipo: 'Proyecto', entidadTipo: 'Validaciones', drillDown: 'flat' },
+  { name: 'Validaciones', tipo: 'Proyecto', entidadTipo: 'Aprobaciones', drillDown: 'flat' },
 ];
 
 function getTabsForNonPmo(role?: string): TabDefinition[] {
@@ -245,10 +249,11 @@ export default function NotificationsPage() {
             const counts = await getSeccionCountsByActividad(pmoActividadNavStack.actividadId);
             setActividadSeccionCounts(counts);
           } else if (pmoActividadNavStack.level === 'notificaciones') {
-            const tipo = ACTIVIDAD_SECCION_TO_TIPO[pmoActividadNavStack.seccion];
+            const { tipo, entidadTipo } = ACTIVIDAD_SECCION_TO_FILTROS[pmoActividadNavStack.seccion];
             const response = await getNotificaciones({
               actividadId: pmoActividadNavStack.actividadId,
               tipo,
+              entidadTipo,
               page,
               limit: PAGE_SIZE,
             });
@@ -267,10 +272,11 @@ export default function NotificationsPage() {
             const counts = await getSeccionCountsByProyecto(pmoNavStack.proyectoId);
             setSeccionCounts(counts);
           } else if (pmoNavStack.level === 'notificaciones') {
-            const tipo = SECCION_TO_TIPO[pmoNavStack.seccion];
+            const { tipo, entidadTipo } = SECCION_TO_FILTROS[pmoNavStack.seccion];
             const response = await getNotificaciones({
               proyectoId: pmoNavStack.proyectoId,
               tipo,
+              entidadTipo,
               page,
               limit: PAGE_SIZE,
             });
@@ -284,10 +290,10 @@ export default function NotificationsPage() {
       } else if (isDeveloper) {
         // DESARROLLADOR Flat Tab Flow (4 sections)
         const developerTipoMap: Record<DeveloperTabName, { tipo: string; entidadTipo?: string }> = {
-          'Proyectos': { tipo: 'Proyectos' },
-          'Tareas': { tipo: 'Tareas' },
-          'Historias de usuario': { tipo: 'Tareas', entidadTipo: 'historia' },
-          'Validaciones': { tipo: 'Aprobaciones' },
+          'Proyectos':            { tipo: 'Proyecto', entidadTipo: 'Asignaciones' },
+          'Tareas':               { tipo: 'Proyecto', entidadTipo: 'Tareas' },
+          'Historias de usuario': { tipo: 'Proyecto', entidadTipo: 'Validaciones' },
+          'Validaciones':         { tipo: 'Proyecto', entidadTipo: 'Aprobaciones' },
         };
         const { tipo: devTipo, entidadTipo: devEntidadTipo } = developerTipoMap[developerActiveTab];
         const devResponse = await getNotificaciones({
@@ -304,9 +310,9 @@ export default function NotificationsPage() {
       } else if (isImplementador) {
         // IMPLEMENTADOR Flat Tab Flow (3 sections)
         const implementadorTipoMap: Record<ImplementadorTabName, { tipo: string; entidadTipo?: string }> = {
-          'Actividades': { tipo: 'Proyectos' },
-          'Tarea': { tipo: 'Tareas', entidadTipo: 'tarea' },
-          'Subtareas': { tipo: 'Tareas', entidadTipo: 'subtarea' },
+          'Actividades': { tipo: 'Actividad', entidadTipo: 'Asignaciones' },
+          'Tarea':       { tipo: 'Actividad', entidadTipo: 'Tareas' },
+          'Subtareas':   { tipo: 'Actividad', entidadTipo: 'Subtareas' },
         };
         const { tipo: implTipo, entidadTipo: implEntidadTipo } = implementadorTipoMap[implementadorActiveTab];
         const implResponse = await getNotificaciones({
@@ -323,10 +329,12 @@ export default function NotificationsPage() {
       } else {
         // Non-PMO Navigation Flow (existing logic)
         if (currentNonPmoTab?.drillDown === 'flat') {
-          // For flat tabs, get first type and paginate server-side
-          const tipo = currentNonPmoTab.types?.[0];
+          // For flat tabs, filter by tipo + entidadTipo and paginate server-side
+          const tipo = currentNonPmoTab.tipo;
+          const entidadTipo = currentNonPmoTab.entidadTipo;
           const response = await getNotificaciones({
             tipo,
+            entidadTipo,
             page: flatPage,
             limit: PAGE_SIZE,
           });
@@ -349,7 +357,8 @@ export default function NotificationsPage() {
           };
           if (otherNavStack.sprintId) {
             filters.entidadId = otherNavStack.sprintId;
-            filters.tipo = 'Sprints';
+            filters.tipo = 'Proyecto';
+            filters.entidadTipo = 'Sprints';
           }
           const response = await getNotificaciones(filters);
           const mapped = response.notificaciones
@@ -419,10 +428,11 @@ export default function NotificationsPage() {
   const handleDeleteSeccion = async (seccion: SeccionName) => {
     if (pmoNavStack.level !== 'secciones') return;
     try {
-      const tipo = SECCION_TO_TIPO[seccion];
+      const { tipo, entidadTipo } = SECCION_TO_FILTROS[seccion];
       const response = await getNotificaciones({
         proyectoId: pmoNavStack.proyectoId,
         tipo,
+        entidadTipo,
         limit: 1000,
       });
       const ids = response.notificaciones.map((n: any) => n.id).filter(Boolean);
@@ -876,6 +886,7 @@ export default function NotificationsPage() {
             const labels: Record<ActividadSeccionName, string> = {
               asignaciones: 'Asignaciones',
               tareas: 'Tareas',
+              subtareas: 'Subtareas',
             };
             return labels[seccion];
           };

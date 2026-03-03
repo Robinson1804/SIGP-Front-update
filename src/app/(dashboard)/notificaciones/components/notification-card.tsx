@@ -40,30 +40,26 @@ const statusStyles: { [key: string]: { bg: string; text: string } } = {
 export function mapBackendNotification(n: any): LocalNotification {
   let type: NotificationType = 'sistema';
   const tipoLower = n.tipo?.toLowerCase() || '';
+  const entidadTipoLower = n.entidadTipo?.toLowerCase() || '';
 
-  if (tipoLower === 'proyectos' || tipoLower === 'proyecto' || tipoLower === 'tareas' || tipoLower === 'tarea') {
-    type = 'project';
-  } else if (tipoLower === 'sprints' || tipoLower === 'sprint') {
-    type = 'sprint';
-  } else if (tipoLower === 'retrasos' || tipoLower === 'retraso') {
-    type = 'delay';
-  } else if (tipoLower === 'validaciones' || tipoLower === 'validacion') {
-    type = 'validacion';
-  } else if (tipoLower === 'aprobaciones' || tipoLower === 'aprobacion') {
-    type = 'aprobacion';
-  } else if (n.tipo === 'hu_revision') {
-    type = 'hu_revision';
-  } else if (n.tipo === 'hu_validated') {
-    type = 'hu_validated';
-  } else if (n.tipo === 'hu_rejected') {
-    type = 'hu_rejected';
+  if (tipoLower === 'proyecto' || tipoLower === 'actividad') {
+    if (entidadTipoLower === 'sprints') {
+      type = 'sprint';
+    } else if (entidadTipoLower === 'validaciones') {
+      type = 'validacion';
+    } else if (entidadTipoLower === 'aprobaciones') {
+      type = 'aprobacion';
+    } else {
+      // Asignaciones, Tareas
+      type = 'project';
+    }
+  } else if (tipoLower === 'sistema') {
+    type = 'sistema';
   }
 
   let projectType: 'Proyecto' | 'Actividad' | 'Cronograma' = 'Proyecto';
-  if (n.entidadTipo === 'actividad' || n.entidadTipo === 'Actividad') {
+  if (tipoLower === 'actividad') {
     projectType = 'Actividad';
-  } else if (n.entidadTipo === 'Cronograma' || n.entidadTipo === 'cronograma') {
-    projectType = 'Cronograma';
   }
 
   let title = n.titulo;
