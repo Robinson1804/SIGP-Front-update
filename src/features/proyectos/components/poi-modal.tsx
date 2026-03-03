@@ -511,7 +511,8 @@ export function POIFullModal({
             setPatrocinadores(pats);
             setSobrecargadosCache(sobrecargados.data || []);
             // Construir mapa personalId → porcentajeTotal con datos reales
-            const cargaMap = new Map<number, number>(resumenCarga.map(r => [r.personalId, r.porcentajeTotal]));
+            // Number() garantiza clave numérica aunque la API devuelva string en runtime
+            const cargaMap = new Map<number, number>(resumenCarga.map(r => [Number(r.personalId), r.porcentajeTotal]));
             setCargaTrabajoCache(cargaMap);
 
             // Si cargamos PGD, actualizar los años
@@ -622,11 +623,10 @@ export function POIFullModal({
                     }
                 }
 
-                // Para Actividades, gestorId se mapea a scrumMasterId en el formulario
-                // Para Proyectos, se usa scrumMasterId directamente
-                const scrumMasterIdValue = project.type === 'Actividad'
-                    ? projectWithIds.gestorId
-                    : projectWithIds.scrumMasterId;
+                // mapActividadToProject ya convierte gestorId → scrumMasterId,
+                // así que scrumMasterId funciona para ambos tipos.
+                // gestorId como fallback por si llegan datos sin ese mapeo previo.
+                const scrumMasterIdValue = projectWithIds.scrumMasterId ?? projectWithIds.gestorId;
 
                 setFormData({
                     ...project,
@@ -915,7 +915,8 @@ export function POIFullModal({
         let cargaActual = cargaTrabajoCache;
         try {
             const resumenFresco = await getResumenCargaPersonal();
-            cargaActual = new Map<number, number>(resumenFresco.map(r => [r.personalId, r.porcentajeTotal]));
+            // Number() garantiza clave numérica aunque la API devuelva string en runtime
+            cargaActual = new Map<number, number>(resumenFresco.map(r => [Number(r.personalId), r.porcentajeTotal]));
             setCargaTrabajoCache(cargaActual);
         } catch {
             // Si falla la recarga, usar el cache existente como respaldo
