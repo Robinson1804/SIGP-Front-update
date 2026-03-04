@@ -194,6 +194,7 @@ export default function NotificationsPage() {
   const [actividadSeccionCounts, setActividadSeccionCounts] = useState<ActividadSeccionCounts>({
     asignaciones: { total: 0, noLeidas: 0 },
     tareas: { total: 0, noLeidas: 0 },
+    subtareas: { total: 0, noLeidas: 0 },
   });
   const [notifications, setNotifications] = useState<LocalNotification[]>([]);
   const [flatNotifications, setFlatNotifications] = useState<LocalNotification[]>([]);
@@ -380,26 +381,6 @@ export default function NotificationsPage() {
     loadData();
   }, [loadData]);
 
-  // Reload data when page becomes visible (e.g., returning from another page)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadData();
-      }
-    };
-
-    const handleFocus = () => {
-      loadData();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [loadData]);
 
   // PMO Navigation handlers
   const handlePmoProyectoClick = (proyectoId: number, proyectoNombre: string, proyectoCodigo: string) => {

@@ -304,6 +304,7 @@ export async function getSeccionCountsByActividad(actividadId: number): Promise<
     return {
       asignaciones: { total: 0, noLeidas: 0 },
       tareas: { total: 0, noLeidas: 0 },
+      subtareas: { total: 0, noLeidas: 0 },
     };
   }
 }
