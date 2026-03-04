@@ -35,10 +35,11 @@ export interface Personal {
 export interface Asignacion {
   id: number;
   personalId: number;
-  tipoAsignacion: 'Proyecto' | 'Actividad' | 'Subproyecto';
+  tipoAsignacion: 'Proyecto' | 'Actividad' | 'Subproyecto' | 'Subactividad';
   proyectoId?: number;
   actividadId?: number;
   subproyectoId?: number;
+  subactividadId?: number;
   rolEquipo?: string;
   porcentajeDedicacion: number;
   fechaInicio: string;
@@ -54,10 +55,11 @@ export interface Asignacion {
 
 export interface CreateAsignacionData {
   personalId: number;
-  tipoAsignacion: 'Proyecto' | 'Actividad' | 'Subproyecto';
+  tipoAsignacion: 'Proyecto' | 'Actividad' | 'Subproyecto' | 'Subactividad';
   proyectoId?: number;
   actividadId?: number;
   subproyectoId?: number;
+  subactividadId?: number;
   rolEquipo?: string;
   porcentajeDedicacion: number;
   fechaInicio: string;
@@ -330,6 +332,61 @@ export async function syncAsignacionesActividad(
   }
 
   return { created, removed, errors };
+}
+
+/**
+ * Obtener asignaciones de una subactividad
+ */
+export async function getAsignacionesBySubactividad(subactividadId: number | string): Promise<Asignacion[]> {
+  const response = await apiClient.get<Asignacion[]>(
+    ENDPOINTS.RRHH.ASIGNACIONES_SUBACTIVIDAD(subactividadId)
+  );
+  return response.data || [];
+}
+
+/**
+ * Sincronizar asignaciones de una subactividad con una lista de IDs de personal
+ */
+export async function syncAsignacionesSubactividad(
+  subactividadId: number,
+  personalIds: number[],
+  porcentajeDedicacion: number = 25
+): Promise<{ created: number; removed: number }> {
+  const asignacionesActuales = await getAsignacionesBySubactividad(subactividadId);
+  const idsActuales = asignacionesActuales.map(a => a.personalId);
+
+  const idsAAgregar = personalIds.filter(id => !idsActuales.includes(id));
+  const asignacionesAEliminar = asignacionesActuales.filter(a => !personalIds.includes(a.personalId));
+
+  let created = 0;
+  let removed = 0;
+
+  for (const personalId of idsAAgregar) {
+    try {
+      await createAsignacion({
+        personalId,
+        tipoAsignacion: 'Subactividad',
+        subactividadId,
+        rolEquipo: 'Implementador',
+        porcentajeDedicacion,
+        fechaInicio: new Date().toISOString().split('T')[0],
+      });
+      created++;
+    } catch (error) {
+      console.warn(`No se pudo asignar personal ${personalId} a la subactividad:`, error);
+    }
+  }
+
+  for (const asignacion of asignacionesAEliminar) {
+    try {
+      await deleteAsignacion(asignacion.id);
+      removed++;
+    } catch (error) {
+      console.warn(`No se pudo eliminar asignación ${asignacion.id}:`, error);
+    }
+  }
+
+  return { created, removed };
 }
 
 /**

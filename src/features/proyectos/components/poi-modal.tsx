@@ -87,6 +87,8 @@ import {
   syncAsignacionesSubproyecto,
   getAsignacionesByActividad,
   syncAsignacionesActividad,
+  getAsignacionesBySubactividad,
+  syncAsignacionesSubactividad,
   getPersonalDisponible,
   getPersonalDesarrolladores,
   getPersonalImplementadores,
@@ -163,6 +165,7 @@ type SubActividadItem = {
   amount?: number;
   fechaInicio?: string;
   fechaFin?: string;
+  responsible?: string[]; // IDs de implementadores asignados
 };
 
 /**
@@ -442,10 +445,12 @@ export function POIFullModal({
         isOpen: boolean;
         sobrecargados: Array<{id: number; nombre: string; porcentaje: number}>;
         disponibles: Array<{id: number; nombre: string; porcentajeActual: number}>;
+        contexto: 'proyecto' | 'actividad' | 'subproyecto' | 'subactividad';
     }>({
         isOpen: false,
         sobrecargados: [],
         disponibles: [],
+        contexto: 'proyecto',
     });
 
     // Datos cargados desde la API
@@ -991,7 +996,8 @@ export function POIFullModal({
         setFormData(p => ({ ...p, responsibles: p.responsibles?.filter(id => !idsToRemove.has(id)) ?? [] }));
 
         // Mostrar modal de advertencia — el POI modal permanece abierto al cerrarlo
-        setSeleccionSobrecargaModal({ isOpen: true, sobrecargados: sobrecargadosEncontrados, disponibles });
+        const contexto = formData.type === 'Actividad' ? 'actividad' : 'proyecto';
+        setSeleccionSobrecargaModal({ isOpen: true, sobrecargados: sobrecargadosEncontrados, disponibles, contexto });
         return true; // Detener guardado
     };
 
@@ -1356,8 +1362,10 @@ export function POIFullModal({
                         const gestorFound = scrumMasters.find(sm => sm.id === sa.gestorId);
                         const coordinadorFound = coordinadores.find(c => c.id === sa.coordinadorId);
 
+                        const responsablesSubaIds = sa.responsible?.map(r => parseInt(r, 10)).filter(n => !isNaN(n)) || [];
+
                         if (isNew) {
-                            await createSubactividad({
+                            const newSubactividad = await createSubactividad({
                                 actividadPadreId: actividadId,
                                 nombre: sa.name,
                                 descripcion: sa.description,
@@ -1372,6 +1380,14 @@ export function POIFullModal({
                                 fechaInicio: sa.fechaInicio,
                                 fechaFin: sa.fechaFin,
                             });
+                            // Sincronizar asignaciones de la nueva subactividad
+                            if (newSubactividad?.id && responsablesSubaIds.length > 0) {
+                                try {
+                                    await syncAsignacionesSubactividad(newSubactividad.id, responsablesSubaIds);
+                                } catch (error) {
+                                    console.warn('Error al sincronizar asignaciones de subactividad:', error);
+                                }
+                            }
                         } else {
                             const subId = parseInt(sa.id, 10);
                             await updateSubactividad(subId, {
@@ -1386,6 +1402,12 @@ export function POIFullModal({
                                 fechaInicio: sa.fechaInicio,
                                 fechaFin: sa.fechaFin,
                             });
+                            // Sincronizar asignaciones de la subactividad existente
+                            try {
+                                await syncAsignacionesSubactividad(subId, responsablesSubaIds);
+                            } catch (error) {
+                                console.warn('Error al sincronizar asignaciones de subactividad:', error);
+                            }
                         }
                     }
                 } catch (error) {
@@ -1538,10 +1560,60 @@ export function POIFullModal({
         setCurrentView('subproject');
     };
 
-    const saveSubProject = () => {
+    const saveSubProject = async () => {
         if (saveSubProjectGuard.current) return;
         saveSubProjectGuard.current = true;
         if (!validateSubProject()) { saveSubProjectGuard.current = false; return; }
+
+        // Verificar sobrecarga en responsables del subproyecto
+        const responsiblesSubproyecto = subProjectForm.responsible || [];
+        if (responsiblesSubproyecto.length > 0) {
+            // Obtener datos frescos
+            let cargaActual = cargaTrabajoCache;
+            try {
+                const resumenFresco = await getResumenCargaPersonal();
+                cargaActual = new Map<number, number>(resumenFresco.map(r => [Number(r.personalId), r.porcentajeTotal]));
+                setCargaTrabajoCache(cargaActual);
+            } catch { /* usar cache */ }
+
+            // Excluir ya asignados al subproyecto (si está editando)
+            let existingSubpIds = new Set<number>();
+            const isExistingSubp = editingSubProject?.id && !editingSubProject.id.startsWith('sp-');
+            if (isExistingSubp) {
+                try {
+                    const existingAsigs = await getAsignacionesBySubproyecto(editingSubProject!.id);
+                    existingSubpIds = new Set(existingAsigs.map(a => Number(a.personalId)));
+                } catch { /* fallback sin exclusiones */ }
+            }
+
+            const bloqueados = responsiblesSubproyecto.filter(idStr => {
+                const pid = parseInt(idStr, 10);
+                if (existingSubpIds.has(pid)) return false;
+                return (cargaActual.get(pid) ?? 0) >= 100;
+            });
+
+            if (bloqueados.length > 0) {
+                const sobrecargados = bloqueados.map(idStr => {
+                    const pid = parseInt(idStr, 10);
+                    const personal = desarrolladores.find(p => p.id === pid) || personalDisponible.find(p => p.id === pid);
+                    return {
+                        id: pid,
+                        nombre: personal ? formatPersonalNombre(personal) : `Personal ID ${pid}`,
+                        porcentaje: cargaActual.get(pid) ?? 100,
+                    };
+                });
+                const disponibles = desarrolladores
+                    .filter(p => (cargaActual.get(p.id) ?? 0) < 100)
+                    .map(p => ({ id: p.id, nombre: formatPersonalNombre(p), porcentajeActual: cargaActual.get(p.id) ?? 0 }))
+                    .sort((a, b) => a.porcentajeActual - b.porcentajeActual);
+
+                const idsToRemove = new Set(bloqueados);
+                setSubProjectForm(p => ({ ...p, responsible: p.responsible?.filter(id => !idsToRemove.has(id)) ?? [] }));
+                setSeleccionSobrecargaModal({ isOpen: true, sobrecargados, disponibles, contexto: 'subproyecto' });
+                saveSubProjectGuard.current = false;
+                return;
+            }
+        }
 
         if (editingSubProject) {
             setSubProjects(prev => prev.map(sp =>
@@ -1576,10 +1648,21 @@ export function POIFullModal({
     const subActividadYearOptions: MultiSelectOption[] = formData.years?.map(y => ({ label: y, value: y })) || [];
 
     // Subactividad handlers
-    const openSubActividadForm = (sa?: SubActividadItem) => {
+    const openSubActividadForm = async (sa?: SubActividadItem) => {
         if (sa) {
             setEditingSubActividad(sa);
-            setSubActividadForm({ ...sa });
+            // Si es subactividad existente (ID numérico), cargar asignaciones
+            const isExistingSubactividad = sa.id && !sa.id.startsWith('sa-');
+            let responsiblesFromAsignaciones: string[] = sa.responsible || [];
+            if (isExistingSubactividad) {
+                try {
+                    const asignaciones = await getAsignacionesBySubactividad(sa.id);
+                    responsiblesFromAsignaciones = asignaciones.map(a => a.personalId.toString());
+                } catch (error) {
+                    console.warn('Error al cargar asignaciones de subactividad:', error);
+                }
+            }
+            setSubActividadForm({ ...sa, responsible: responsiblesFromAsignaciones });
         } else {
             setEditingSubActividad(null);
             setSubActividadForm({
@@ -1596,6 +1679,7 @@ export function POIFullModal({
                 amount: 0,
                 fechaInicio: '',
                 fechaFin: '',
+                responsible: [],
             });
         }
         setSubActividadErrors({});
@@ -1603,10 +1687,61 @@ export function POIFullModal({
         setCurrentView('subactividad');
     };
 
-    const saveSubActividad = () => {
+    const saveSubActividad = async () => {
         if (saveSubActividadGuard.current) return;
         saveSubActividadGuard.current = true;
         if (!validateSubActividad()) { saveSubActividadGuard.current = false; return; }
+
+        // Verificar sobrecarga en responsables de la subactividad
+        const responsiblesSubactividad = subActividadForm.responsible || [];
+        if (responsiblesSubactividad.length > 0) {
+            // Obtener datos frescos
+            let cargaActual = cargaTrabajoCache;
+            try {
+                const resumenFresco = await getResumenCargaPersonal();
+                cargaActual = new Map<number, number>(resumenFresco.map(r => [Number(r.personalId), r.porcentajeTotal]));
+                setCargaTrabajoCache(cargaActual);
+            } catch { /* usar cache */ }
+
+            // Excluir ya asignados a esta subactividad (si está editando)
+            let existingSubaIds = new Set<number>();
+            const isExistingSuba = editingSubActividad?.id && !editingSubActividad.id.startsWith('sa-');
+            if (isExistingSuba) {
+                try {
+                    const existingAsigs = await getAsignacionesBySubactividad(editingSubActividad!.id);
+                    existingSubaIds = new Set(existingAsigs.map(a => Number(a.personalId)));
+                } catch { /* fallback */ }
+            }
+
+            const bloqueados = responsiblesSubactividad.filter(idStr => {
+                const pid = parseInt(idStr, 10);
+                if (existingSubaIds.has(pid)) return false;
+                return (cargaActual.get(pid) ?? 0) >= 100;
+            });
+
+            if (bloqueados.length > 0) {
+                const sobrecargados = bloqueados.map(idStr => {
+                    const pid = parseInt(idStr, 10);
+                    const personal = implementadores.find(p => p.id === pid) || personalDisponible.find(p => p.id === pid);
+                    return {
+                        id: pid,
+                        nombre: personal ? formatPersonalNombre(personal) : `Personal ID ${pid}`,
+                        porcentaje: cargaActual.get(pid) ?? 100,
+                    };
+                });
+                const disponibles = implementadores
+                    .filter(p => (cargaActual.get(p.id) ?? 0) < 100)
+                    .map(p => ({ id: p.id, nombre: formatPersonalNombre(p), porcentajeActual: cargaActual.get(p.id) ?? 0 }))
+                    .sort((a, b) => a.porcentajeActual - b.porcentajeActual);
+
+                const idsToRemove = new Set(bloqueados);
+                setSubActividadForm(p => ({ ...p, responsible: p.responsible?.filter(id => !idsToRemove.has(id)) ?? [] }));
+                setSeleccionSobrecargaModal({ isOpen: true, sobrecargados, disponibles, contexto: 'subactividad' });
+                saveSubActividadGuard.current = false;
+                return;
+            }
+        }
+
         if (editingSubActividad) {
             setSubActividades(prev => prev.map(sa =>
                 sa.id === editingSubActividad.id ? { ...subActividadForm as SubActividadItem, id: sa.id } : sa
@@ -2272,6 +2407,18 @@ export function POIFullModal({
                                 {subActividadErrors.gestor && <p className="text-red-500 text-xs mt-1">{subActividadErrors.gestor}</p>}
                             </div>
                             <div>
+                                <label className="text-sm font-medium">Responsables (Implementadores)</label>
+                                <MultiSelect
+                                    options={implementadores.map(p => ({
+                                        label: formatPersonalNombre(p),
+                                        value: p.id.toString(),
+                                    }))}
+                                    selected={subActividadForm.responsible || []}
+                                    onChange={(selected) => setSubActividadForm(p => ({ ...p, responsible: selected }))}
+                                    placeholder="Seleccionar responsable(s)"
+                                />
+                            </div>
+                            <div>
                                 <label className="text-sm font-medium">Área Financiera</label>
                                 <MultiSelect
                                     options={financialAreaOptions}
@@ -2697,7 +2844,7 @@ export function POIFullModal({
 
         {/* Modal de Advertencia de Asignación al seleccionar responsable sobrecargado */}
         <AlertDialog open={seleccionSobrecargaModal.isOpen} onOpenChange={(open) => {
-            if (!open) setSeleccionSobrecargaModal({ isOpen: false, sobrecargados: [], disponibles: [] });
+            if (!open) setSeleccionSobrecargaModal({ isOpen: false, sobrecargados: [], disponibles: [], contexto: 'proyecto' });
         }}>
             <AlertDialogContent className="max-w-lg">
                 <AlertDialogHeader>
@@ -2715,7 +2862,13 @@ export function POIFullModal({
                     {/* Responsables bloqueados */}
                     <div>
                         <p className="text-sm text-gray-700 mb-2">
-                            El {formData.type === 'Actividad' ? 'actividad' : 'proyecto'} no puede asignar a los siguientes responsables:
+                            {seleccionSobrecargaModal.contexto === 'subactividad'
+                                ? 'La subactividad'
+                                : seleccionSobrecargaModal.contexto === 'subproyecto'
+                                ? 'El subproyecto'
+                                : seleccionSobrecargaModal.contexto === 'actividad'
+                                ? 'La actividad'
+                                : 'El proyecto'} no puede asignar a los siguientes responsables:
                         </p>
                         <ul className="space-y-1 pl-1">
                             {seleccionSobrecargaModal.sobrecargados.map(s => (
@@ -2731,7 +2884,13 @@ export function POIFullModal({
                             ))}
                         </ul>
                         <p className="text-xs text-red-600 mt-2">
-                            Estos usuarios no serán asignados al {formData.type === 'Actividad' ? 'actividad' : 'proyecto'}.
+                            Estos usuarios no serán asignados {seleccionSobrecargaModal.contexto === 'subactividad'
+                                ? 'a la subactividad'
+                                : seleccionSobrecargaModal.contexto === 'subproyecto'
+                                ? 'al subproyecto'
+                                : seleccionSobrecargaModal.contexto === 'actividad'
+                                ? 'a la actividad'
+                                : 'al proyecto'}.
                         </p>
                     </div>
 
@@ -2761,14 +2920,16 @@ export function POIFullModal({
 
                     {seleccionSobrecargaModal.disponibles.length === 0 && (
                         <p className="text-sm text-amber-700 bg-amber-50 rounded-md px-3 py-2 border border-amber-200">
-                            No hay {formData.type === 'Actividad' ? 'implementadores' : 'desarrolladores'} con disponibilidad en este momento.
+                            No hay {seleccionSobrecargaModal.contexto === 'subactividad' || seleccionSobrecargaModal.contexto === 'actividad'
+                                ? 'implementadores'
+                                : 'desarrolladores'} con disponibilidad en este momento.
                         </p>
                     )}
                 </div>
 
                 <AlertDialogFooter>
                     <AlertDialogAction
-                        onClick={() => setSeleccionSobrecargaModal({ isOpen: false, sobrecargados: [], disponibles: [] })}
+                        onClick={() => setSeleccionSobrecargaModal({ isOpen: false, sobrecargados: [], disponibles: [], contexto: 'proyecto' })}
                         className="bg-[#018CD1] hover:bg-[#0177b3] text-white"
                     >
                         Reasignar

@@ -282,6 +282,7 @@ export const ENDPOINTS = {
     ASIGNACIONES_PROYECTO: (proyectoId: number | string) => `/proyectos/${proyectoId}/asignaciones`,
     ASIGNACIONES_ACTIVIDAD: (actividadId: number | string) => `/actividades/${actividadId}/asignaciones`,
     ASIGNACIONES_SUBPROYECTO: (subproyectoId: number | string) => `/subproyectos/${subproyectoId}/asignaciones`,
+    ASIGNACIONES_SUBACTIVIDAD: (subactividadId: number | string) => `/subactividades/${subactividadId}/asignaciones`,
   },
 
   // ============================================
