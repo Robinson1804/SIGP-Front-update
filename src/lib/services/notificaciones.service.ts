@@ -71,6 +71,13 @@ export interface ActividadSeccionCounts {
   subtareas: { total: number; noLeidas: number };
 }
 
+export interface DeveloperSeccionCounts {
+  asignaciones: { total: number; noLeidas: number };
+  tareas: { total: number; noLeidas: number };
+  historiasUsuario: { total: number; noLeidas: number };
+  validaciones: { total: number; noLeidas: number };
+}
+
 export interface SeccionCounts {
   asignaciones: { total: number; noLeidas: number };
   sprints: { total: number; noLeidas: number };
@@ -310,6 +317,26 @@ export async function getSeccionCountsByActividad(actividadId: number): Promise<
 }
 
 /**
+ * Obtener conteos de notificaciones por sección para DESARROLLADOR
+ */
+export async function getSeccionCountsDeveloper(): Promise<DeveloperSeccionCounts> {
+  try {
+    const response = await apiClient.get<DeveloperSeccionCounts>(
+      ENDPOINTS.NOTIFICACIONES.SECCIONES_DESARROLLADOR
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching developer section counts:', error);
+    return {
+      asignaciones: { total: 0, noLeidas: 0 },
+      tareas: { total: 0, noLeidas: 0 },
+      historiasUsuario: { total: 0, noLeidas: 0 },
+      validaciones: { total: 0, noLeidas: 0 },
+    };
+  }
+}
+
+/**
  * Marcar todas como leídas por actividad
  */
 export async function marcarTodasLeidasPorActividad(actividadId: number): Promise<void> {
@@ -349,4 +376,6 @@ export const notificacionesService = {
   getSeccionCountsByActividad,
   marcarTodasLeidasPorActividad,
   bulkDeleteByActividades,
+  // Developer-related
+  getSeccionCountsDeveloper,
 };

@@ -1,0 +1,107 @@
+"use client";
+
+import React from 'react';
+import { Loader2, FolderKanban, ListTodo, BookOpen, CheckSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { DeveloperSeccionCounts } from '@/lib/services/notificaciones.service';
+
+export type DeveloperSeccionName = 'Asignaciones' | 'Tareas' | 'HistoriasUsuario' | 'Validaciones';
+
+interface DeveloperSeccionBlockListProps {
+  counts: DeveloperSeccionCounts;
+  loading: boolean;
+  onSeccionClick: (seccion: DeveloperSeccionName) => void;
+}
+
+const DEVELOPER_SECCION_CONFIG: {
+  key: DeveloperSeccionName;
+  label: string;
+  icon: React.ElementType;
+  description: string;
+}[] = [
+  { key: 'Asignaciones', label: 'Asignaciones', icon: FolderKanban, description: 'Asignaciones a proyectos' },
+  { key: 'Tareas', label: 'Tareas', icon: ListTodo, description: 'Tareas asignadas' },
+  { key: 'HistoriasUsuario', label: 'Historias de usuario', icon: BookOpen, description: 'Historias de usuario asignadas' },
+  { key: 'Validaciones', label: 'Validaciones', icon: CheckSquare, description: 'HU validadas y rechazadas por el SM' },
+];
+
+// Map section key to counts field
+const SECCION_TO_COUNTS_KEY: Record<DeveloperSeccionName, keyof DeveloperSeccionCounts> = {
+  Asignaciones: 'asignaciones',
+  Tareas: 'tareas',
+  HistoriasUsuario: 'historiasUsuario',
+  Validaciones: 'validaciones',
+};
+
+export function DeveloperSeccionBlockList({ counts, loading, onSeccionClick }: DeveloperSeccionBlockListProps) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">Proyectos</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {DEVELOPER_SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
+          const countsKey = SECCION_TO_COUNTS_KEY[key];
+          const seccionData = counts[countsKey];
+          const hasUnread = seccionData.noLeidas > 0;
+          const total = seccionData.total;
+
+          if (total === 0) {
+            return (
+              <div
+                key={key}
+                className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+              >
+                <div className="shrink-0 h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                  <Icon className="h-5 w-5 text-gray-400" />
+                </div>
+                <div className="flex-grow min-w-0">
+                  <p className="font-semibold text-gray-500">{label}</p>
+                  <p className="text-xs text-gray-400">{description}</p>
+                </div>
+                <span className="shrink-0 inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-sm font-medium bg-gray-200 text-gray-400">
+                  0
+                </span>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={key}
+              className={cn(
+                "flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-colors duration-200",
+                "hover:bg-gray-100 bg-white border-gray-200"
+              )}
+              onClick={() => onSeccionClick(key)}
+            >
+              <div className={cn(
+                "shrink-0 h-10 w-10 rounded-lg flex items-center justify-center",
+                hasUnread ? "bg-[#018CD1]/10" : "bg-gray-100"
+              )}>
+                <Icon className={cn("h-5 w-5", hasUnread ? "text-[#018CD1]" : "text-gray-500")} />
+              </div>
+              <div className="flex-grow min-w-0">
+                <p className="font-semibold text-gray-800">{label}</p>
+                <p className="text-xs text-gray-500">{description}</p>
+              </div>
+              <span className={cn(
+                "shrink-0 inline-flex items-center justify-center min-w-[28px] h-7 px-2 rounded-full text-sm font-medium",
+                hasUnread ? "bg-[#018CD1] text-white" : "bg-gray-200 text-gray-600"
+              )}>
+                {total}
+                {hasUnread && <span className="ml-1 h-2 w-2 rounded-full bg-white inline-block" />}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

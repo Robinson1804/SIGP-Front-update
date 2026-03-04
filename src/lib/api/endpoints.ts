@@ -331,6 +331,7 @@ export const ENDPOINTS = {
     // Activity-related endpoints (PMO Actividades tab)
     AGRUPADAS_ACTIVIDADES: '/notificaciones/agrupadas/actividades',
     SECCIONES_ACTIVIDAD: (actividadId: number | string) => `/notificaciones/actividad/${actividadId}/secciones`,
+    SECCIONES_DESARROLLADOR: '/notificaciones/secciones/desarrollador',
     LEER_TODAS_ACTIVIDAD: (actividadId: number | string) => `/notificaciones/leer-todas/actividad/${actividadId}`,
     BULK_DELETE_ACTIVIDADES: '/notificaciones/bulk/actividades',
   },

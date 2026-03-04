@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellRing, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { ArrowLeft, BellRing, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 
 import AppLayout from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import {
   getSeccionCountsByProyecto,
   getNotificacionesAgrupadasPorActividad,
   getSeccionCountsByActividad,
+  getSeccionCountsDeveloper,
   marcarNotificacionLeida,
   marcarTodasLeidas,
   marcarTodasLeidasPorProyecto,
@@ -34,6 +35,7 @@ import {
   type SeccionCounts,
   type ActividadGroup,
   type ActividadSeccionCounts,
+  type DeveloperSeccionCounts,
 } from '@/lib/services/notificaciones.service';
 import {
   NotificationCard,
@@ -46,6 +48,7 @@ import { SprintBlockList } from './components/sprint-block-list';
 import { SeccionBlockList, type SeccionName } from './components/seccion-block-list';
 import { ActividadBlockList } from './components/actividad-block-list';
 import { ActividadSeccionBlockList, type ActividadSeccionName } from './components/actividad-seccion-block-list';
+import { DeveloperSeccionBlockList, type DeveloperSeccionName } from './components/developer-seccion-block-list';
 import { NotificationList } from './components/notification-list';
 import { DeleteToolbar } from './components/delete-toolbar';
 import { ObservacionDialog } from './components/observacion-dialog';
@@ -91,8 +94,25 @@ type OtherNavLevel =
   | { level: 'sprints'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string }
   | { level: 'notificaciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string; sprintId?: number; sprintNombre?: string };
 
-// Flat tab types for DESARROLLADOR (4 sections)
-type DeveloperTabName = 'Proyectos' | 'Tareas' | 'Historias de usuario' | 'Validaciones';
+// Navigation state type for DESARROLLADOR (section blocks -> notification list)
+type DeveloperSeccionNavLevel =
+  | { level: 'secciones' }
+  | { level: 'notificaciones'; seccion: DeveloperSeccionName };
+
+// Map section key to entidadTipo for backend queries
+const DEVELOPER_SECCION_TO_ENTIDAD_TIPO: Record<DeveloperSeccionName, string> = {
+  Asignaciones: 'Asignaciones',
+  Tareas: 'Tareas',
+  HistoriasUsuario: 'HistoriasUsuario',
+  Validaciones: 'Validaciones',
+};
+
+const DEVELOPER_SECCION_LABELS: Record<DeveloperSeccionName, string> = {
+  Asignaciones: 'Asignaciones',
+  Tareas: 'Tareas',
+  HistoriasUsuario: 'Historias de usuario',
+  Validaciones: 'Validaciones',
+};
 
 // Flat tab types for IMPLEMENTADOR (3 sections)
 type ImplementadorTabName = 'Actividades' | 'Tarea' | 'Subtareas';
@@ -171,7 +191,13 @@ export default function NotificationsPage() {
   const [pmoNavStack, setPmoNavStack] = useState<PmoNavLevel>({ level: 'proyectos' });
   const [pmoActividadNavStack, setPmoActividadNavStack] = useState<PmoActividadNavLevel>({ level: 'actividades' });
   const [otherNavStack, setOtherNavStack] = useState<OtherNavLevel>({ level: 'proyectos' });
-  const [developerActiveTab, setDeveloperActiveTab] = useState<DeveloperTabName>('Proyectos');
+  const [developerNavStack, setDeveloperNavStack] = useState<DeveloperSeccionNavLevel>({ level: 'secciones' });
+  const [developerSeccionCounts, setDeveloperSeccionCounts] = useState<DeveloperSeccionCounts>({
+    asignaciones: { total: 0, noLeidas: 0 },
+    tareas: { total: 0, noLeidas: 0 },
+    historiasUsuario: { total: 0, noLeidas: 0 },
+    validaciones: { total: 0, noLeidas: 0 },
+  });
   const [implementadorActiveTab, setImplementadorActiveTab] = useState<ImplementadorTabName>('Actividades');
   const [developerNotifications, setDeveloperNotifications] = useState<LocalNotification[]>([]);
   const [developerPage, setDeveloperPage] = useState(1);
@@ -289,25 +315,24 @@ export default function NotificationsPage() {
           }
         }
       } else if (isDeveloper) {
-        // DESARROLLADOR Flat Tab Flow (4 sections)
-        const developerTipoMap: Record<DeveloperTabName, { tipo: string; entidadTipo?: string }> = {
-          'Proyectos':            { tipo: 'Proyecto', entidadTipo: 'Asignaciones' },
-          'Tareas':               { tipo: 'Proyecto', entidadTipo: 'Tareas' },
-          'Historias de usuario': { tipo: 'Proyecto', entidadTipo: 'HistoriasUsuario' },
-          'Validaciones':         { tipo: 'Proyecto', entidadTipo: 'Validaciones' },
-        };
-        const { tipo: devTipo, entidadTipo: devEntidadTipo } = developerTipoMap[developerActiveTab];
-        const devResponse = await getNotificaciones({
-          tipo: devTipo,
-          entidadTipo: devEntidadTipo,
-          page: developerPage,
-          limit: PAGE_SIZE,
-        });
-        const devMapped = devResponse.notificaciones
-          .map(mapBackendNotification)
-          .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-        setDeveloperNotifications(devMapped);
-        setDeveloperTotalItems(devResponse.total);
+        // DESARROLLADOR Block Navigation Flow
+        if (developerNavStack.level === 'secciones') {
+          const counts = await getSeccionCountsDeveloper();
+          setDeveloperSeccionCounts(counts);
+        } else {
+          const entidadTipo = DEVELOPER_SECCION_TO_ENTIDAD_TIPO[developerNavStack.seccion];
+          const devResponse = await getNotificaciones({
+            tipo: 'Proyecto',
+            entidadTipo,
+            page: developerPage,
+            limit: PAGE_SIZE,
+          });
+          const devMapped = devResponse.notificaciones
+            .map(mapBackendNotification)
+            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          setDeveloperNotifications(devMapped);
+          setDeveloperTotalItems(devResponse.total);
+        }
       } else if (isImplementador) {
         // IMPLEMENTADOR Flat Tab Flow (3 sections)
         const implementadorTipoMap: Record<ImplementadorTabName, { tipo: string; entidadTipo?: string }> = {
@@ -375,7 +400,7 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [usePmoFlow, isDeveloper, isImplementador, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, developerActiveTab, implementadorActiveTab, developerPage, implementadorPage, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
+  }, [usePmoFlow, isDeveloper, isImplementador, activeTab, pmoNavStack, pmoActividadNavStack, otherNavStack, developerNavStack, implementadorActiveTab, developerPage, implementadorPage, currentNonPmoTab, page, flatPage, toast, pgdFilterId]);
 
   useEffect(() => {
     loadData();
@@ -534,9 +559,16 @@ export default function NotificationsPage() {
     setSelectedNotificationIds(new Set());
   };
 
-  // DESARROLLADOR tab change handler
-  const handleDeveloperTabChange = (tab: DeveloperTabName) => {
-    setDeveloperActiveTab(tab);
+  // DESARROLLADOR section navigation handlers
+  const handleDeveloperSeccionClick = (seccion: DeveloperSeccionName) => {
+    setDeveloperNavStack({ level: 'notificaciones', seccion });
+    setDeveloperPage(1);
+    setDeleteMode(false);
+    setSelectedNotificationIds(new Set());
+  };
+
+  const handleDeveloperBack = () => {
+    setDeveloperNavStack({ level: 'secciones' });
     setDeveloperPage(1);
     setDeleteMode(false);
     setSelectedNotificationIds(new Set());
@@ -800,6 +832,9 @@ export default function NotificationsPage() {
         }
       }
     } else if (isDeveloper) {
+      if (developerNavStack.level === 'secciones') {
+        return Object.values(developerSeccionCounts).reduce((sum, s) => sum + s.noLeidas, 0);
+      }
       return developerNotifications.filter(n => !n.read).length;
     } else if (isImplementador) {
       return implementadorNotifications.filter(n => !n.read).length;
@@ -1030,18 +1065,40 @@ export default function NotificationsPage() {
       }
     }
 
-    // DESARROLLADOR View (4 flat tabs)
+    // DESARROLLADOR View (block-based navigation)
     if (isDeveloper) {
+      if (developerNavStack.level === 'secciones') {
+        return (
+          <DeveloperSeccionBlockList
+            counts={developerSeccionCounts}
+            loading={isLoading}
+            onSeccionClick={handleDeveloperSeccionClick}
+          />
+        );
+      }
+      // developerNavStack.level === 'notificaciones'
       const developerTotalPages = Math.ceil(developerTotalItems / PAGE_SIZE);
+      const seccionLabel = DEVELOPER_SECCION_LABELS[developerNavStack.seccion];
       return (
         <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Button variant="ghost" size="sm" onClick={handleDeveloperBack} className="gap-1">
+              <ArrowLeft className="h-4 w-4" />
+              Volver
+            </Button>
+            <nav className="text-sm text-gray-500">
+              <span className="text-gray-400">Proyectos</span>
+              <span className="mx-1 text-gray-400">&gt;</span>
+              <span className="font-medium text-gray-700">{seccionLabel}</span>
+            </nav>
+          </div>
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
             </div>
           ) : developerNotifications.length === 0 ? (
             <div className="text-center py-10 text-gray-500">
-              No hay notificaciones en esta sección.
+              No hay notificaciones en esta seccion.
             </div>
           ) : (
             <>
@@ -1329,22 +1386,14 @@ export default function NotificationsPage() {
                 )}
               </>
             ) : isDeveloper ? (
-              // DESARROLLADOR 4 flat tabs
-              (['Proyectos', 'Tareas', 'Historias de usuario', 'Validaciones'] as DeveloperTabName[]).map(tabName => (
-                <Button
-                  key={tabName}
-                  size="sm"
-                  onClick={() => handleDeveloperTabChange(tabName)}
-                  className={cn(
-                    developerActiveTab === tabName
-                      ? 'bg-[#018CD1] text-white'
-                      : 'bg-white text-black border-gray-300'
-                  )}
-                  variant={developerActiveTab === tabName ? 'default' : 'outline'}
-                >
-                  {tabName}
-                </Button>
-              ))
+              // DESARROLLADOR: single "Proyectos" module tab
+              <Button
+                size="sm"
+                className="bg-[#018CD1] text-white"
+                variant="default"
+              >
+                Proyectos
+              </Button>
             ) : isImplementador ? (
               // IMPLEMENTADOR 3 flat tabs
               (['Actividades', 'Tarea', 'Subtareas'] as ImplementadorTabName[]).map(tabName => (
