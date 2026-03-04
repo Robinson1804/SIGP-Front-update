@@ -922,9 +922,27 @@ export function POIFullModal({
             // Si falla la recarga, usar el cache existente como respaldo
         }
 
-        // Detectar responsables seleccionados que están al 100% de capacidad
+        // En modo edición: cargar los responsables ya asignados a este proyecto/actividad.
+        // El resumen de carga incluye su dedicación a ESTE proyecto, por lo que si ya
+        // pertenecen a él no deben ser bloqueados (el sync los mantiene, no los vuelve a crear).
+        let existingPersonalIds = new Set<number>();
+        if (project?.id) {
+            try {
+                const existingAsigs = formData.type === 'Actividad'
+                    ? await getAsignacionesByActividad(project.id)
+                    : await getAsignacionesByProyecto(project.id);
+                existingPersonalIds = new Set(existingAsigs.map(a => Number(a.personalId)));
+            } catch {
+                // fallback: sin exclusiones, se mostrará la advertencia si aplica
+            }
+        }
+
+        // Detectar responsables seleccionados que están al 100% de capacidad.
+        // Excluir a los que YA están asignados a este proyecto/actividad: su carga
+        // reportada ya incluye esa dedicación y el sync no creará una asignación nueva.
         const bloqueados = formData.responsibles.filter(idStr => {
             const personalId = parseInt(idStr, 10);
+            if (existingPersonalIds.has(personalId)) return false;
             return (cargaActual.get(personalId) ?? 0) >= 100;
         });
 
