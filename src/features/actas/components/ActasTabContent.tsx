@@ -263,8 +263,11 @@ export function ActasTabContent({ proyectoId, subproyectoId }: ActasTabContentPr
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('es-PE', {
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return '-';
+    const datePart = String(dateStr).split('T')[0];
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',

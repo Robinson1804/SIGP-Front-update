@@ -77,8 +77,8 @@ export function DashboardContent() {
       const [kpisData, proyectosData, actividadesData, sprintsData, saludData] =
         await Promise.all([
           getKpisGerenciales().catch(() => null),
-          getProyectosActivos({ limit: 10 }).catch(() => ({ data: [], total: 0, page: 1, limit: 10 })),
-          getActividadesActivas({ limit: 10 }).catch(() => ({ data: [], total: 0, page: 1, limit: 10 })),
+          getProyectosActivos({ limit: 100 }).catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
+          getActividadesActivas({ limit: 100 }).catch(() => ({ data: [], total: 0, page: 1, limit: 100 })),
           getSprintsTimeline(3).catch(() => ({ data: [], rangoInicio: '', rangoFin: '' })),
           getSaludProyectosDetallada().catch(() => null),
         ]);
@@ -248,7 +248,6 @@ export function DashboardContent() {
             <ProyectosActivosTable
               data={proyectos}
               loading={loading}
-              maxItems={5}
               onViewAll={handleViewAllProyectos}
             />
 
@@ -256,7 +255,6 @@ export function DashboardContent() {
             <ActividadesActivasTable
               data={actividades}
               loading={loading}
-              maxItems={5}
               onViewAll={handleViewAllActividades}
             />
           </div>

@@ -11,10 +11,19 @@
  * - Personal más demandado
  */
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Users,
   UserCheck,
@@ -23,6 +32,8 @@ import {
   AlertTriangle,
   TrendingUp,
   Briefcase,
+  ArrowUpRight,
+  Search,
 } from 'lucide-react';
 import type {
   Personal,
@@ -55,6 +66,9 @@ export function RRHHDashboard({
   alertasSobrecarga,
   isLoading = false,
 }: RRHHDashboardProps) {
+  const [showMasDemandados, setShowMasDemandados] = useState(false);
+  const [searchDemandados, setSearchDemandados] = useState('');
+
   // Calcular distribución por división
   const distribucionDivisiones = divisiones
     .filter((d) => d.activo)
@@ -92,6 +106,31 @@ export function RRHHDashboard({
     .filter((p) => p.numAsignaciones > 0)
     .sort((a, b) => b.cargaTotal - a.cargaTotal)
     .slice(0, 5);
+
+  // Lista completa para el modal (sin slice)
+  const todoDemandados = personal
+    .filter((p) => p.activo)
+    .map((p) => {
+      const asignacionesPersona = asignaciones.filter(
+        (a) => a.personalId === p.id && a.activo
+      );
+      const cargaTotal = asignacionesPersona.reduce(
+        (acc, a) => acc + Number(a.porcentajeDedicacion),
+        0
+      );
+      return { ...p, cargaTotal, numAsignaciones: asignacionesPersona.length };
+    })
+    .filter((p) => p.numAsignaciones > 0)
+    .sort((a, b) => b.cargaTotal - a.cargaTotal);
+
+  const todoDemandadosFiltrado = todoDemandados.filter((p) => {
+    const term = searchDemandados.toLowerCase().trim();
+    if (!term) return true;
+    return (
+      getNombreCompleto(p).toLowerCase().includes(term) ||
+      p.codigoEmpleado.toLowerCase().includes(term)
+    );
+  });
 
   const totalActivos = personal.filter((p) => p.activo).length;
 
@@ -291,13 +330,26 @@ export function RRHHDashboard({
         {/* Personal más demandado */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Más Demandados
-            </CardTitle>
-            <CardDescription>
-              Personal con mayor carga de trabajo
-            </CardDescription>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Más Demandados
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Personal con mayor carga de trabajo
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={() => { setShowMasDemandados(true); setSearchDemandados(''); }}
+                title="Ver lista completa"
+              >
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {personalMasAsignado.length === 0 ? (
@@ -381,6 +433,70 @@ export function RRHHDashboard({
           </CardContent>
         </Card>
       )}
+
+      {/* Modal: Lista completa de más demandados */}
+      <Dialog open={showMasDemandados} onOpenChange={setShowMasDemandados}>
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Carga de Trabajo — Personal
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Búsqueda */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nombre o código..."
+              value={searchDemandados}
+              onChange={(e) => setSearchDemandados(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* Lista scrollable */}
+          <div className="overflow-y-auto flex-1 -mx-1 px-1 space-y-2">
+            {todoDemandadosFiltrado.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8 text-sm">
+                {searchDemandados ? 'Sin resultados para la búsqueda' : 'Sin asignaciones activas'}
+              </p>
+            ) : (
+              todoDemandadosFiltrado.map((p, index) => (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-xs font-bold text-gray-600 shrink-0">
+                    {index + 1}
+                  </span>
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarFallback className="bg-[#004272] text-white text-xs">
+                      {p.nombres[0]}{p.apellidos[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">
+                      {getNombreCompleto(p)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {p.codigoEmpleado} · {p.numAsignaciones} asignación{p.numAsignaciones !== 1 ? 'es' : ''}
+                    </p>
+                  </div>
+                  <Badge className={getCargaColor(p.cargaTotal)}>
+                    {p.cargaTotal}%
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Contador */}
+          <p className="text-xs text-muted-foreground text-right pt-1 border-t">
+            {todoDemandadosFiltrado.length} de {todoDemandados.length} registros
+          </p>
+        </DialogContent>
+      </Dialog>
 
       {/* Resumen de divisiones */}
       <Card>

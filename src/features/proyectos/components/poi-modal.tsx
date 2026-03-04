@@ -203,6 +203,7 @@ export function POIModal({
     const router = useRouter();
     const [formData, setFormData] = React.useState<Partial<Project>>({});
     const [errors, setErrors] = React.useState<{[key: string]: string}>({});
+    const isSavingRef = React.useRef(false);
 
     // Generar opciones de años basadas en el PGD o usar fallback
     const yearOptions = generateYearOptions(
@@ -212,6 +213,7 @@ export function POIModal({
 
     React.useEffect(() => {
         if (isOpen) {
+            isSavingRef.current = false; // Reset guard when modal opens
             if (project) {
                 const managementMethod = project.managementMethod ||
                     (project.type === 'Proyecto' ? 'Scrum' : project.type === 'Actividad' ? 'Kanban' : '');
@@ -262,7 +264,9 @@ export function POIModal({
     }
 
     const handleSave = () => {
-        if (!validate()) return;
+        if (isSavingRef.current) return;
+        isSavingRef.current = true;
+        if (!validate()) { isSavingRef.current = false; return; }
         onSave({ ...formData as Project, scrumMaster: formData.scrumMaster || '' });
         onClose();
     }
@@ -415,6 +419,8 @@ export function POIFullModal({
     const [subProjectErrors, setSubProjectErrors] = useState<{[key: string]: string}>({});
     const [isSaving, setIsSaving] = useState(false);
     const isSavingRef = useRef(false); // Guard síncrono contra doble-clic
+    const saveSubProjectGuard = useRef(false); // Guard para doble-clic en sub-proyectos
+    const saveSubActividadGuard = useRef(false); // Guard para doble-clic en sub-actividades
 
     // Estado para subactividades (solo visible cuando type === 'Actividad')
     const [subActividades, setSubActividades] = useState<SubActividadItem[]>([]);
@@ -536,6 +542,11 @@ export function POIFullModal({
     // Inicializar formulario cuando se abre el modal
     useEffect(() => {
         if (!isOpen) return;
+
+        // Reset all save guards when modal opens
+        isSavingRef.current = false;
+        saveSubProjectGuard.current = false;
+        saveSubActividadGuard.current = false;
 
         const initialize = async () => {
             // Primero cargar datos maestros (usuarios, acciones estratégicas)
@@ -1523,11 +1534,14 @@ export function POIFullModal({
             });
         }
         setSubProjectErrors({});
+        saveSubProjectGuard.current = false; // Reset guard when opening form
         setCurrentView('subproject');
     };
 
     const saveSubProject = () => {
-        if (!validateSubProject()) return;
+        if (saveSubProjectGuard.current) return;
+        saveSubProjectGuard.current = true;
+        if (!validateSubProject()) { saveSubProjectGuard.current = false; return; }
 
         if (editingSubProject) {
             setSubProjects(prev => prev.map(sp =>
@@ -1542,6 +1556,7 @@ export function POIFullModal({
     };
 
     const cancelSubProject = () => {
+        saveSubProjectGuard.current = false;
         setCurrentView('main');
         setEditingSubProject(null);
         setSubProjectForm({});
@@ -1584,11 +1599,14 @@ export function POIFullModal({
             });
         }
         setSubActividadErrors({});
+        saveSubActividadGuard.current = false; // Reset guard when opening form
         setCurrentView('subactividad');
     };
 
     const saveSubActividad = () => {
-        if (!validateSubActividad()) return;
+        if (saveSubActividadGuard.current) return;
+        saveSubActividadGuard.current = true;
+        if (!validateSubActividad()) { saveSubActividadGuard.current = false; return; }
         if (editingSubActividad) {
             setSubActividades(prev => prev.map(sa =>
                 sa.id === editingSubActividad.id ? { ...subActividadForm as SubActividadItem, id: sa.id } : sa
@@ -1602,6 +1620,7 @@ export function POIFullModal({
     };
 
     const cancelSubActividad = () => {
+        saveSubActividadGuard.current = false;
         setCurrentView('main');
         setEditingSubActividad(null);
         setSubActividadForm({});

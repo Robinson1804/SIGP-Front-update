@@ -117,7 +117,7 @@ export function ActividadesActivasTable({
     );
   }
 
-  const displayData = maxItems ? data.slice(0, maxItems) : data;
+  const displayData = maxItems && maxItems > 0 ? data.slice(0, maxItems) : data;
 
   return (
     <Card className={cn('w-full', className)}>
@@ -125,10 +125,13 @@ export function ActividadesActivasTable({
         <CardTitle className="text-base flex items-center gap-2">
           <Layers className="h-4 w-4" />
           ACTIVIDADES ACTIVAS
+          <span className="ml-1 text-xs font-normal text-muted-foreground">
+            ({data.length})
+          </span>
         </CardTitle>
-        {onViewAll && data.length > maxItems && (
+        {onViewAll && (
           <Button variant="ghost" size="sm" onClick={onViewAll}>
-            Ver todas ({data.length})
+            Ir al módulo POI
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         )}
