@@ -162,7 +162,7 @@ export default function NotificationsPage() {
   }, [usePmoFlow, initializePGD]);
 
   // Tab state - SCRUM_MASTER only sees Proyectos, PMO/COORDINADOR see both
-  const PMO_TABS: PmoTabName[] = isScrumMaster ? ['Proyectos'] : ['Proyectos', 'Actividades'];
+  const PMO_TABS: PmoTabName[] = ['Proyectos', 'Actividades'];
   const NON_PMO_TABS = getTabsForNonPmo(user?.role);
 
   const [activeTab, setActiveTab] = useState<TabName>(usePmoFlow ? 'Proyectos' : (NON_PMO_TABS[0]?.name || 'Proyectos'));
@@ -875,6 +875,7 @@ export default function NotificationsPage() {
               actividadCodigo={pmoActividadNavStack.actividadCodigo}
               counts={actividadSeccionCounts}
               loading={isLoading}
+              userRole={user?.role}
               onSeccionClick={handleActividadSeccionClick}
               onBack={handlePmoActividadBack}
             />

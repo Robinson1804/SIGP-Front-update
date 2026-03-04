@@ -14,6 +14,7 @@ interface ActividadSeccionBlockListProps {
   actividadCodigo: string;
   counts: ActividadSeccionCounts;
   loading: boolean;
+  userRole?: string;
   onSeccionClick: (seccion: ActividadSeccionName) => void;
   onBack: () => void;
 }
@@ -49,9 +50,14 @@ export function ActividadSeccionBlockList({
   actividadCodigo,
   counts,
   loading,
+  userRole,
   onSeccionClick,
   onBack,
 }: ActividadSeccionBlockListProps) {
+  // Solo IMPLEMENTADOR ve la sección Subtareas; PMO, SCRUM_MASTER y COORDINADOR solo ven 2 secciones
+  const seccionesVisibles = userRole === 'IMPLEMENTADOR'
+    ? ACTIVIDAD_SECCION_CONFIG
+    : ACTIVIDAD_SECCION_CONFIG.filter(s => s.key !== 'subtareas');
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -60,8 +66,8 @@ export function ActividadSeccionBlockList({
     );
   }
 
-  const totalNotificaciones = Object.values(counts).reduce(
-    (sum, c) => sum + c.total,
+  const totalNotificaciones = seccionesVisibles.reduce(
+    (sum, s) => sum + (counts[s.key]?.total ?? 0),
     0
   );
 
@@ -106,9 +112,9 @@ export function ActividadSeccionBlockList({
         {actividadCodigo}: {actividadNombre}
       </h3>
 
-      {/* Section grid 1x3 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {ACTIVIDAD_SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
+      {/* Section grid */}
+      <div className={cn("grid grid-cols-1 gap-4", seccionesVisibles.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+        {seccionesVisibles.map(({ key, label, icon: Icon, description }) => {
           const seccionData = counts[key];
           const hasUnread = seccionData.noLeidas > 0;
           const total = seccionData.total;
