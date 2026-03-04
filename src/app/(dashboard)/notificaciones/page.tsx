@@ -293,8 +293,8 @@ export default function NotificationsPage() {
         const developerTipoMap: Record<DeveloperTabName, { tipo: string; entidadTipo?: string }> = {
           'Proyectos':            { tipo: 'Proyecto', entidadTipo: 'Asignaciones' },
           'Tareas':               { tipo: 'Proyecto', entidadTipo: 'Tareas' },
-          'Historias de usuario': { tipo: 'Proyecto', entidadTipo: 'Validaciones' },
-          'Validaciones':         { tipo: 'Proyecto', entidadTipo: 'Aprobaciones' },
+          'Historias de usuario': { tipo: 'Proyecto', entidadTipo: 'HistoriasUsuario' },
+          'Validaciones':         { tipo: 'Proyecto', entidadTipo: 'Validaciones' },
         };
         const { tipo: devTipo, entidadTipo: devEntidadTipo } = developerTipoMap[developerActiveTab];
         const devResponse = await getNotificaciones({
