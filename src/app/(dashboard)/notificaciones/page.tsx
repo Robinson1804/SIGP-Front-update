@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BellRing, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 
@@ -53,6 +53,7 @@ import { NotificationList } from './components/notification-list';
 import { DeleteToolbar } from './components/delete-toolbar';
 import { ObservacionDialog } from './components/observacion-dialog';
 import { PaginationControls } from './components/pagination-controls';
+import { useRealtimeNotifications } from '@/lib/hooks/use-realtime-notifications';
 
 const PAGE_SIZE = 5;
 
@@ -405,6 +406,13 @@ export default function NotificationsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Real-time refresh: reload when a new notification arrives via WebSocket
+  // Use ref to keep a stable callback that always calls the latest loadData
+  const loadDataRef = useRef(loadData);
+  useEffect(() => { loadDataRef.current = loadData; }, [loadData]);
+  const handleRealtimeNotification = useCallback(() => { loadDataRef.current(); }, []);
+  useRealtimeNotifications({ onNotification: handleRealtimeNotification });
 
 
   // PMO Navigation handlers

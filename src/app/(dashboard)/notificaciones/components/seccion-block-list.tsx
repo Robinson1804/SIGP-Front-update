@@ -42,13 +42,13 @@ const SECCION_CONFIG: {
     key: 'aprobaciones',
     label: 'Aprobaciones',
     icon: CheckCircle,
-    description: 'Aprobaciones de documentos',
+    description: 'Resultado de aprobaciones y rechazos de docs, HU',
   },
   {
     key: 'validaciones',
     label: 'Validaciones',
     icon: Search,
-    description: 'Pendientes de validar',
+    description: 'Docs, actas, cronogramas e HU pendientes de validar',
   },
 ];
 
