@@ -275,7 +275,7 @@ export function CoordinadoresTable({
               <SelectTrigger>
                 <SelectValue placeholder="Seleccione personal..." />
               </SelectTrigger>
-              <SelectContent position="item-aligned">
+              <SelectContent position="popper" className="max-h-[220px] overflow-y-auto">
                 {personalDisponible.map((p) => (
                   <SelectItem key={p.id} value={p.id.toString()}>
                     {getNombreCompleto(p)} - {p.division?.nombre || 'Sin división'}
