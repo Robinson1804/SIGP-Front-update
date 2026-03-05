@@ -26,21 +26,26 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Search,
   UserCog,
   Building2,
   UserPlus,
   UserMinus,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { TablePagination } from '@/components/ui/table-pagination';
 import type { Division, Personal } from '../types';
 import { getNombreCompleto } from '../types';
@@ -64,6 +69,7 @@ export function CoordinadoresTable({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDivision, setSelectedDivision] = useState<Division | null>(null);
   const [selectedPersonalId, setSelectedPersonalId] = useState<string>('');
+  const [isComboboxOpen, setIsComboboxOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const PAGE_SIZE = 10;
@@ -93,6 +99,7 @@ export function CoordinadoresTable({
   const handleAsignarClick = (division: Division) => {
     setSelectedDivision(division);
     setSelectedPersonalId('');
+    setIsComboboxOpen(false);
     setIsDialogOpen(true);
   };
 
@@ -271,18 +278,48 @@ export function CoordinadoresTable({
           </DialogHeader>
 
           <div className="py-4">
-            <Select value={selectedPersonalId} onValueChange={setSelectedPersonalId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccione personal..." />
-              </SelectTrigger>
-              <SelectContent position="popper" className="max-h-[220px] overflow-y-auto">
-                {personalDisponible.map((p) => (
-                  <SelectItem key={p.id} value={p.id.toString()}>
-                    {getNombreCompleto(p)} - {p.division?.nombre || 'Sin división'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isComboboxOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedPersonalId
+                    ? (() => {
+                        const p = personalDisponible.find(p => p.id.toString() === selectedPersonalId);
+                        return p ? `${getNombreCompleto(p)} - ${p.division?.nombre || 'Sin división'}` : 'Seleccione personal...';
+                      })()
+                    : 'Seleccione personal...'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Buscar personal..." />
+                  <CommandList className="max-h-[220px]">
+                    <CommandEmpty>No se encontró personal.</CommandEmpty>
+                    <CommandGroup>
+                      {personalDisponible.map((p) => (
+                        <CommandItem
+                          key={p.id}
+                          value={`${getNombreCompleto(p)} ${p.division?.nombre || ''}`}
+                          onSelect={() => {
+                            setSelectedPersonalId(p.id.toString());
+                            setIsComboboxOpen(false);
+                          }}
+                        >
+                          <Check className={cn('mr-2 h-4 w-4', selectedPersonalId === p.id.toString() ? 'opacity-100' : 'opacity-0')} />
+                          <span className="font-medium">{getNombreCompleto(p)}</span>
+                          <span className="ml-1 text-muted-foreground text-sm">— {p.division?.nombre || 'Sin división'}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <DialogFooter>
