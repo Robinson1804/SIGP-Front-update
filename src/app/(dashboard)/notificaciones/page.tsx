@@ -96,10 +96,11 @@ type OtherNavLevel =
   | { level: 'sprints'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string }
   | { level: 'notificaciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string; sprintId?: number; sprintNombre?: string };
 
-// Navigation state type for DESARROLLADOR (section blocks -> notification list)
+// Navigation state type for DESARROLLADOR (projects -> section blocks -> notification list)
 type DeveloperSeccionNavLevel =
-  | { level: 'secciones' }
-  | { level: 'notificaciones'; seccion: DeveloperSeccionName };
+  | { level: 'proyectos' }
+  | { level: 'secciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string }
+  | { level: 'notificaciones'; proyectoId: number; proyectoNombre: string; proyectoCodigo: string; seccion: DeveloperSeccionName };
 
 // Map section key to entidadTipo for backend queries
 const DEVELOPER_SECCION_TO_ENTIDAD_TIPO: Record<DeveloperSeccionName, string> = {
@@ -134,12 +135,14 @@ const TAB_DEFINITIONS: TabDefinition[] = [
 ];
 
 // Tabs específicos para PATROCINADOR:
-// - "Aprobaciones" = cosas pendientes de su aprobación (entidadTipo=Validaciones del backend)
-// - "Validaciones" = respuestas/resultados de aprobaciones (entidadTipo=Aprobaciones del backend)
+// - "Aprobaciones" = aprobaciones/rechazos dados por PMO que le notifican al PATROCINADOR (entidadTipo=Aprobaciones del backend)
+//   Ej: PMO aprueba el cronograma → se cross-notifica al área usuaria con entidadTipo='Aprobaciones'
+// - "Validaciones" = documentos pendientes de validar por parte del PATROCINADOR (entidadTipo=Validaciones del backend)
+//   Ej: SM envía acta/cronograma a revisión → PMO y área usuaria reciben entidadTipo='Validaciones'
 const PATROCINADOR_TAB_DEFINITIONS: TabDefinition[] = [
   { name: 'Proyectos', drillDown: 'project-only' },
-  { name: 'Aprobaciones', tipo: 'Proyecto', entidadTipo: 'Validaciones', drillDown: 'flat' },
-  { name: 'Validaciones', tipo: 'Proyecto', entidadTipo: 'Aprobaciones', drillDown: 'flat' },
+  { name: 'Aprobaciones', tipo: 'Proyecto', entidadTipo: 'Aprobaciones', drillDown: 'flat' },
+  { name: 'Validaciones', tipo: 'Proyecto', entidadTipo: 'Validaciones', drillDown: 'flat' },
 ];
 
 function getTabsForNonPmo(role?: string): TabDefinition[] {
@@ -190,7 +193,7 @@ export default function NotificationsPage() {
   const [pmoNavStack, setPmoNavStack] = useState<PmoNavLevel>({ level: 'proyectos' });
   const [pmoActividadNavStack, setPmoActividadNavStack] = useState<PmoActividadNavLevel>({ level: 'actividades' });
   const [otherNavStack, setOtherNavStack] = useState<OtherNavLevel>({ level: 'proyectos' });
-  const [developerNavStack, setDeveloperNavStack] = useState<DeveloperSeccionNavLevel>({ level: 'secciones' });
+  const [developerNavStack, setDeveloperNavStack] = useState<DeveloperSeccionNavLevel>({ level: 'proyectos' });
   const [developerSeccionCounts, setDeveloperSeccionCounts] = useState<DeveloperSeccionCounts>({
     asignaciones: { total: 0, noLeidas: 0 },
     tareas: { total: 0, noLeidas: 0 },
@@ -248,7 +251,9 @@ export default function NotificationsPage() {
     if (usePmoFlow) {
       setPmoNavStack({ level: 'proyectos' });
       setPmoActividadNavStack({ level: 'actividades' });
-    } else if (!isDeveloper && !isImplementador) {
+    } else if (isDeveloper) {
+      setDeveloperNavStack({ level: 'proyectos' });
+    } else if (!isImplementador) {
       setOtherNavStack({ level: 'proyectos' });
     }
     setDeleteMode(false);
@@ -315,13 +320,19 @@ export default function NotificationsPage() {
           }
         }
       } else if (isDeveloper) {
-        // DESARROLLADOR Block Navigation Flow
-        if (developerNavStack.level === 'secciones') {
-          const counts = await getSeccionCountsDeveloper();
+        // DESARROLLADOR: Proyectos → Secciones → Notificaciones
+        if (developerNavStack.level === 'proyectos') {
+          const groups = await getNotificacionesAgrupadasPorProyecto();
+          setProyectoGroups(groups);
+          setProyectoPage(1);
+        } else if (developerNavStack.level === 'secciones') {
+          const counts = await getSeccionCountsDeveloper(developerNavStack.proyectoId);
           setDeveloperSeccionCounts(counts);
         } else {
+          // level === 'notificaciones'
           const entidadTipo = DEVELOPER_SECCION_TO_ENTIDAD_TIPO[developerNavStack.seccion];
           const devResponse = await getNotificaciones({
+            proyectoId: developerNavStack.proyectoId,
             tipo: 'Proyecto',
             entidadTipo,
             page: developerPage,
@@ -572,16 +583,40 @@ export default function NotificationsPage() {
     setSelectedNotificationIds(new Set());
   };
 
-  // DESARROLLADOR section navigation handlers
+  // DESARROLLADOR navigation handlers (Proyectos → Secciones → Notificaciones)
+  const handleDeveloperProyectoClick = (proyectoId: number, proyectoNombre: string, proyectoCodigo: string) => {
+    setDeveloperNavStack({ level: 'secciones', proyectoId, proyectoNombre, proyectoCodigo });
+    setDeleteMode(false);
+    setSelectedProyectoIds(new Set());
+    setSelectedNotificationIds(new Set());
+  };
+
   const handleDeveloperSeccionClick = (seccion: DeveloperSeccionName) => {
-    setDeveloperNavStack({ level: 'notificaciones', seccion });
+    if (developerNavStack.level !== 'secciones') return;
+    setDeveloperNavStack({
+      level: 'notificaciones',
+      proyectoId: developerNavStack.proyectoId,
+      proyectoNombre: developerNavStack.proyectoNombre,
+      proyectoCodigo: developerNavStack.proyectoCodigo,
+      seccion,
+    });
     setDeveloperPage(1);
     setDeleteMode(false);
     setSelectedNotificationIds(new Set());
   };
 
   const handleDeveloperBack = () => {
-    setDeveloperNavStack({ level: 'secciones' });
+    if (developerNavStack.level === 'notificaciones') {
+      setDeveloperNavStack({
+        level: 'secciones',
+        proyectoId: developerNavStack.proyectoId,
+        proyectoNombre: developerNavStack.proyectoNombre,
+        proyectoCodigo: developerNavStack.proyectoCodigo,
+      });
+    } else if (developerNavStack.level === 'secciones') {
+      setDeveloperNavStack({ level: 'proyectos' });
+      setSelectedProyectoIds(new Set());
+    }
     setDeveloperPage(1);
     setDeleteMode(false);
     setSelectedNotificationIds(new Set());
@@ -812,12 +847,17 @@ export default function NotificationsPage() {
           toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
           loadData();
         }
-      } else if (isDeveloper && selectedNotificationIds.size > 0) {
-        // Developer: flat notification deletion
-        const ids = Array.from(selectedNotificationIds).map(Number);
-        await bulkDeleteNotificaciones(ids);
-        toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
-        loadData();
+      } else if (isDeveloper) {
+        if (developerNavStack.level === 'proyectos' && selectedProyectoIds.size > 0) {
+          await bulkDeleteByProyectos(Array.from(selectedProyectoIds));
+          setProyectoGroups(prev => prev.filter(g => !selectedProyectoIds.has(g.proyectoId)));
+          toast({ title: 'Listo', description: `${selectedProyectoIds.size} proyecto(s) eliminados` });
+        } else if (selectedNotificationIds.size > 0) {
+          const ids = Array.from(selectedNotificationIds).map(Number);
+          await bulkDeleteNotificaciones(ids);
+          toast({ title: 'Listo', description: `${selectedNotificationIds.size} notificacion(es) eliminadas` });
+          loadData();
+        }
       } else if (isImplementador) {
         // Implementador drill-down deletion
         if (implementadorNavStack.level === 'actividades' && selectedActividadIds.size > 0) {
@@ -866,6 +906,7 @@ export default function NotificationsPage() {
       return currentLevel === 'actividades' ? selectedActividadIds.size : selectedNotificationIds.size;
     }
     if (isDeveloper) {
+      if (developerNavStack.level === 'proyectos') return selectedProyectoIds.size;
       return selectedNotificationIds.size;
     }
     return currentLevel === 'proyectos' ? selectedProyectoIds.size : selectedNotificationIds.size;
@@ -893,6 +934,9 @@ export default function NotificationsPage() {
         }
       }
     } else if (isDeveloper) {
+      if (developerNavStack.level === 'proyectos') {
+        return proyectoGroups.reduce((sum, g) => sum + g.noLeidas, 0);
+      }
       if (developerNavStack.level === 'secciones') {
         return Object.values(developerSeccionCounts).reduce((sum, s) => sum + s.noLeidas, 0);
       }
@@ -1157,67 +1201,101 @@ export default function NotificationsPage() {
       }
     }
 
-    // DESARROLLADOR View (block-based navigation)
+    // DESARROLLADOR View (block-based navigation: Proyectos → Secciones → Notificaciones)
     if (isDeveloper) {
+      if (developerNavStack.level === 'proyectos') {
+        return (
+          <div className="space-y-4">
+            <ProyectoBlockList
+              groups={pagedProyectoGroups}
+              loading={isLoading}
+              deleteMode={deleteMode}
+              selectedIds={selectedProyectoIds}
+              onToggleSelect={toggleProyectoSelect}
+              onProyectoClick={handleDeveloperProyectoClick}
+            />
+            {proyectoTotalPages > 1 && (
+              <PaginationControls
+                page={proyectoPage}
+                totalPages={proyectoTotalPages}
+                total={proyectoGroups.length}
+                limit={BLOCK_PAGE_SIZE}
+                onPageChange={(p) => setProyectoPage(p)}
+              />
+            )}
+          </div>
+        );
+      }
+
       if (developerNavStack.level === 'secciones') {
         return (
           <DeveloperSeccionBlockList
             counts={developerSeccionCounts}
             loading={isLoading}
             onSeccionClick={handleDeveloperSeccionClick}
+            onBack={handleDeveloperBack}
+            proyectoNombre={developerNavStack.proyectoNombre}
+            proyectoCodigo={developerNavStack.proyectoCodigo}
           />
         );
       }
-      // developerNavStack.level === 'notificaciones'
-      const developerTotalPages = Math.ceil(developerTotalItems / PAGE_SIZE);
-      const seccionLabel = DEVELOPER_SECCION_LABELS[developerNavStack.seccion];
-      return (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Button variant="ghost" size="sm" onClick={handleDeveloperBack} className="gap-1">
-              <ArrowLeft className="h-4 w-4" />
-              Volver
-            </Button>
-            <nav className="text-sm text-gray-500">
-              <span className="text-gray-400">Proyectos</span>
-              <span className="mx-1 text-gray-400">&gt;</span>
-              <span className="font-medium text-gray-700">{seccionLabel}</span>
-            </nav>
-          </div>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
+
+      // level === 'notificaciones'
+      if (developerNavStack.level === 'notificaciones') {
+        const developerTotalPages = Math.ceil(developerTotalItems / PAGE_SIZE);
+        const seccionLabel = DEVELOPER_SECCION_LABELS[developerNavStack.seccion];
+        return (
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Button variant="ghost" size="sm" onClick={handleDeveloperBack} className="gap-1">
+                <ArrowLeft className="h-4 w-4" />
+                Volver
+              </Button>
+              <nav className="text-sm text-gray-500">
+                <span className="text-gray-400">Proyectos</span>
+                <span className="mx-1 text-gray-400">&gt;</span>
+                <span className="text-gray-400">{developerNavStack.proyectoCodigo}</span>
+                <span className="mx-1 text-gray-400">&gt;</span>
+                <span className="font-medium text-gray-700">{seccionLabel}</span>
+              </nav>
             </div>
-          ) : developerNotifications.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">
-              No hay notificaciones en esta seccion.
-            </div>
-          ) : (
-            <>
-              <div className="space-y-3">
-                {developerNotifications.map((notification) => (
-                  <NotificationCard
-                    key={notification.id}
-                    notification={notification}
-                    onClick={handleNotificationClick}
-                    onViewObservacion={setViewingObservacion}
-                    checkbox={deleteMode}
-                    checked={selectedNotificationIds.has(notification.id)}
-                    onCheckChange={() => toggleNotificationSelect(notification.id)}
-                  />
-                ))}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-[#018CD1]" />
               </div>
-              <PaginationControls
-                page={developerPage}
-                totalPages={developerTotalPages}
-                total={developerTotalItems}
-                limit={PAGE_SIZE}
-                onPageChange={(p) => { setDeveloperPage(p); setSelectedNotificationIds(new Set()); }}
-              />
-            </>
-          )}
-        </div>
-      );
+            ) : developerNotifications.length === 0 ? (
+              <div className="text-center py-10 text-gray-500">
+                No hay notificaciones en esta seccion.
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {developerNotifications.map((notification) => (
+                    <NotificationCard
+                      key={notification.id}
+                      notification={notification}
+                      onClick={handleNotificationClick}
+                      onViewObservacion={setViewingObservacion}
+                      checkbox={deleteMode}
+                      checked={selectedNotificationIds.has(notification.id)}
+                      onCheckChange={() => toggleNotificationSelect(notification.id)}
+                    />
+                  ))}
+                </div>
+                <PaginationControls
+                  page={developerPage}
+                  totalPages={developerTotalPages}
+                  total={developerTotalItems}
+                  limit={PAGE_SIZE}
+                  onPageChange={(p) => { setDeveloperPage(p); setSelectedNotificationIds(new Set()); }}
+                />
+              </>
+            )}
+          </div>
+        );
+      }
+
+      return null;
     }
 
     // IMPLEMENTADOR View (drill-down: Actividades → Secciones → Notificaciones)

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { BacklogToolbar } from '../components/backlog-toolbar';
 import { SprintSection } from '../components/sprint-section';
@@ -148,7 +148,16 @@ export function BacklogView({
     return filterHistorias(backlogHistorias);
   }, [backlogHistorias, searchTerm, selectedEpicaId]);
 
-  // Clear selection when backlog changes
+  // Clear selection for IDs that are no longer in the backlog (e.g. after moving to a sprint)
+  useEffect(() => {
+    if (selectedBacklogIds.length === 0) return;
+    const backlogIdSet = new Set(backlogHistorias.map(h => h.id));
+    const stillInBacklog = selectedBacklogIds.filter(id => backlogIdSet.has(id));
+    if (stillInBacklog.length !== selectedBacklogIds.length) {
+      setSelectedBacklogIds(stillInBacklog);
+    }
+  }, [backlogHistorias]);
+
   const handleBacklogSelectionChange = (ids: number[]) => {
     setSelectedBacklogIds(ids);
   };

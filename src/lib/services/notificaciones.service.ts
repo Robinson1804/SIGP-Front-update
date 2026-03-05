@@ -318,11 +318,13 @@ export async function getSeccionCountsByActividad(actividadId: number): Promise<
 
 /**
  * Obtener conteos de notificaciones por sección para DESARROLLADOR
+ * Si se pasa proyectoId, filtra por ese proyecto específico
  */
-export async function getSeccionCountsDeveloper(): Promise<DeveloperSeccionCounts> {
+export async function getSeccionCountsDeveloper(proyectoId?: number): Promise<DeveloperSeccionCounts> {
   try {
     const response = await apiClient.get<DeveloperSeccionCounts>(
-      ENDPOINTS.NOTIFICACIONES.SECCIONES_DESARROLLADOR
+      ENDPOINTS.NOTIFICACIONES.SECCIONES_DESARROLLADOR,
+      proyectoId ? { params: { proyectoId } } : undefined,
     );
     return response.data;
   } catch (error) {

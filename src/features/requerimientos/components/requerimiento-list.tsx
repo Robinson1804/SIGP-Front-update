@@ -7,6 +7,7 @@ import {
   Trash2,
   MoreVertical,
   FileText,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -358,6 +359,15 @@ export function RequerimientoList({
             onClick={() => setShowMatriz(!showMatriz)}
           >
             {showMatriz ? 'Ver Lista' : 'Matriz de Trazabilidad'}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={loadRequerimientos}
+            disabled={isLoading}
+            title="Actualizar lista"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           {canManage && (
             <Button onClick={handleCreate}>

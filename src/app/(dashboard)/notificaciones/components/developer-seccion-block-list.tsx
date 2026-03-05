@@ -1,7 +1,8 @@
 "use client";
 
 import React from 'react';
-import { Loader2, FolderKanban, ListTodo, BookOpen, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Loader2, FolderKanban, ListTodo, BookOpen, CheckSquare } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { DeveloperSeccionCounts } from '@/lib/services/notificaciones.service';
 
@@ -11,6 +12,9 @@ interface DeveloperSeccionBlockListProps {
   counts: DeveloperSeccionCounts;
   loading: boolean;
   onSeccionClick: (seccion: DeveloperSeccionName) => void;
+  onBack?: () => void;
+  proyectoNombre?: string;
+  proyectoCodigo?: string;
 }
 
 const DEVELOPER_SECCION_CONFIG: {
@@ -33,7 +37,7 @@ const SECCION_TO_COUNTS_KEY: Record<DeveloperSeccionName, keyof DeveloperSeccion
   Validaciones: 'validaciones',
 };
 
-export function DeveloperSeccionBlockList({ counts, loading, onSeccionClick }: DeveloperSeccionBlockListProps) {
+export function DeveloperSeccionBlockList({ counts, loading, onSeccionClick, onBack, proyectoNombre, proyectoCodigo }: DeveloperSeccionBlockListProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-10">
@@ -44,7 +48,24 @@ export function DeveloperSeccionBlockList({ counts, loading, onSeccionClick }: D
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Proyectos</h3>
+      {onBack && (
+        <div className="flex items-center gap-2 mb-4">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Button>
+          <nav className="text-sm text-gray-500">
+            <span className="text-gray-400">Proyectos</span>
+            {proyectoCodigo && (
+              <>
+                <span className="mx-1 text-gray-400">&gt;</span>
+                <span className="font-medium text-gray-700">{proyectoCodigo}</span>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">{proyectoNombre || 'Proyectos'}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {DEVELOPER_SECCION_CONFIG.map(({ key, label, icon: Icon, description }) => {
           const countsKey = SECCION_TO_COUNTS_KEY[key];

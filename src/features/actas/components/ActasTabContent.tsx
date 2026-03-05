@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Trash2,
   Send,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -727,6 +728,16 @@ export function ActasTabContent({ proyectoId, subproyectoId }: ActasTabContentPr
           <FileText className="h-6 w-6 text-gray-700" />
           Actas del Proyecto
         </h3>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={fetchActas}
+          disabled={loading}
+          title="Actualizar lista"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Actualizar
+        </Button>
       </div>
 
       {/* Acta de Constitucion Section */}
