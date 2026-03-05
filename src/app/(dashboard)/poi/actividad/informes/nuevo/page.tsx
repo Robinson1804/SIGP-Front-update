@@ -282,7 +282,7 @@ function NuevoInformeContent() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="anio">Ano</Label>
+                  <Label htmlFor="anio">Año</Label>
                   <Input
                     id="anio"
                     type="number"

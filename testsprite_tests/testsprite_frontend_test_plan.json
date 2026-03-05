@@ -1,0 +1,3265 @@
+[
+  {
+    "id": "TC001",
+    "title": "Authenticated user can open Main Dashboard and see global KPI sections",
+    "description": "Verifies that a logged-in user can reach /dashboard and see the main KPI areas (projects and activities).",
+    "category": "Main Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Proyectos\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Actividades\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Main Dashboard shows project metrics cards",
+    "description": "Verifies that the dashboard renders project metric cards for a logged-in user.",
+    "category": "Main Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Project metrics cards section\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"At least one project metric card\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Main Dashboard shows activity metrics",
+    "description": "Verifies that the dashboard renders activity KPI/metrics for a logged-in user.",
+    "category": "Main Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Activity metrics section\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"At least one activity metric\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Main Dashboard shows team performance chart",
+    "description": "Verifies that the team performance chart/visualization is visible on the dashboard.",
+    "category": "Main Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the team performance area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Team performance chart\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Main Dashboard shows overdue alerts section when present",
+    "description": "Verifies that the dashboard displays an overdue/alerts area and it is visible to the user.",
+    "category": "Main Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the alerts/overdue area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Overdue alerts section\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Clicking a project card navigates to the project dashboard (dynamic route)",
+    "description": "Verifies that selecting a project from the dashboard navigates to a project-specific dashboard page.",
+    "category": "Main Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible project card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard/proyecto/\""
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Project dashboard page loads after navigation from Main Dashboard",
+    "description": "Verifies that after navigating to a project dashboard from the main dashboard, the project dashboard shows project details content.",
+    "category": "Main Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible project card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Project dashboard details section\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Unauthorized access handling: user sees access denied when not permitted",
+    "description": "Verifies that a user who is authenticated but lacks permission is shown the unauthorized page when attempting to access the dashboard.",
+    "category": "Main Dashboard",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Dashboard\" navigation item in the app menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/unauthorized\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Acceso denegado\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "View notifications list and verify grouped content loads",
+    "description": "Ensures an authenticated user can open Notifications and see a loaded list with grouping.",
+    "category": "Notifications",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" (Sign in) button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Notificaciones\" in the main navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/notificaciones\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Notifications list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Filter notifications by type",
+    "description": "Verifies the user can filter notifications by a type and see the list update accordingly.",
+    "category": "Notifications",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" (Sign in) button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Notificaciones\" in the main navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Filter by type\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Proyecto\" from the type filter dropdown"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Click a project-related notification and reach project details context (without using direct URL navigation)",
+    "description": "Ensures clicking a project-related notification takes the user toward the project context from the UI.",
+    "category": "Notifications",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" (Sign in) button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Notificaciones\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Proyecto\" from the type filter dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first notification item that indicates it relates to a project"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Mark a single notification as read",
+    "description": "Validates that marking one notification as read updates the visible read/unread state.",
+    "category": "Notifications",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" (Sign in) button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Notificaciones\" in the main navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"An unread notification\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mark as read\" for the first unread notification"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Mark all notifications as read",
+    "description": "Ensures the 'mark all as read' control updates the list so unread indicators are no longer shown.",
+    "category": "Notifications",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" (Sign in) button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Notificaciones\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mark all as read\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Sin notificaciones no leídas\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Delete a notification from the list",
+    "description": "Verifies a user can delete a notification and it disappears from the visible list.",
+    "category": "Notifications",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" (Sign in) button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Notificaciones\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Delete notification\" for the first notification item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Notificación eliminada\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Empty state after filtering shows no results message",
+    "description": "Ensures filtering to a type with no matching notifications displays a clear empty state.",
+    "category": "Notifications",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Iniciar sesión\" (Sign in) button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Notificaciones\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Sprint\" from the type filter dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No hay notificaciones\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Create a new OEI successfully from PGD home and verify it appears in OEI list",
+    "description": "Verifies an authenticated user can create an OEI and then see it listed on the OEI page.",
+    "category": "Strategic Planning PGD",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Plan de Gobierno Digital\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create OEI\" button"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Submit OEI form with valid values and confirm success feedback",
+    "description": "Verifies the OEI creation modal ('REGISTRAR OBJETIVO ESTRATÉGICO INSTITUCIONAL') can be completed with all 5 required fields and submitted successfully. Navigate to /pgd/oei and click 'NUEVO OEI' to open the modal. Required fields: Nombre, Nombre del Indicador, Unidad de Medida, Línea Base Año (Select dropdown), Línea Base Valor (number input). The 'Código' field is auto-generated and DISABLED — do not try to fill it. Metas Anuales is OPTIONAL and is a structured widget (select year + input value), NOT a plain text field. Footer buttons: 'Cancelar' (outline) and 'Guardar' (blue) — only click 'Guardar'.",
+    "category": "Strategic Planning PGD",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate directly to /pgd/oei"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the OEI page is loaded — look for heading 'Objetivos Estratégicos Institucionales' or 'OEI'"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"NUEVO OEI\" button (blue button with Plus icon) to open the creation modal"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the dialog modal opens with title \"REGISTRAR OBJETIVO ESTRATÉGICO INSTITUCIONAL (OEI)\""
+      },
+      {
+        "type": "action",
+        "description": "Find the \"Nombre *\" input field and type \"OEI de prueba automatizada\""
+      },
+      {
+        "type": "action",
+        "description": "Find the \"Nombre del Indicador *\" input field and type \"Porcentaje de procesos digitalizados\""
+      },
+      {
+        "type": "action",
+        "description": "Find the \"Unidad de Medida *\" input field and type \"Porcentaje\""
+      },
+      {
+        "type": "action",
+        "description": "In the \"Línea Base *\" section, click the \"Año *\" Select dropdown and select the first available year (e.g. 2024 or 2025)"
+      },
+      {
+        "type": "action",
+        "description": "In the \"Línea Base *\" section, find the \"Valor *\" number input and type \"20\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Guardar\" button (solid blue button in the modal footer — do NOT click 'Cancelar')"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the modal closes and the new OEI \"OEI de prueba automatizada\" appears in the list"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "OEI form required field validation when submitting empty form",
+    "description": "Verifies required-field validation is shown when trying to submit an empty OEI form.",
+    "category": "Strategic Planning PGD",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create OEI\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Submit\" or \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "OEI form validation when only some required fields are filled",
+    "description": "Verifies the form blocks submission and shows validation errors when partial data is provided.",
+    "category": "Strategic Planning PGD",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create OEI\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"OEI-TEST-PARTIAL\" into the \"Code\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Submit\" or \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "View active PGD plan details on PGD home",
+    "description": "Verifies the active PGD plan is displayed on the PGD home page for an authenticated user.",
+    "category": "Strategic Planning PGD",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Vigente\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Navigate to OGD section from PGD and verify page loads",
+    "description": "Verifies a user can open the OGD objectives page from PGD navigation.",
+    "category": "Strategic Planning PGD",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"OGD\" in the PGD navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd/ogd\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"OGD\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Navigate to OEGD section from PGD and verify page loads",
+    "description": "Verifies a user can open the OEGD objectives page from PGD navigation.",
+    "category": "Strategic Planning PGD",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"OEGD\" in the PGD navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd/oegd\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"OEGD\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Navigate to Acciones Estratégicas (AE) section and verify list loads",
+    "description": "Verifies a user can open the AE page and see strategic actions content.",
+    "category": "Strategic Planning PGD",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Acciones Estratégicas\" or \"AE\" in the PGD navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd/ae\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Acciones\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "View progress by objective on PGD pages",
+    "description": "Verifies progress tracking information is visible for objectives within the PGD module.",
+    "category": "Strategic Planning PGD",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"OEI\" in the PGD navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd/oei\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"%\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Create a new Scrum project and open its details",
+    "description": "Verifies a user can create a new Scrum project from the projects list and navigate to the created project details page.",
+    "category": "Projects Management (Scrum)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\" to open the Scrum projects list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/proyectos\""
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Projects list: filter by status updates visible list",
+    "description": "Verifies status filtering on the Scrum projects list changes the visible projects list results.",
+    "category": "Projects Management (Scrum)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\" to open the Scrum projects list"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Activos\" from the status filter dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Activos\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "POI modal: required field validation blocks submission when form is empty",
+    "description": "Verifies that the POI creation modal ('REGISTRAR PLAN OPERATIVO INFORMÁTICO') shows validation error messages for all required fields when the 'Guardar' button is clicked without filling any field. The modal opens from the 'NUEVO POI' button on /poi page and has a loading state ('Cargando datos...') that must finish before interaction is possible. IMPORTANT: The modal has two buttons — 'Cancelar' (outline/border style) and 'Guardar' (solid blue #018CD1). Only click 'Guardar', never 'Cancelar'.",
+    "category": "Projects Management (Scrum)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Navigate directly to /poi"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the POI page is loaded — look for text 'Plan Operativo' or 'POI' in the heading"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"NUEVO POI\" button (has a Plus icon, blue background color #018CD1)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog/modal opens with title \"REGISTRAR PLAN OPERATIVO INFORMÁTICO (POI)\" or similar"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the 'Cargando datos...' loading spinner to disappear from the modal before interacting with any element"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify 'Cargando datos...' text is no longer visible in the modal"
+      },
+      {
+        "type": "action",
+        "description": "Click the 'Guardar' button — it is the BLUE button with solid background at the bottom right of the modal footer. Do NOT click 'Cancelar' (outline button)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation error messages are shown inside the modal, such as 'El tipo es requerido.', 'El nombre es requerido.', 'La descripción es requerida.'"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "POI modal: create Scrum project filling all 14 required fields",
+    "description": "Verifies that a POI Proyecto (Scrum) can be created by filling all required fields in the 'REGISTRAR PLAN OPERATIVO INFORMÁTICO (POI)' modal and clicking 'Guardar'. The modal opens from the 'NUEVO POI' button on /poi page. Required fields: Tipo (Proyecto), Nombre, Descripción, Acción Estratégica, Clasificación, Coordinación, Área Financiera, Coordinador, Gestor/Scrum Master, Responsables, Año, Monto, Fecha Inicio, Fecha Fin. CRITICAL: Wait for 'Cargando datos...' to disappear before interacting. Click ONLY the blue 'Guardar' button, never 'Cancelar'.",
+    "category": "Projects Management (Scrum)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Navigate directly to /poi"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"NUEVO POI\" button (blue button with Plus icon)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a dialog opens with title containing 'REGISTRAR PLAN OPERATIVO INFORMÁTICO' or 'POI'"
+      },
+      {
+        "type": "action",
+        "description": "Wait for 'Cargando datos...' text to disappear from the modal before proceeding"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Proyecto\" from the \"Tipo (Proyecto/Actividad) *\" dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Proyecto Scrum Test Automatizado\" into the \"Nombre *\" input field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Proyecto de prueba creado por test automatizado\" into the \"Descripción *\" textarea"
+      },
+      {
+        "type": "action",
+        "description": "Select the first available option from the \"Acción Estratégica *\" dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Al ciudadano\" from the \"Clasificación *\" dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Dirección de Tecnología de la Información\" into the \"Coordinación *\" input field"
+      },
+      {
+        "type": "action",
+        "description": "Select or type the first available option in the \"Área Financiera *\" field (it may be a multi-select or input)"
+      },
+      {
+        "type": "action",
+        "description": "Select the first available option from the \"Coordinador *\" dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select the first available option from the \"Gestor/Scrum Master *\" dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select at least one option from the \"Responsables *\" multi-select field"
+      },
+      {
+        "type": "action",
+        "description": "Select the current year (e.g. 2026) from the \"Año *\" dropdown or multi-select"
+      },
+      {
+        "type": "action",
+        "description": "Type \"500000\" into the \"Monto *\" input field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"2026-01-01\" into the \"Fecha Inicio *\" date input field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"2026-12-31\" into the \"Fecha Fin *\" date input field"
+      },
+      {
+        "type": "action",
+        "description": "Click the blue \"Guardar\" button in the modal footer (NOT the 'Cancelar' outline button)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the modal closes without showing validation errors"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the new project \"Proyecto Scrum Test Automatizado\" appears in the POI list on the page"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Project details: open from projects list card",
+    "description": "Verifies clicking a project card from the list opens the project details view.",
+    "category": "Projects Management (Scrum)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\" to open the Scrum projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible project card in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/proyectos/\""
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Project details: navigate to Sprints tab",
+    "description": "Verifies the Sprints tab is accessible from a Scrum project details page and shows sprint-related UI.",
+    "category": "Projects Management (Scrum)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\" to open the Scrum projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible project card in the list"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sprints\" tab"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Create sprint with valid dates succeeds",
+    "description": "Verifies a sprint can be created from the Sprints tab using a valid non-overlapping date range and is shown in the list.",
+    "category": "Projects Management (Scrum)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\" to open the Scrum projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible project card in the list"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sprints\" tab"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "Create sprint with overlapping dates shows validation error",
+    "description": "Verifies the UI blocks sprint creation and shows a visible overlap validation error when dates overlap an existing sprint.",
+    "category": "Projects Management (Scrum)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username or email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" or \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\" to open the Scrum projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible project card in the list"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sprints\" tab"
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Create a new subproject from a parent project and open its details",
+    "description": "Verifies a user can create a subproject under a project, see it listed, and navigate into the subproject details page.",
+    "category": "Subprojects Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/proyectos\""
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Start subproject creation from a project details page (via in-app navigation)",
+    "description": "Verifies the UI provides an entry point to create a subproject from a project’s details page.",
+    "category": "Subprojects Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Crear subproyecto\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Submit subproject creation with required details and verify it appears in the project page list",
+    "description": "Verifies submitting the create-subproject form results in the new subproject being visible in the parent project’s subprojects list.",
+    "category": "Subprojects Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Crear subproyecto\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Nuevo subproyecto\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Validation: attempt to create subproject with missing required fields",
+    "description": "Verifies the create-subproject form prevents submission and shows visible validation feedback when required fields are empty.",
+    "category": "Subprojects Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Crear subproyecto\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Guardar\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Este campo es obligatorio\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "Open an existing subproject from the parent project page",
+    "description": "Verifies a user can navigate from a project page into a subproject details page by clicking a subproject in the list.",
+    "category": "Subprojects Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first subproject in the subprojects list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/subproyectos/\""
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "View key sections in subproject details (backlog, sprints, schedule)",
+    "description": "Verifies the subproject details page exposes navigation/sections for backlog, sprints, and schedule.",
+    "category": "Subprojects Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first subproject in the subprojects list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Backlog\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "Change subproject state from subproject details page",
+    "description": "Verifies a user can change the subproject state and sees visible confirmation of the updated state.",
+    "category": "Subprojects Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first subproject in the subprojects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Estado\""
+      },
+      {
+        "type": "action",
+        "description": "Select \"En progreso\" from the state dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"En progreso\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC040",
+    "title": "Prevent deletion of subproject when it has dependent sprints or artifacts",
+    "description": "Verifies deletion is blocked with a visible error when the subproject has dependencies such as sprints or artifacts.",
+    "category": "Subprojects Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first subproject in the subprojects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Eliminar subproyecto\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No se puede eliminar\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC041",
+    "title": "Create a new Kanban activity from Activities List",
+    "description": "Verifies a user can create a new Kanban activity from the list page and see it reflected in the UI.",
+    "category": "Activities Management (Kanban)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Ingresar\"/\"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Actividades\" option"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Lista\" option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/actividad/lista\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Crear\" / \"Nueva actividad\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Crear actividad\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Actividad Kanban E2E\" into the activity name/title field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Coordinador\" option for the coordinator/owner field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Guardar\" / \"Crear\" / \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Actividad Kanban E2E\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC042",
+    "title": "Navigate from Activities List to Kanban Board",
+    "description": "Verifies a user can reach the Kanban board view from the activities list via UI navigation and the board loads.",
+    "category": "Activities Management (Kanban)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Ingresar\"/\"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Actividades\" option"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Tablero\" option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/actividad/tablero\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Tablero\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Kanban board\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC043",
+    "title": "Create a task within an activity from Kanban Board",
+    "description": "Verifies a user can create a new task on the Kanban board and see it appear in a column.",
+    "category": "Activities Management (Kanban)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Ingresar\"/\"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Actividades\" option"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Tablero\" option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/actividad/tablero\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Crear tarea\" / \"Nueva tarea\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Crear tarea\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Tarea E2E Kanban\" into the task title field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Guardar\" / \"Crear\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Tarea E2E Kanban\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC044",
+    "title": "Validation: Prevent creating an activity with required fields missing",
+    "description": "Verifies the activity creation form shows visible validation errors when required inputs are not provided.",
+    "category": "Activities Management (Kanban)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Ingresar\"/\"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Actividades\" option"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Lista\" option"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/actividad/lista\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Crear\" / \"Nueva actividad\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Crear actividad\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Guardar\" / \"Crear\" / \"Submit\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"requerido\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC045",
+    "title": "Create a new subactivity from an activity details page",
+    "description": "Verifies a user can create a subactivity from the activity details screen and see it listed.",
+    "category": "Subactivities Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Actividades\" or \"Lista de actividades\""
+      },
+      {
+        "type": "action",
+        "description": "Click on an activity row/item to open its details page"
+      }
+    ]
+  },
+  {
+    "id": "TC046",
+    "title": "View subactivities list on activity details",
+    "description": "Verifies the activity details page shows a visible subactivities section/list.",
+    "category": "Subactivities Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Actividades\" or \"Lista de actividades\""
+      },
+      {
+        "type": "action",
+        "description": "Click on an activity row/item to open its details page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Subactividades\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC047",
+    "title": "Create subactivity using the Create Subactivity form with required fields",
+    "description": "Verifies the create subactivity form validates and successfully creates a subactivity that appears in the subactivities list.",
+    "category": "Subactivities Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Actividades\" or \"Lista de actividades\""
+      },
+      {
+        "type": "action",
+        "description": "Click on an activity row/item to open its details page"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Crear subactividad\" or \"Create subactivity\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Crear subactividad\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Subactividad E2E\" into the subactivity name/title field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Guardar\" or \"Crear\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Subactividad E2E\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC048",
+    "title": "Create subactivity form shows validation errors when submitting empty",
+    "description": "Verifies required-field validation is shown when attempting to submit the create subactivity form without filling mandatory data.",
+    "category": "Subactivities Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" or \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"POI\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Actividades\" or \"Lista de actividades\""
+      },
+      {
+        "type": "action",
+        "description": "Click on an activity row/item to open its details page"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Crear subactividad\" or \"Create subactivity\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Guardar\" or \"Crear\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"requerido\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC049",
+    "title": "View personnel list from Human Resources after login",
+    "description": "Verifies an authenticated user can access Human Resources and see the personnel list.",
+    "category": "Human Resources Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/recursos-humanos\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Recursos humanos\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC050",
+    "title": "Search personnel by name and open profile with availability visible",
+    "description": "Verifies searching by a known name returns results and a personnel profile shows availability information.",
+    "category": "Human Resources Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/recursos-humanos\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"a\" into the personnel search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify at least one personnel list entry is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC051",
+    "title": "Open a personnel entry and verify profile and availability percentage are shown",
+    "description": "Verifies selecting a person from the list opens their profile view and shows an availability percentage.",
+    "category": "Human Resources Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/recursos-humanos\""
+      },
+      {
+        "type": "action",
+        "description": "Click the first visible personnel list entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Disponibilidad\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC052",
+    "title": "Verify assignments section is visible within a personnel profile",
+    "description": "Verifies the personnel profile view includes a visible assignments area for that person.",
+    "category": "Human Resources Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the first visible personnel list entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Asignaciones\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC053",
+    "title": "Search for unknown personnel name shows no results message",
+    "description": "Verifies searching with an unknown name displays a clear 'no results' state.",
+    "category": "Human Resources Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/recursos-humanos\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"zzzznonexistentperson\" into the personnel search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Sin resultados\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC054",
+    "title": "Clear search restores personnel list results",
+    "description": "Verifies clearing the search input returns the list from a no-results state back to showing personnel entries.",
+    "category": "Human Resources Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Type \"zzzznonexistentperson\" into the personnel search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Sin resultados\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Clear the personnel search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify at least one personnel list entry is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC055",
+    "title": "Manage divisions: open divisions area from Human Resources page",
+    "description": "Verifies the user can open the divisions management area from Human Resources.",
+    "category": "Human Resources Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/recursos-humanos\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Divisiones\" tab or section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Divisiones\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC056",
+    "title": "Create user account for personnel: open create account action from a personnel profile",
+    "description": "Verifies the user can initiate the 'create user account' action from within a personnel profile view.",
+    "category": "Human Resources Management",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the first visible personnel list entry"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Crear usuario\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Crear usuario\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC057",
+    "title": "Assign roles to user: open role assignment UI from personnel profile",
+    "description": "Verifies the role assignment interface can be opened from a personnel profile for an associated user.",
+    "category": "Human Resources Management",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Recursos humanos\" option in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the first visible personnel list entry"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Roles\" tab or section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Roles\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC058",
+    "title": "Login and access project list to reach documents workflow entry point",
+    "description": "Verifies an authenticated user can reach the Projects list as the starting point for project document workflows.",
+    "category": "Documents and Minutes (Actas)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/proyectos\""
+      }
+    ]
+  },
+  {
+    "id": "TC059",
+    "title": "Project documents list page shows document upload entry point",
+    "description": "Verifies the user can navigate from the Projects list into a specific project's details and see the Documents/Actas area.",
+    "category": "Documents and Minutes (Actas)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Documents\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC060",
+    "title": "Open Documents/Actas tab from project details",
+    "description": "Verifies the user can switch to the Documents or Actas tab within a project details page and see the upload control.",
+    "category": "Documents and Minutes (Actas)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Documentos\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Subir documento\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC061",
+    "title": "Attempt to upload with no file selected shows required-field message",
+    "description": "Verifies the upload action is blocked and a visible message appears when the user tries to upload without choosing a file.",
+    "category": "Documents and Minutes (Actas)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Documentos\" tab"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Subir\" or \"Cargar\" button in the upload form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"requerido\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC062",
+    "title": "Actas tab is accessible and shows acta workflow entry point",
+    "description": "Verifies the Actas area is reachable from a project and shows UI elements relevant to generating/approving minutes.",
+    "category": "Documents and Minutes (Actas)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Actas\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Generar acta\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC063",
+    "title": "Unauthorized/insufficient role: Approve action not available for non-PMO (UI gating)",
+    "description": "Verifies that users without PMO privileges do not see an approval action in the documents list UI.",
+    "category": "Documents and Minutes (Actas)",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"POI\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Proyectos\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first project in the projects list"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Documentos\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Aprobar\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC064",
+    "title": "PMO can log in and access Dashboard landing page",
+    "description": "Verifies a PMO user can authenticate and reach the main dashboard successfully.",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Dashboard\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC065",
+    "title": "PMO sees expected main navigation menu items",
+    "description": "Verifies the PMO role is presented with the expected navigation options in the authenticated UI.",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"PGD\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"POI\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Notificaciones\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC066",
+    "title": "PMO can open PGD from the menu and reach /pgd",
+    "description": "Verifies the PMO role can access the PGD module via the UI navigation.",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Plan de Gobierno Digital\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC067",
+    "title": "PMO can access PGD sub-sections (OEI) from within PGD",
+    "description": "Verifies an authorized PMO can navigate within PGD to a sub-section page.",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"PGD\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"OEI\" (Objetivos Estratégicos Institucionales)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/pgd/oei\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Objetivos\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC068",
+    "title": "Desarrollador is denied access when navigating directly to /pgd",
+    "description": "Verifies a DESARROLLADOR role cannot access PGD and is shown an access denied screen/message.",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /pgd"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/unauthorized\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Acceso denegado\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC069",
+    "title": "Desarrollador does not see PGD option in the main navigation (if hidden by RBAC)",
+    "description": "Verifies the UI hides the PGD entry point for a DESARROLLADOR role (or otherwise prevents discovery through the menu).",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"PGD\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC070",
+    "title": "Desarrollador can still access allowed areas like POI activities list",
+    "description": "Verifies a DESARROLLADOR role can navigate to a permitted module, confirming RBAC is selective (not a global lockout).",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click \"POI\" in the main navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Actividades\" or \"Lista\" to open the activities list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/poi/actividad/lista\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Actividades\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC071",
+    "title": "Unauthorized page provides a clear access-denied indicator and a way to continue",
+    "description": "Verifies the unauthorized screen is user-friendly by showing an access denied message and a visible navigation option (e.g., back to Dashboard or Login).",
+    "category": "Permission Based Access Control (RBAC)",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the username/email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Iniciar sesión\" / \"Login\" button"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /pgd"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/unauthorized\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Acceso denegado\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Volver\" / \"Regresar\" / \"Ir al Dashboard\" is visible"
+      }
+    ]
+  }
+]

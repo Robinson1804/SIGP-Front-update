@@ -1393,7 +1393,7 @@ function ProjectDetailsContent() {
                                             <InfoField label="Clasificación"><p>{project.classification}</p></InfoField>
                                             <InfoField label="Coordinación"><p>{project.coordination || 'Son las divisiones'}</p></InfoField>
                                             <InfoField label="Coordinador"><p>{project.coordinator || ''}</p></InfoField>
-                                            <InfoField label="Product Owner">
+                                            <InfoField label="Área usuaria">
                                                 {project.areaUsuariaId ? (
                                                     <AreaUsuariaDisplay userIds={[project.areaUsuariaId]} />
                                                 ) : (

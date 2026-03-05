@@ -1,0 +1,367 @@
+version: "2"
+type: frontend
+tech_stack:
+  - Next.js 14 (App Router)
+  - TypeScript
+  - Tailwind CSS
+  - shadcn/ui (Radix UI primitives)
+  - React Hook Form
+  - Zod (schema validation)
+  - Zustand (state management)
+  - Axios (HTTP client)
+  - Socket.io-client (real-time)
+  - dnd-kit (drag and drop)
+  - Recharts (charts)
+  - date-fns
+
+routes:
+  - path: /login
+    file: src/app/(auth)/login/page.tsx
+    auth_required: false
+    description: User authentication page
+  - path: /unauthorized
+    file: src/app/(auth)/unauthorized/page.tsx
+    auth_required: false
+    description: Access denied page
+  - path: /dashboard
+    file: src/app/(dashboard)/dashboard/page.tsx
+    auth_required: true
+    description: Main dashboard with global KPIs and statistics
+  - path: /dashboard/proyecto/[id]
+    file: src/app/(dashboard)/dashboard/proyecto/[id]/page.tsx
+    auth_required: true
+    description: Scrum project specific dashboard
+  - path: /dashboard/actividad/[id]
+    file: src/app/(dashboard)/dashboard/actividad/[id]/page.tsx
+    auth_required: true
+    description: Kanban activity specific dashboard
+  - path: /perfil
+    file: src/app/(dashboard)/perfil/page.tsx
+    auth_required: true
+    description: User profile page
+  - path: /notificaciones
+    file: src/app/(dashboard)/notificaciones/page.tsx
+    auth_required: true
+    description: Notifications list with grouping and filters
+  - path: /pgd
+    file: src/app/(dashboard)/pgd/page.tsx
+    auth_required: true
+    description: Plan de Gobierno Digital home page
+  - path: /pgd/oei
+    file: src/app/(dashboard)/pgd/oei/page.tsx
+    auth_required: true
+    description: Objetivos Estrategicos Institucionales
+  - path: /pgd/ogd
+    file: src/app/(dashboard)/pgd/ogd/page.tsx
+    auth_required: true
+    description: Objetivos de Gobierno Digital
+  - path: /pgd/oegd
+    file: src/app/(dashboard)/pgd/oegd/page.tsx
+    auth_required: true
+    description: Objetivos Especificos de Gobierno Digital
+  - path: /pgd/ae
+    file: src/app/(dashboard)/pgd/ae/page.tsx
+    auth_required: true
+    description: Acciones Estrategicas
+  - path: /poi
+    file: src/app/(dashboard)/poi/page.tsx
+    auth_required: true
+    description: Plan Operativo Informatico home
+  - path: /poi/proyectos
+    file: src/app/(dashboard)/poi/proyectos/page.tsx
+    auth_required: true
+    description: Scrum projects list
+  - path: /poi/proyectos/[id]
+    file: src/app/(dashboard)/poi/proyectos/[id]/page.tsx
+    auth_required: true
+    description: Scrum project details with tabs
+  - path: /poi/proyectos/[id]/cronograma
+    file: src/app/(dashboard)/poi/proyectos/[id]/cronograma/page.tsx
+    auth_required: true
+    description: Project Gantt chart
+  - path: /poi/subproyectos/[id]
+    file: src/app/(dashboard)/poi/subproyectos/[id]/page.tsx
+    auth_required: true
+    description: Subproject details with backlog and sprints
+  - path: /poi/subproyectos/[id]/cronograma
+    file: src/app/(dashboard)/poi/subproyectos/[id]/cronograma/page.tsx
+    auth_required: true
+    description: Subproject Gantt chart
+  - path: /poi/actividad/lista
+    file: src/app/(dashboard)/poi/actividad/lista/page.tsx
+    auth_required: true
+    description: Kanban activities list
+  - path: /poi/actividad/tablero
+    file: src/app/(dashboard)/poi/actividad/tablero/page.tsx
+    auth_required: true
+    description: Kanban board view
+  - path: /poi/actividad/detalles
+    file: src/app/(dashboard)/poi/actividad/detalles/page.tsx
+    auth_required: true
+    description: Activity details page
+  - path: /poi/subactividad/detalles
+    file: src/app/(dashboard)/poi/subactividad/detalles/page.tsx
+    auth_required: true
+    description: Subactivity details page
+  - path: /recursos-humanos
+    file: src/app/(dashboard)/recursos-humanos/page.tsx
+    auth_required: true
+    description: Human resources management
+
+features:
+  - name: User Login
+    description: Authentication with username and password, JWT token management
+    files:
+      - src/app/(auth)/login/page.tsx
+    entry_route: /login
+    user_interactions:
+      - Fill username input field
+      - Fill password input field
+      - Click Login button to submit
+      - See error message on invalid credentials
+      - Redirect to dashboard on success
+    api_calls:
+      - method: POST
+        endpoint: /api/v1/auth/login
+      - method: GET
+        endpoint: /api/v1/auth/me
+    auth_required: false
+
+  - name: Main Dashboard
+    description: Global KPIs, project status overview and alerts
+    files:
+      - src/app/(dashboard)/dashboard/page.tsx
+    entry_route: /dashboard
+    user_interactions:
+      - View project metrics cards
+      - View activity metrics
+      - View team performance chart
+      - Click on project card to navigate
+      - View overdue alerts
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/dashboard
+    auth_required: true
+
+  - name: Notifications
+    description: Real-time notifications grouped by project/activity/sprint
+    files:
+      - src/app/(dashboard)/notificaciones/page.tsx
+    entry_route: /notificaciones
+    user_interactions:
+      - View notifications list
+      - Mark notification as read
+      - Mark all as read
+      - Delete notification
+      - Filter by type
+      - Click notification to navigate to context
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/notificaciones
+      - method: POST
+        endpoint: /api/v1/notificaciones/{id}/leer
+      - method: POST
+        endpoint: /api/v1/notificaciones/leer-todas
+    auth_required: true
+
+  - name: Strategic Planning PGD
+    description: 4-year government digital plan with OEI, OGD, OEGD, AE hierarchy
+    files:
+      - src/app/(dashboard)/pgd/page.tsx
+    entry_route: /pgd
+    user_interactions:
+      - View active PGD plan
+      - Create OEI objective
+      - Create OGD objective
+      - Create OEGD objective
+      - Create strategic action AE
+      - View progress by objective
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/pgd/vigente
+      - method: POST
+        endpoint: /api/v1/oei
+      - method: GET
+        endpoint: /api/v1/acciones-estrategicas
+    auth_required: true
+
+  - name: Projects Management Scrum
+    description: Full Scrum project lifecycle with sprints, epics, user stories and tasks
+    files:
+      - src/app/(dashboard)/poi/proyectos/page.tsx
+      - src/app/(dashboard)/poi/proyectos/[id]/page.tsx
+    entry_route: /poi/proyectos
+    user_interactions:
+      - View projects list with status filters
+      - Create new Scrum project
+      - View project details
+      - Create epic
+      - Create sprint with dates
+      - Create user story in backlog
+      - Assign user story to sprint
+      - Create task within user story
+      - Move user story between sprint and backlog
+      - Start sprint
+      - View sprint board
+      - Finalize task with evidence
+      - Validate task as Scrum Master
+      - View sprint burndown chart
+      - Close sprint and generate report
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/proyectos
+      - method: POST
+        endpoint: /api/v1/proyectos
+      - method: GET
+        endpoint: /api/v1/proyectos/{id}
+      - method: POST
+        endpoint: /api/v1/sprints/{sprintId}/historias-usuario
+      - method: POST
+        endpoint: /api/v1/tareas
+    auth_required: true
+
+  - name: Subprojects Management
+    description: Sub-level Scrum projects with own sprints user stories and tasks
+    files:
+      - src/app/(dashboard)/poi/subproyectos/[id]/page.tsx
+    entry_route: /poi/proyectos/{id}
+    user_interactions:
+      - Create subproject within project
+      - View subproject details
+      - Manage subproject sprints
+      - Manage subproject backlog
+      - View subproject schedule
+      - Change subproject state
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/subproyectos
+      - method: POST
+        endpoint: /api/v1/subproyectos
+      - method: PUT
+        endpoint: /api/v1/subproyectos/{id}
+    auth_required: true
+
+  - name: Activities Management Kanban
+    description: Continuous flow Kanban activities with tasks and subtasks
+    files:
+      - src/app/(dashboard)/poi/actividad/lista/page.tsx
+      - src/app/(dashboard)/poi/actividad/tablero/page.tsx
+    entry_route: /poi/actividad/lista
+    user_interactions:
+      - View activities list
+      - Create new Kanban activity
+      - View Kanban board
+      - Drag task to different column
+      - Create task in activity
+      - Create subtask within task
+      - Update task status
+      - Finalize activity
+      - Create activity report
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/actividades
+      - method: POST
+        endpoint: /api/v1/actividades
+      - method: GET
+        endpoint: /api/v1/actividades/{id}
+      - method: POST
+        endpoint: /api/v1/tareas
+      - method: PUT
+        endpoint: /api/v1/tareas/{id}/estado
+    auth_required: true
+
+  - name: Subactivities Management
+    description: Sub-level Kanban activities with tasks
+    files:
+      - src/app/(dashboard)/poi/subactividad/detalles/page.tsx
+    entry_route: /poi/actividad/detalles
+    user_interactions:
+      - View subactivities in activity
+      - Create subactivity
+      - Create task within subactivity
+      - Update subactivity task status
+      - Finalize subactivity
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/subactividades
+      - method: POST
+        endpoint: /api/v1/subactividades
+      - method: POST
+        endpoint: /api/v1/subactividades/{id}/finalizar
+    auth_required: true
+
+  - name: Human Resources Management
+    description: Personnel profiles, divisions, skills, assignments and availability
+    files:
+      - src/app/(dashboard)/recursos-humanos/page.tsx
+    entry_route: /recursos-humanos
+    user_interactions:
+      - View personnel list
+      - Search personnel by name
+      - View personnel profile
+      - View personnel availability percentage
+      - View assignments per person
+      - Manage divisions
+      - Create user account for personnel
+      - Assign roles to user
+    api_calls:
+      - method: GET
+        endpoint: /api/v1/personal
+      - method: GET
+        endpoint: /api/v1/personal/{id}
+      - method: GET
+        endpoint: /api/v1/divisiones
+    auth_required: true
+
+  - name: Documents and Minutes
+    description: Project documents upload and meeting minutes with approval workflow
+    files:
+      - src/app/(dashboard)/poi/proyectos/[id]/page.tsx
+    entry_route: /poi/proyectos/{id}
+    user_interactions:
+      - Upload project document
+      - Download document
+      - Create meeting minutes (acta de reunion)
+      - Create constitution minutes (acta de constitucion)
+      - Approve minutes as PMO
+      - Approve constitution as Patrocinador
+      - Reject with observation
+    api_calls:
+      - method: POST
+        endpoint: /api/v1/storage/upload
+      - method: GET
+        endpoint: /api/v1/proyectos/{id}/actas
+      - method: POST
+        endpoint: /api/v1/proyectos/{id}/actas
+      - method: POST
+        endpoint: /api/v1/actas/{id}/aprobar
+    auth_required: true
+
+  - name: Permission Based Access Control
+    description: Role based UI rendering - 7 roles with different module access
+    files:
+      - src/lib/permissions.ts
+    entry_route: /dashboard
+    user_interactions:
+      - ADMIN sees only RRHH and administration modules
+      - PMO sees PGD, POI, Dashboard, Notificaciones, RRHH
+      - COORDINADOR sees POI, Dashboard, Notificaciones, RRHH (read)
+      - SCRUM_MASTER sees POI (no create), Notificaciones, RRHH (read)
+      - DESARROLLADOR sees own tasks only
+      - IMPLEMENTADOR sees own tasks only
+    api_calls: []
+    auth_required: true
+
+known_limitations:
+  - issue: Dev server running - tests limited to 15 high priority tests
+    location: localhost:3000
+    impact: Concurrent test load may cause server instability
+  - issue: Scrum tasks (tipo SCRUM) cannot have subtasks by design
+    location: src/modules/agile/tareas
+    impact: Subtasks only available for Kanban tasks
+  - issue: Real-time features require backend Socket.io server
+    location: src/lib/socket.ts
+    impact: Notifications and board updates depend on backend availability
+  - issue: File uploads require presigned URLs from MinIO backend
+    location: src/lib/upload.ts
+    impact: Document upload requires backend MinIO service running

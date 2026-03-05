@@ -1,0 +1,22 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000/poi",
+  "loginUser": "admin@sigp.gob.pe",
+  "loginPassword": "Admin123!",
+  "executionArgs": {
+    "projectName": "sigp-frontend",
+    "projectPath": "E:\\Sistema de Gestion de Proyectos\\sigp-frontend",
+    "testIds": [
+      "TC028"
+    ],
+    "additionalInstruction": "El formulario de creación de proyecto está en /poi/proyectos/nuevo. Los campos son: Nombre (requerido, min 3 chars), Descripcion (textarea), Clasificacion (select: \"Al ciudadano\" o \"Gestion interna\"), Coordinacion (texto), Scrum Master ID (input numérico), Coordinador ID (input numérico). El botón de submit dice \"Crear Proyecto\". Si los campos de Scrum Master y Coordinador son inputs numéricos, intentar escribir un número como 1 o 2. Si hay selects/combobox buscar la primera opción disponible.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-wPxChGNm-6AyM_UKcPchHLKFgwsFXjaDqJsqD1spe39Fvzi64HvYfHr6boKAh4oDoVnOIh27c-0FZsS-5dJUwAf1xqvGD-VOidp_68vZ6UBxeKytGqLd3j1mMHShh0BDhD8"
+    }
+  },
+  "serverPort": 62079,
+  "proxy": "http://f1ab3824-4be7-4b9e-92b4-73351a7d2aa2:6urkUAuVVdBGsa3Ab9PhJtBfxnVZ2ADi@tun.testsprite.com:8080"
+}
