@@ -1199,7 +1199,7 @@ export function POIFullModal({
                         anios: baseData.anios,
                         fechaInicio: baseData.fechaInicio,
                         fechaFin: baseData.fechaFin,
-                        areaUsuaria: baseData.areaUsuaria,
+                        areaUsuariaId: baseData.areaUsuariaId,
                     };
                     savedResult = await createProyecto(createData);
 
