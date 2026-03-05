@@ -83,7 +83,7 @@ export function PersonalTable({
     const matchesSearch =
       searchTerm === '' ||
       nombreCompleto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.usuario?.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
       p.codigoEmpleado.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.dni && p.dni.includes(searchTerm));
 
@@ -152,7 +152,7 @@ export function PersonalTable({
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nombre, email, código o DNI..."
+              placeholder="Buscar por nombre, código o DNI..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -244,7 +244,7 @@ export function PersonalTable({
                         <div>
                           <p className="font-medium">{getNombreCompleto(persona)}</p>
                           <p className="text-sm text-muted-foreground">
-                            {persona.email}
+                            {persona.usuario?.email || '-'}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {persona.codigoEmpleado}

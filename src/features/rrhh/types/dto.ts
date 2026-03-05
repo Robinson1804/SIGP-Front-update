@@ -26,7 +26,6 @@ export interface CreatePersonalDto {
   dni?: string;
   nombres: string;
   apellidos: string;
-  email: string;
   telefono?: string;
   divisionId?: number;
   cargo?: string;
@@ -46,7 +45,6 @@ export interface UpdatePersonalDto {
   dni?: string;
   nombres?: string;
   apellidos?: string;
-  email?: string;
   telefono?: string;
   divisionId?: number;
   cargo?: string;
@@ -265,10 +263,6 @@ export const VALIDATION_RULES = {
   apellidos: {
     minLength: 2,
     maxLength: 100,
-  },
-  email: {
-    maxLength: 255,
-    pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
   telefono: {
     length: 9,

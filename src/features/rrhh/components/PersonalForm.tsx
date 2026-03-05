@@ -68,7 +68,6 @@ const personalSchema = z.object({
     .string()
     .min(VALIDATION_RULES.apellidos.minLength, 'Los apellidos deben tener al menos 2 caracteres')
     .max(VALIDATION_RULES.apellidos.maxLength, 'Los apellidos no pueden exceder 100 caracteres'),
-  email: z.string().email('Email inválido'),
   telefono: z
     .string()
     .refine((val) => val === '' || /^\d{9}$/.test(val), {
@@ -123,7 +122,6 @@ export function PersonalForm({
       dni: '',
       nombres: '',
       apellidos: '',
-      email: '',
       telefono: '',
       divisionId: undefined,
       cargo: '',
@@ -158,7 +156,6 @@ export function PersonalForm({
         dni: personal?.dni || '',
         nombres: personal?.nombres || '',
         apellidos: personal?.apellidos || '',
-        email: personal?.email || '',
         telefono: personal?.telefono || '',
         divisionId: personal?.divisionId || undefined,
         cargo: personal?.cargo || '',
@@ -312,53 +309,33 @@ export function PersonalForm({
               />
             </div>
 
-            {/* Email y Teléfono */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="juan.perez@inei.gob.pe"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="telefono"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teléfono</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="987654321"
-                        inputMode="numeric"
-                        onKeyPress={(e) => {
-                          if (!/[0-9]/.test(e.key)) {
-                            e.preventDefault();
-                          }
-                        }}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '').slice(0, 9);
-                          field.onChange(value);
-                        }}
-                        value={field.value}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {/* Teléfono */}
+            <FormField
+              control={form.control}
+              name="telefono"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teléfono</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="987654321"
+                      inputMode="numeric"
+                      onKeyPress={(e) => {
+                        if (!/[0-9]/.test(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 9);
+                        field.onChange(value);
+                      }}
+                      value={field.value}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* División y Cargo */}
             <div className="grid grid-cols-2 gap-4">
@@ -501,7 +478,7 @@ export function PersonalForm({
                   <FormDescription>
                     {isEditing && personal?.usuarioId
                       ? 'Al cambiar el rol se actualizará el usuario existente'
-                      : 'Al guardar se creará automáticamente el usuario con este rol'}
+                      : 'Al guardar se creará el usuario con email nombre.apellido@sigp.gob.pe'}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
