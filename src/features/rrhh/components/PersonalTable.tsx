@@ -7,7 +7,7 @@
  * Sincronizado con Backend - Dic 2024
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -46,6 +46,7 @@ import {
   UserCheck,
   Shield,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import type { Personal, Division } from '../types';
 import {
   Modalidad,
@@ -78,6 +79,13 @@ export function PersonalTable({
   const [modalidadFilter, setModalidadFilter] = useState<string>('all');
   const [estadoFilter, setEstadoFilter] = useState<string>('activo');
 
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, divisionFilter, modalidadFilter, estadoFilter]);
+
   const filteredPersonal = personal.filter((p) => {
     const nombreCompleto = getNombreCompleto(p);
     const matchesSearch =
@@ -100,6 +108,8 @@ export function PersonalTable({
 
     return matchesSearch && matchesDivision && matchesModalidad && matchesEstado;
   });
+
+  const paginatedPersonal = filteredPersonal.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const getInitials = (personal: Personal) => {
     return `${personal.nombres[0]}${personal.apellidos[0]}`.toUpperCase();
@@ -232,7 +242,7 @@ export function PersonalTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPersonal.map((persona) => (
+                paginatedPersonal.map((persona) => (
                   <TableRow key={persona.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -304,10 +314,14 @@ export function PersonalTable({
           </Table>
         </div>
 
-        {/* Footer con conteo */}
-        <div className="text-sm text-muted-foreground">
-          Mostrando {filteredPersonal.length} de {personal.length} registros
-        </div>
+        <TablePagination
+          page={currentPage}
+          totalPages={Math.ceil(filteredPersonal.length / PAGE_SIZE)}
+          total={filteredPersonal.length}
+          limit={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="personas"
+        />
       </CardContent>
     </Card>
   );

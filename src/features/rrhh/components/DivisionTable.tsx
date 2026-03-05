@@ -6,7 +6,7 @@
  * Tabla de divisiones con búsqueda y filtros
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -42,6 +42,7 @@ import {
   Building2,
   Users,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import type { Division, Personal } from '../types';
 import { getNombreCompleto } from '../types';
 
@@ -65,6 +66,13 @@ export function DivisionTable({
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFilter, setEstadoFilter] = useState<string>('all');
 
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, estadoFilter]);
+
   const filteredDivisiones = divisiones.filter((d) => {
     const matchesSearch =
       searchTerm === '' ||
@@ -79,6 +87,8 @@ export function DivisionTable({
 
     return matchesSearch && matchesEstado;
   });
+
+  const paginatedDivisiones = filteredDivisiones.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const getCoordinadorNombre = (division: Division): string => {
     if (!division.coordinador) return '-';
@@ -162,7 +172,7 @@ export function DivisionTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredDivisiones.map((division) => (
+                paginatedDivisiones.map((division) => (
                   <TableRow key={division.id}>
                     <TableCell>
                       <Badge variant="outline" className="font-mono">
@@ -221,10 +231,14 @@ export function DivisionTable({
           </Table>
         </div>
 
-        {/* Footer con conteo */}
-        <div className="text-sm text-muted-foreground">
-          Mostrando {filteredDivisiones.length} de {divisiones.length} divisiones
-        </div>
+        <TablePagination
+          page={currentPage}
+          totalPages={Math.ceil(filteredDivisiones.length / PAGE_SIZE)}
+          total={filteredDivisiones.length}
+          limit={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="divisiones"
+        />
       </CardContent>
     </Card>
   );

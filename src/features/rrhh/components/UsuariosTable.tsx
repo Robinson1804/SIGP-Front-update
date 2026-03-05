@@ -6,7 +6,7 @@
  * Tabla de usuarios del sistema con gestión de roles
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -52,6 +52,7 @@ import {
   ShieldPlus,
   ShieldMinus,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import type { Usuario, Role } from '../types';
 import { getRolLabel, getRolColor, getTodosLosRoles, normalizeRolesAdicionales } from '../types';
 
@@ -95,6 +96,13 @@ export function UsuariosTable({
   const [passwordTemporal, setPasswordTemporal] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, rolFilter, estadoFilter]);
+
   const filteredUsuarios = usuarios.filter((u) => {
     const todosRoles = getTodosLosRoles(u);
     const matchesSearch =
@@ -115,6 +123,8 @@ export function UsuariosTable({
 
     return matchesSearch && matchesRol && matchesEstado;
   });
+
+  const paginatedUsuarios = filteredUsuarios.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleAgregarRolClick = (usuario: Usuario) => {
     setSelectedUsuario(usuario);
@@ -296,7 +306,7 @@ export function UsuariosTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsuarios.map((usuario) => (
+                  paginatedUsuarios.map((usuario) => (
                     <TableRow key={usuario.id}>
                       <TableCell className="font-mono">
                         {usuario.username}
@@ -382,10 +392,14 @@ export function UsuariosTable({
             </Table>
           </div>
 
-          {/* Footer con conteo */}
-          <div className="text-sm text-muted-foreground">
-            Mostrando {filteredUsuarios.length} de {usuarios.length} usuarios
-          </div>
+          <TablePagination
+            page={currentPage}
+            totalPages={Math.ceil(filteredUsuarios.length / PAGE_SIZE)}
+            total={filteredUsuarios.length}
+            limit={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="usuarios"
+          />
         </CardContent>
       </Card>
 

@@ -6,7 +6,7 @@
  * Tabla de divisiones con sus scrum masters asignados (Many-to-Many)
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import {
   UserPlus,
   X,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import type { Division, Personal } from '../types';
 import { getNombreCompleto } from '../types';
 
@@ -65,6 +66,13 @@ export function ScrumMastersTable({
   const [selectedPersonalId, setSelectedPersonalId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const filteredDivisiones = divisiones.filter((d) => {
     const scrumMastersNames = d.scrumMasters?.map(sm => getNombreCompleto(sm)).join(' ') || '';
     const matchesSearch =
@@ -75,6 +83,8 @@ export function ScrumMastersTable({
 
     return matchesSearch && d.activo;
   });
+
+  const paginatedDivisiones = filteredDivisiones.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handleAgregarClick = (division: Division) => {
     setSelectedDivision(division);
@@ -113,12 +123,6 @@ export function ScrumMastersTable({
     const scrumMasterIds = division.scrumMasters?.map(sm => sm.id) || [];
     return personal.filter(p => p.activo && !scrumMasterIds.includes(p.id));
   };
-
-  // Contar total de scrum masters
-  const totalScrumMasters = filteredDivisiones.reduce(
-    (acc, d) => acc + (d.scrumMasters?.length || 0),
-    0
-  );
 
   return (
     <>
@@ -175,7 +179,7 @@ export function ScrumMastersTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredDivisiones.map((division) => (
+                  paginatedDivisiones.map((division) => (
                     <TableRow key={division.id}>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
@@ -237,10 +241,14 @@ export function ScrumMastersTable({
             </Table>
           </div>
 
-          {/* Footer con conteo */}
-          <div className="text-sm text-muted-foreground">
-            {totalScrumMasters} scrum masters asignados en {filteredDivisiones.length} divisiones
-          </div>
+          <TablePagination
+            page={currentPage}
+            totalPages={Math.ceil(filteredDivisiones.length / PAGE_SIZE)}
+            total={filteredDivisiones.length}
+            limit={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="divisiones"
+          />
         </CardContent>
       </Card>
 

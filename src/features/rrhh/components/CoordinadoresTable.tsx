@@ -6,7 +6,7 @@
  * Tabla de divisiones con sus coordinadores asignados
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -41,6 +41,7 @@ import {
   UserPlus,
   UserMinus,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import type { Division, Personal } from '../types';
 import { getNombreCompleto } from '../types';
 
@@ -65,6 +66,13 @@ export function CoordinadoresTable({
   const [selectedPersonalId, setSelectedPersonalId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const filteredDivisiones = divisiones.filter((d) => {
     const matchesSearch =
       searchTerm === '' ||
@@ -74,6 +82,8 @@ export function CoordinadoresTable({
 
     return matchesSearch && d.activo;
   });
+
+  const paginatedDivisiones = filteredDivisiones.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const getCoordinadorNombre = (division: Division): string => {
     if (!division.coordinador) return 'Sin asignar';
@@ -173,7 +183,7 @@ export function CoordinadoresTable({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredDivisiones.map((division) => (
+                  paginatedDivisiones.map((division) => (
                     <TableRow key={division.id}>
                       <TableCell>
                         <Badge variant="outline" className="font-mono">
@@ -238,10 +248,14 @@ export function CoordinadoresTable({
             </Table>
           </div>
 
-          {/* Footer con conteo */}
-          <div className="text-sm text-muted-foreground">
-            {filteredDivisiones.filter(d => d.coordinador).length} de {filteredDivisiones.length} divisiones con coordinador asignado
-          </div>
+          <TablePagination
+            page={currentPage}
+            totalPages={Math.ceil(filteredDivisiones.length / PAGE_SIZE)}
+            total={filteredDivisiones.length}
+            limit={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+            itemLabel="divisiones"
+          />
         </CardContent>
       </Card>
 

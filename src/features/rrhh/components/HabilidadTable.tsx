@@ -6,7 +6,7 @@
  * Tabla de habilidades con búsqueda y filtros por categoría
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -40,6 +40,7 @@ import {
   Sparkles,
   Plus,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import type { Habilidad } from '../types';
 import {
   HabilidadCategoria,
@@ -66,6 +67,13 @@ export function HabilidadTable({
   const [categoriaFilter, setCategoriaFilter] = useState<string>('all');
   const [estadoFilter, setEstadoFilter] = useState<string>('all');
 
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, categoriaFilter, estadoFilter]);
+
   const filteredHabilidades = habilidades.filter((h) => {
     const matchesSearch =
       searchTerm === '' ||
@@ -82,6 +90,8 @@ export function HabilidadTable({
 
     return matchesSearch && matchesCategoria && matchesEstado;
   });
+
+  const paginatedHabilidades = filteredHabilidades.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const getCategoriaBadge = (categoria: HabilidadCategoria) => {
     const color = getCategoriaColor(categoria);
@@ -188,7 +198,7 @@ export function HabilidadTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredHabilidades.map((habilidad) => (
+                paginatedHabilidades.map((habilidad) => (
                   <TableRow key={habilidad.id}>
                     <TableCell className="font-medium">{habilidad.nombre}</TableCell>
                     <TableCell>{getCategoriaBadge(habilidad.categoria)}</TableCell>
@@ -231,10 +241,14 @@ export function HabilidadTable({
           </Table>
         </div>
 
-        {/* Footer con conteo */}
-        <div className="text-sm text-muted-foreground">
-          Mostrando {filteredHabilidades.length} de {habilidades.length} habilidades
-        </div>
+        <TablePagination
+          page={currentPage}
+          totalPages={Math.ceil(filteredHabilidades.length / PAGE_SIZE)}
+          total={filteredHabilidades.length}
+          limit={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="habilidades"
+        />
       </CardContent>
     </Card>
   );

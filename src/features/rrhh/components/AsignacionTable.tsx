@@ -6,7 +6,7 @@
  * Tabla de asignaciones con filtros por tipo y estado
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -44,6 +44,7 @@ import {
   Briefcase,
   Calendar,
 } from 'lucide-react';
+import { TablePagination } from '@/components/ui/table-pagination';
 import type { Asignacion, Personal } from '../types';
 import {
   TipoAsignacion,
@@ -77,6 +78,13 @@ export function AsignacionTable({
   const [tipoFilter, setTipoFilter] = useState<string>('all');
   const [estadoFilter, setEstadoFilter] = useState<string>('all');
 
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, tipoFilter, estadoFilter]);
+
   const filteredAsignaciones = asignaciones.filter((a) => {
     const matchesSearch =
       searchTerm === '' ||
@@ -97,6 +105,8 @@ export function AsignacionTable({
 
     return matchesSearch && matchesTipo && matchesEstado;
   });
+
+  const paginatedAsignaciones = filteredAsignaciones.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const getPersonalNombre = (asignacion: Asignacion): string => {
     if (!asignacion.personal) return '-';
@@ -238,7 +248,7 @@ export function AsignacionTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredAsignaciones.map((asignacion) => (
+                paginatedAsignaciones.map((asignacion) => (
                   <TableRow key={asignacion.id}>
                     {showPersonal && (
                       <TableCell className="font-medium">
@@ -318,10 +328,14 @@ export function AsignacionTable({
           </Table>
         </div>
 
-        {/* Footer con conteo */}
-        <div className="text-sm text-muted-foreground">
-          Mostrando {filteredAsignaciones.length} de {asignaciones.length} asignaciones
-        </div>
+        <TablePagination
+          page={currentPage}
+          totalPages={Math.ceil(filteredAsignaciones.length / PAGE_SIZE)}
+          total={filteredAsignaciones.length}
+          limit={PAGE_SIZE}
+          onPageChange={setCurrentPage}
+          itemLabel="asignaciones"
+        />
       </CardContent>
     </Card>
   );
