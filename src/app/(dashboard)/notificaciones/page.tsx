@@ -56,6 +56,7 @@ import { PaginationControls } from './components/pagination-controls';
 import { useRealtimeNotifications } from '@/lib/hooks/use-realtime-notifications';
 
 const PAGE_SIZE = 5;
+const BLOCK_PAGE_SIZE = 10;
 
 // Mapeo seccion → filtros backend (tipo + entidadTipo) para proyectos
 const SECCION_TO_FILTROS: Record<SeccionName, { tipo: string; entidadTipo: string }> = {
@@ -226,6 +227,8 @@ export default function NotificationsPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [flatPage, setFlatPage] = useState(1);
   const [flatTotalItems, setFlatTotalItems] = useState(0);
+  const [proyectoPage, setProyectoPage] = useState(1);
+  const [actividadPage, setActividadPage] = useState(1);
 
   // Delete mode state
   const [deleteMode, setDeleteMode] = useState(false);
@@ -267,6 +270,7 @@ export default function NotificationsPage() {
           if (pmoActividadNavStack.level === 'actividades') {
             const groups = await getNotificacionesAgrupadasPorActividad(pgdFilterId);
             setActividadGroups(groups);
+            setActividadPage(1);
           } else if (pmoActividadNavStack.level === 'secciones') {
             const counts = await getSeccionCountsByActividad(pmoActividadNavStack.actividadId);
             setActividadSeccionCounts(counts);
@@ -290,6 +294,7 @@ export default function NotificationsPage() {
           if (pmoNavStack.level === 'proyectos') {
             const groups = await getNotificacionesAgrupadasPorProyecto(pgdFilterId);
             setProyectoGroups(groups);
+            setProyectoPage(1);
           } else if (pmoNavStack.level === 'secciones') {
             const counts = await getSeccionCountsByProyecto(pmoNavStack.proyectoId);
             setSeccionCounts(counts);
@@ -333,6 +338,7 @@ export default function NotificationsPage() {
         if (implementadorNavStack.level === 'actividades') {
           const groups = await getNotificacionesAgrupadasPorActividad();
           setActividadGroups(groups);
+          setActividadPage(1);
         } else if (implementadorNavStack.level === 'secciones') {
           const counts = await getSeccionCountsByActividad(implementadorNavStack.actividadId);
           setActividadSeccionCounts(counts);
@@ -371,6 +377,7 @@ export default function NotificationsPage() {
         } else if (otherNavStack.level === 'proyectos') {
           const groups = await getNotificacionesAgrupadasPorProyecto();
           setProyectoGroups(groups);
+          setProyectoPage(1);
         } else if (otherNavStack.level === 'sprints') {
           const groups = await getNotificacionesAgrupadasPorSprint(otherNavStack.proyectoId);
           setSprintGroups(groups);
@@ -911,6 +918,10 @@ export default function NotificationsPage() {
   // Pagination calculations
   const drillTotalPages = Math.ceil(totalItems / PAGE_SIZE);
   const flatTotalPages = Math.ceil(flatTotalItems / PAGE_SIZE);
+  const proyectoTotalPages = Math.ceil(proyectoGroups.length / BLOCK_PAGE_SIZE);
+  const actividadTotalPages = Math.ceil(actividadGroups.length / BLOCK_PAGE_SIZE);
+  const pagedProyectoGroups = proyectoGroups.slice((proyectoPage - 1) * BLOCK_PAGE_SIZE, proyectoPage * BLOCK_PAGE_SIZE);
+  const pagedActividadGroups = actividadGroups.slice((actividadPage - 1) * BLOCK_PAGE_SIZE, actividadPage * BLOCK_PAGE_SIZE);
 
   // Get seccion label for breadcrumb
   const getSeccionLabel = (seccion: SeccionName) => {
@@ -931,14 +942,25 @@ export default function NotificationsPage() {
       if (activeTab === 'Actividades') {
         if (pmoActividadNavStack.level === 'actividades') {
           return (
-            <ActividadBlockList
-              groups={actividadGroups}
-              loading={isLoading}
-              deleteMode={deleteMode}
-              selectedIds={selectedActividadIds}
-              onToggleSelect={toggleActividadSelect}
-              onActividadClick={handlePmoActividadClick}
-            />
+            <div className="space-y-4">
+              <ActividadBlockList
+                groups={pagedActividadGroups}
+                loading={isLoading}
+                deleteMode={deleteMode}
+                selectedIds={selectedActividadIds}
+                onToggleSelect={toggleActividadSelect}
+                onActividadClick={handlePmoActividadClick}
+              />
+              {actividadTotalPages > 1 && (
+                <PaginationControls
+                  page={actividadPage}
+                  totalPages={actividadTotalPages}
+                  total={actividadGroups.length}
+                  limit={BLOCK_PAGE_SIZE}
+                  onPageChange={(p) => setActividadPage(p)}
+                />
+              )}
+            </div>
           );
         }
 
@@ -1034,14 +1056,25 @@ export default function NotificationsPage() {
       // Proyectos tab
       if (pmoNavStack.level === 'proyectos') {
         return (
-          <ProyectoBlockList
-            groups={proyectoGroups}
-            loading={isLoading}
-            deleteMode={deleteMode}
-            selectedIds={selectedProyectoIds}
-            onToggleSelect={toggleProyectoSelect}
-            onProyectoClick={handlePmoProyectoClick}
-          />
+          <div className="space-y-4">
+            <ProyectoBlockList
+              groups={pagedProyectoGroups}
+              loading={isLoading}
+              deleteMode={deleteMode}
+              selectedIds={selectedProyectoIds}
+              onToggleSelect={toggleProyectoSelect}
+              onProyectoClick={handlePmoProyectoClick}
+            />
+            {proyectoTotalPages > 1 && (
+              <PaginationControls
+                page={proyectoPage}
+                totalPages={proyectoTotalPages}
+                total={proyectoGroups.length}
+                limit={BLOCK_PAGE_SIZE}
+                onPageChange={(p) => setProyectoPage(p)}
+              />
+            )}
+          </div>
         );
       }
 
@@ -1191,14 +1224,25 @@ export default function NotificationsPage() {
     if (isImplementador) {
       if (implementadorNavStack.level === 'actividades') {
         return (
-          <ActividadBlockList
-            groups={actividadGroups}
-            loading={isLoading}
-            deleteMode={deleteMode}
-            selectedIds={selectedActividadIds}
-            onToggleSelect={toggleActividadSelect}
-            onActividadClick={handleImplementadorActividadClick}
-          />
+          <div className="space-y-4">
+            <ActividadBlockList
+              groups={pagedActividadGroups}
+              loading={isLoading}
+              deleteMode={deleteMode}
+              selectedIds={selectedActividadIds}
+              onToggleSelect={toggleActividadSelect}
+              onActividadClick={handleImplementadorActividadClick}
+            />
+            {actividadTotalPages > 1 && (
+              <PaginationControls
+                page={actividadPage}
+                totalPages={actividadTotalPages}
+                total={actividadGroups.length}
+                limit={BLOCK_PAGE_SIZE}
+                onPageChange={(p) => setActividadPage(p)}
+              />
+            )}
+          </div>
         );
       }
 
@@ -1344,14 +1388,25 @@ export default function NotificationsPage() {
     // Drill-down tabs
     if (otherNavStack.level === 'proyectos') {
       return (
-        <ProyectoBlockList
-          groups={proyectoGroups}
-          loading={isLoading}
-          deleteMode={deleteMode}
-          selectedIds={selectedProyectoIds}
-          onToggleSelect={toggleProyectoSelect}
-          onProyectoClick={handleOtherProyectoClick}
-        />
+        <div className="space-y-4">
+          <ProyectoBlockList
+            groups={pagedProyectoGroups}
+            loading={isLoading}
+            deleteMode={deleteMode}
+            selectedIds={selectedProyectoIds}
+            onToggleSelect={toggleProyectoSelect}
+            onProyectoClick={handleOtherProyectoClick}
+          />
+          {proyectoTotalPages > 1 && (
+            <PaginationControls
+              page={proyectoPage}
+              totalPages={proyectoTotalPages}
+              total={proyectoGroups.length}
+              limit={BLOCK_PAGE_SIZE}
+              onPageChange={(p) => setProyectoPage(p)}
+            />
+          )}
+        </div>
       );
     }
 
