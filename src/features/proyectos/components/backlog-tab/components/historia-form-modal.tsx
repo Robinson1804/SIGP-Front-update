@@ -1140,7 +1140,7 @@ export function HistoriaFormModal({
                     <Input
                       value={
                         isEditing && historia?.creador
-                          ? `${historia.creador.nombres} ${historia.creador.apellidoPaterno}`
+                          ? `${historia.creador.nombre} ${historia.creador.apellido}`
                           : currentUser?.name || ''
                       }
                       disabled

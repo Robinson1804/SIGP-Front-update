@@ -79,6 +79,11 @@ export interface Tarea {
   createdAt: string;
   updatedAt: string;
   createdBy: number;
+  creator?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+  } | null;
 
   // Relaciones opcionales (cargadas segun la consulta)
   historiaUsuario?: {

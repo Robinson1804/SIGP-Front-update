@@ -74,8 +74,8 @@ export interface HistoriaUsuario {
   } | null;
   creador?: {
     id: number;
-    nombres: string;
-    apellidoPaterno: string;
+    nombre: string;
+    apellido: string;
   } | null;
   tareas?: TareaResumen[];
   criteriosAceptacion?: CriterioAceptacion[];

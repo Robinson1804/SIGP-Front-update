@@ -158,7 +158,9 @@ export function TareaFormModal({
 
   // Obtener usuario actual para el campo Informador
   const currentUser = useCurrentUser();
-  const informadorNombre = currentUser?.name || 'Usuario';
+  const informadorNombre = isEditing && tarea?.creator
+    ? `${tarea.creator.nombre} ${tarea.creator.apellido}`
+    : currentUser?.name || 'Usuario';
   const isDeveloper = currentUser?.role === 'DESARROLLADOR';
 
   const form = useForm<TareaFormValues>({
@@ -1171,7 +1173,7 @@ export function TareaFormModal({
                     {informadorNombre}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    El creador de la tarea (usted)
+                    {isEditing ? 'El creador original de la tarea' : 'El creador de la tarea (usted)'}
                   </p>
                 </div>
 
