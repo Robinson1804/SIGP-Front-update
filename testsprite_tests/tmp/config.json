@@ -2,21 +2,34 @@
   "status": "commited",
   "type": "frontend",
   "scope": "codebase",
-  "localEndpoint": "http://localhost:3000/poi",
+  "localEndpoint": "http://localhost:3000/poi/actividad/lista",
   "loginUser": "admin@sigp.gob.pe",
   "loginPassword": "Admin123!",
   "executionArgs": {
     "projectName": "sigp-frontend",
     "projectPath": "E:\\Sistema de Gestion de Proyectos\\sigp-frontend",
     "testIds": [
-      "TC028"
+      "TC001",
+      "TC002",
+      "TC003",
+      "TC004",
+      "TC005",
+      "TC006",
+      "TC007",
+      "TC008",
+      "TC009",
+      "TC010",
+      "TC011",
+      "TC012",
+      "TC013",
+      "TC014"
     ],
-    "additionalInstruction": "El formulario de creación de proyecto está en /poi/proyectos/nuevo. Los campos son: Nombre (requerido, min 3 chars), Descripcion (textarea), Clasificacion (select: \"Al ciudadano\" o \"Gestion interna\"), Coordinacion (texto), Scrum Master ID (input numérico), Coordinador ID (input numérico). El botón de submit dice \"Crear Proyecto\". Si los campos de Scrum Master y Coordinador son inputs numéricos, intentar escribir un número como 1 o 2. Si hay selects/combobox buscar la primera opción disponible.",
+    "additionalInstruction": "Login credentials: email = admin@sigp.gob.pe or pmo@sigp.gob.pe, password = Admin123! or Password123!. The app is in Spanish. After login the user is redirected to /dashboard. Navigation to actividades is via sidebar menu item \"POI\" -> \"Actividades\". The \"Nueva Actividad\" button is typically in the top right of the activities list page. For creating subactividad, navigate to an existing activity detail page and look for \"Nueva Subactividad\" or a subactividades section/tab.",
     "serverMode": "development",
     "envs": {
       "API_KEY": "sk-user-wPxChGNm-6AyM_UKcPchHLKFgwsFXjaDqJsqD1spe39Fvzi64HvYfHr6boKAh4oDoVnOIh27c-0FZsS-5dJUwAf1xqvGD-VOidp_68vZ6UBxeKytGqLd3j1mMHShh0BDhD8"
     }
   },
-  "serverPort": 62079,
-  "proxy": "http://f1ab3824-4be7-4b9e-92b4-73351a7d2aa2:6urkUAuVVdBGsa3Ab9PhJtBfxnVZ2ADi@tun.testsprite.com:8080"
+  "serverPort": 49675,
+  "proxy": "http://a26ce41f-9b2d-4970-9fa3-115c8d50e9d4:74yQ92vLv1HDhe9PalMttaOJf3cSCjxg@tun.testsprite.com:8080"
 }
