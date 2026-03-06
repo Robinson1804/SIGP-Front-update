@@ -742,6 +742,10 @@ function PmoPoiView() {
     useEffect(() => {
         if (!loadingPGD && currentPGD) {
             fetchProyectos();
+        } else if (!loadingPGD && !currentPGD) {
+            // PGDs ya cargaron pero no hay ninguno seleccionado/disponible
+            setIsLoading(false);
+            setProjects([]);
         }
     }, [fetchProyectos, loadingPGD, currentPGD]);
 
@@ -1093,17 +1097,26 @@ function PmoPoiView() {
                 {!isLoading && !error && filteredProjects.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                         <Search className="h-12 w-12 mb-4 opacity-50" />
-                        <p className="text-lg font-medium">No se encontraron {effectiveType === "Proyecto" ? "proyectos" : "actividades"}</p>
-                        <p className="text-sm mb-4">Intenta ajustar los filtros de búsqueda</p>
-                        {activeFiltersCount > 0 && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={clearAllFilters}
-                                className="text-[#018CD1] border-[#018CD1] hover:bg-[#018CD1]/10"
-                            >
-                                Limpiar filtros
-                            </Button>
+                        {!currentPGD ? (
+                            <>
+                                <p className="text-lg font-medium">No hay PGD disponible</p>
+                                <p className="text-sm">Registra un Plan de Gobierno Digital en el módulo de Planificación para comenzar.</p>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-lg font-medium">No se encontraron {effectiveType === "Proyecto" ? "proyectos" : "actividades"}</p>
+                                <p className="text-sm mb-4">Intenta ajustar los filtros de búsqueda</p>
+                                {activeFiltersCount > 0 && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={clearAllFilters}
+                                        className="text-[#018CD1] border-[#018CD1] hover:bg-[#018CD1]/10"
+                                    >
+                                        Limpiar filtros
+                                    </Button>
+                                )}
+                            </>
                         )}
                     </div>
                 )}
