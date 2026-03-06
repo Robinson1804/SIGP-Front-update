@@ -278,7 +278,7 @@ export function CoordinadoresTable({
           </DialogHeader>
 
           <div className="py-4">
-            <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen}>
+            <Popover open={isComboboxOpen} onOpenChange={setIsComboboxOpen} modal={false}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
