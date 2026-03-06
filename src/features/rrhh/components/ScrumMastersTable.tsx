@@ -284,10 +284,10 @@ export function ScrumMastersTable({
                     key={p.id}
                     type="button"
                     onClick={() => setSelectedPersonalId(p.id.toString())}
-                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-accent transition-colors ${selectedPersonalId === p.id.toString() ? 'bg-accent font-medium' : ''}`}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${selectedPersonalId === p.id.toString() ? 'bg-[#018CD1] text-white font-medium' : 'hover:bg-accent'}`}
                   >
                     <span className="flex-1">{getNombreCompleto(p)}</span>
-                    <span className="text-muted-foreground text-xs">{p.division?.nombre || 'Sin división'}</span>
+                    <span className={`text-xs ${selectedPersonalId === p.id.toString() ? 'text-white/80' : 'text-muted-foreground'}`}>{p.division?.nombre || 'Sin división'}</span>
                   </button>
                 ));
               })()}
